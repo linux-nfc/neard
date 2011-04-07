@@ -1,0 +1,40 @@
+Manager hierarchy
+=================
+
+Service		org.neard
+Interface	org.neard.Manager
+Object path	/
+
+Methods		dict GetProperties()
+
+			Returns all properties for the device. See the
+			properties section for available properties.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+
+		void SetProperty(string name, variant value)
+
+			Changes the value of the specified property. Only
+			properties that are listed a read-write are changeable.
+			On success this will emit a PropertyChanged signal.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+					 org.neard.Error.InvalidArguments
+ 
+
+Signals		PropertyChanged(string name, variant value)
+
+			This signal indicates a changed value of the given
+			property.
+
+		AdapterAdded(object adapter)
+
+			Parameter is the object path of added adapter.
+
+		AdapterRemoved(object adapter)
+
+			Parameter is the object path of removed adapter.
+
+Properties 	array{object} Adapters [readonly]
+
+			List of adapter object paths.

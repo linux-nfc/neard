@@ -1,0 +1,38 @@
+Target hierarchy
+================
+
+Service		org.neard
+Interface	org.neard.Target
+Object path	[variable prefix]/{nfc0,nfc1,...}/target_UID
+
+Method		dict GetProperties()
+
+			Returns all properties for the device. See the
+			properties section for available properties.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+
+		void SetProperty(string name, variant value)
+
+			Changes the value of the specified property. Only
+			properties that are listed a read-write are changeable.
+			On success this will emit a PropertyChanged signal.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+					 org.neard.Error.InvalidArguments
+
+Signals		PropertyChanged(string name, variant value)
+
+			This signal indicates a changed value of the given
+			property.
+
+Properties	string Type [readonly]
+
+			The NFC target type.
+
+			Valid types are "tag" and "device".
+
+		array{dict} Records [readwrite]
+
+			List of NDEF records.
+			This is only valid for tag type targets.

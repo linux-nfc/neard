@@ -1,0 +1,17 @@
+#!/bin/sh
+
+for i in $*
+do
+	echo "extern struct near_plugin_desc __near_builtin_$i;"
+done
+
+echo
+echo "static struct near_plugin_desc *__near_builtin[] = {"
+
+for i in $*
+do
+	echo "  &__near_builtin_$i,"
+done
+
+echo "  NULL"
+echo "};"

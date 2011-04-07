@@ -1,0 +1,64 @@
+Adapter hierarchy
+=================
+
+Service		org.neard
+Interface	org.neard.Adapter
+Object path	[variable prefix]/{nfc0,nfc1,...}
+
+Methods:	dict GetProperties()
+
+			Returns all properties for the device. See the
+			properties section for available properties.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+
+		void SetProperty(string name, variant value)
+
+			Changes the value of the specified property. Only
+			properties that are listed a read-write are changeable.
+			On success this will emit a PropertyChanged signal.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+					 org.neard.Error.InvalidArguments
+ 
+
+Signals		PropertyChanged(string name, variant value)
+
+			This signal indicates a changed value of the given
+			property.
+
+		TargetFound(string address, dict values)
+
+			This signal is sent whenever an NFC target is found,
+			as a result of a probe response reception.
+ 
+			The dictionary contains basically the same values
+			that are returned by the GetProperties method
+			from the org.neard.Target interface.
+
+		TargetLost(string address)
+
+			This signal is sent whenever the NFC target is no longer
+			in sight, or when it's been de-activated.
+
+
+Properties:	string Mode [readwrite]
+
+			The adapter mode.
+
+			Valid types are "initiator" and "target".
+			The default value for the adapter mode is "target".
+
+		string CommunicationMode [readwrite]
+
+		       The adapter communication mode.
+
+		       Valid types are "passive" and "active". In passive mode, the
+		       initiator never turns its RF field off.
+		       The default value for the adapter communication mode
+		       is "passive".
+
+		string Powered [readwrite]
+
+		       Switch an adapter on or off.
+
