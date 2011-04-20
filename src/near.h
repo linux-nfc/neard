@@ -1,6 +1,6 @@
 /*
  *
- *  Near Field Communication
+ *  neard - Near Field Communication manager
  *
  *  Copyright (C) 2011  Intel Corporation. All rights reserved.
  *
@@ -58,3 +58,6 @@ void __near_manager_cleanup(void);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
+
+int __near_netlink_init(void);
+void __near_netlink_cleanup(void);

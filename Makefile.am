@@ -21,7 +21,7 @@ libexec_PROGRAMS = src/neard
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/main.c src/error.c src/near.h src/types.h \
 			src/log.h src/log.c src/dbus.c src/manager.c \
-			src/adapter.c
+			src/adapter.c src/nfcnl.c
 
 src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ -lresolv -ldl
 

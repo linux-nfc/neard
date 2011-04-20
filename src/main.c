@@ -138,6 +138,7 @@ int main(int argc, char *argv[])
 
 	__near_manager_init(conn);
 	__near_adapter_init();
+	__near_netlink_init();
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sig_term;
@@ -146,6 +147,7 @@ int main(int argc, char *argv[])
 
 	g_main_loop_run(main_loop);
 
+	__near_netlink_cleanup();
 	__near_adapter_cleanup();
 	__near_manager_cleanup();
 
