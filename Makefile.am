@@ -21,9 +21,9 @@ libexec_PROGRAMS = src/neard
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/main.c src/error.c src/near.h src/types.h \
 			src/log.h src/log.c src/dbus.c src/manager.c \
-			src/adapter.c src/nfcnl.c
+			src/adapter.c src/netlink.c
 
-src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ -lresolv -ldl
+src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ @NETLINK_LIBS@ -lresolv -ldl
 
 src_neard_LDFLAGS = -Wl,--export-dynamic
 
@@ -32,8 +32,8 @@ nodist_src_neard_SOURCES = src/builtin.h
 src/builtin.h: src/genbuiltin $(builtin_sources)
 	$(AM_V_GEN)$(srcdir)/src/genbuiltin $(builtin_modules) > $@
 
-AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ $(builtin_cflags) \
-					-DMMS_PLUGIN_BUILTIN \
+AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ @NETLINK_CFLAGS@ $(builtin_cflags) \
+					-DNEARD_PLUGIN_BUILTIN \
 					-DPLUGINDIR=\""$(plugindir)"\"
 
 INCLUDES = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus

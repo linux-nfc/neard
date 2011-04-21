@@ -73,4 +73,9 @@ AC_CHECK_LIB(dbus-1, dbus_watch_get_unix_fd, dummy=yes,
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
+PKG_CHECK_MODULES(NETLINK, libnl-2.0, dummy=yes,
+				AC_MSG_ERROR(Netlink library is required))
+AC_SUBST(NETLINK_CFLAGS)
+AC_SUBST(NETLINK_LIBS)
+
 AC_OUTPUT(Makefile)
