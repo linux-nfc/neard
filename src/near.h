@@ -60,5 +60,6 @@ void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 
+int __near_netlink_get_adapters(void);
 int __near_netlink_init(void);
 void __near_netlink_cleanup(void);
