@@ -55,9 +55,10 @@ DBusMessage *__near_error_invalid_property(DBusMessage *msg);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
 
+int __near_adapter_create(const char *name, guint32 idx, guint32 protocols);
+void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
-void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 
 int __near_netlink_init(void);
 void __near_netlink_cleanup(void);
