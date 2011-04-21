@@ -21,8 +21,8 @@
 
 #include <dbus/dbus.h>
 
-#define NFC_SERVICE     "net.near"
-#define NFC_PATH	"/net/near"
+#define NFC_SERVICE     "org.near"
+#define NFC_PATH	"/org/near"
 
 #define NFC_ERROR_INTERFACE	NFC_SERVICE ".Error"
 
