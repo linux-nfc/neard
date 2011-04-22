@@ -36,8 +36,6 @@
 
 #include <linux/nfc.h>
 
-#include <near/types.h>
-
 #include "near.h"
 
 struct nlnfc_state {

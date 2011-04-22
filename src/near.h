@@ -23,6 +23,8 @@
 
 #include "log.h"
 
+#include <near/types.h>
+
 struct near_adapter;
 
 int __near_log_init(const char *debug, gboolean detach);
