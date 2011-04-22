@@ -78,4 +78,8 @@ PKG_CHECK_MODULES(NETLINK, libnl-2.0, dummy=yes,
 AC_SUBST(NETLINK_CFLAGS)
 AC_SUBST(NETLINK_LIBS)
 
+AC_ARG_ENABLE(test, AC_HELP_STRING([--enable-test],
+		[enable test/example scripts]), [enable_test=${enableval}])
+AM_CONDITIONAL(TEST, test "${enable_test}" = "yes")
+
 AC_OUTPUT(Makefile)

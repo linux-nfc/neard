@@ -41,7 +41,16 @@ CLEANFILES = src/builtin.h $(local_headers)
 
 doc_files = doc/manager-api.txt doc/target-api.txt doc/adapter-api.txt
 
-EXTRA_DIST = src/genbuiltin $(test_scripts) $(doc_files)
+EXTRA_DIST = src/genbuiltin $(doc_files)
+
+test_scripts = test/list-adapters
+
+if TEST
+testdir = $(pkglibdir)/test
+test_SCRIPTS = $(test_scripts)
+endif
+
+EXTRA_DIST += $(test_scripts)
 
 MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \
