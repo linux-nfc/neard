@@ -3,7 +3,7 @@ AM_MAKEFLAGS = --no-print-directory
 
 includedir = @includedir@/near
 
-noinst_HEADERS = include/dbus.h
+noinst_HEADERS = include/dbus.h include/types.h
 
 local_headers = $(foreach file,$(include_HEADERS) $(nodist_include_HEADERS) \
 			$(noinst_HEADERS), include/near/$(notdir $(file)))
