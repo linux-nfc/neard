@@ -43,6 +43,8 @@ struct near_adapter {
 	char *name;
 	guint32 idx;
 	guint32 protocols;
+
+	near_bool_t powered;
 };
 
 static void free_adapter(gpointer data)
@@ -77,13 +79,24 @@ void __near_adapter_list(DBusMessageIter *iter, void *user_data)
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
+	struct near_adapter *adapter = data;
 	DBusMessage *reply;
+	DBusMessageIter array, dict;
 
 	DBG("conn %p", conn);
 
 	reply = dbus_message_new_method_return(msg);
 	if (reply == NULL)
 		return NULL;
+
+	dbus_message_iter_init_append(reply, &array);
+
+	near_dbus_dict_open(&array, &dict);
+
+	near_dbus_dict_append_basic(&dict, "Powered",
+				    DBUS_TYPE_BOOLEAN, &adapter->powered);
+
+	near_dbus_dict_close(&array, &dict);
 
 	return reply;
 }
@@ -125,6 +138,7 @@ struct near_adapter * __near_adapter_create(guint32 idx,
 	}
 	adapter->idx = idx;
 	adapter->protocols = protocols;
+	adapter->powered = TRUE;
 
 	adapter->path = g_strdup_printf("%s/%d", NFC_PATH, idx);
 
