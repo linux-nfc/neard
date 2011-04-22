@@ -92,7 +92,7 @@ int __near_adapter_add(const char *name, guint32 idx, guint32 protocols)
 	adapter->idx = idx;
 	adapter->protocols = protocols;
 
-	adapter->path = g_strdup_printf("%s_%d", name, idx);
+	adapter->path = g_strdup_printf("%s/%d", NFC_PATH, idx);
 
 	g_hash_table_insert(adapter_hash, GINT_TO_POINTER(idx), adapter);
 
