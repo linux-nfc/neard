@@ -36,6 +36,8 @@
 
 #include <linux/nfc.h>
 
+#include <types.h>
+
 #include "near.h"
 
 struct nlnfc_state {
@@ -182,6 +184,44 @@ static int no_seq_check(struct nl_msg *n, void *arg)
 	return NL_OK;
 }
 
+static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
+{
+	struct nlattr *attrs[NFC_ATTR_MAX + 1];
+	guint32 idx;
+
+	DBG("");
+
+	nla_parse(attrs, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL) {
+		near_error("Missing device index");
+		return -ENODEV;
+	}
+
+	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
+
+	if (add == TRUE &&
+		(attrs[NFC_ATTR_DEVICE_NAME] == NULL ||
+			attrs[NFC_ATTR_PROTOCOLS] == NULL)) {
+		near_error("Missing attributes");
+		return -EINVAL;
+	}
+
+	if (add == TRUE) {
+		char *name;
+		guint32 protocols;
+
+		name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
+		protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
+
+		return __near_adapter_add(name, idx, protocols);
+	} else {
+		__near_adapter_remove(idx);
+	}
+
+	return 0;
+}
+
 static int nfc_netlink_event(struct nl_msg *n, void *arg)
 {
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
@@ -194,9 +234,13 @@ static int nfc_netlink_event(struct nl_msg *n, void *arg)
 		break;
 	case NFC_EVENT_DEVICE_ADDED:
 		DBG("Adapter added");
+		nfc_netlink_event_adapter(gnlh, TRUE);
+
 		break;
 	case NFC_EVENT_DEVICE_REMOVED:
 		DBG("Adapter removed");
+		nfc_netlink_event_adapter(gnlh, FALSE);
+
 		break;
 	}
 
