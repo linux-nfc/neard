@@ -87,7 +87,7 @@ int __near_manager_init(DBusConnection *conn)
 						manager_methods,
 						manager_signals, NULL, NULL, NULL);
 
-	return 0;
+	return __near_netlink_get_adapters();
 }
 
 void __near_manager_cleanup(void)
