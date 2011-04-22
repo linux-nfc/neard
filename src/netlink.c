@@ -141,7 +141,7 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 	name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 	protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 
-	__near_adapter_create(name, idx, protocols);
+	__near_adapter_add(name, idx, protocols);
 
 	return NL_SKIP;
 }

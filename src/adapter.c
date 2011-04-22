@@ -70,7 +70,7 @@ void __near_adapter_list(DBusMessageIter *iter, void *user_data)
 	g_hash_table_foreach(adapter_hash, append_path, iter);
 }
 
-int __near_adapter_create(const char *name, guint32 idx, guint32 protocols)
+int __near_adapter_add(const char *name, guint32 idx, guint32 protocols)
 {
 	struct near_adapter *adapter;
 
@@ -97,6 +97,11 @@ int __near_adapter_create(const char *name, guint32 idx, guint32 protocols)
 	g_hash_table_insert(adapter_hash, GINT_TO_POINTER(idx), adapter);
 
 	return 0;
+}
+
+void __near_adapter_remove(guint32 idx)
+{
+	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(idx));
 }
 
 int __near_adapter_init(void)
