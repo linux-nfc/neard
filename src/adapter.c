@@ -76,6 +76,10 @@ int __near_adapter_create(const char *name, guint32 idx, guint32 protocols)
 
 	DBG("name %s idx %d", name, idx);
 
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter != NULL)
+		return -EEXIST;
+
 	adapter = g_try_malloc0(sizeof(struct near_adapter));
 	if (adapter == NULL)
 		return -ENOMEM;
