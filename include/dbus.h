@@ -29,6 +29,8 @@
 #define NFC_MANAGER_INTERFACE	NFC_SERVICE ".Manager"
 #define NFC_MANAGER_PATH	"/"
 
+#define NFC_ADAPTER_INTERFACE	NFC_SERVICE ".Adapter"
+
 typedef void (* near_dbus_append_cb_t) (DBusMessageIter *iter,
 							void *user_data);
 

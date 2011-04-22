@@ -29,7 +29,11 @@
 
 #include <glib.h>
 
+#include <gdbus.h>
+
 #include "near.h"
+
+static DBusConnection *connection = NULL;
 
 static GHashTable *adapter_hash;
 
@@ -70,6 +74,41 @@ void __near_adapter_list(DBusMessageIter *iter, void *user_data)
 	g_hash_table_foreach(adapter_hash, append_path, iter);
 }
 
+static DBusMessage *get_properties(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessage *reply;
+
+	DBG("conn %p", conn);
+
+	reply = dbus_message_new_method_return(msg);
+	if (reply == NULL)
+		return NULL;
+
+	return reply;
+}
+
+static DBusMessage *set_property(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBG("conn %p", conn);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static GDBusMethodTable adapter_methods[] = {
+	{ "GetProperties",     "",      "a{sv}", get_properties     },
+	{ "SetProperty",       "sv",    "",      set_property       },
+	{ },
+};
+
+static GDBusSignalTable adapter_signals[] = {
+	{ "PropertyChanged",		"sv"	},
+	{ "TargetFound",		"o"	},
+	{ "TargetLost",			"o"	},
+	{ }
+};
+
 int __near_adapter_add(const char *name, guint32 idx, guint32 protocols)
 {
 	struct near_adapter *adapter;
@@ -96,17 +135,33 @@ int __near_adapter_add(const char *name, guint32 idx, guint32 protocols)
 
 	g_hash_table_insert(adapter_hash, GINT_TO_POINTER(idx), adapter);
 
+	g_dbus_register_interface(connection, adapter->path,
+					NFC_ADAPTER_INTERFACE,
+					adapter_methods, adapter_signals,
+							NULL, adapter, NULL);
+
 	return 0;
 }
 
 void __near_adapter_remove(guint32 idx)
 {
+	struct near_adapter *adapter;
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL || adapter->path == NULL)
+		return;
+
+	g_dbus_unregister_interface(connection, adapter->path,
+						NFC_ADAPTER_INTERFACE);
+
 	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(idx));
 }
 
 int __near_adapter_init(void)
 {
 	DBG("");
+
+	connection = near_dbus_get_connection();
 
 	adapter_hash = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 							NULL, free_adapter);
