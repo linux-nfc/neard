@@ -23,6 +23,8 @@
 
 #include "log.h"
 
+struct near_adapter;
+
 int __near_log_init(const char *debug, gboolean detach);
 void __near_log_cleanup(void);
 
@@ -52,11 +54,18 @@ DBusMessage *__near_error_operation_timeout(DBusMessage *msg);
 DBusMessage *__near_error_invalid_service(DBusMessage *msg);
 DBusMessage *__near_error_invalid_property(DBusMessage *msg);
 
+int __near_manager_adapter_add(guint32 idx, const char *name, guint32 protocols);
+void __near_manager_adapter_remove(guint32 idx);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
 
-int __near_adapter_add(const char *name, guint32 idx, guint32 protocols);
-void __near_adapter_remove(guint32 idx);
+struct near_adapter * __near_adapter_create(guint32 idx,
+				const char *name, guint32 protocols);
+void __near_adapter_destroy(struct near_adapter *adapter);
+const char *__near_adapter_get_path(struct near_adapter *adapter);
+struct near_adapter *__near_adapter_get(guint32 idx);
+int __near_adapter_add(struct near_adapter *adapter);
+void __near_adapter_remove(struct near_adapter *adapter);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);

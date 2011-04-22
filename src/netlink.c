@@ -143,7 +143,7 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 	name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 	protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 
-	__near_adapter_add(name, idx, protocols);
+	__near_manager_adapter_add(idx, name, protocols);
 
 	return NL_SKIP;
 }
@@ -214,9 +214,9 @@ static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
 		name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 		protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 
-		return __near_adapter_add(name, idx, protocols);
+		return __near_manager_adapter_add(idx, name, protocols);
 	} else {
-		__near_adapter_remove(idx);
+		__near_manager_adapter_remove(idx);
 	}
 
 	return 0;

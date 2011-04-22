@@ -23,11 +23,17 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+
 #include <glib.h>
 
 #include <gdbus.h>
 
 #include "near.h"
+
+static DBusConnection *connection;
 
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
@@ -61,6 +67,69 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
+int __near_manager_adapter_add(guint32 idx, const char *name, guint32 protocols)
+{
+	struct near_adapter *adapter;
+	const char *path;
+	int err;
+
+	DBG("idx %d", idx);
+
+	adapter = __near_adapter_create(idx, name, protocols);
+	if (adapter == NULL)
+		return -ENOMEM;
+
+	path = __near_adapter_get_path(adapter);
+	if (path == NULL) {
+		__near_adapter_destroy(adapter);
+		return -EINVAL;
+	}
+
+	near_dbus_property_changed_array(NFC_MANAGER_PATH,
+				NFC_MANAGER_INTERFACE, "Adapters",
+				DBUS_TYPE_OBJECT_PATH, __near_adapter_list,
+				NULL);
+
+	g_dbus_emit_signal(connection, "/",
+			NFC_MANAGER_INTERFACE, "AdapterAdded",
+			DBUS_TYPE_OBJECT_PATH, &path,
+			DBUS_TYPE_INVALID);
+
+	err = __near_adapter_add(adapter);
+	if (err < 0)
+		__near_adapter_destroy(adapter);
+
+	return err;
+}
+
+void __near_manager_adapter_remove(guint32 idx)
+{
+	struct near_adapter *adapter;
+	const char *path;
+
+	DBG("idx %d", idx);
+
+	adapter = __near_adapter_get(idx);
+	if (adapter == NULL)
+		return;
+
+	path = __near_adapter_get_path(adapter);
+	if (path == NULL)
+		return;
+
+	near_dbus_property_changed_array(NFC_MANAGER_PATH,
+				NFC_MANAGER_INTERFACE, "Adapters",
+				DBUS_TYPE_OBJECT_PATH, __near_adapter_list,
+				NULL);
+
+	g_dbus_emit_signal(connection, "/",
+			NFC_MANAGER_INTERFACE, "AdapterRemoved",
+			DBUS_TYPE_OBJECT_PATH, &path,
+			DBUS_TYPE_INVALID);
+
+	__near_adapter_remove(adapter);
+}
+
 static GDBusMethodTable manager_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
@@ -74,13 +143,13 @@ static GDBusSignalTable manager_signals[] = {
 	{ }
 };
 
-static DBusConnection *connection;
-
 int __near_manager_init(DBusConnection *conn)
 {
 	DBG("");
 
 	connection = dbus_connection_ref(conn);
+
+	DBG("connection %p", connection);
 
 	g_dbus_register_interface(connection, NFC_MANAGER_PATH,
 						NFC_MANAGER_INTERFACE,

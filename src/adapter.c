@@ -109,31 +109,57 @@ static GDBusSignalTable adapter_signals[] = {
 	{ }
 };
 
-int __near_adapter_add(const char *name, guint32 idx, guint32 protocols)
+struct near_adapter * __near_adapter_create(guint32 idx,
+					const char *name, guint32 protocols)
 {
 	struct near_adapter *adapter;
 
-	DBG("name %s idx %d", name, idx);
-
-	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter != NULL)
-		return -EEXIST;
-
 	adapter = g_try_malloc0(sizeof(struct near_adapter));
 	if (adapter == NULL)
-		return -ENOMEM;
+		return NULL;
 
 	adapter->name = g_strdup(name);
 	if (adapter->name == NULL) {
 		g_free(adapter);
-		return -ENOMEM;
+		return NULL;
 	}
 	adapter->idx = idx;
 	adapter->protocols = protocols;
 
 	adapter->path = g_strdup_printf("%s/%d", NFC_PATH, idx);
 
+	return adapter;
+}
+
+void __near_adapter_destroy(struct near_adapter *adapter)
+{
+	DBG("");
+
+	free_adapter(adapter);
+}
+
+const char *__near_adapter_get_path(struct near_adapter *adapter)
+{
+	return adapter->path;
+}
+
+struct near_adapter *__near_adapter_get(guint32 idx)
+{
+	return g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+}
+
+int __near_adapter_add(struct near_adapter *adapter)
+{
+	guint32 idx = adapter->idx;
+
+	DBG("%s", adapter->path);
+
+	if (g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx)) != NULL)
+		return -EEXIST;
+
 	g_hash_table_insert(adapter_hash, GINT_TO_POINTER(idx), adapter);
+
+	DBG("connection %p", connection);
 
 	g_dbus_register_interface(connection, adapter->path,
 					NFC_ADAPTER_INTERFACE,
@@ -143,18 +169,14 @@ int __near_adapter_add(const char *name, guint32 idx, guint32 protocols)
 	return 0;
 }
 
-void __near_adapter_remove(guint32 idx)
+void __near_adapter_remove(struct near_adapter *adapter)
 {
-	struct near_adapter *adapter;
-
-	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL || adapter->path == NULL)
-		return;
+	DBG("%s", adapter->path);
 
 	g_dbus_unregister_interface(connection, adapter->path,
 						NFC_ADAPTER_INTERFACE);
 
-	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(idx));
+	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(adapter->idx));
 }
 
 int __near_adapter_init(void)
