@@ -4,8 +4,8 @@ import dbus
 
 bus = dbus.SessionBus()
 
-manager = dbus.Interface(bus.get_object("org.near", "/"),
-					"org.near.Manager")
+manager = dbus.Interface(bus.get_object("org.neard", "/"),
+					"org.neard.Manager")
 
 
 properties = manager.GetProperties()
@@ -13,8 +13,8 @@ properties = manager.GetProperties()
 for path in properties["Adapters"]:
     print "[ %s ]" % (path)
 
-    adapter = dbus.Interface(bus.get_object("org.near", path),
-						"org.near.Adapter")
+    adapter = dbus.Interface(bus.get_object("org.neard", path),
+						"org.neard.Adapter")
 
     properties = adapter.GetProperties()
 
