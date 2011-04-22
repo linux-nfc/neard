@@ -140,7 +140,7 @@ struct near_adapter * __near_adapter_create(guint32 idx,
 	adapter->protocols = protocols;
 	adapter->powered = TRUE;
 
-	adapter->path = g_strdup_printf("%s/%d", NFC_PATH, idx);
+	adapter->path = g_strdup_printf("%s/nfc%d", NFC_PATH, idx);
 
 	return adapter;
 }
