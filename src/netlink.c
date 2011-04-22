@@ -45,7 +45,8 @@ struct nlnfc_state {
 	int mcid;
 };
 
-static struct nlnfc_state *state;
+static struct nlnfc_state *nfc_state;
+static GIOChannel *netlink_channel = NULL;
 
 static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
 			 void *arg)
@@ -157,7 +158,7 @@ int __near_netlink_get_adapters(void)
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(state->nlnfc);
+	family = genl_family_get_id(nfc_state->nlnfc);
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
 			  NLM_F_DUMP, NFC_CMD_GET_DEVICE, NFC_GENL_VERSION);
@@ -166,12 +167,79 @@ int __near_netlink_get_adapters(void)
 		goto out;
 	}
 
-	err = nl_send_msg(state->nl_sock, msg, get_devices_handler, NULL);
+	err = nl_send_msg(nfc_state->nl_sock, msg, get_devices_handler, NULL);
 
 out:
 	nlmsg_free(msg);
 
 	return err;
+}
+
+static int no_seq_check(struct nl_msg *n, void *arg)
+{
+	DBG("");
+
+	return NL_OK;
+}
+
+static int nfc_netlink_event(struct nl_msg *n, void *arg)
+{
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
+
+	DBG("event 0x%x", gnlh->cmd);
+
+	switch (gnlh->cmd) {
+	case NFC_EVENT_TARGETS_FOUND:
+		DBG("Targets found");
+		break;
+	case NFC_EVENT_DEVICE_ADDED:
+		DBG("Adapter added");
+		break;
+	case NFC_EVENT_DEVICE_REMOVED:
+		DBG("Adapter removed");
+		break;
+	}
+
+	return NL_SKIP;
+}
+
+static gboolean __nfc_netlink_event(GIOChannel *channel,
+				GIOCondition cond, gpointer data)
+{
+	struct nl_cb *cb;
+	struct nlnfc_state *state = data;
+
+	if (cond & (G_IO_NVAL | G_IO_HUP | G_IO_ERR))
+		return FALSE;
+
+	cb = nl_cb_alloc(NL_CB_VERBOSE);
+	if (cb == NULL)
+		return TRUE;
+
+	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
+	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, nfc_netlink_event, data);
+
+	nl_recvmsgs(state->nl_sock, cb);
+
+	return TRUE;
+}
+
+static int nfc_event_listener(struct nlnfc_state *state)
+{
+	int sock;
+
+	sock = nl_socket_get_fd(state->nl_sock);
+	netlink_channel = g_io_channel_unix_new(sock);
+	g_io_channel_set_close_on_unref(netlink_channel, TRUE);
+
+	g_io_channel_set_encoding(netlink_channel, NULL, NULL);
+	g_io_channel_set_buffered(netlink_channel, FALSE);
+
+	g_io_add_watch(netlink_channel,
+				G_IO_IN | G_IO_NVAL | G_IO_HUP | G_IO_ERR,
+						__nfc_netlink_event, state);
+
+	return 0;
 }
 
 struct handler_args {
@@ -257,61 +325,60 @@ int __near_netlink_init(void)
 
 	DBG("");
 
-	state = g_try_malloc0(sizeof(struct nlnfc_state));
-	if (state == NULL)
+	nfc_state = g_try_malloc0(sizeof(struct nlnfc_state));
+	if (nfc_state == NULL)
 		return -ENOMEM;
 
-	state->nl_sock = nl_socket_alloc();
-	if (state->nl_sock == NULL) {
+	nfc_state->nl_sock = nl_socket_alloc();
+	if (nfc_state->nl_sock == NULL) {
 		near_error("Failed to allocate NFC netlink socket");
 		err = -ENOMEM;
 		goto state_free;
 	}
 
-	if (genl_connect(state->nl_sock)) {
+	if (genl_connect(nfc_state->nl_sock)) {
 		near_error("Failed to connect to generic netlink");
 		err = -ENOLINK;
 		goto handle_destroy;
 	}
 
-	if (genl_ctrl_alloc_cache(state->nl_sock, &state->nl_cache)) {
+	if (genl_ctrl_alloc_cache(nfc_state->nl_sock, &nfc_state->nl_cache)) {
 		near_error("Failed to allocate generic netlink cache");
 		err = -ENOMEM;
 		goto handle_destroy;
 	}
 
-	state->nlnfc = genl_ctrl_search_by_name(state->nl_cache, "nfc");
-	if (state->nlnfc == NULL) {
+	nfc_state->nlnfc = genl_ctrl_search_by_name(nfc_state->nl_cache, "nfc");
+	if (nfc_state->nlnfc == NULL) {
 		near_error("nfc not found");
 		err = -ENOENT;
 		goto cache_free;
 	}
 
-	state->mcid = nl_get_multicast_id(state->nl_sock, NFC_GENL_NAME,
+	nfc_state->mcid = nl_get_multicast_id(nfc_state->nl_sock, NFC_GENL_NAME,
 						NFC_GENL_MCAST_EVENT_NAME);
-	if (state->mcid <= 0) {
-		near_error("Wrong mcast id %d", state->mcid);
-		err = state->mcid;
+	if (nfc_state->mcid <= 0) {
+		near_error("Wrong mcast id %d", nfc_state->mcid);
+		err = nfc_state->mcid;
 		goto family_free;
 	}
 
-	err = nl_socket_add_membership(state->nl_sock, state->mcid);
+	err = nl_socket_add_membership(nfc_state->nl_sock, nfc_state->mcid);
 	if (err) {
 		near_error("Error adding nl socket to membership");
 		goto family_free;
 	}
 
-
-	return __near_netlink_get_adapters();
+	return nfc_event_listener(nfc_state);
 
 family_free:
-	genl_family_put(state->nlnfc);
+	genl_family_put(nfc_state->nlnfc);
 cache_free:
-	nl_cache_free(state->nl_cache);
+	nl_cache_free(nfc_state->nl_cache);
 handle_destroy:
-	nl_socket_free(state->nl_sock);
+	nl_socket_free(nfc_state->nl_sock);
 state_free:
-	g_free(state);
+	g_free(nfc_state);
 
 	near_error("netlink init failed");
 
@@ -320,11 +387,16 @@ state_free:
 
 void __near_netlink_cleanup(void)
 {
-	genl_family_put(state->nlnfc);
-	nl_cache_free(state->nl_cache);
-	nl_socket_free(state->nl_sock);
+	g_io_channel_shutdown(netlink_channel, TRUE, NULL);
+	g_io_channel_unref(netlink_channel);
 
-	g_free(state);
+	netlink_channel = NULL;
+
+	genl_family_put(nfc_state->nlnfc);
+	nl_cache_free(nfc_state->nl_cache);
+	nl_socket_free(nfc_state->nl_sock);
+
+	g_free(nfc_state);
 
 	DBG("");
 }
