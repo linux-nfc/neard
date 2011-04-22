@@ -20,7 +20,29 @@ Methods:	dict GetProperties()
 
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
- 
+
+		void StartPoll()
+
+			The adapter will start polling for targets when calling
+			this method. It is only valid when the adapter is in
+			initiator mode.
+
+			This process will start emitting TargetFound and
+			PropertyChanged "Polling" signals.
+
+			Possible errors: org.neard.Error.NotReady
+					 org.neard.Error.Failed
+					 org.neard.Error.NotSupported
+
+		void StopPoll()
+
+			The adapter will stop polling for targets when calling
+			this method. It is only available when the adapter is in
+			initiator mode.
+
+			Possible errors: org.neard.Error.NotReady
+					 org.neard.Error.Failed
+					 org.neard.Error.NotSupported
 
 Signals		PropertyChanged(string name, variant value)
 
@@ -49,16 +71,16 @@ Properties:	string Mode [readwrite]
 			Valid types are "initiator" and "target".
 			The default value for the adapter mode is "target".
 
-		string CommunicationMode [readwrite]
-
-		       The adapter communication mode.
-
-		       Valid types are "passive" and "active". In passive mode, the
-		       initiator never turns its RF field off.
-		       The default value for the adapter communication mode
-		       is "passive".
-
 		boolean Powered [readwrite]
 
 		       Switch an adapter on or off.
 
+		boolean Polling [readonly]
+
+			Indicates that the adapter is currently polling for targets.
+			This is only valid when the adapter is in initiator mode.
+
+		array{object} Targets [readonly]
+
+			List of target object paths.
+			This is only valid when the adapter is in initiator mode.
