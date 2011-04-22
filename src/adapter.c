@@ -109,9 +109,41 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
+static DBusMessage *start_poll(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	struct near_adapter *adapter = data;
+	int err;
+
+	DBG("conn %p", conn);
+
+	err = __near_netlink_start_poll(adapter->idx, adapter->protocols);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static DBusMessage *stop_poll(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	struct near_adapter *adapter = data;
+	int err;
+
+	DBG("conn %p", conn);
+
+	err = __near_netlink_stop_poll(adapter->idx);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
 static GDBusMethodTable adapter_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
+	{ "StartPoll",         "",      "",      start_poll         },
+	{ "StopPoll",          "",      "",      stop_poll          },
 	{ },
 };
 
