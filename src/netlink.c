@@ -36,7 +36,7 @@
 
 #include <linux/nfc.h>
 
-#include <types.h>
+#include <near/types.h>
 
 #include "near.h"
 
