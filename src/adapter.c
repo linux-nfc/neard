@@ -31,7 +31,7 @@
 
 #include "near.h"
 
-static GSList *adapter_list = NULL;
+static GHashTable *adapter_hash;
 
 struct near_adapter {
 	char *path;
@@ -41,7 +41,16 @@ struct near_adapter {
 	guint32 protocols;
 };
 
-static void append_path(gpointer value, gpointer user_data)
+static void free_adapter(gpointer data)
+{
+	struct near_adapter *adapter = data;
+
+	g_free(adapter->name);
+	g_free(adapter->path);
+	g_free(adapter);
+}
+
+static void append_path(gpointer key, gpointer value, gpointer user_data)
 {
 	struct near_adapter *adapter = value;
 	DBusMessageIter *iter = user_data;
@@ -58,7 +67,7 @@ static void append_path(gpointer value, gpointer user_data)
 
 void __near_adapter_list(DBusMessageIter *iter, void *user_data)
 {
-	g_slist_foreach(adapter_list, append_path, iter);
+	g_hash_table_foreach(adapter_hash, append_path, iter);
 }
 
 int __near_adapter_create(const char *name, guint32 idx, guint32 protocols)
@@ -81,7 +90,7 @@ int __near_adapter_create(const char *name, guint32 idx, guint32 protocols)
 
 	adapter->path = g_strdup_printf("%s_%d", name, idx);
 
-	adapter_list = g_slist_append(adapter_list, adapter);
+	g_hash_table_insert(adapter_hash, GINT_TO_POINTER(idx), adapter);
 
 	return 0;
 }
@@ -90,21 +99,14 @@ int __near_adapter_init(void)
 {
 	DBG("");
 
+	adapter_hash = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+							NULL, free_adapter);
+
 	return 0;
 }
 
 void __near_adapter_cleanup(void)
 {
-	GSList *list;
-	struct near_adapter *adapter;
-
-	for (list = adapter_list; list; list = list->next) {
-		adapter = list->data;
-
-		g_free(adapter->name);
-		g_free(adapter->path);
-		g_free(adapter);
-	}
-
-	g_slist_free(adapter_list);
+	g_hash_table_destroy(adapter_hash);
+	adapter_hash = NULL;
 }
