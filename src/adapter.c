@@ -48,6 +48,8 @@ struct near_adapter {
 
 	near_bool_t powered;
 	near_bool_t polling;
+
+	struct near_target *target;
 };
 
 static void free_adapter(gpointer data)
@@ -122,7 +124,6 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 	}
 }
 
-
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -148,6 +149,17 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 	near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, adapter);
+
+	if (adapter->target != NULL) {
+		const char *target_path;
+
+		target_path = __near_target_get_path(adapter->target);
+
+		if (target_path != NULL) {
+			near_dbus_dict_append_basic(&dict, "CurrentTarget",
+				DBUS_TYPE_OBJECT_PATH, &target_path);
+		}
+	}
 
 	near_dbus_dict_close(&array, &dict);
 

@@ -86,7 +86,6 @@ Properties:	string Mode [readwrite]
 			Possible values are "Felica", "MIFARE", "Jewel",
 			"ISO-DEP" and "NFC-DEP".
 
-		array{object} Targets [readonly]
+		object CurrentTarget [readonly]
 
-			List of target object paths.
-			This is only valid when the adapter is in initiator mode.
+			Current target object path.
