@@ -32,6 +32,12 @@ Properties	string Type [readonly]
 
 			Valid types are "tag" and "device".
 
+		array{string} Protocols [readonly]
+
+			The target supported protocols.
+			Possible values are "Felica", "MIFARE", "Jewel",
+			"ISO-DEP" and "NFC-DEP".
+
 		array{dict} Records [readwrite]
 
 			List of NDEF records.

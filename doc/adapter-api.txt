@@ -80,6 +80,12 @@ Properties:	string Mode [readwrite]
 			Indicates that the adapter is currently polling for targets.
 			This is only valid when the adapter is in initiator mode.
 
+		array{string} Protocols [readonly]
+
+			The adapter supported protocols.
+			Possible values are "Felica", "MIFARE", "Jewel",
+			"ISO-DEP" and "NFC-DEP".
+
 		array{object} Targets [readonly]
 
 			List of target object paths.
