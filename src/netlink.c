@@ -154,6 +154,9 @@ int __near_netlink_get_adapters(void)
 
 	DBG("");
 
+	if (nfc_state->nlnfc == NULL)
+		return -ENODEV;
+
 	msg = nlmsg_alloc();
 	if (msg == NULL)
 		return -ENOMEM;
@@ -493,10 +496,12 @@ state_free:
 
 void __near_netlink_cleanup(void)
 {
-	g_io_channel_shutdown(netlink_channel, TRUE, NULL);
-	g_io_channel_unref(netlink_channel);
+	if (netlink_channel != NULL) {
+		g_io_channel_shutdown(netlink_channel, TRUE, NULL);
+		g_io_channel_unref(netlink_channel);
 
-	netlink_channel = NULL;
+		netlink_channel = NULL;
+	}
 
 	genl_family_put(nfc_state->nlnfc);
 	nl_cache_free(nfc_state->nl_cache);
