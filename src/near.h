@@ -73,7 +73,16 @@ int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 
 struct near_target;
+
+enum near_target_type {
+	NEAR_TARGET_TYPE_TAG = 0,
+	NEAR_TARGET_TYPE_DEVICE = 1,
+};
+
 const char *__near_target_get_path(struct near_target *target);
+int __near_target_add(guint32 adapter_idx, guint32 target_idx,
+		guint32 protocols, enum near_target_type type);
+void __near_target_remove(guint32 target_idx);
 int __near_target_init(void);
 void __near_target_cleanup(void);
 
