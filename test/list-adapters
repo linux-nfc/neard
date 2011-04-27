@@ -27,7 +27,7 @@ for path in properties["Adapters"]:
     properties = adapter.GetProperties()
 
     for key in properties.keys():
-        if key in ["Powered"]:
+        if key in ["Powered", "Polling"]:
             if properties[key] == dbus.Boolean(1):
                 val = "true"
             else:

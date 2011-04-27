@@ -47,6 +47,7 @@ struct near_adapter {
 	guint32 protocols;
 
 	near_bool_t powered;
+	near_bool_t polling;
 };
 
 static void free_adapter(gpointer data)
@@ -142,6 +143,9 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	near_dbus_dict_append_basic(&dict, "Powered",
 				    DBUS_TYPE_BOOLEAN, &adapter->powered);
 
+	near_dbus_dict_append_basic(&dict, "Polling",
+				    DBUS_TYPE_BOOLEAN, &adapter->polling);
+
 	near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, adapter);
 
@@ -170,6 +174,8 @@ static DBusMessage *start_poll(DBusConnection *conn,
 	if (err < 0)
 		return __near_error_failed(msg, -err);
 
+	adapter->polling = TRUE;
+
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
@@ -184,6 +190,8 @@ static DBusMessage *stop_poll(DBusConnection *conn,
 	err = __near_netlink_stop_poll(adapter->idx);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
+
+	adapter->polling = FALSE;
 
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
