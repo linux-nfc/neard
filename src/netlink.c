@@ -287,6 +287,50 @@ static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
 	return 0;
 }
 
+static int nfc_netlink_event_targets(struct genlmsghdr *gnlh)
+{
+	struct nlattr *attr[NFC_ATTR_MAX + 1];
+	struct nlattr *attr_nest[NFC_TARGET_ATTR_MAX + 1];
+	struct nlattr *attr_tgt;
+	guint32 adapter_idx;
+	int rem;
+
+	DBG("");
+
+	nla_parse(attr, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+			genlmsg_attrlen(gnlh, 0), NULL);
+	if (attr[NFC_ATTR_TARGETS] == NULL ||
+			attr[NFC_ATTR_DEVICE_INDEX] == NULL)
+		return -ENODEV;
+
+	adapter_idx = nla_get_u32(attr[NFC_ATTR_DEVICE_INDEX]);
+
+	DBG("adapter %d", adapter_idx);
+
+	attr_tgt = nla_data(attr[NFC_ATTR_TARGETS]);
+	rem = nla_len(attr[NFC_ATTR_TARGETS]);
+	nla_for_each_nested(attr_tgt, attr[NFC_ATTR_TARGETS], rem) {
+		guint32 target_idx;
+		guint32 protocols;
+
+		nla_parse(attr_nest, NFC_TARGET_ATTR_MAX, nla_data(attr_tgt),
+				nla_len(attr_tgt), NULL);
+
+		if (attr_nest[NFC_TARGET_ATTR_TARGET_INDEX] == NULL ||
+			attr_nest[NFC_TARGET_ATTR_SUPPORTED_PROTOCOLS] == NULL)
+			return -ENODEV;
+
+		target_idx =
+			nla_get_u32(attr_nest[NFC_TARGET_ATTR_TARGET_INDEX]);
+		protocols =
+			nla_get_u32(attr_nest[NFC_TARGET_ATTR_SUPPORTED_PROTOCOLS]);
+
+		DBG("target idx %d proto 0x%x", target_idx, protocols);
+	}
+
+	return 0;
+}
+
 static int nfc_netlink_event(struct nl_msg *n, void *arg)
 {
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
@@ -296,6 +340,7 @@ static int nfc_netlink_event(struct nl_msg *n, void *arg)
 	switch (gnlh->cmd) {
 	case NFC_EVENT_TARGETS_FOUND:
 		DBG("Targets found");
+		nfc_netlink_event_targets(gnlh);
 		break;
 	case NFC_EVENT_DEVICE_ADDED:
 		DBG("Adapter added");
