@@ -72,6 +72,11 @@ void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 
+struct near_target;
+const char *__near_target_get_path(struct near_target *target);
+int __near_target_init(void);
+void __near_target_cleanup(void);
+
 int __near_netlink_get_adapters(void);
 int __near_netlink_start_poll(int idx, guint32 protocols);
 int __near_netlink_stop_poll(int idx);
