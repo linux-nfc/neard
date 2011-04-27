@@ -31,6 +31,8 @@
 
 #include <gdbus.h>
 
+#include <linux/nfc.h>
+
 #include "near.h"
 
 static DBusConnection *connection = NULL;
@@ -76,6 +78,50 @@ void __near_adapter_list(DBusMessageIter *iter, void *user_data)
 	g_hash_table_foreach(adapter_hash, append_path, iter);
 }
 
+static void append_protocols(DBusMessageIter *iter, void *user_data)
+{
+	struct near_adapter *adapter = user_data;
+	const char *str;
+
+	DBG("protocols 0x%x", adapter->protocols);
+
+	if (adapter->protocols & NFC_PROTO_FELICA) {
+		str = "Felica";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_MIFARE) {
+		str = "MIFARE";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_JEWEL) {
+		str = "Jewel";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_ISO14443_4) {
+		str = "ISO-DEP";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_NFC_DEP) {
+		str = "NFC-DEP";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+}
+
+
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -95,6 +141,9 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 	near_dbus_dict_append_basic(&dict, "Powered",
 				    DBUS_TYPE_BOOLEAN, &adapter->powered);
+
+	near_dbus_dict_append_array(&dict, "Protocols",
+				DBUS_TYPE_STRING, append_protocols, adapter);
 
 	near_dbus_dict_close(&array, &dict);
 

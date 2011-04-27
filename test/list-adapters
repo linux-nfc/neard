@@ -2,6 +2,14 @@
 
 import dbus
 
+
+def extract_list(list):
+	val = "["
+	for i in list:
+		val += " " + str(i)
+	val += " ]"
+	return val
+
 bus = dbus.SessionBus()
 
 manager = dbus.Interface(bus.get_object("org.neard", "/"),
@@ -24,6 +32,8 @@ for path in properties["Adapters"]:
                 val = "true"
             else:
                 val = "false"
+        elif key in ["Protocols"]:
+            val = extract_list(properties[key])
         else:
             val = str(properties[key])
             
