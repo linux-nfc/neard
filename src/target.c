@@ -199,7 +199,10 @@ void __near_target_remove(guint32 target_idx)
 	if (target == NULL)
 		return;
 
-	free_target(target);
+	g_dbus_unregister_interface(connection, target->path,
+						NFC_TARGET_INTERFACE);
+
+	g_hash_table_remove(target_hash, GINT_TO_POINTER(target_idx));
 }
 
 int __near_target_init(void)
