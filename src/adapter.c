@@ -294,6 +294,37 @@ void __near_adapter_remove(struct near_adapter *adapter)
 	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(adapter->idx));
 }
 
+int __near_adapter_add_target(guint32 idx, struct near_target *target)
+{
+	struct near_adapter *adapter;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	adapter->target = target;
+	adapter->polling = FALSE;
+
+	return 0;
+}
+
+int __near_adapter_remove_target(guint32 idx)
+{
+	struct near_adapter *adapter;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	adapter->target = NULL;
+
+	return 0;
+}
+
 int __near_adapter_init(void)
 {
 	DBG("");

@@ -26,6 +26,7 @@
 #include <near/types.h>
 
 struct near_adapter;
+struct near_target;
 
 int __near_log_init(const char *debug, gboolean detach);
 void __near_log_cleanup(void);
@@ -68,11 +69,11 @@ const char *__near_adapter_get_path(struct near_adapter *adapter);
 struct near_adapter *__near_adapter_get(guint32 idx);
 int __near_adapter_add(struct near_adapter *adapter);
 void __near_adapter_remove(struct near_adapter *adapter);
+int __near_adapter_add_target(guint32 idx, struct near_target *target);
+int __near_adapter_remove_target(guint32 idx);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
-
-struct near_target;
 
 enum near_target_type {
 	NEAR_TARGET_TYPE_TAG = 0,

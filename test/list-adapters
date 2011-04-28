@@ -38,3 +38,22 @@ for path in properties["Adapters"]:
             val = str(properties[key])
             
         print "        %s = %s" % (key, val)
+
+
+    if "CurrentTarget" in properties.keys():
+	    path = str(properties["CurrentTarget"]);
+
+	    print "        Target = [ %s]" % (path)
+
+	    target = dbus.Interface(bus.get_object("org.neard", path),
+						"org.neard.Target")
+
+	    properties = target.GetProperties()
+
+	    for key in properties.keys():
+		    if key in ["Protocols"]:
+			    val = extract_list(properties[key])
+		    else:
+			    val = str(properties[key])
+
+	    print "             %s = %s" % (key, val)

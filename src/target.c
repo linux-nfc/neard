@@ -188,7 +188,7 @@ int __near_target_add(guint32 adapter_idx, guint32 target_idx,
 					target_methods, target_signals,
 							NULL, target, NULL);
 
-	return 0;
+	return __near_adapter_add_target(adapter_idx, target);
 }
 
 void __near_target_remove(guint32 target_idx)
@@ -199,6 +199,8 @@ void __near_target_remove(guint32 target_idx)
 	if (target == NULL)
 		return;
 
+	__near_adapter_add_target(target->adapter_idx, target);
+
 	g_dbus_unregister_interface(connection, target->path,
 						NFC_TARGET_INTERFACE);
 
@@ -208,6 +210,8 @@ void __near_target_remove(guint32 target_idx)
 int __near_target_init(void)
 {
 	DBG("");
+
+	connection = near_dbus_get_connection();
 
 	target_hash = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 							NULL, free_target);

@@ -326,6 +326,8 @@ static int nfc_netlink_event_targets(struct genlmsghdr *gnlh)
 			nla_get_u32(attr_nest[NFC_TARGET_ATTR_SUPPORTED_PROTOCOLS]);
 
 		DBG("target idx %d proto 0x%x", target_idx, protocols);
+
+		__near_target_add(adapter_idx, target_idx, protocols, NEAR_TARGET_TYPE_TAG);
 	}
 
 	return 0;
