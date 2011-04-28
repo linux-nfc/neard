@@ -43,7 +43,7 @@ for path in properties["Adapters"]:
     if "CurrentTarget" in properties.keys():
 	    path = str(properties["CurrentTarget"]);
 
-	    print "        Target = [ %s]" % (path)
+	    print "        Target = [ %s ]" % (path)
 
 	    target = dbus.Interface(bus.get_object("org.neard", path),
 						"org.neard.Target")
