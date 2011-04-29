@@ -82,4 +82,4 @@ AC_ARG_ENABLE(test, AC_HELP_STRING([--enable-test],
 		[enable test/example scripts]), [enable_test=${enableval}])
 AM_CONDITIONAL(TEST, test "${enable_test}" = "yes")
 
-AC_OUTPUT(Makefile)
+AC_OUTPUT(Makefile include/version.h)

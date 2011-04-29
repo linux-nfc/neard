@@ -26,11 +26,10 @@
 extern "C" {
 #endif
 
-#define NEAR_VERSION	"0.1"
+#define NEAR_VERSION	"@VERSION@"
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __NEAR_VERSION_H */
-
