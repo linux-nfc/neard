@@ -312,6 +312,8 @@ static int nfc_netlink_event_targets(struct genlmsghdr *gnlh)
 	nla_for_each_nested(attr_tgt, attr[NFC_ATTR_TARGETS], rem) {
 		guint32 target_idx;
 		guint32 protocols;
+		near_uint16_t sens_res = 0;
+		near_uint8_t sel_res = 0;
 
 		nla_parse(attr_nest, NFC_TARGET_ATTR_MAX, nla_data(attr_tgt),
 				nla_len(attr_tgt), NULL);
@@ -325,9 +327,19 @@ static int nfc_netlink_event_targets(struct genlmsghdr *gnlh)
 		protocols =
 			nla_get_u32(attr_nest[NFC_TARGET_ATTR_SUPPORTED_PROTOCOLS]);
 
-		DBG("target idx %d proto 0x%x", target_idx, protocols);
+		if (attr_nest[NFC_TARGET_ATTR_SENS_RES] != NULL)
+			sens_res =
+				nla_get_u16(attr_nest[NFC_TARGET_ATTR_SENS_RES]);
 
-		__near_target_add(adapter_idx, target_idx, protocols, NEAR_TARGET_TYPE_TAG);
+		if (attr_nest[NFC_TARGET_ATTR_SEL_RES] != NULL)
+			sel_res =
+				nla_get_u16(attr_nest[NFC_TARGET_ATTR_SEL_RES]);
+
+		DBG("target idx %d proto 0x%x sens_res 0x%x sel_res 0x%x",
+		    target_idx, protocols, sens_res, sel_res);
+
+		__near_target_add(adapter_idx, target_idx, protocols,
+					NEAR_TARGET_TYPE_TAG, sens_res, sel_res);
 	}
 
 	return 0;

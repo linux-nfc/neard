@@ -42,6 +42,7 @@ struct near_target {
 	guint32 adapter_idx;
 	guint32 protocols;
 	enum near_target_type type;
+	near_uint16_t tag_type;
 };
 
 static DBusConnection *connection = NULL;
@@ -110,12 +111,70 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 	}
 }
 
+static void append_tag_type(DBusMessageIter *iter, void *user_data)
+{
+	struct near_target *target = user_data;
+	const char *str;
+
+	DBG("tag 0x%x", target->tag_type);
+
+	if (target->tag_type & NEAR_TAG_NFC_TYPE1) {
+		str = "Type 1";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (target->tag_type & NEAR_TAG_NFC_TYPE2) {
+		str = "Type 2";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (target->tag_type & NEAR_TAG_NFC_TYPE3) {
+		str = "Type 3";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (target->tag_type & NEAR_TAG_NFC_TYPE4) {
+		str = "Type 4";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+
+	if (target->tag_type & NEAR_TAG_NFC_DEP) {
+		str = "NFC-DEP";
+
+		dbus_message_iter_append_basic(iter,
+				DBUS_TYPE_STRING, &str);
+	}
+}
+
+static const char *type2string(enum near_target_type type)
+{
+	DBG("");
+
+	switch (type) {
+	case NEAR_TARGET_TYPE_TAG:
+		return "Tag";
+	case NEAR_TARGET_TYPE_DEVICE:
+		return "Device";
+	}
+
+	return NULL;
+}
+
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
-	struct near_adapter *target = data;
+	struct near_target *target = data;
 	DBusMessage *reply;
 	DBusMessageIter array, dict;
+	const char *type;
 
 	DBG("conn %p", conn);
 
@@ -123,12 +182,22 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	if (reply == NULL)
 		return NULL;
 
+	type = type2string(target->type);
+
 	dbus_message_iter_init_append(reply, &array);
 
 	near_dbus_dict_open(&array, &dict);
 
-	near_dbus_dict_append_array(&dict, "Protocols",
+	near_dbus_dict_append_basic(&dict, "Type",
+				    DBUS_TYPE_STRING, &type);
+
+	if (target->type == NEAR_TARGET_TYPE_DEVICE)
+		near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, target);
+
+	if (target->type == NEAR_TARGET_TYPE_TAG)
+		near_dbus_dict_append_array(&dict, "TagType",
+				DBUS_TYPE_STRING, append_tag_type, target);
 
 	near_dbus_dict_close(&array, &dict);
 
@@ -154,8 +223,56 @@ static GDBusSignalTable target_signals[] = {
 	{ }
 };
 
+#define NFC_TAG_A (NFC_PROTO_ISO14443_4 | NFC_PROTO_NFC_DEP | NFC_PROTO_MIFARE)
+#define NFC_TAG_A_TYPE1      0x00
+#define NFC_TAG_A_TYPE4      0x01
+#define NFC_TAG_A_NFC_DEP    0x02
+#define NFC_TAG_A_TYPE4_DEP  0x03
+
+#define NFC_TAG_A_SEL_PROT(sel_res) (((sel_res) & 0x60) >> 5)
+
+static void find_tag_type(struct near_target *target,
+			near_uint16_t sens_res, near_uint8_t sel_res)
+{
+	DBG("protocols 0x%x sens_res 0x%x sel_res 0x%x", target->protocols,
+							sens_res, sel_res);
+
+	if (target->type != NEAR_TARGET_TYPE_TAG) {
+		target->tag_type = NEAR_TAG_NFC_UNKNOWN;
+		return;
+	}
+
+	if (target->protocols & NFC_TAG_A) {
+		near_uint8_t proto = NFC_TAG_A_SEL_PROT(sel_res);
+
+		DBG("proto 0x%x", proto);
+
+		switch(proto) {
+		case NFC_TAG_A_TYPE1:
+			target->tag_type = NEAR_TAG_NFC_TYPE1;
+			break;
+		case NFC_TAG_A_TYPE4:
+			target->tag_type = NEAR_TAG_NFC_TYPE4;
+			break;
+		case NFC_TAG_A_NFC_DEP:
+			target->tag_type = NEAR_TAG_NFC_DEP;
+			break;
+		case NFC_TAG_A_TYPE4_DEP:
+			target->tag_type = NEAR_TAG_NFC_TYPE4 |
+						NEAR_TAG_NFC_DEP;
+			break;
+		}
+
+	} else {
+		target->tag_type = NEAR_TAG_NFC_UNKNOWN;
+	}
+
+	DBG("tag type 0x%x", target->tag_type);
+}
+
 int __near_target_add(guint32 adapter_idx, guint32 target_idx,
-			guint32 protocols, enum near_target_type type)
+			guint32 protocols, enum near_target_type type,
+			near_uint16_t sens_res, near_uint8_t sel_res)
 {
 	struct near_target *target;
 
@@ -178,6 +295,7 @@ int __near_target_add(guint32 adapter_idx, guint32 target_idx,
 	target->adapter_idx = adapter_idx;
 	target->protocols = protocols;
 	target->type = type;
+	find_tag_type(target, sens_res, sel_res);
 
 	g_hash_table_insert(target_hash, GINT_TO_POINTER(target_idx), target);
 

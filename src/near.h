@@ -82,10 +82,13 @@ enum near_target_type {
 
 const char *__near_target_get_path(struct near_target *target);
 int __near_target_add(guint32 adapter_idx, guint32 target_idx,
-		guint32 protocols, enum near_target_type type);
+		guint32 protocols, enum near_target_type type,
+		near_uint16_t sens_res, near_uint8_t sel_res);
 void __near_target_remove(guint32 target_idx);
 int __near_target_init(void);
 void __near_target_cleanup(void);
+
+#include <near/tag.h>
 
 int __near_netlink_get_adapters(void);
 int __near_netlink_start_poll(int idx, guint32 protocols);

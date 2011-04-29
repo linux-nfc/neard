@@ -38,6 +38,13 @@ Properties	string Type [readonly]
 			Possible values are "Felica", "MIFARE", "Jewel",
 			"ISO-DEP" and "NFC-DEP".
 
+		array{string} TagType [readonly]
+
+			The tag type.
+			Possible values are "Type 1", "Type 2", "Type 3",
+			"Type 4" and "NFC-DEP"
+			This is only valid for tag type targets.
+
 		array{dict} Records [readwrite]
 
 			List of NDEF records.

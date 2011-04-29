@@ -53,7 +53,9 @@ for path in properties["Adapters"]:
 	    for key in properties.keys():
 		    if key in ["Protocols"]:
 			    val = extract_list(properties[key])
+		    elif key in ["TagType"]:
+			    val = extract_list(properties[key])
 		    else:
 			    val = str(properties[key])
 
-	    print "             %s = %s" % (key, val)
+		    print "             %s = %s" % (key, val)
