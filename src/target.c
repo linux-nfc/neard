@@ -68,6 +68,11 @@ const char *__near_target_get_path(struct near_target *target)
 	return target->path;
 }
 
+near_uint16_t __near_target_get_tag_type(struct near_target *target)
+{
+	return target->tag_type;
+}
+
 static void append_protocols(DBusMessageIter *iter, void *user_data)
 {
 	struct near_target *target = user_data;

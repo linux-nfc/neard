@@ -32,7 +32,7 @@
 struct near_tag_driver {
 	near_uint16_t type;
 
-	int (*read)(guint32 adapter_idx, void *buf, size_t length);
+	int (*read)(struct near_target *target, void *buf, size_t length);
 };
 
 int near_tag_driver_register(struct near_tag_driver *driver);

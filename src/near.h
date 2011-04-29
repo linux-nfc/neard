@@ -91,6 +91,8 @@ void __near_target_cleanup(void);
 
 #include <near/tag.h>
 
+int __near_tag_read(struct near_target *target, void *buf, size_t length);
+
 int __near_netlink_get_adapters(void);
 int __near_netlink_start_poll(int idx, guint32 protocols);
 int __near_netlink_stop_poll(int idx);
