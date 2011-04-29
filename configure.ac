@@ -82,4 +82,10 @@ AC_ARG_ENABLE(test, AC_HELP_STRING([--enable-test],
 		[enable test/example scripts]), [enable_test=${enableval}])
 AM_CONDITIONAL(TEST, test "${enable_test}" = "yes")
 
+AC_ARG_ENABLE(nfctype2,
+	AC_HELP_STRING([--enable-nfctype2], [enable NFC forum type 2 tags support]),
+			[enable_nfctype2=${enableval}], [enable_nfctype2="no"])
+AM_CONDITIONAL(NFCTYPE2, test "${enable_nfctype2}" != "no")
+AM_CONDITIONAL(NFCTYPE2_BUILTIN, test "${enable_nfctype2}" = "builtin")
+
 AC_OUTPUT(Makefile include/version.h)

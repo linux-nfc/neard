@@ -16,6 +16,10 @@ local_headers = $(foreach file,$(include_HEADERS) $(nodist_include_HEADERS) \
 gdbus_sources = gdbus/gdbus.h gdbus/mainloop.c gdbus/watch.c \
 					gdbus/object.c gdbus/polkit.c
 
+plugin_LTLIBRARIES =
+
+plugin_objects =
+
 builtin_modules =
 builtin_sources =
 builtin_cflags =
@@ -35,12 +39,20 @@ src_neard_LDFLAGS = -Wl,--export-dynamic
 nodist_src_neard_SOURCES = src/builtin.h
 
 AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ @NETLINK_CFLAGS@ $(builtin_cflags) \
-					-DNEARD_PLUGIN_BUILTIN \
+					-DNEAR_PLUGIN_BUILTIN \
 					-DPLUGINDIR=\""$(plugindir)"\"
 
 INCLUDES = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 
 CLEANFILES = src/builtin.h $(local_headers)
+
+plugindir = $(libdir)/near/plugins
+
+if MAINTAINER_MODE
+build_plugindir = $(abs_top_srcdir)/plugins/.libs
+else
+build_plugindir = $(plugindir)
+endif
 
 doc_files = doc/manager-api.txt doc/target-api.txt doc/adapter-api.txt
 
@@ -52,6 +64,8 @@ if TEST
 testdir = $(pkglibdir)/test
 test_SCRIPTS = $(test_scripts)
 endif
+
+include Makefile.plugins
 
 EXTRA_DIST += $(test_scripts)
 
