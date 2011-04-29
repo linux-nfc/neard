@@ -3,7 +3,7 @@ AM_MAKEFLAGS = --no-print-directory
 
 includedir = @includedir@/near
 
-noinst_HEADERS = include/dbus.h include/types.h
+noinst_HEADERS = include/dbus.h include/types.h include/tag.h
 
 local_headers = $(foreach file,$(include_HEADERS) $(nodist_include_HEADERS) \
 			$(noinst_HEADERS), include/near/$(notdir $(file)))
@@ -21,7 +21,7 @@ libexec_PROGRAMS = src/neard
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/main.c src/error.c src/near.h src/log.h src/log.c \
 			src/dbus.c src/manager.c src/adapter.c src/target.c \
-			src/netlink.c
+			src/tag.c src/netlink.c
 
 src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ @NETLINK_LIBS@ -lresolv -ldl
 
