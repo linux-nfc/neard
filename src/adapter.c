@@ -325,6 +325,45 @@ int __near_adapter_remove_target(guint32 idx)
 	return 0;
 }
 
+int __near_adapter_connect(uint32_t idx)
+{
+	struct near_adapter *adapter;
+	uint32_t target_idx, protocols;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	if (adapter->target == NULL)
+		return -ENOLINK;
+
+	target_idx = __near_target_get_idx(adapter->target);
+	protocols = __near_target_get_protocols(adapter->target);
+
+	return __near_netlink_activate_target(idx, target_idx, protocols);
+}
+
+int __near_adapter_disconnect(uint32_t idx)
+{
+	struct near_adapter *adapter;
+	uint32_t target_idx;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	if (adapter->target == NULL)
+		return -ENOLINK;
+
+	target_idx = __near_target_get_idx(adapter->target);
+
+	return __near_netlink_deactivate_target(idx, target_idx);
+}
+
 int __near_adapter_init(void)
 {
 	DBG("");

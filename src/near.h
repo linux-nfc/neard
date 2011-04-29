@@ -19,6 +19,8 @@
  *
  */
 
+#include <stdint.h>
+
 #include <glib.h>
 
 #include <near/types.h>
@@ -72,6 +74,8 @@ void __near_adapter_remove(struct near_adapter *adapter);
 int __near_adapter_add_target(guint32 idx, struct near_target *target);
 int __near_adapter_remove_target(guint32 idx);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
+int __near_adapter_connect(uint32_t idx);
+int __near_adapter_disconnect(uint32_t idx);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 
