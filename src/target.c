@@ -83,6 +83,10 @@ guint32 __near_target_get_adapter_idx(struct near_target *target)
 	return target->adapter_idx;
 }
 
+guint32 __near_target_get_protocols(struct near_target *target)
+{
+	return target->protocols;
+}
 
 static void append_protocols(DBusMessageIter *iter, void *user_data)
 {
