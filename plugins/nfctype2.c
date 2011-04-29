@@ -25,17 +25,32 @@
 
 #include <near/plugin.h>
 #include <near/log.h>
+#include <near/types.h>
+#include <near/tag.h>
+
+static int nfctype2_read(guint32 adapter_idx, guint32 target_idx,
+				void *buf, size_t length)
+{
+	return 0;
+}
+
+static struct near_tag_driver type2_driver = {
+	.type = NEAR_TAG_NFC_TYPE2,
+	.read = nfctype2_read,
+};
 
 static int nfctype2_init(void)
 {
 	DBG("");
 
-	return 0;
+	return near_tag_driver_register(&type2_driver);
 }
 
 static void nfctype2_exit(void)
 {
 	DBG("");
+
+	near_tag_driver_unregister(&type2_driver);
 }
 
 NEAR_PLUGIN_DEFINE(nfctype2, "NFC Forum Type 2 tags support", VERSION,

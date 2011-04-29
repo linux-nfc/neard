@@ -47,13 +47,11 @@ int near_tag_driver_register(struct near_tag_driver *driver)
 	return 0;
 }
 
-int near_tag_driver_unregister(struct near_tag_driver *driver)
+void near_tag_driver_unregister(struct near_tag_driver *driver)
 {
 	DBG("");
 
 	driver_list = g_list_remove(driver_list, driver);
-
-	return 0;
 }
 
 int __near_tag_read(struct near_target *target, void *buf, size_t length)
@@ -70,8 +68,14 @@ int __near_tag_read(struct near_target *target, void *buf, size_t length)
 	for (list = driver_list; list; list = list->next) {
 		struct near_tag_driver *driver = list->data;
 
-		if (driver->type & type)
-			return driver->read(target, buf, length);
+		if (driver->type & type) {
+			guint32 adapter_idx, target_idx;		
+
+			target_idx = __near_target_get_idx(target);
+			adapter_idx = __near_target_get_adapter_idx(target);
+
+			return driver->read(adapter_idx, target_idx, buf, length);
+		}
 	}
 
 	return -EOPNOTSUPP;

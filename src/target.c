@@ -73,6 +73,17 @@ near_uint16_t __near_target_get_tag_type(struct near_target *target)
 	return target->tag_type;
 }
 
+guint32 __near_target_get_idx(struct near_target *target)
+{
+	return target->idx;
+}
+
+guint32 __near_target_get_adapter_idx(struct near_target *target)
+{
+	return target->adapter_idx;
+}
+
+
 static void append_protocols(DBusMessageIter *iter, void *user_data)
 {
 	struct near_target *target = user_data;

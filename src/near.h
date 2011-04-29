@@ -82,6 +82,8 @@ enum near_target_type {
 
 const char *__near_target_get_path(struct near_target *target);
 near_uint16_t __near_target_get_tag_type(struct near_target *target);
+guint32 __near_target_get_idx(struct near_target *target);
+guint32 __near_target_get_adapter_idx(struct near_target *target);
 int __near_target_add(guint32 adapter_idx, guint32 target_idx,
 		guint32 protocols, enum near_target_type type,
 		near_uint16_t sens_res, near_uint8_t sel_res);

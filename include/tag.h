@@ -22,6 +22,8 @@
 #ifndef __NEAR_TAG_H
 #define __NEAR_TAG_H
 
+#include <glib.h>
+
 #define	NEAR_TAG_NFC_TYPE1   0x1
 #define	NEAR_TAG_NFC_TYPE2   0x2
 #define	NEAR_TAG_NFC_TYPE3   0x4
@@ -32,10 +34,11 @@
 struct near_tag_driver {
 	near_uint16_t type;
 
-	int (*read)(struct near_target *target, void *buf, size_t length);
+	int (*read)(guint32 adapter_idx, guint32 target_idx,
+					void *buf, size_t length);
 };
 
 int near_tag_driver_register(struct near_tag_driver *driver);
-int near_tag_driver_unregister(struct near_tag_driver *driver);
+void near_tag_driver_unregister(struct near_tag_driver *driver);
 
 #endif
