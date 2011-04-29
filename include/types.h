@@ -33,5 +33,6 @@
 typedef int	near_bool_t;
 typedef unsigned char	near_uint8_t;
 typedef unsigned short	near_uint16_t;
+typedef unsigned int	near_uint32_t;
 
 #endif
