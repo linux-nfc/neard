@@ -19,6 +19,9 @@
  *
  */
 
+#ifndef __NEAR_TYPES_H
+#define __NEAR_TYPES_H
+
 #ifndef	FALSE
 #define	FALSE	(0)
 #endif
@@ -28,4 +31,7 @@
 #endif
 
 typedef int	near_bool_t;
+typedef unsigned char	near_uint8_t;
+typedef unsigned short	near_uint16_t;
 
+#endif
