@@ -178,7 +178,7 @@ out:
 	return err;
 }
 
-int __near_netlink_start_poll(int idx, guint32 protocols)
+int __near_netlink_start_poll(int idx, uint32_t protocols)
 {
 	struct nl_msg *msg;
 	void *hdr;
@@ -242,9 +242,9 @@ nla_put_failure:
 	return err;
 }
 
-int __near_netlink_activate_target(near_uint32_t adapter_idx,
-					near_uint32_t target_idx,
-					near_uint32_t protocol)
+int __near_netlink_activate_target(uint32_t adapter_idx,
+					uint32_t target_idx,
+					uint32_t protocol)
 {
 	struct nl_msg *msg;
 	void *hdr;
@@ -278,8 +278,8 @@ nla_put_failure:
 	return err;
 }
 
-int __near_netlink_deactivate_target(near_uint32_t adapter_idx,
-					near_uint32_t target_idx)
+int __near_netlink_deactivate_target(uint32_t adapter_idx,
+					uint32_t target_idx)
 {
 	struct nl_msg *msg;
 	void *hdr;
@@ -322,7 +322,7 @@ static int no_seq_check(struct nl_msg *n, void *arg)
 static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
 {
 	struct nlattr *attrs[NFC_ATTR_MAX + 1];
-	guint32 idx;
+	uint32_t idx;
 
 	DBG("");
 
@@ -344,7 +344,7 @@ static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
 
 	if (add == TRUE) {
 		char *name;
-		guint32 protocols;
+		uint32_t protocols;
 
 		name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 		protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
@@ -362,7 +362,7 @@ static int nfc_netlink_event_targets(struct genlmsghdr *gnlh)
 	struct nlattr *attr[NFC_ATTR_MAX + 1];
 	struct nlattr *attr_nest[NFC_TARGET_ATTR_MAX + 1];
 	struct nlattr *attr_tgt;
-	guint32 adapter_idx;
+	uint32_t adapter_idx;
 	int rem;
 
 	DBG("");
@@ -380,10 +380,10 @@ static int nfc_netlink_event_targets(struct genlmsghdr *gnlh)
 	attr_tgt = nla_data(attr[NFC_ATTR_TARGETS]);
 	rem = nla_len(attr[NFC_ATTR_TARGETS]);
 	nla_for_each_nested(attr_tgt, attr[NFC_ATTR_TARGETS], rem) {
-		guint32 target_idx;
-		guint32 protocols;
-		near_uint16_t sens_res = 0;
-		near_uint8_t sel_res = 0;
+		uint32_t target_idx;
+		uint32_t protocols;
+		uint16_t sens_res = 0;
+		uint8_t sel_res = 0;
 
 		nla_parse(attr_nest, NFC_TARGET_ATTR_MAX, nla_data(attr_tgt),
 				nla_len(attr_tgt), NULL);

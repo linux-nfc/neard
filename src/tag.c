@@ -57,7 +57,7 @@ void near_tag_driver_unregister(struct near_tag_driver *driver)
 int __near_tag_read(struct near_target *target, void *buf, size_t length)
 {
 	GList *list;
-	near_uint16_t type;
+	uint16_t type;
 
 	DBG("");
 
@@ -69,7 +69,7 @@ int __near_tag_read(struct near_target *target, void *buf, size_t length)
 		struct near_tag_driver *driver = list->data;
 
 		if (driver->type & type) {
-			guint32 adapter_idx, target_idx;		
+			uint32_t adapter_idx, target_idx;		
 
 			target_idx = __near_target_get_idx(target);
 			adapter_idx = __near_target_get_adapter_idx(target);

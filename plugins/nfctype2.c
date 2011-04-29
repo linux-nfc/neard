@@ -28,7 +28,7 @@
 #include <near/types.h>
 #include <near/tag.h>
 
-static int nfctype2_read(guint32 adapter_idx, guint32 target_idx,
+static int nfctype2_read(uint32_t adapter_idx, uint32_t target_idx,
 				void *buf, size_t length)
 {
 	return 0;

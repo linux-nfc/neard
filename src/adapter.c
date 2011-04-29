@@ -43,8 +43,8 @@ struct near_adapter {
 	char *path;
 
 	char *name;
-	guint32 idx;
-	guint32 protocols;
+	uint32_t idx;
+	uint32_t protocols;
 
 	near_bool_t powered;
 	near_bool_t polling;
@@ -223,8 +223,8 @@ static GDBusSignalTable adapter_signals[] = {
 	{ }
 };
 
-struct near_adapter * __near_adapter_create(guint32 idx,
-					const char *name, guint32 protocols)
+struct near_adapter * __near_adapter_create(uint32_t idx,
+					const char *name, uint32_t protocols)
 {
 	struct near_adapter *adapter;
 
@@ -258,14 +258,14 @@ const char *__near_adapter_get_path(struct near_adapter *adapter)
 	return adapter->path;
 }
 
-struct near_adapter *__near_adapter_get(guint32 idx)
+struct near_adapter *__near_adapter_get(uint32_t idx)
 {
 	return g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 }
 
 int __near_adapter_add(struct near_adapter *adapter)
 {
-	guint32 idx = adapter->idx;
+	uint32_t idx = adapter->idx;
 
 	DBG("%s", adapter->path);
 
@@ -294,7 +294,7 @@ void __near_adapter_remove(struct near_adapter *adapter)
 	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(adapter->idx));
 }
 
-int __near_adapter_add_target(guint32 idx, struct near_target *target)
+int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 {
 	struct near_adapter *adapter;
 
@@ -310,7 +310,7 @@ int __near_adapter_add_target(guint32 idx, struct near_target *target)
 	return 0;
 }
 
-int __near_adapter_remove_target(guint32 idx)
+int __near_adapter_remove_target(uint32_t idx)
 {
 	struct near_adapter *adapter;
 

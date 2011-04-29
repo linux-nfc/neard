@@ -59,20 +59,20 @@ DBusMessage *__near_error_operation_timeout(DBusMessage *msg);
 DBusMessage *__near_error_invalid_service(DBusMessage *msg);
 DBusMessage *__near_error_invalid_property(DBusMessage *msg);
 
-int __near_manager_adapter_add(guint32 idx, const char *name, guint32 protocols);
-void __near_manager_adapter_remove(guint32 idx);
+int __near_manager_adapter_add(uint32_t idx, const char *name, uint32_t protocols);
+void __near_manager_adapter_remove(uint32_t idx);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
 
-struct near_adapter * __near_adapter_create(guint32 idx,
-				const char *name, guint32 protocols);
+struct near_adapter * __near_adapter_create(uint32_t idx,
+				const char *name, uint32_t protocols);
 void __near_adapter_destroy(struct near_adapter *adapter);
 const char *__near_adapter_get_path(struct near_adapter *adapter);
-struct near_adapter *__near_adapter_get(guint32 idx);
+struct near_adapter *__near_adapter_get(uint32_t idx);
 int __near_adapter_add(struct near_adapter *adapter);
 void __near_adapter_remove(struct near_adapter *adapter);
-int __near_adapter_add_target(guint32 idx, struct near_target *target);
-int __near_adapter_remove_target(guint32 idx);
+int __near_adapter_add_target(uint32_t idx, struct near_target *target);
+int __near_adapter_remove_target(uint32_t idx);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_connect(uint32_t idx);
 int __near_adapter_disconnect(uint32_t idx);
@@ -85,14 +85,14 @@ enum near_target_type {
 };
 
 const char *__near_target_get_path(struct near_target *target);
-near_uint16_t __near_target_get_tag_type(struct near_target *target);
-guint32 __near_target_get_idx(struct near_target *target);
-guint32 __near_target_get_adapter_idx(struct near_target *target);
-guint32 __near_target_get_protocols(struct near_target *target);
-int __near_target_add(guint32 adapter_idx, guint32 target_idx,
-		guint32 protocols, enum near_target_type type,
-		near_uint16_t sens_res, near_uint8_t sel_res);
-void __near_target_remove(guint32 target_idx);
+uint16_t __near_target_get_tag_type(struct near_target *target);
+uint32_t __near_target_get_idx(struct near_target *target);
+uint32_t __near_target_get_adapter_idx(struct near_target *target);
+uint32_t __near_target_get_protocols(struct near_target *target);
+int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
+		uint32_t protocols, enum near_target_type type,
+		uint16_t sens_res, uint8_t sel_res);
+void __near_target_remove(uint32_t target_idx);
 int __near_target_init(void);
 void __near_target_cleanup(void);
 
@@ -101,13 +101,13 @@ void __near_target_cleanup(void);
 int __near_tag_read(struct near_target *target, void *buf, size_t length);
 
 int __near_netlink_get_adapters(void);
-int __near_netlink_start_poll(int idx, guint32 protocols);
+int __near_netlink_start_poll(int idx, uint32_t protocols);
 int __near_netlink_stop_poll(int idx);
-int __near_netlink_activate_target(near_uint32_t adapter_idx,
-					near_uint32_t target_idx,
-					near_uint32_t protocol);
-int __near_netlink_deactivate_target(near_uint32_t adapter_idx,
-					near_uint32_t target_idx);
+int __near_netlink_activate_target(uint32_t adapter_idx,
+					uint32_t target_idx,
+					uint32_t protocol);
+int __near_netlink_deactivate_target(uint32_t adapter_idx,
+					uint32_t target_idx);
 int __near_netlink_init(void);
 void __near_netlink_cleanup(void);
 

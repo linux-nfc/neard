@@ -67,7 +67,7 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
-int __near_manager_adapter_add(guint32 idx, const char *name, guint32 protocols)
+int __near_manager_adapter_add(uint32_t idx, const char *name, uint32_t protocols)
 {
 	struct near_adapter *adapter;
 	const char *path;
@@ -102,7 +102,7 @@ int __near_manager_adapter_add(guint32 idx, const char *name, guint32 protocols)
 	return err;
 }
 
-void __near_manager_adapter_remove(guint32 idx)
+void __near_manager_adapter_remove(uint32_t idx)
 {
 	struct near_adapter *adapter;
 	const char *path;

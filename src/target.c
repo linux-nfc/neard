@@ -38,11 +38,11 @@
 struct near_target {
 	char *path;
 
-	guint32 idx;
-	guint32 adapter_idx;
-	guint32 protocols;
+	uint32_t idx;
+	uint32_t adapter_idx;
+	uint32_t protocols;
 	enum near_target_type type;
-	near_uint16_t tag_type;
+	uint16_t tag_type;
 };
 
 static DBusConnection *connection = NULL;
@@ -68,22 +68,22 @@ const char *__near_target_get_path(struct near_target *target)
 	return target->path;
 }
 
-near_uint16_t __near_target_get_tag_type(struct near_target *target)
+uint16_t __near_target_get_tag_type(struct near_target *target)
 {
 	return target->tag_type;
 }
 
-guint32 __near_target_get_idx(struct near_target *target)
+uint32_t __near_target_get_idx(struct near_target *target)
 {
 	return target->idx;
 }
 
-guint32 __near_target_get_adapter_idx(struct near_target *target)
+uint32_t __near_target_get_adapter_idx(struct near_target *target)
 {
 	return target->adapter_idx;
 }
 
-guint32 __near_target_get_protocols(struct near_target *target)
+uint32_t __near_target_get_protocols(struct near_target *target)
 {
 	return target->protocols;
 }
@@ -252,7 +252,7 @@ static GDBusSignalTable target_signals[] = {
 #define NFC_TAG_A_SEL_PROT(sel_res) (((sel_res) & 0x60) >> 5)
 
 static void find_tag_type(struct near_target *target,
-			near_uint16_t sens_res, near_uint8_t sel_res)
+				uint16_t sens_res, uint8_t sel_res)
 {
 	DBG("protocols 0x%x sens_res 0x%x sel_res 0x%x", target->protocols,
 							sens_res, sel_res);
@@ -263,7 +263,7 @@ static void find_tag_type(struct near_target *target,
 	}
 
 	if (target->protocols & NFC_TAG_A) {
-		near_uint8_t proto = NFC_TAG_A_SEL_PROT(sel_res);
+		uint8_t proto = NFC_TAG_A_SEL_PROT(sel_res);
 
 		DBG("proto 0x%x", proto);
 
@@ -290,9 +290,9 @@ static void find_tag_type(struct near_target *target,
 	DBG("tag type 0x%x", target->tag_type);
 }
 
-int __near_target_add(guint32 adapter_idx, guint32 target_idx,
-			guint32 protocols, enum near_target_type type,
-			near_uint16_t sens_res, near_uint8_t sel_res)
+int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
+			uint32_t protocols, enum near_target_type type,
+			uint16_t sens_res, uint8_t sel_res)
 {
 	struct near_target *target;
 
@@ -329,7 +329,7 @@ int __near_target_add(guint32 adapter_idx, guint32 target_idx,
 	return __near_adapter_add_target(adapter_idx, target);
 }
 
-void __near_target_remove(guint32 target_idx)
+void __near_target_remove(uint32_t target_idx)
 {
 	struct near_target *target;
 
