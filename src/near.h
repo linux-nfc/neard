@@ -21,12 +21,12 @@
 
 #include <glib.h>
 
-#include "log.h"
-
 #include <near/types.h>
 
 struct near_adapter;
 struct near_target;
+
+#include <near/log.h>
 
 int __near_log_init(const char *debug, gboolean detach);
 void __near_log_cleanup(void);
@@ -81,6 +81,7 @@ enum near_target_type {
 };
 
 const char *__near_target_get_path(struct near_target *target);
+near_uint16_t __near_target_get_tag_type(struct near_target *target);
 int __near_target_add(guint32 adapter_idx, guint32 target_idx,
 		guint32 protocols, enum near_target_type type,
 		near_uint16_t sens_res, near_uint8_t sel_res);
@@ -95,3 +96,8 @@ int __near_netlink_start_poll(int idx, guint32 protocols);
 int __near_netlink_stop_poll(int idx);
 int __near_netlink_init(void);
 void __near_netlink_cleanup(void);
+
+#include <near/plugin.h>
+
+int __near_plugin_init(const char *pattern, const char *exclude);
+void __near_plugin_cleanup(void);
