@@ -325,7 +325,7 @@ int __near_adapter_remove_target(uint32_t idx)
 	return 0;
 }
 
-int __near_adapter_connect(uint32_t idx)
+int near_adapter_connect(uint32_t idx)
 {
 	struct near_adapter *adapter;
 	uint32_t target_idx, protocols;
@@ -345,7 +345,7 @@ int __near_adapter_connect(uint32_t idx)
 	return __near_netlink_activate_target(idx, target_idx, protocols);
 }
 
-int __near_adapter_disconnect(uint32_t idx)
+int near_adapter_disconnect(uint32_t idx)
 {
 	struct near_adapter *adapter;
 	uint32_t target_idx;

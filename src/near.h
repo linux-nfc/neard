@@ -64,6 +64,8 @@ void __near_manager_adapter_remove(uint32_t idx);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
 
+#include <near/adapter.h>
+
 struct near_adapter * __near_adapter_create(uint32_t idx,
 				const char *name, uint32_t protocols);
 void __near_adapter_destroy(struct near_adapter *adapter);
@@ -74,8 +76,6 @@ void __near_adapter_remove(struct near_adapter *adapter);
 int __near_adapter_add_target(uint32_t idx, struct near_target *target);
 int __near_adapter_remove_target(uint32_t idx);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
-int __near_adapter_connect(uint32_t idx);
-int __near_adapter_disconnect(uint32_t idx);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 

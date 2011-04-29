@@ -4,7 +4,7 @@ AM_MAKEFLAGS = --no-print-directory
 includedir = @includedir@/near
 
 include_HEADERS = include/types.h include/log.h include/plugin.h \
-			include/tag.h
+			include/tag.h include/adapter.h
 
 nodist_include_HEADERS = include/version.h
 
