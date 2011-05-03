@@ -337,7 +337,7 @@ void __near_target_remove(uint32_t target_idx)
 	if (target == NULL)
 		return;
 
-	__near_adapter_add_target(target->adapter_idx, target);
+	__near_adapter_remove_target(target->adapter_idx, target);
 
 	g_dbus_unregister_interface(connection, target->path,
 						NFC_TARGET_INTERFACE);

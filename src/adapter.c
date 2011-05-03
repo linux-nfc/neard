@@ -50,6 +50,7 @@ struct near_adapter {
 	near_bool_t polling;
 
 	GList *target_list;
+	struct near_target *active_target;
 };
 
 static void free_adapter(gpointer data)
@@ -364,42 +365,40 @@ int __near_adapter_remove_target(uint32_t idx, struct near_target *target)
 	if (adapter == NULL)
 		return -ENODEV;
 
+	if (adapter->active_target == target) {
+		__near_netlink_deactivate_target(idx, target_idx);
+		adapter->active_target = NULL;
+	}
+
 	adapter->target_list = g_list_remove(adapter->target_list, target);
 
 	return 0;
 }
 
-int near_adapter_connect(uint32_t idx)
+static struct near_target *find_target(struct near_adapter *adapter,
+						uint32_t target_idx)
 {
-	struct near_adapter *adapter;
-	struct near_target *target;
 	GList *list;
-	uint32_t target_idx, protocols;
 
-	DBG("idx %d", idx);
+	for (list = adapter->target_list; list; list = list->next) {
+		struct near_target *target = list->data;
+		uint32_t idx;
 
-	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
-		return -ENODEV;
+		idx = __near_target_get_idx(target);
+		if (idx == target_idx)
+			return target;
 
-	list = g_list_first(adapter->target_list);
-	if (list == NULL)
-		return -ENOLINK;
+	}
 
-	target = list->data;
-
-	target_idx = __near_target_get_idx(target);
-	protocols = __near_target_get_protocols(target);
-
-	return __near_netlink_activate_target(idx, target_idx, protocols);
+	return NULL;
 }
 
-int near_adapter_disconnect(uint32_t idx)
+int near_adapter_connect(uint32_t idx, uint32_t target_idx)
 {
 	struct near_adapter *adapter;
 	struct near_target *target;
-	GList *list;
-	uint32_t target_idx;
+	uint32_t protocols;
+	int err;
 
 	DBG("idx %d", idx);
 
@@ -407,15 +406,43 @@ int near_adapter_disconnect(uint32_t idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	list = g_list_first(adapter->target_list);
-	if (list == NULL)
+	if (adapter->active_target != NULL)
+		return -EALREADY;
+
+	target = find_target(adapter, target_idx);
+	if (target == NULL)
 		return -ENOLINK;
 
-	target = list->data;
+	protocols = __near_target_get_protocols(target);
 
-	target_idx = __near_target_get_idx(target);
+	err = __near_netlink_activate_target(idx, target_idx, protocols);
+	if (err == 0)
+		adapter->active_target = target;
 
-	return __near_netlink_deactivate_target(idx, target_idx);
+	return err;
+}
+
+int near_adapter_disconnect(uint32_t idx, uint32_t target_idx)
+{
+	struct near_adapter *adapter;
+	struct near_target *target;
+	int err;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	target = find_target(adapter, target_idx);
+	if (target == NULL || adapter->active_target == NULL)
+		return -ENOLINK;
+
+	err = __near_netlink_deactivate_target(idx, target_idx);
+	if (err == 0)
+		adapter->active_target = NULL;
+
+	return err;
 }
 
 int __near_adapter_init(void)
