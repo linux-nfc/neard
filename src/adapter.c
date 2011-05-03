@@ -49,7 +49,7 @@ struct near_adapter {
 	near_bool_t powered;
 	near_bool_t polling;
 
-	struct near_target *target;
+	GList *target_list;
 };
 
 static void free_adapter(gpointer data)
@@ -67,19 +67,6 @@ static void polling_changed(struct near_adapter *adapter)
 	near_dbus_property_changed_basic(adapter->path,
 				NFC_ADAPTER_INTERFACE, "Polling",
 					DBUS_TYPE_BOOLEAN, &adapter->polling);
-}
-
-static void current_target_changed(struct near_adapter *adapter)
-{
-	const char *target_path;
-
-	target_path = __near_target_get_path(adapter->target);
-	if (target_path == NULL)
-		return;
-
-	near_dbus_property_changed_basic(adapter->path,
-				NFC_ADAPTER_INTERFACE, "CurrentTarget",
-					DBUS_TYPE_OBJECT_PATH, &target_path);
 }
 
 static void append_path(gpointer key, gpointer value, gpointer user_data)
@@ -145,6 +132,35 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 	}
 }
 
+static void append_targets(DBusMessageIter *iter, void *user_data)
+{
+	struct near_adapter *adapter = user_data;
+	GList *list;
+
+	DBG("");
+
+	for (list = adapter->target_list; list; list = list->next) {
+		struct near_target *target = list->data;
+		const char *target_path;
+
+		target_path = __near_target_get_path(target);
+
+		if (target_path == NULL)
+			continue;
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
+							&target_path);
+	}
+}
+
+static void targets_changed(struct near_adapter *adapter)
+{
+	near_dbus_property_changed_array(adapter->path,
+				NFC_ADAPTER_INTERFACE, "Targets",
+				DBUS_TYPE_OBJECT_PATH, append_targets,
+				adapter);
+}
+
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -171,16 +187,8 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, adapter);
 
-	if (adapter->target != NULL) {
-		const char *target_path;
-
-		target_path = __near_target_get_path(adapter->target);
-
-		if (target_path != NULL) {
-			near_dbus_dict_append_basic(&dict, "CurrentTarget",
-				DBUS_TYPE_OBJECT_PATH, &target_path);
-		}
-	}
+	near_dbus_dict_append_array(&dict, "Targets",
+				DBUS_TYPE_STRING, append_targets, adapter);
 
 	near_dbus_dict_close(&array, &dict);
 
@@ -322,37 +330,41 @@ void __near_adapter_remove(struct near_adapter *adapter)
 int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 {
 	struct near_adapter *adapter;
+	uint32_t target_idx;
 
 	DBG("idx %d", idx);
+
+	target_idx = __near_target_get_idx(target);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (adapter == NULL)
 		return -ENODEV;
 
-	adapter->target = target;
+	adapter->target_list = g_list_prepend(adapter->target_list, target);
 
 	adapter->polling = FALSE;
 
 	polling_changed(adapter);
 
-	current_target_changed(adapter);
+	targets_changed(adapter);
 
 	return 0;
 }
 
-int __near_adapter_remove_target(uint32_t idx)
+int __near_adapter_remove_target(uint32_t idx, struct near_target *target)
 {
 	struct near_adapter *adapter;
+	uint32_t target_idx;
 
 	DBG("idx %d", idx);
+
+	target_idx = __near_target_get_idx(target);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (adapter == NULL)
 		return -ENODEV;
 
-	adapter->target = NULL;
-
-	current_target_changed(adapter);
+	adapter->target_list = g_list_remove(adapter->target_list, target);
 
 	return 0;
 }
@@ -360,6 +372,8 @@ int __near_adapter_remove_target(uint32_t idx)
 int near_adapter_connect(uint32_t idx)
 {
 	struct near_adapter *adapter;
+	struct near_target *target;
+	GList *list;
 	uint32_t target_idx, protocols;
 
 	DBG("idx %d", idx);
@@ -368,11 +382,14 @@ int near_adapter_connect(uint32_t idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	if (adapter->target == NULL)
+	list = g_list_first(adapter->target_list);
+	if (list == NULL)
 		return -ENOLINK;
 
-	target_idx = __near_target_get_idx(adapter->target);
-	protocols = __near_target_get_protocols(adapter->target);
+	target = list->data;
+
+	target_idx = __near_target_get_idx(target);
+	protocols = __near_target_get_protocols(target);
 
 	return __near_netlink_activate_target(idx, target_idx, protocols);
 }
@@ -380,6 +397,8 @@ int near_adapter_connect(uint32_t idx)
 int near_adapter_disconnect(uint32_t idx)
 {
 	struct near_adapter *adapter;
+	struct near_target *target;
+	GList *list;
 	uint32_t target_idx;
 
 	DBG("idx %d", idx);
@@ -388,10 +407,13 @@ int near_adapter_disconnect(uint32_t idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	if (adapter->target == NULL)
+	list = g_list_first(adapter->target_list);
+	if (list == NULL)
 		return -ENOLINK;
 
-	target_idx = __near_target_get_idx(adapter->target);
+	target = list->data;
+
+	target_idx = __near_target_get_idx(target);
 
 	return __near_netlink_deactivate_target(idx, target_idx);
 }
