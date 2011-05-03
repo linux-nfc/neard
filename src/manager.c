@@ -85,19 +85,20 @@ int __near_manager_adapter_add(uint32_t idx, const char *name, uint32_t protocol
 		return -EINVAL;
 	}
 
-	near_dbus_property_changed_array(NFC_MANAGER_PATH,
+	err = __near_adapter_add(adapter);
+	if (err < 0)
+		__near_adapter_destroy(adapter);
+	else {
+		near_dbus_property_changed_array(NFC_MANAGER_PATH,
 				NFC_MANAGER_INTERFACE, "Adapters",
 				DBUS_TYPE_OBJECT_PATH, __near_adapter_list,
 				NULL);
 
-	g_dbus_emit_signal(connection, "/",
+		g_dbus_emit_signal(connection, "/",
 			NFC_MANAGER_INTERFACE, "AdapterAdded",
 			DBUS_TYPE_OBJECT_PATH, &path,
 			DBUS_TYPE_INVALID);
-
-	err = __near_adapter_add(adapter);
-	if (err < 0)
-		__near_adapter_destroy(adapter);
+	}
 
 	return err;
 }
@@ -117,10 +118,6 @@ void __near_manager_adapter_remove(uint32_t idx)
 	if (path == NULL)
 		return;
 
-	near_dbus_property_changed_array(NFC_MANAGER_PATH,
-				NFC_MANAGER_INTERFACE, "Adapters",
-				DBUS_TYPE_OBJECT_PATH, __near_adapter_list,
-				NULL);
 
 	g_dbus_emit_signal(connection, "/",
 			NFC_MANAGER_INTERFACE, "AdapterRemoved",
@@ -128,6 +125,11 @@ void __near_manager_adapter_remove(uint32_t idx)
 			DBUS_TYPE_INVALID);
 
 	__near_adapter_remove(adapter);
+
+	near_dbus_property_changed_array(NFC_MANAGER_PATH,
+				NFC_MANAGER_INTERFACE, "Adapters",
+				DBUS_TYPE_OBJECT_PATH, __near_adapter_list,
+				NULL);
 }
 
 static GDBusMethodTable manager_methods[] = {
