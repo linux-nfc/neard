@@ -61,6 +61,27 @@ static void free_adapter(gpointer data)
 	g_free(adapter);
 }
 
+static void polling_changed(struct near_adapter *adapter)
+{
+
+	near_dbus_property_changed_basic(adapter->path,
+				NFC_ADAPTER_INTERFACE, "Polling",
+					DBUS_TYPE_BOOLEAN, &adapter->polling);
+}
+
+static void current_target_changed(struct near_adapter *adapter)
+{
+	const char *target_path;
+
+	target_path = __near_target_get_path(adapter->target);
+	if (target_path == NULL)
+		return;
+
+	near_dbus_property_changed_basic(adapter->path,
+				NFC_ADAPTER_INTERFACE, "CurrentTarget",
+					DBUS_TYPE_OBJECT_PATH, &target_path);
+}
+
 static void append_path(gpointer key, gpointer value, gpointer user_data)
 {
 	struct near_adapter *adapter = value;
@@ -188,6 +209,8 @@ static DBusMessage *start_poll(DBusConnection *conn,
 
 	adapter->polling = TRUE;
 
+	polling_changed(adapter);
+
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
@@ -204,6 +227,8 @@ static DBusMessage *stop_poll(DBusConnection *conn,
 		return __near_error_failed(msg, -err);
 
 	adapter->polling = FALSE;
+
+	polling_changed(adapter);
 
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
@@ -305,7 +330,12 @@ int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 		return -ENODEV;
 
 	adapter->target = target;
+
 	adapter->polling = FALSE;
+
+	polling_changed(adapter);
+
+	current_target_changed(adapter);
 
 	return 0;
 }
@@ -321,6 +351,8 @@ int __near_adapter_remove_target(uint32_t idx)
 		return -ENODEV;
 
 	adapter->target = NULL;
+
+	current_target_changed(adapter);
 
 	return 0;
 }
