@@ -393,6 +393,24 @@ static struct near_target *find_target(struct near_adapter *adapter,
 	return NULL;
 }
 
+struct near_target *near_adapter_last_target(uint32_t idx)
+{
+	struct near_adapter *adapter;
+	GList *list;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return NULL;
+
+	list = g_list_first(adapter->target_list);
+	if (list == NULL)
+		return NULL;
+
+	return list->data;
+}
+
 int near_adapter_connect(uint32_t idx, uint32_t target_idx)
 {
 	struct near_adapter *adapter;
