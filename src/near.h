@@ -20,6 +20,10 @@
  */
 
 #include <stdint.h>
+#include <sys/socket.h>
+
+#include <linux/socket.h>
+#include <linux/nfc.h>
 
 #include <glib.h>
 
@@ -98,7 +102,7 @@ void __near_target_cleanup(void);
 
 #include <near/tag.h>
 
-int __near_tag_read(struct near_target *target, void *buf, size_t length);
+struct near_ndef *__near_tag_ndef_read(struct near_target *target);
 
 int __near_netlink_get_adapters(void);
 int __near_netlink_start_poll(int idx, uint32_t protocols);
@@ -115,3 +119,5 @@ void __near_netlink_cleanup(void);
 
 int __near_plugin_init(const char *pattern, const char *exclude);
 void __near_plugin_cleanup(void);
+
+#include <near/ndef.h>

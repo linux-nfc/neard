@@ -39,7 +39,7 @@ int near_tag_driver_register(struct near_tag_driver *driver)
 {
 	DBG("");
 
-	if (driver->read == NULL)
+	if (driver->read_ndef == NULL)
 		return -EINVAL;
 
 	driver_list = g_list_append(driver_list, driver);
@@ -54,7 +54,7 @@ void near_tag_driver_unregister(struct near_tag_driver *driver)
 	driver_list = g_list_remove(driver_list, driver);
 }
 
-int __near_tag_read(struct near_target *target, void *buf, size_t length)
+struct near_ndef *__near_tag_ndef_read(struct near_target *target)
 {
 	GList *list;
 	uint16_t type;
@@ -63,7 +63,7 @@ int __near_tag_read(struct near_target *target, void *buf, size_t length)
 
 	type = __near_target_get_tag_type(target);
 	if (type == NEAR_TAG_NFC_UNKNOWN)
-		return -EINVAL;
+		return NULL;
 
 	for (list = driver_list; list; list = list->next) {
 		struct near_tag_driver *driver = list->data;
@@ -74,9 +74,9 @@ int __near_tag_read(struct near_target *target, void *buf, size_t length)
 			target_idx = __near_target_get_idx(target);
 			adapter_idx = __near_target_get_adapter_idx(target);
 
-			return driver->read(adapter_idx, target_idx, buf, length);
+			return driver->read_ndef(adapter_idx, target_idx);
 		}
 	}
 
-	return -EOPNOTSUPP;
+	return NULL;
 }

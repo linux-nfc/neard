@@ -19,41 +19,27 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#ifndef __NEAR_NDEF_H
+#define __NEAR_NDEF_H
 
-#include <near/plugin.h>
-#include <near/log.h>
-#include <near/types.h>
-#include <near/tag.h>
-#include <near/ndef.h>
-
-static struct near_ndef *nfctype2_read_ndef(uint32_t adapter_idx,
-						uint32_t target_idx)
-{
-	return NULL;
-}
-
-static struct near_tag_driver type2_driver = {
-	.type       = NEAR_TAG_NFC_TYPE2,
-	.read_ndef = nfctype2_read_ndef,
+struct near_ndef_record {
+	uint8_t tnf;
+	uint8_t type_length;
+	uint8_t payload[];
 };
 
-static int nfctype2_init(void)
-{
-	DBG("");
+struct near_ndef {
+	uint32_t n_records;
+	struct near_ndef_record *records;
+};
 
-	return near_tag_driver_register(&type2_driver);
-}
+uint8_t near_ndef_record_tnf(struct near_ndef_record *ndef);
 
-static void nfctype2_exit(void)
-{
-	DBG("");
+uint8_t *near_ndef_record_type(struct near_ndef_record *ndef,
+					uint8_t *type_length);
+uint8_t *near_ndef_record_id(struct near_ndef *ndef,
+					uint8_t *id_length);
+uint8_t *near_ndef_record_payload(struct near_ndef *ndef,
+					uint8_t *payload_length);
 
-	near_tag_driver_unregister(&type2_driver);
-}
-
-NEAR_PLUGIN_DEFINE(nfctype2, "NFC Forum Type 2 tags support", VERSION,
-			NEAR_PLUGIN_PRIORITY_HIGH, nfctype2_init, nfctype2_exit)
-
+#endif
