@@ -192,7 +192,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 				DBUS_TYPE_STRING, append_protocols, adapter);
 
 	near_dbus_dict_append_array(&dict, "Targets",
-				DBUS_TYPE_STRING, append_targets, adapter);
+				DBUS_TYPE_OBJECT_PATH, append_targets, adapter);
 
 	near_dbus_dict_close(&array, &dict);
 
