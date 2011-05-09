@@ -31,8 +31,6 @@
 
 #include <gdbus.h>
 
-#include <linux/nfc.h>
-
 #include "near.h"
 
 struct near_target {
@@ -95,35 +93,35 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 
 	DBG("protocols 0x%x", target->protocols);
 
-	if (target->protocols & NFC_PROTO_FELICA) {
+	if (target->protocols & NFC_PROTO_FELICA_MASK) {
 		str = "Felica";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (target->protocols & NFC_PROTO_MIFARE) {
+	if (target->protocols & NFC_PROTO_MIFARE_MASK) {
 		str = "MIFARE";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (target->protocols & NFC_PROTO_JEWEL) {
+	if (target->protocols & NFC_PROTO_JEWEL_MASK) {
 		str = "Jewel";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (target->protocols & NFC_PROTO_ISO14443_4) {
+	if (target->protocols & NFC_PROTO_ISO14443_MASK) {
 		str = "ISO-DEP";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (target->protocols & NFC_PROTO_NFC_DEP) {
+	if (target->protocols & NFC_PROTO_NFC_DEP_MASK) {
 		str = "NFC-DEP";
 
 		dbus_message_iter_append_basic(iter,
@@ -243,7 +241,8 @@ static GDBusSignalTable target_signals[] = {
 	{ }
 };
 
-#define NFC_TAG_A (NFC_PROTO_ISO14443_4 | NFC_PROTO_NFC_DEP | NFC_PROTO_MIFARE)
+#define NFC_TAG_A (NFC_PROTO_ISO14443_MASK | NFC_PROTO_NFC_DEP_MASK | \
+						NFC_PROTO_MIFARE_MASK)
 #define NFC_TAG_A_TYPE1      0x00
 #define NFC_TAG_A_TYPE4      0x01
 #define NFC_TAG_A_NFC_DEP    0x02

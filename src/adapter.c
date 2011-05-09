@@ -25,13 +25,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 
 #include <glib.h>
 
 #include <gdbus.h>
-
-#include <linux/nfc.h>
 
 #include "near.h"
 
@@ -51,7 +50,11 @@ struct near_adapter {
 
 	GList *target_list;
 	struct near_target *active_target;
+	int active_sock;
 };
+
+/* HACK HACK */
+#define AF_NFC 39
 
 static void free_adapter(gpointer data)
 {
@@ -97,35 +100,35 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 
 	DBG("protocols 0x%x", adapter->protocols);
 
-	if (adapter->protocols & NFC_PROTO_FELICA) {
+	if (adapter->protocols & NFC_PROTO_FELICA_MASK) {
 		str = "Felica";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (adapter->protocols & NFC_PROTO_MIFARE) {
+	if (adapter->protocols & NFC_PROTO_MIFARE_MASK) {
 		str = "MIFARE";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (adapter->protocols & NFC_PROTO_JEWEL) {
+	if (adapter->protocols & NFC_PROTO_JEWEL_MASK) {
 		str = "Jewel";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (adapter->protocols & NFC_PROTO_ISO14443_4) {
+	if (adapter->protocols & NFC_PROTO_ISO14443_MASK) {
 		str = "ISO-DEP";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
 	}
 
-	if (adapter->protocols & NFC_PROTO_NFC_DEP) {
+	if (adapter->protocols & NFC_PROTO_NFC_DEP_MASK) {
 		str = "NFC-DEP";
 
 		dbus_message_iter_append_basic(iter,
@@ -274,6 +277,8 @@ struct near_adapter * __near_adapter_create(uint32_t idx,
 	adapter->idx = idx;
 	adapter->protocols = protocols;
 	adapter->powered = TRUE;
+	adapter->active_target = NULL;
+	adapter->active_sock = -1;
 
 	adapter->path = g_strdup_printf("%s/nfc%d", NFC_PATH, idx);
 
@@ -366,7 +371,8 @@ int __near_adapter_remove_target(uint32_t idx, struct near_target *target)
 		return -ENODEV;
 
 	if (adapter->active_target == target) {
-		__near_netlink_deactivate_target(idx, target_idx);
+		if (adapter->active_sock != -1)
+			close(adapter->active_sock);
 		adapter->active_target = NULL;
 	}
 
@@ -416,7 +422,8 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx)
 	struct near_adapter *adapter;
 	struct near_target *target;
 	uint32_t protocols;
-	int err;
+	struct sockaddr_nfc addr;
+	int err, sock;
 
 	DBG("idx %d", idx);
 
@@ -433,18 +440,29 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx)
 
 	protocols = __near_target_get_protocols(target);
 
-	err = __near_netlink_activate_target(idx, target_idx, protocols);
-	if (err == 0)
-		adapter->active_target = target;
+	sock = socket(AF_NFC, SOCK_SEQPACKET, protocols);
+	if (sock == -1)
+		return sock;
 
-	return err;
+	addr.sa_family = AF_NFC;
+	addr.dev_idx = idx;
+	addr.target_idx = target_idx;
+
+	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
+	if (err) {
+		close(sock);
+		return err;
+	}
+
+	adapter->active_target = target;
+	adapter->active_sock = sock;
+
+	return 0;
 }
 
-int near_adapter_disconnect(uint32_t idx, uint32_t target_idx)
+int near_adapter_disconnect(uint32_t idx)
 {
 	struct near_adapter *adapter;
-	struct near_target *target;
-	int err;
 
 	DBG("idx %d", idx);
 
@@ -452,15 +470,13 @@ int near_adapter_disconnect(uint32_t idx, uint32_t target_idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	target = find_target(adapter, target_idx);
-	if (target == NULL || adapter->active_target == NULL)
+	if (adapter->active_sock == -1)
 		return -ENOLINK;
 
-	err = __near_netlink_deactivate_target(idx, target_idx);
-	if (err == 0)
-		adapter->active_target = NULL;
+	close(adapter->active_sock);
+	adapter->active_sock = -1;
 
-	return err;
+	return 0;
 }
 
 int __near_adapter_init(void)

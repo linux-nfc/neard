@@ -34,8 +34,6 @@
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
 
-#include <linux/nfc.h>
-
 #include "near.h"
 
 struct nlnfc_state {
@@ -233,76 +231,6 @@ int __near_netlink_stop_poll(int idx)
 	}
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
-
-	err = nl_send_msg(nfc_state->nl_sock, msg, NULL, NULL);
-
-nla_put_failure:
-	nlmsg_free(msg);
-
-	return err;
-}
-
-int __near_netlink_activate_target(uint32_t adapter_idx,
-					uint32_t target_idx,
-					uint32_t protocol)
-{
-	struct nl_msg *msg;
-	void *hdr;
-	int family, err = 0;
-
-	DBG("");
-
-	msg = nlmsg_alloc();
-	if (msg == NULL)
-		return -ENOMEM;
-
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
-			NLM_F_REQUEST, NFC_CMD_ACTIVATE_TARGET,
-			NFC_GENL_VERSION);
-	if (hdr == NULL) {
-		err = -EINVAL;
-		goto nla_put_failure;
-	}
-
-	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter_idx);
-	NLA_PUT_U32(msg, NFC_ATTR_TARGET_INDEX, target_idx);
-	NLA_PUT_U32(msg, NFC_ATTR_PROTOCOLS, protocol);
-
-	err = nl_send_msg(nfc_state->nl_sock, msg, NULL, NULL);
-
-nla_put_failure:
-	nlmsg_free(msg);
-
-	return err;
-}
-
-int __near_netlink_deactivate_target(uint32_t adapter_idx,
-					uint32_t target_idx)
-{
-	struct nl_msg *msg;
-	void *hdr;
-	int family, err = 0;
-
-	DBG("");
-
-	msg = nlmsg_alloc();
-	if (msg == NULL)
-		return -ENOMEM;
-
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
-			NLM_F_REQUEST, NFC_CMD_DEACTIVATE_TARGET,
-			NFC_GENL_VERSION);
-	if (hdr == NULL) {
-		err = -EINVAL;
-		goto nla_put_failure;
-	}
-
-	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter_idx);
-	NLA_PUT_U32(msg, NFC_ATTR_TARGET_INDEX, target_idx);
 
 	err = nl_send_msg(nfc_state->nl_sock, msg, NULL, NULL);
 
