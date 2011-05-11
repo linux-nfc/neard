@@ -51,6 +51,16 @@ struct near_adapter {
 	GList *target_list;
 	struct near_target *active_target;
 	int active_sock;
+
+	GIOChannel *channel;
+	guint watch;
+	GList *ioreq_list;
+};
+
+struct near_adapter_ioreq {
+	uint32_t target_idx;
+	near_recv cb;
+	void *data;
 };
 
 /* HACK HACK */
@@ -354,6 +364,8 @@ int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 
 	targets_changed(adapter);
 
+	__near_tag_read(target);
+
 	return 0;
 }
 
@@ -417,11 +429,67 @@ struct near_target *near_adapter_last_target(uint32_t idx)
 	return list->data;
 }
 
-int near_adapter_connect(uint32_t idx, uint32_t target_idx)
+static void adapter_flush_rx(struct near_adapter *adapter, int error)
+{
+	GList *list;
+
+	for (list = adapter->ioreq_list; list; list = list->next) {
+		struct near_adapter_ioreq *req = list->data;
+
+		if (req == NULL)
+			continue;
+
+		req->cb(NULL, error, req->data);
+		g_free(req);
+	}
+
+	g_list_free(adapter->ioreq_list);
+	adapter->ioreq_list = NULL;
+}
+
+static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
+							gpointer user_data)
+{
+	struct near_adapter *adapter = user_data;
+	unsigned char buf[1024];
+	struct near_adapter_ioreq *req;
+	GList *first;
+	int sk;
+	size_t len;
+
+	DBG("condition 0x%x", condition);
+
+	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
+		near_error("Error while reading NFC bytes");
+
+		adapter_flush_rx(adapter, -EIO);
+		adapter->watch = 0;
+		return FALSE;
+	}
+
+	sk = g_io_channel_unix_get_fd(channel);
+	first = g_list_first(adapter->ioreq_list);
+	if (first == NULL)
+		return TRUE;
+
+	req = first->data;
+	if (req == NULL)
+		goto out;
+
+	len = recv(sk, buf, sizeof(buf), 0);
+	req->cb(buf, len, req->data);
+
+out:
+	adapter->ioreq_list = g_list_remove(adapter->ioreq_list, first);
+	g_free(req);
+
+	return TRUE;
+}
+
+int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 {
 	struct near_adapter *adapter;
 	struct near_target *target;
-	uint32_t protocols;
 	struct sockaddr_nfc addr;
 	int err, sock;
 
@@ -438,15 +506,14 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx)
 	if (target == NULL)
 		return -ENOLINK;
 
-	protocols = __near_target_get_protocols(target);
-
-	sock = socket(AF_NFC, SOCK_SEQPACKET, protocols);
+	sock = socket(AF_NFC, SOCK_SEQPACKET, NFC_SOCKPROTO_RAW);
 	if (sock == -1)
 		return sock;
 
 	addr.sa_family = AF_NFC;
 	addr.dev_idx = idx;
 	addr.target_idx = target_idx;
+	addr.nfc_protocol = protocol;
 
 	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
 	if (err) {
@@ -456,6 +523,17 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx)
 
 	adapter->active_target = target;
 	adapter->active_sock = sock;
+
+	if (adapter->channel == NULL)
+		adapter->channel = g_io_channel_unix_new(adapter->active_sock);
+
+	g_io_channel_set_flags(adapter->channel, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_channel_set_close_on_unref(adapter->channel, TRUE);
+
+	if (adapter->watch == 0)
+		adapter->watch = g_io_add_watch(adapter->channel,
+				G_IO_IN | G_IO_NVAL | G_IO_ERR | G_IO_HUP,
+						adapter_recv_event, adapter);
 
 	return 0;
 }
@@ -473,10 +551,64 @@ int near_adapter_disconnect(uint32_t idx)
 	if (adapter->active_sock == -1)
 		return -ENOLINK;
 
+	if (adapter->watch > 0) {
+		g_source_remove(adapter->watch);
+		adapter->watch = 0;
+	}
+
+	adapter->channel = NULL;
 	close(adapter->active_sock);
 	adapter->active_sock = -1;
+	adapter_flush_rx(adapter, -ENOLINK);
 
 	return 0;
+}
+
+int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
+			near_recv cb, void *data)
+{
+	struct near_adapter *adapter;
+	struct near_adapter_ioreq *req = NULL;
+	int err;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	if (adapter->active_sock == -1)
+		return -ENOLINK;
+
+	if (cb != NULL && adapter->watch != 0) {
+		req = g_try_malloc0(sizeof(*req));
+		if (req == NULL)
+			return -ENOMEM;
+
+		req->target_idx = __near_target_get_idx(adapter->active_target);
+		req->cb = cb;
+		req->data = data;
+
+		adapter->ioreq_list =
+			g_list_append(adapter->ioreq_list, req);
+	}
+
+	err = send(adapter->active_sock, buf, length, 0);
+	if (err < 0)
+		goto out_err;
+
+	return err;
+
+out_err:
+	if (req != NULL) {
+		GList *last = g_list_last(adapter->ioreq_list);
+
+		g_free(req);
+		adapter->ioreq_list =
+				g_list_delete_link(adapter->ioreq_list, last);
+	}
+
+	return err;
 }
 
 int __near_adapter_init(void)
