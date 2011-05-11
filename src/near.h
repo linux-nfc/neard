@@ -102,7 +102,7 @@ void __near_target_cleanup(void);
 
 #include <near/tag.h>
 
-struct near_ndef *__near_tag_ndef_read(struct near_target *target);
+int __near_tag_read(struct near_target *target);
 
 int __near_netlink_get_adapters(void);
 int __near_netlink_start_poll(int idx, uint32_t protocols);

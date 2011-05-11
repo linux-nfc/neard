@@ -38,8 +38,7 @@
 struct near_tag_driver {
 	uint16_t type;
 
-	struct near_ndef *
-		(*read_ndef)(uint32_t adapter_idx, uint32_t target_idx);
+	int (*read_tag)(uint32_t adapter_idx, uint32_t target_idx);
 };
 
 int near_tag_driver_register(struct near_tag_driver *driver);
