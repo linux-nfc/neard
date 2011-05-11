@@ -243,7 +243,7 @@ static GDBusSignalTable target_signals[] = {
 
 #define NFC_TAG_A (NFC_PROTO_ISO14443_MASK | NFC_PROTO_NFC_DEP_MASK | \
 						NFC_PROTO_MIFARE_MASK)
-#define NFC_TAG_A_TYPE1      0x00
+#define NFC_TAG_A_TYPE2      0x00
 #define NFC_TAG_A_TYPE4      0x01
 #define NFC_TAG_A_NFC_DEP    0x02
 #define NFC_TAG_A_TYPE4_DEP  0x03
@@ -267,8 +267,8 @@ static void find_tag_type(struct near_target *target,
 		DBG("proto 0x%x", proto);
 
 		switch(proto) {
-		case NFC_TAG_A_TYPE1:
-			target->tag_type = NEAR_TAG_NFC_TYPE1;
+		case NFC_TAG_A_TYPE2:
+			target->tag_type = NEAR_TAG_NFC_TYPE2;
 			break;
 		case NFC_TAG_A_TYPE4:
 			target->tag_type = NEAR_TAG_NFC_TYPE4;
