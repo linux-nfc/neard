@@ -164,7 +164,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	tag->data_length = TAG_DATA_LENGTH(tag->cc);
 	tag->data = g_try_malloc0(tag->data_length);
-	if (tag->data == NULL || tag->data_length = 0)
+	if (tag->data == NULL || tag->data_length == 0)
 		return -ENOMEM;
 
 	return data_read(tag);
