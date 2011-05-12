@@ -60,6 +60,8 @@ struct near_adapter {
 struct near_adapter_ioreq {
 	uint32_t target_idx;
 	near_recv cb;
+	unsigned char buf[1024];
+	size_t len;
 	void *data;
 };
 
@@ -447,15 +449,26 @@ static void adapter_flush_rx(struct near_adapter *adapter, int error)
 	adapter->ioreq_list = NULL;
 }
 
+static gboolean execute_recv_cb(gpointer user_data)
+{
+	struct near_adapter_ioreq *req = user_data;
+
+	DBG("data %p", req->data);
+
+	req->cb(req->buf, req->len, req->data);
+
+	g_free(req);
+
+	return FALSE;
+}
+
 static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 							gpointer user_data)
 {
 	struct near_adapter *adapter = user_data;
-	unsigned char buf[1024];
 	struct near_adapter_ioreq *req;
 	GList *first;
 	int sk;
-	size_t len;
 
 	DBG("condition 0x%x", condition);
 
@@ -473,15 +486,11 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 		return TRUE;
 
 	req = first->data;
-	if (req == NULL)
-		goto out;
+	req->len = recv(sk, req->buf, sizeof(req->buf), 0);
 
-	len = recv(sk, buf, sizeof(buf), 0);
-	req->cb(buf, len, req->data);
+	adapter->ioreq_list = g_list_remove(adapter->ioreq_list, req);
 
-out:
-	adapter->ioreq_list = g_list_remove(adapter->ioreq_list, first);
-	g_free(req);
+	g_idle_add(execute_recv_cb, req);
 
 	return TRUE;
 }
@@ -559,6 +568,7 @@ int near_adapter_disconnect(uint32_t idx)
 	adapter->channel = NULL;
 	close(adapter->active_sock);
 	adapter->active_sock = -1;
+	adapter->active_target = NULL;
 	adapter_flush_rx(adapter, -ENOLINK);
 
 	return 0;
@@ -584,6 +594,8 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 		req = g_try_malloc0(sizeof(*req));
 		if (req == NULL)
 			return -ENOMEM;
+
+		DBG("req %p cb %p data %p", req, cb, data);
 
 		req->target_idx = __near_target_get_idx(adapter->active_target);
 		req->cb = cb;
