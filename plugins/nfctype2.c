@@ -93,7 +93,6 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx, struct type2_tag *tag)
 {
-	int err;
 	struct type2_cmd cmd;
 	
 	DBG("");
@@ -101,11 +100,7 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx, struct 
 	cmd.cmd = CMD_READ;
 	cmd.block = META_BLOCK_START;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd), meta_recv, tag);
-	if (err < 0)
-		near_adapter_disconnect(adapter_idx);
-
-	return 0;
+	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd), meta_recv, tag);
 }
 
 static int nfctype2_read_tag(uint32_t adapter_idx,
