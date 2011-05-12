@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-typedef int (*near_recv)(uint8_t *resp, size_t length, void *data);
+typedef int (*near_recv)(uint8_t *resp, int length, void *data);
 
 struct near_target *near_adapter_last_target(uint32_t idx);
 int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol);

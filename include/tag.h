@@ -28,6 +28,8 @@
 
 #include <near/ndef.h>
 
+#define NFC_HEADER_SIZE 1
+
 #define	NEAR_TAG_NFC_TYPE1   0x1
 #define	NEAR_TAG_NFC_TYPE2   0x2
 #define	NEAR_TAG_NFC_TYPE3   0x4
