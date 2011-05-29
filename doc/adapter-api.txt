@@ -86,6 +86,6 @@ Properties:	string Mode [readwrite]
 			Possible values are "Felica", "MIFARE", "Jewel",
 			"ISO-DEP" and "NFC-DEP".
 
-		array{object} Targets [readonly]
+		object Target [readonly]
 
-			List of target object paths.
+			The current target object path.
