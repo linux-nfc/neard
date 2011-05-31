@@ -49,6 +49,13 @@
 #define DATA_BLOCK_START 4
 #define TYPE2_MAGIC 0xe1
 
+#define TLV_NULL 0x00
+#define TLV_LOCK 0x01
+#define TLV_MEM  0x02
+#define TLV_NDEF 0x03
+#define TLV_PROP 0xfd
+#define TLV_END  0xfe
+
 #define TAG_DATA_CC(data) ((data) + 12)
 #define TAG_DATA_LENGTH(cc) ((cc)[2] * 8)
 #define TAG_DATA_NFC(cc) ((cc)[0] & TYPE2_MAGIC)
@@ -64,6 +71,91 @@ struct type2_tag {
 
 	struct near_tag *tag;
 };
+
+static uint16_t tlv_length(uint8_t *tlv)
+{
+	uint16_t length;
+
+	if (tlv[0] == TLV_NULL || tlv[0] == TLV_END)
+		length = 0;
+	else if (tlv[1] == 0xff)
+		length = *(uint16_t *)(tlv + 2);
+	else
+		length = tlv[1];
+
+	return length;
+}
+
+static uint8_t *next_tlv(uint8_t *data)
+{
+	uint16_t length;
+	uint8_t l_length;
+
+	length = tlv_length(data);
+	if (length > 0xfe)
+		l_length = 3;
+	else if (length == 0)
+		l_length = 0;
+	else
+		l_length = 1;
+
+	/* T (1 byte) + L (1 or 3 bytes) + V */
+	return data + 1 + l_length + length;
+}
+
+static uint8_t *tlv_data(uint8_t *data)
+{
+	uint16_t length;
+	uint8_t l_length;
+
+	length = tlv_length(data);
+	if (length > 0xfe)
+		l_length = 3;
+	else if (length == 0)
+		l_length = 0;
+	else
+		l_length = 1;
+
+	/* T (1 byte) + L (1 or 3 bytes) */
+	return data + 1 + l_length;
+}
+
+static int data_parse(struct near_tag *tag, uint8_t *data, uint16_t length)
+{
+	uint8_t *tlv = data;
+	uint8_t t, i;
+
+	DBG("");
+
+	for (i = 0; i < length; i++)
+		DBG("data[%d] 0x%x", i, tlv[i]);
+
+	while(1) {
+		t = tlv[0];
+
+		DBG("tlv 0x%x", tlv[0]);
+
+		switch (t) {
+		case TLV_NDEF:
+			DBG("NDEF found %d bytes long", tlv_length(tlv));
+
+			near_tag_add_ndef(tag, tlv_data(tlv), tlv_length(tlv));
+
+			break;
+		case TLV_END:
+			return 0;
+		}
+
+		tlv = next_tlv(tlv);
+
+		if (tlv - data >= length)
+			break;
+	}
+
+	DBG("Done");
+
+	return 0;
+}
 
 static int data_recv(uint8_t *resp, int length, void *data)
 {
@@ -98,6 +190,8 @@ static int data_recv(uint8_t *resp, int length, void *data)
 		tag->current_block = 0;
 
 		DBG("Done reading");
+
+		data_parse(tag->tag, nfc_data, data_length);
 
 		g_free(tag);
 

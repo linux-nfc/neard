@@ -122,6 +122,11 @@ uint32_t near_tag_get_target_idx(struct near_tag *tag)
 	return tag->target_idx;
 }
 
+int near_tag_add_ndef(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length)
+{
+	return 0;
+}
+
 int near_tag_driver_register(struct near_tag_driver *driver)
 {
 	DBG("");
