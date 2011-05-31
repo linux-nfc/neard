@@ -33,7 +33,46 @@
 
 #include "near.h"
 
+struct near_tag {
+	uint32_t adapter_idx;
+	uint32_t target_idx;
+	uint16_t uid;
+
+	uint16_t data_length;
+	uint8_t *data;
+
+	GList *ndef_list;
+};
+
 static GList *driver_list = NULL;
+
+static void tag_initialize(struct near_tag *tag,
+			uint32_t adapter_idx, uint32_t target_idx)
+{
+	tag->adapter_idx = adapter_idx;
+	tag->target_idx = target_idx;
+
+	return;
+}
+
+struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx)
+{
+	struct near_tag *tag;
+
+	tag = g_try_malloc0(sizeof(struct near_tag));
+	if (tag == NULL)
+		return NULL;
+
+	tag_initialize(tag, adapter_idx, target_idx);
+
+	return tag;
+}
+
+void __near_tag_free(struct near_tag *tag)
+{
+	g_free(tag->data);
+	g_free(tag);
+}
 
 int near_tag_driver_register(struct near_tag_driver *driver)
 {

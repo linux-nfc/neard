@@ -83,6 +83,8 @@ void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 
+#include <near/target.h>
+
 enum near_target_type {
 	NEAR_TARGET_TYPE_TAG = 0,
 	NEAR_TARGET_TYPE_DEVICE = 1,
@@ -102,6 +104,8 @@ void __near_target_cleanup(void);
 
 #include <near/tag.h>
 
+struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx);
+void __near_tag_free(struct near_tag *tag);
 int __near_tag_read(struct near_target *target);
 
 int __near_netlink_get_adapters(void);

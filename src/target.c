@@ -40,7 +40,9 @@ struct near_target {
 	uint32_t adapter_idx;
 	uint32_t protocols;
 	enum near_target_type type;
+
 	uint16_t tag_type;
+	struct near_tag *tag;
 };
 
 static DBusConnection *connection = NULL;
@@ -51,6 +53,8 @@ static void free_target(gpointer data)
 {
 	struct near_target *target = data;
 
+	if (target->tag != NULL)
+		__near_tag_free(target->tag);
 	g_free(target->path);
 	g_free(target);
 }
@@ -342,6 +346,25 @@ void __near_target_remove(uint32_t target_idx)
 						NFC_TARGET_INTERFACE);
 
 	g_hash_table_remove(target_hash, GINT_TO_POINTER(target_idx));
+}
+
+struct near_tag *near_target_get_tag(uint32_t target_idx)
+{
+	struct near_target *target;
+
+	target = g_hash_table_lookup(target_hash, GINT_TO_POINTER(target_idx));
+	if (target == NULL)
+		return NULL;
+
+	if (target->tag != NULL)
+		return target->tag;
+
+	target->tag = __near_tag_new(target->adapter_idx, target_idx);
+	if (target->tag == NULL)
+		return NULL;
+
+	/* TODO reference the tag, or add tag reference count API */
+	return target->tag;
 }
 
 int __near_target_init(void)

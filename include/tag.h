@@ -43,6 +43,8 @@ struct near_tag_driver {
 	int (*read_tag)(uint32_t adapter_idx, uint32_t target_idx);
 };
 
+struct near_tag;
+
 int near_tag_driver_register(struct near_tag_driver *driver);
 void near_tag_driver_unregister(struct near_tag_driver *driver);
 
