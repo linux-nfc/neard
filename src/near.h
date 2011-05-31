@@ -104,7 +104,8 @@ void __near_target_cleanup(void);
 
 #include <near/tag.h>
 
-struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx);
+struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
+				size_t data_length);
 void __near_tag_free(struct near_tag *tag);
 int __near_tag_read(struct near_target *target);
 

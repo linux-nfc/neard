@@ -348,7 +348,7 @@ void __near_target_remove(uint32_t target_idx)
 	g_hash_table_remove(target_hash, GINT_TO_POINTER(target_idx));
 }
 
-struct near_tag *near_target_get_tag(uint32_t target_idx)
+struct near_tag *near_target_get_tag(uint32_t target_idx, size_t data_length)
 {
 	struct near_target *target;
 
@@ -359,7 +359,7 @@ struct near_tag *near_target_get_tag(uint32_t target_idx)
 	if (target->tag != NULL)
 		return target->tag;
 
-	target->tag = __near_tag_new(target->adapter_idx, target_idx);
+	target->tag = __near_tag_new(target->adapter_idx, target_idx, data_length);
 	if (target->tag == NULL)
 		return NULL;
 

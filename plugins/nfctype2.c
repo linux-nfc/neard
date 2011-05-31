@@ -35,6 +35,7 @@
 #include <near/log.h>
 #include <near/types.h>
 #include <near/adapter.h>
+#include <near/target.h>
 #include <near/tag.h>
 #include <near/ndef.h>
 
@@ -48,10 +49,9 @@
 #define DATA_BLOCK_START 4
 #define TYPE2_MAGIC 0xe1
 
+#define TAG_DATA_CC(data) ((data) + 12)
 #define TAG_DATA_LENGTH(cc) ((cc)[2] * 8)
 #define TAG_DATA_NFC(cc) ((cc)[0] & TYPE2_MAGIC)
-
-static GHashTable *tag_hash;
 
 struct type2_cmd {
 	uint8_t cmd;
@@ -60,49 +60,46 @@ struct type2_cmd {
 } __attribute__((packed));
 
 struct type2_tag {
-	uint32_t adapter_idx;
-	uint32_t target_idx;
-	uint8_t uid[8];
-	uint8_t lock[4];
-	uint8_t cc[4];
 	uint16_t current_block;
-	uint16_t data_length;
-	uint8_t *data;
+
+	struct near_tag *tag;
 };
-
-static void free_tag(gpointer data)
-{
-	struct type2_tag *tag = data;
-
-	g_free(tag->data);
-	g_free(tag);
-}
 
 static int data_recv(uint8_t *resp, int length, void *data)
 {
 	struct type2_tag *tag = data;
 	struct type2_cmd cmd;
-	uint16_t current_length, length_read;
+	uint8_t *nfc_data;
+	uint16_t current_length, length_read, data_length;
+	uint32_t adapter_idx;
 	int read_blocks;
 
 	DBG("%d", length);
 
-	if (length < 0)
+	if (length < 0) {
+		g_free(tag);
+
 		return  length;
+	}
+
+	nfc_data = near_tag_get_data(tag->tag, (size_t *)&data_length);
+	adapter_idx = near_tag_get_adapter_idx(tag->tag);
 
 	length_read = length - NFC_HEADER_SIZE;
 	current_length = tag->current_block * BLOCK_SIZE;
-	if (current_length + length - NFC_HEADER_SIZE> tag->data_length)
-		length_read = tag->data_length - current_length;
+	if (current_length + length - NFC_HEADER_SIZE > data_length)
+		length_read = data_length - current_length;
 
-	memcpy(tag->data + current_length, resp, length_read);
+	memcpy(nfc_data + current_length, resp, length_read);
 
-	if (current_length + length_read == tag->data_length) {
+	if (current_length + length_read == data_length) {
 		/* TODO parse tag->data for NDEFS, and notify target.c */
-		near_adapter_disconnect(tag->adapter_idx);
+		near_adapter_disconnect(adapter_idx);
 		tag->current_block = 0;
 
 		DBG("Done reading");
+
+		g_free(tag);
 
 		return 0;
 	}
@@ -113,9 +110,9 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	cmd.cmd = CMD_READ;
 	cmd.block = DATA_BLOCK_START + tag->current_block;
 
-	DBG("adapter %d", tag->adapter_idx);
+	DBG("adapter %d", adapter_idx);
 
-	return near_adapter_send(tag->adapter_idx,
+	return near_adapter_send(adapter_idx,
 				(uint8_t *)&cmd, sizeof(cmd),
 					data_recv, tag);
 }
@@ -123,28 +120,28 @@ static int data_recv(uint8_t *resp, int length, void *data)
 static int data_read(struct type2_tag *tag)
 {
 	struct type2_cmd cmd;
+	uint32_t adapter_idx;
 
-	if (tag->data == NULL) {
-		g_hash_table_remove(tag_hash, GINT_TO_POINTER(tag->target_idx));
-
-		return -ENOMEM;
-	}
-
-	DBG("%d", tag->data_length);
+	DBG("");
 
 	tag->current_block = 0;
 
 	cmd.cmd = CMD_READ;
 	cmd.block = DATA_BLOCK_START;
 
-	return near_adapter_send(tag->adapter_idx,
+	adapter_idx = near_tag_get_adapter_idx(tag->tag);
+
+	return near_adapter_send(adapter_idx,
 				(uint8_t *)&cmd, sizeof(cmd),
 					data_recv, tag);
 }
 
 static int meta_recv(uint8_t *resp, int length, void *data)
 {
-	struct type2_tag *tag = data;
+        uint32_t *target_idx = data;
+	struct near_tag *tag;
+	struct type2_tag *t2_tag;
+	uint8_t *cc;
 
 	DBG("%d", length);
 
@@ -154,67 +151,54 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	if (resp[0] != 0)
 		return -EIO;
 
-	memcpy(&tag->uid, resp + NFC_HEADER_SIZE, length);
+	cc = TAG_DATA_CC(resp + NFC_HEADER_SIZE);
 
-	DBG("0x%x 0x%x 0x%x 0x%x", tag->cc[0], tag->cc[1], tag->cc[2], tag->cc[3]);
-
-	if (tag->data != NULL)
-		g_free(tag->data);
-
-	tag->data_length = TAG_DATA_LENGTH(tag->cc);
-	tag->data = g_try_malloc0(tag->data_length);
-
-	if (TAG_DATA_NFC(tag->cc) == 0)
+	if (TAG_DATA_NFC(cc) == 0)
 		return -EINVAL;
 
-	if (tag->data == NULL || tag->data_length == 0)
+	tag = near_target_get_tag(*target_idx, TAG_DATA_LENGTH(cc));
+	if (tag == NULL)
 		return -ENOMEM;
 
-	return data_read(tag);
+	t2_tag = g_try_malloc0(sizeof(struct type2_tag));
+	t2_tag->tag = tag;
+
+	near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
+
+	return data_read(t2_tag);
 }
 
-static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx, struct type2_tag *tag)
+static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx)
 {
 	struct type2_cmd cmd;
+	uint32_t *idx;
 	
 	DBG("");
 
 	cmd.cmd = CMD_READ;
 	cmd.block = META_BLOCK_START;
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd), meta_recv, tag);
+	idx = g_try_malloc0(sizeof(uint32_t));
+	*idx = target_idx;
+
+	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd), meta_recv, idx);
 }
 
 static int nfctype2_read_tag(uint32_t adapter_idx,
 					uint32_t target_idx)
 {
 	int err;
-	struct type2_tag *tag;
 
 	DBG("");
 
-	tag = g_hash_table_lookup(tag_hash, GINT_TO_POINTER(target_idx));
-	if (tag == NULL) {
-		tag = g_try_malloc0(sizeof(*tag));
-		if (tag == NULL)
-			return -ENOMEM;
-
-		tag->adapter_idx = adapter_idx;
-		tag->target_idx = target_idx;
-
-		g_hash_table_insert(tag_hash, GINT_TO_POINTER(target_idx), tag);
-	}
-
 	err = near_adapter_connect(adapter_idx, target_idx, NFC_PROTO_MIFARE);
 	if (err < 0) {
-		g_hash_table_remove(tag_hash, GINT_TO_POINTER(target_idx));
-
 		near_error("Could not connect %d", err);
 
 		return err;
 	}
 
-	err = nfctype2_read_meta(adapter_idx, target_idx, tag);
+	err = nfctype2_read_meta(adapter_idx, target_idx);
 	if (err < 0)
 		near_adapter_disconnect(adapter_idx);
 
@@ -230,17 +214,12 @@ static int nfctype2_init(void)
 {
 	DBG("");
 
-	tag_hash = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-							NULL, free_tag);
-
 	return near_tag_driver_register(&type2_driver);
 }
 
 static void nfctype2_exit(void)
 {
 	DBG("");
-
-	g_hash_table_destroy(tag_hash);
 
 	near_tag_driver_unregister(&type2_driver);
 }
