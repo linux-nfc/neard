@@ -182,7 +182,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	if (current_length + length - NFC_HEADER_SIZE > data_length)
 		length_read = data_length - current_length;
 
-	memcpy(nfc_data + current_length, resp, length_read);
+	memcpy(nfc_data + current_length, resp + NFC_HEADER_SIZE, length_read);
 
 	if (current_length + length_read == data_length) {
 		/* TODO parse tag->data for NDEFS, and notify target.c */
