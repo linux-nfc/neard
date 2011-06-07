@@ -126,3 +126,6 @@ int __near_plugin_init(const char *pattern, const char *exclude);
 void __near_plugin_cleanup(void);
 
 #include <near/ndef.h>
+
+void __near_ndef_destroy(struct near_ndef *ndef);
+struct near_ndef *__near_ndef_create(uint8_t *ndef_data, size_t ndef_length);

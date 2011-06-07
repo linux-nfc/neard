@@ -124,6 +124,14 @@ uint32_t near_tag_get_target_idx(struct near_tag *tag)
 
 int near_tag_add_ndef(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length)
 {
+	struct near_ndef *ndef;
+
+	ndef = __near_ndef_create(ndef_data, ndef_length);
+	if (ndef == NULL)
+		return -ENOMEM;
+
+	tag->ndef_list = g_list_append(tag->ndef_list, ndef);
+
 	return 0;
 }
 

@@ -24,22 +24,20 @@
 
 struct near_ndef_record {
 	uint8_t tnf;
-	uint8_t type_length;
-	uint8_t payload[];
+
+	uint8_t *type;
+	size_t type_length;
+
+	uint8_t *payload;
+	size_t payload_length;
 };
 
 struct near_ndef {
+	gboolean smart_poster;
+	gboolean handover;
+
 	uint32_t n_records;
-	struct near_ndef_record *records;
+	GList *records;
 };
-
-uint8_t near_ndef_record_tnf(struct near_ndef_record *ndef);
-
-uint8_t *near_ndef_record_type(struct near_ndef_record *ndef,
-					uint8_t *type_length);
-uint8_t *near_ndef_record_id(struct near_ndef *ndef,
-					uint8_t *id_length);
-uint8_t *near_ndef_record_payload(struct near_ndef *ndef,
-					uint8_t *payload_length);
 
 #endif
