@@ -232,30 +232,44 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	struct near_tag *tag;
 	struct type2_tag *t2_tag;
 	uint8_t *cc;
+	int err;
 
 	DBG("%d", length);
 
-	if (length < 0)
-		return length; 
+	if (length < 0) {
+		err = length;
+		goto out;
+	}
 
-	if (resp[0] != 0)
-		return -EIO;
+	if (resp[0] != 0) {
+		err = -EIO;
+		goto out;
+	}
 
 	cc = TAG_DATA_CC(resp + NFC_HEADER_SIZE);
 
-	if (TAG_DATA_NFC(cc) == 0)
-		return -EINVAL;
+	if (TAG_DATA_NFC(cc) == 0) {
+		err = -EINVAL;
+		goto out;
+	}
 
 	tag = near_target_get_tag(*target_idx, TAG_DATA_LENGTH(cc));
-	if (tag == NULL)
-		return -ENOMEM;
+	if (tag == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
 
 	t2_tag = g_try_malloc0(sizeof(struct type2_tag));
 	t2_tag->tag = tag;
 
 	near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
 
-	return data_read(t2_tag);
+	err = data_read(t2_tag);
+
+out:
+	g_free(data);
+
+	return err;
 }
 
 static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx)
