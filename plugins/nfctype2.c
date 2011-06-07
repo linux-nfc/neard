@@ -122,13 +122,9 @@ static uint8_t *tlv_data(uint8_t *data)
 
 static int data_parse(struct near_tag *tag, uint8_t *data, uint16_t length)
 {
-	uint8_t *tlv = data;
-	uint8_t t, i;
+	uint8_t *tlv = data, t;
 
 	DBG("");
-
-	for (i = 0; i < length; i++)
-		DBG("data[%d] 0x%x", i, tlv[i]);
 
 	while(1) {
 		t = tlv[0];
