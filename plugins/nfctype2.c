@@ -67,8 +67,10 @@ struct type2_cmd {
 } __attribute__((packed));
 
 struct type2_tag {
+	uint32_t adapter_idx;
 	uint16_t current_block;
 
+	near_tag_read_cb cb;
 	struct near_tag *tag;
 };
 
@@ -120,7 +122,7 @@ static uint8_t *tlv_data(uint8_t *data)
 	return data + 1 + l_length;
 }
 
-static int data_parse(struct near_tag *tag, uint8_t *data, uint16_t length)
+static int data_parse(struct type2_tag *tag, uint8_t *data, uint16_t length)
 {
 	uint8_t *tlv = data, t;
 
@@ -135,12 +137,16 @@ static int data_parse(struct near_tag *tag, uint8_t *data, uint16_t length)
 		case TLV_NDEF:
 			DBG("NDEF found %d bytes long", tlv_length(tlv));
 
-			near_tag_add_ndef(tag, tlv_data(tlv), tlv_length(tlv));
+			near_tag_add_ndef(tag->tag, tlv_data(tlv),
+						tlv_length(tlv));
 
 			break;
 		case TLV_END:
-			return 0;
+			break;
 		}
+
+		if (t == TLV_END)
+			break;
 
 		tlv = next_tlv(tlv);
 
@@ -149,6 +155,9 @@ static int data_parse(struct near_tag *tag, uint8_t *data, uint16_t length)
 	}
 
 	DBG("Done");
+
+	if (tag->cb)
+		tag->cb(tag->adapter_idx, 0);
 
 	return 0;
 }
@@ -187,7 +196,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 		DBG("Done reading");
 
-		data_parse(tag->tag, nfc_data, data_length);
+		data_parse(tag, nfc_data, data_length);
 
 		g_free(tag);
 
@@ -226,9 +235,15 @@ static int data_read(struct type2_tag *tag)
 					data_recv, tag);
 }
 
+struct recv_cookie {
+	uint32_t adapter_idx;
+	uint32_t target_idx;
+	near_tag_read_cb cb;
+};
+
 static int meta_recv(uint8_t *resp, int length, void *data)
 {
-        uint32_t *target_idx = data;
+        struct recv_cookie *cookie = data;
 	struct near_tag *tag;
 	struct type2_tag *t2_tag;
 	uint8_t *cc;
@@ -253,13 +268,20 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		goto out;
 	}
 
-	tag = near_target_get_tag(*target_idx, TAG_DATA_LENGTH(cc));
+	tag = near_target_get_tag(cookie->target_idx, TAG_DATA_LENGTH(cc));
 	if (tag == NULL) {
 		err = -ENOMEM;
 		goto out;
 	}
 
 	t2_tag = g_try_malloc0(sizeof(struct type2_tag));
+	if (t2_tag == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	t2_tag->adapter_idx = cookie->adapter_idx;
+	t2_tag->cb = cookie->cb;
 	t2_tag->tag = tag;
 
 	near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
@@ -267,29 +289,36 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	err = data_read(t2_tag);
 
 out:
-	g_free(data);
+	g_free(cookie);
+
+	if (err < 0 && cookie->cb)
+		cookie->cb(cookie->adapter_idx, err);
 
 	return err;
 }
 
-static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx)
+static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
+							near_tag_read_cb cb)
 {
 	struct type2_cmd cmd;
-	uint32_t *idx;
+	struct recv_cookie *cookie;
 	
 	DBG("");
 
 	cmd.cmd = CMD_READ;
 	cmd.block = META_BLOCK_START;
 
-	idx = g_try_malloc0(sizeof(uint32_t));
-	*idx = target_idx;
+	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd), meta_recv, idx);
+	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd),
+							meta_recv, cookie);
 }
 
 static int nfctype2_read_tag(uint32_t adapter_idx,
-					uint32_t target_idx)
+				uint32_t target_idx, near_tag_read_cb cb)
 {
 	int err;
 
@@ -302,7 +331,7 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 		return err;
 	}
 
-	err = nfctype2_read_meta(adapter_idx, target_idx);
+	err = nfctype2_read_meta(adapter_idx, target_idx, cb);
 	if (err < 0)
 		near_adapter_disconnect(adapter_idx);
 

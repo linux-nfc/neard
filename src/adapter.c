@@ -341,6 +341,22 @@ void __near_adapter_remove(struct near_adapter *adapter)
 	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(adapter->idx));
 }
 
+static void tag_read_cb(uint32_t adapter_idx, int status)
+{
+	struct near_adapter *adapter;
+
+	DBG("%d", status);
+
+	if (status < 0)
+		return;
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
+	target_changed(adapter);
+}
+
 int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 {
 	struct near_adapter *adapter;
@@ -360,9 +376,7 @@ int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 
 	polling_changed(adapter);
 
-	target_changed(adapter);
-
-	__near_tag_read(target);
+	__near_tag_read(target, tag_read_cb);
 
 	return 0;
 }

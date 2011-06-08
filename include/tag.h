@@ -37,10 +37,13 @@
 #define	NEAR_TAG_NFC_DEP     0x10
 #define	NEAR_TAG_NFC_UNKNOWN 0xff
 
+typedef void (*near_tag_read_cb) (uint32_t adapter_idx, int status);
+
 struct near_tag_driver {
 	uint16_t type;
 
-	int (*read_tag)(uint32_t adapter_idx, uint32_t target_idx);
+	int (*read_tag)(uint32_t adapter_idx, uint32_t target_idx,
+						near_tag_read_cb cb);
 };
 
 struct near_tag;

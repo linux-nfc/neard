@@ -107,7 +107,7 @@ void __near_target_cleanup(void);
 struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
 				size_t data_length);
 void __near_tag_free(struct near_tag *tag);
-int __near_tag_read(struct near_target *target);
+int __near_tag_read(struct near_target *target, near_tag_read_cb cb);
 
 int __near_netlink_get_adapters(void);
 int __near_netlink_start_poll(int idx, uint32_t protocols);
