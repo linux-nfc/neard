@@ -190,6 +190,18 @@ static const char *type2string(enum near_target_type type)
 	return NULL;
 }
 
+static void append_records(DBusMessageIter *iter, void *user_data)
+{
+	struct near_target *target = user_data;
+
+	DBG("");
+
+	if (target->tag == NULL)
+		return;
+
+	__near_tag_append_records(target->tag, iter);
+}
+
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -217,9 +229,13 @@ static DBusMessage *get_properties(DBusConnection *conn,
 		near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, target);
 
-	if (target->type == NEAR_TARGET_TYPE_TAG)
+	if (target->type == NEAR_TARGET_TYPE_TAG) {
 		near_dbus_dict_append_array(&dict, "TagType",
 				DBUS_TYPE_STRING, append_tag_type, target);
+
+		near_dbus_dict_append_array(&dict, "Records",
+				DBUS_TYPE_OBJECT_PATH, append_records, target);
+	}
 
 	near_dbus_dict_close(&array, &dict);
 

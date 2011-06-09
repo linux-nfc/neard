@@ -31,6 +31,7 @@
 
 #define NFC_ADAPTER_INTERFACE	NFC_SERVICE ".Adapter"
 #define NFC_TARGET_INTERFACE	NFC_SERVICE ".Target"
+#define NFC_RECORD_INTERFACE	NFC_SERVICE ".Record"
 
 typedef void (* near_dbus_append_cb_t) (DBusMessageIter *iter,
 							void *user_data);

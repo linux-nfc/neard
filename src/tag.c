@@ -45,10 +45,28 @@ struct near_tag {
 	size_t data_length;
 	uint8_t *data;
 
-	GList *ndef_list;
+	uint32_t n_records;
+	GList *records;
 };
 
 static GList *driver_list = NULL;
+
+void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
+{
+	GList *list;
+
+	for (list = tag->records; list; list = list->next) {
+		struct near_ndef_record *record = list->data;
+		char *path;
+
+		path = __near_ndef_record_get_path(record);
+		if (path == NULL)
+			continue;
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
+							&path);
+	}
+}
 
 static int tag_initialize(struct near_tag *tag,
 			uint32_t adapter_idx, uint32_t target_idx,
@@ -58,6 +76,7 @@ static int tag_initialize(struct near_tag *tag,
 
 	tag->adapter_idx = adapter_idx;
 	tag->target_idx = target_idx;
+	tag->n_records = 0;
 
 	if (data_length > 0) {
 		tag->data_length = data_length;
@@ -87,8 +106,33 @@ struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx, size_
 
 void __near_tag_free(struct near_tag *tag)
 {
+	GList *list;
+
+	for (list = tag->records; list; list = list->next) {
+		struct near_ndef_record *record = list->data;
+
+		__near_ndef_record_free(record);
+	}
+
+	g_list_free(tag->records);
 	g_free(tag->data);
 	g_free(tag);
+}
+
+uint32_t __near_tag_n_records(struct near_tag *tag)
+{
+	return tag->n_records;
+}
+
+int __near_tag_add_record(struct near_tag *tag,
+				struct near_ndef_record *record)
+{
+	DBG("");
+
+	tag->n_records++;
+	tag->records = g_list_append(tag->records, record);
+
+	return 0;
 }
 
 int near_tag_set_uid(struct near_tag *tag, uint8_t *uid, size_t uid_length)
@@ -120,19 +164,6 @@ uint32_t near_tag_get_adapter_idx(struct near_tag *tag)
 uint32_t near_tag_get_target_idx(struct near_tag *tag)
 {
 	return tag->target_idx;
-}
-
-int near_tag_add_ndef(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length)
-{
-	struct near_ndef *ndef;
-
-	ndef = __near_ndef_create(ndef_data, ndef_length);
-	if (ndef == NULL)
-		return -ENOMEM;
-
-	tag->ndef_list = g_list_append(tag->ndef_list, ndef);
-
-	return 0;
 }
 
 int near_tag_driver_register(struct near_tag_driver *driver)

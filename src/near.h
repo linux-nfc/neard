@@ -102,8 +102,18 @@ void __near_target_remove(uint32_t target_idx);
 int __near_target_init(void);
 void __near_target_cleanup(void);
 
+#include <near/ndef.h>
+
+int __near_ndef_init(void);
+void __near_ndef_cleanup(void);
+void __near_ndef_record_free(struct near_ndef_record *record);
+char *__near_ndef_record_get_path(struct near_ndef_record *record);
+
 #include <near/tag.h>
 
+void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter);
+uint32_t __near_tag_n_records(struct near_tag *tag);
+int __near_tag_add_record(struct near_tag *tag, struct near_ndef_record *record);
 struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
 				size_t data_length);
 void __near_tag_free(struct near_tag *tag);
@@ -124,8 +134,3 @@ void __near_netlink_cleanup(void);
 
 int __near_plugin_init(const char *pattern, const char *exclude);
 void __near_plugin_cleanup(void);
-
-#include <near/ndef.h>
-
-void __near_ndef_destroy(struct near_ndef *ndef);
-struct near_ndef *__near_ndef_create(uint8_t *ndef_data, size_t ndef_length);

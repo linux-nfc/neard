@@ -137,7 +137,7 @@ static int data_parse(struct type2_tag *tag, uint8_t *data, uint16_t length)
 		case TLV_NDEF:
 			DBG("NDEF found %d bytes long", tlv_length(tlv));
 
-			near_tag_add_ndef(tag->tag, tlv_data(tlv),
+			near_ndef_parse(tag->tag, tlv_data(tlv),
 						tlv_length(tlv));
 
 			break;

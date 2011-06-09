@@ -22,22 +22,10 @@
 #ifndef __NEAR_NDEF_H
 #define __NEAR_NDEF_H
 
-struct near_ndef_record {
-	uint8_t tnf;
+#include <near/tag.h>
 
-	uint8_t *type;
-	size_t type_length;
+struct near_ndef_record;
 
-	uint8_t *payload;
-	size_t payload_length;
-};
-
-struct near_ndef {
-	gboolean smart_poster;
-	gboolean handover;
-
-	uint32_t n_records;
-	GList *records;
-};
+int near_ndef_parse(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length);
 
 #endif

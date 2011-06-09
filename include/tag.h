@@ -26,8 +26,6 @@
 
 #include <glib.h>
 
-#include <near/ndef.h>
-
 #define NFC_HEADER_SIZE 1
 
 #define	NEAR_TAG_NFC_TYPE1   0x1
