@@ -262,13 +262,19 @@ static GDBusSignalTable target_signals[] = {
 };
 
 #define NFC_TAG_A (NFC_PROTO_ISO14443_MASK | NFC_PROTO_NFC_DEP_MASK | \
-						NFC_PROTO_MIFARE_MASK)
+				NFC_PROTO_JEWEL_MASK | NFC_PROTO_MIFARE_MASK)
 #define NFC_TAG_A_TYPE2      0x00
 #define NFC_TAG_A_TYPE4      0x01
 #define NFC_TAG_A_NFC_DEP    0x02
 #define NFC_TAG_A_TYPE4_DEP  0x03
 
+#define NFC_TAG_A_SENS_RES_SSD_JEWEL      0x00
+#define NFC_TAG_A_SENS_RES_PLATCONF_JEWEL 0x0c
+
 #define NFC_TAG_A_SEL_PROT(sel_res) (((sel_res) & 0x60) >> 5)
+#define NFC_TAG_A_SEL_CASCADE(sel_res) (((sel_res) & 0x04) >> 2)
+#define NFC_TAG_A_SENS_RES_SSD(sens_res) ((sens_res) & 0x001f)
+#define NFC_TAG_A_SENS_RES_PLATCONF(sens_res) (((sens_res) & 0x0f00) >> 8)
 
 static void find_tag_type(struct near_target *target,
 				uint16_t sens_res, uint8_t sel_res)
@@ -281,7 +287,16 @@ static void find_tag_type(struct near_target *target,
 		return;
 	}
 
-	if (target->protocols & NFC_TAG_A) {
+	if (target->protocols & NFC_PROTO_JEWEL_MASK) {
+		uint8_t platconf = NFC_TAG_A_SENS_RES_PLATCONF(sens_res);
+		uint8_t ssd = NFC_TAG_A_SENS_RES_SSD(sens_res);
+
+		DBG("Jewel");
+
+		if ((ssd == NFC_TAG_A_SENS_RES_SSD_JEWEL) &&
+				(platconf == NFC_TAG_A_SENS_RES_PLATCONF_JEWEL))
+			target->tag_type = NEAR_TAG_NFC_TYPE1;
+	} else if (target->protocols & NFC_TAG_A) {
 		uint8_t proto = NFC_TAG_A_SEL_PROT(sel_res);
 
 		DBG("proto 0x%x", proto);
