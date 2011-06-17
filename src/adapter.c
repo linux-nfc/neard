@@ -360,11 +360,8 @@ static void tag_read_cb(uint32_t adapter_idx, int status)
 int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 {
 	struct near_adapter *adapter;
-	uint32_t target_idx;
 
 	DBG("idx %d", idx);
-
-	target_idx = __near_target_get_idx(target);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (adapter == NULL)
@@ -384,11 +381,8 @@ int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 int __near_adapter_remove_target(uint32_t idx, struct near_target *target)
 {
 	struct near_adapter *adapter;
-	uint32_t target_idx;
 
 	DBG("idx %d", idx);
-
-	target_idx = __near_target_get_idx(target);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (adapter == NULL)
