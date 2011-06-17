@@ -72,7 +72,7 @@ static int tag_initialize(struct near_tag *tag,
 			uint32_t adapter_idx, uint32_t target_idx,
 				size_t data_length)
 {
-	DBG("data length %d", data_length);
+	DBG("data length %zu", data_length);
 
 	tag->adapter_idx = adapter_idx;
 	tag->target_idx = target_idx;
