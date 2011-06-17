@@ -442,7 +442,7 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 		near_error("Error while reading NFC bytes");
 
 		adapter_flush_rx(adapter, -EIO);
-		adapter->watch = 0;
+		near_adapter_disconnect(adapter->idx);
 		return FALSE;
 	}
 
