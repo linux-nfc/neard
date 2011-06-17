@@ -447,7 +447,7 @@ int near_ndef_parse(struct near_tag *tag,
 						n_records); 
 
 		for (i = 0; i < record->payload_length; i++)
-			DBG("Payload[%d] %c 0x%x", i, record->payload[i], record->payload[i]);
+			DBG("Payload[%zu] %c 0x%x", i, record->payload[i], record->payload[i]);
 
 		DBG("Record path %s", record->path);
 		__near_tag_add_record(tag, record);
