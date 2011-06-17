@@ -452,7 +452,7 @@ static int nl_get_multicast_id(struct nl_sock *sock, const char *family,
 				const char *group)
 {
 	struct nl_msg *msg;
-	int err, ctrlid;
+	int err = 0, ctrlid;
 	struct handler_args grp = {
 		.group = group,
 		.id = -ENOENT,
