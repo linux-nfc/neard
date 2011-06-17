@@ -105,12 +105,11 @@ static gboolean record_sp(uint8_t tnf, uint8_t *type, size_t type_length)
 
 static uint8_t record_type_offset(uint8_t *record, size_t *type_length)
 {
-	uint8_t sr, tnf, il;
+	uint8_t sr, il;
 	uint32_t offset = 0;
 
 	sr = RECORD_SR(record);
 	il = RECORD_IL(record);
-	tnf = RECORD_TNF(record);
 	*type_length = record[1];
 
 	/* Record header */
