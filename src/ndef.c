@@ -250,6 +250,9 @@ static void append_rtd_uri(struct near_ndef_record *record,
 	case 0x9:
 		prefix = "ftps://";
 		break;
+	default:
+		prefix = NULL;
+		break;
 	}
 
 	uri = g_strndup((char *)&record->payload[1],
