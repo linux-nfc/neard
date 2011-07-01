@@ -25,13 +25,6 @@
 
 #include "near.h"
 
-#define TLV_NULL 0x00
-#define TLV_LOCK 0x01
-#define TLV_MEM  0x02
-#define TLV_NDEF 0x03
-#define TLV_PROP 0xfd
-#define TLV_END  0xfe
-
 uint16_t near_tlv_length(uint8_t *tlv)
 {
 	uint16_t length;
@@ -78,4 +71,46 @@ uint8_t *near_tlv_data(uint8_t *tlv)
 
 	/* T (1 byte) + L (1 or 3 bytes) */
 	return tlv + 1 + l_length;
+}
+
+int near_tlv_parse(struct near_tag *tag, near_tag_read_cb cb,
+			uint8_t *data, uint16_t length)
+{
+	uint8_t *tlv = data, t;
+	uint32_t adapter_idx = near_tag_get_adapter_idx(tag);
+
+	DBG("");
+
+	while(1) {
+		t = tlv[0];
+
+		DBG("tlv 0x%x", tlv[0]);
+
+		switch (t) {
+		case TLV_NDEF:
+			DBG("NDEF found %d bytes long", near_tlv_length(tlv));
+
+			near_ndef_parse(tag, near_tlv_data(tlv),
+						near_tlv_length(tlv));
+
+			break;
+		case TLV_END:
+			break;
+		}
+
+		if (t == TLV_END)
+			break;
+
+		tlv = near_tlv_next(tlv);
+
+		if (tlv - data >= length)
+			break;
+	}
+
+	DBG("Done");
+
+	if (cb)
+		cb(adapter_idx, 0);
+
+	return 0;
 }

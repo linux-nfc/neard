@@ -68,46 +68,6 @@ struct type2_tag {
 	struct near_tag *tag;
 };
 
-static int data_parse(struct type2_tag *tag, uint8_t *data, uint16_t length)
-{
-	uint8_t *tlv = data, t;
-
-	DBG("");
-
-	while(1) {
-		t = tlv[0];
-
-		DBG("tlv 0x%x", tlv[0]);
-
-		switch (t) {
-		case TLV_NDEF:
-			DBG("NDEF found %d bytes long", near_tlv_length(tlv));
-
-			near_ndef_parse(tag->tag, near_tlv_data(tlv),
-						near_tlv_length(tlv));
-
-			break;
-		case TLV_END:
-			break;
-		}
-
-		if (t == TLV_END)
-			break;
-
-		tlv = near_tlv_next(tlv);
-
-		if (tlv - data >= length)
-			break;
-	}
-
-	DBG("Done");
-
-	if (tag->cb)
-		tag->cb(tag->adapter_idx, 0);
-
-	return 0;
-}
-
 static int data_recv(uint8_t *resp, int length, void *data)
 {
 	struct type2_tag *tag = data;
@@ -142,7 +102,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 		DBG("Done reading");
 
-		data_parse(tag, nfc_data, data_length);
+		near_tlv_parse(tag->tag, tag->cb, nfc_data, data_length);
 
 		g_free(tag);
 
