@@ -38,6 +38,7 @@
 #include <near/target.h>
 #include <near/tag.h>
 #include <near/ndef.h>
+#include <near/tlv.h>
 
 #define CMD_READ         0x30
 #define CMD_WRITE        0xA2
@@ -48,13 +49,6 @@
 #define META_BLOCK_START 0
 #define DATA_BLOCK_START 4
 #define TYPE2_MAGIC 0xe1
-
-#define TLV_NULL 0x00
-#define TLV_LOCK 0x01
-#define TLV_MEM  0x02
-#define TLV_NDEF 0x03
-#define TLV_PROP 0xfd
-#define TLV_END  0xfe
 
 #define TAG_DATA_CC(data) ((data) + 12)
 #define TAG_DATA_LENGTH(cc) ((cc)[2] * 8)
@@ -74,54 +68,6 @@ struct type2_tag {
 	struct near_tag *tag;
 };
 
-static uint16_t tlv_length(uint8_t *tlv)
-{
-	uint16_t length;
-
-	if (tlv[0] == TLV_NULL || tlv[0] == TLV_END)
-		length = 0;
-	else if (tlv[1] == 0xff)
-		length = *(uint16_t *)(tlv + 2);
-	else
-		length = tlv[1];
-
-	return length;
-}
-
-static uint8_t *next_tlv(uint8_t *data)
-{
-	uint16_t length;
-	uint8_t l_length;
-
-	length = tlv_length(data);
-	if (length > 0xfe)
-		l_length = 3;
-	else if (length == 0)
-		l_length = 0;
-	else
-		l_length = 1;
-
-	/* T (1 byte) + L (1 or 3 bytes) + V */
-	return data + 1 + l_length + length;
-}
-
-static uint8_t *tlv_data(uint8_t *data)
-{
-	uint16_t length;
-	uint8_t l_length;
-
-	length = tlv_length(data);
-	if (length > 0xfe)
-		l_length = 3;
-	else if (length == 0)
-		l_length = 0;
-	else
-		l_length = 1;
-
-	/* T (1 byte) + L (1 or 3 bytes) */
-	return data + 1 + l_length;
-}
-
 static int data_parse(struct type2_tag *tag, uint8_t *data, uint16_t length)
 {
 	uint8_t *tlv = data, t;
@@ -135,10 +81,10 @@ static int data_parse(struct type2_tag *tag, uint8_t *data, uint16_t length)
 
 		switch (t) {
 		case TLV_NDEF:
-			DBG("NDEF found %d bytes long", tlv_length(tlv));
+			DBG("NDEF found %d bytes long", near_tlv_length(tlv));
 
-			near_ndef_parse(tag->tag, tlv_data(tlv),
-						tlv_length(tlv));
+			near_ndef_parse(tag->tag, near_tlv_data(tlv),
+						near_tlv_length(tlv));
 
 			break;
 		case TLV_END:
@@ -148,7 +94,7 @@ static int data_parse(struct type2_tag *tag, uint8_t *data, uint16_t length)
 		if (t == TLV_END)
 			break;
 
-		tlv = next_tlv(tlv);
+		tlv = near_tlv_next(tlv);
 
 		if (tlv - data >= length)
 			break;

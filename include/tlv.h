@@ -22,6 +22,13 @@
 #ifndef __NEAR_TLV_H
 #define __NEAR_TLV_H
 
+#define TLV_NULL 0x00
+#define TLV_LOCK 0x01
+#define TLV_MEM  0x02
+#define TLV_NDEF 0x03
+#define TLV_PROP 0xfd
+#define TLV_END  0xfe
+
 uint16_t near_tlv_length(uint8_t *tlv);
 uint8_t *near_tlv_next(uint8_t *tlv);
 uint8_t *near_tlv_data(uint8_t *tlv);
