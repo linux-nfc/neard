@@ -5,7 +5,7 @@ includedir = @includedir@/near
 
 include_HEADERS = include/types.h include/log.h include/plugin.h \
 			include/tag.h include/adapter.h include/ndef.h \
-			include/target.h
+			include/target.h include/tlv.h
 
 nodist_include_HEADERS = include/version.h
 
@@ -31,7 +31,8 @@ libexec_PROGRAMS = src/neard
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/main.c src/error.c src/near.h src/log.c \
 			src/dbus.c src/manager.c src/adapter.c src/target.c \
-			src/tag.c src/plugin.c src/netlink.c src/ndef.c
+			src/tag.c src/plugin.c src/netlink.c src/ndef.c \
+			src/tlv.c
 
 src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ @NETLINK_LIBS@ -lresolv -ldl
 
