@@ -48,7 +48,8 @@ struct near_adapter {
 	near_bool_t powered;
 	near_bool_t polling;
 
-	struct near_target *target;
+	GHashTable *targets;
+	struct near_target *link;
 	int sock;
 
 	GIOChannel *channel;
@@ -74,6 +75,13 @@ static void free_adapter(gpointer data)
 	g_free(adapter->name);
 	g_free(adapter->path);
 	g_free(adapter);
+}
+
+static void free_target(gpointer data)
+{
+	struct near_target *target = data;
+
+	__near_target_remove(target);
 }
 
 static void polling_changed(struct near_adapter *adapter)
@@ -147,22 +155,29 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 	}
 }
 
-static void append_target(DBusMessageIter *iter, void *user_data)
+static void append_target_path(gpointer key, gpointer value, gpointer user_data)
 {
-	struct near_adapter *adapter = user_data;
+	struct near_target *target = value;
+	DBusMessageIter *iter = user_data;
 	const char *target_path;
 
-	DBG("");
-
-	if (adapter->target == NULL)
-		return;
-
-	target_path = __near_target_get_path(adapter->target);
+	target_path = __near_target_get_path(target);
 	if (target_path == NULL)
 		return;
 
+	DBG("%s", target_path);
+
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
 							&target_path);
+}
+
+static void append_targets(DBusMessageIter *iter, void *user_data)
+{
+	struct near_adapter *adapter = user_data;
+
+	DBG("");
+
+	g_hash_table_foreach(adapter->targets, append_target_path, iter);
 }
 
 void __near_adapter_target_changed(uint32_t adapter_idx)
@@ -175,8 +190,8 @@ void __near_adapter_target_changed(uint32_t adapter_idx)
 		return;
 
 	near_dbus_property_changed_array(adapter->path,
-				NFC_ADAPTER_INTERFACE, "Target",
-				DBUS_TYPE_OBJECT_PATH, append_target,
+				NFC_ADAPTER_INTERFACE, "Targets",
+				DBUS_TYPE_OBJECT_PATH, append_targets,
 				adapter);
 }
 
@@ -206,8 +221,8 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, adapter);
 
-	near_dbus_dict_append_array(&dict, "Target",
-				DBUS_TYPE_OBJECT_PATH, append_target, adapter);
+	near_dbus_dict_append_array(&dict, "Targets",
+				DBUS_TYPE_OBJECT_PATH, append_targets, adapter);
 
 	near_dbus_dict_close(&array, &dict);
 
@@ -292,7 +307,8 @@ struct near_adapter * __near_adapter_create(uint32_t idx,
 	adapter->idx = idx;
 	adapter->protocols = protocols;
 	adapter->powered = TRUE;
-	adapter->target = NULL;
+	adapter->targets = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+							NULL, free_target);
 	adapter->sock = -1;
 
 	adapter->path = g_strdup_printf("%s/nfc%d", NFC_PATH, idx);
@@ -378,14 +394,15 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	if (target == NULL)
 		return -ENODEV;
 
-	adapter->target = target;
+	g_hash_table_insert(adapter->targets,
+			GINT_TO_POINTER(target_idx), target);	
 
 	__near_tag_read(target, tag_read_cb);
 
 	return 0;
 }
 
-int __near_adapter_remove_target(uint32_t idx, struct near_target *target)
+int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 {
 	struct near_adapter *adapter;
 
@@ -395,13 +412,7 @@ int __near_adapter_remove_target(uint32_t idx, struct near_target *target)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	if (adapter->target == target) {
-		if (adapter->sock != -1)
-			close(adapter->sock);
-		adapter->target = NULL;
-	}
-
-	__near_target_remove(target);
+	g_hash_table_remove(adapter->targets, GINT_TO_POINTER(target_idx));
 
 	return 0;
 }
@@ -473,6 +484,7 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 {
 	struct near_adapter *adapter;
+	struct near_target *target;
 	struct sockaddr_nfc addr;
 	int err, sock;
 
@@ -485,10 +497,9 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	if (adapter->sock != -1)
 		return -EALREADY;
 
-	if (adapter->target == NULL)
-		return -ENOLINK;
-
-	if (__near_target_get_idx(adapter->target) != target_idx)
+	target = g_hash_table_lookup(adapter->targets,
+				GINT_TO_POINTER(target_idx));
+	if (target == NULL)
 		return -ENOLINK;
 
 	sock = socket(AF_NFC, SOCK_SEQPACKET, NFC_SOCKPROTO_RAW);
@@ -507,6 +518,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	}
 
 	adapter->sock = sock;
+	adapter->link = target;
 
 	if (adapter->channel == NULL)
 		adapter->channel = g_io_channel_unix_new(adapter->sock);
@@ -543,6 +555,7 @@ int near_adapter_disconnect(uint32_t idx)
 	adapter->channel = NULL;
 	close(adapter->sock);
 	adapter->sock = -1;
+	adapter->link = NULL;
 	adapter_flush_rx(adapter, -ENOLINK);
 
 	return 0;
@@ -561,7 +574,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 	if (adapter == NULL)
 		return -ENODEV;
 
-	if (adapter->sock == -1)
+	if (adapter->sock == -1 || adapter->link == NULL)
 		return -ENOLINK;
 
 	if (cb != NULL && adapter->watch != 0) {
@@ -571,7 +584,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 
 		DBG("req %p cb %p data %p", req, cb, data);
 
-		req->target_idx = __near_target_get_idx(adapter->target);
+		req->target_idx = __near_target_get_idx(adapter->link);
 		req->cb = cb;
 		req->data = data;
 
