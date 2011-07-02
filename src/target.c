@@ -329,29 +329,29 @@ int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
 			uint16_t sens_res, uint8_t sel_res)
 {
 	struct near_target *target;
+	char *path;
 
-	if (g_hash_table_lookup(target_hash,
-			GINT_TO_POINTER(target_idx)) != NULL)
+	path = g_strdup_printf("%s/nfc%d/target%d", NFC_PATH,
+					adapter_idx, target_idx);
+
+	if (path == NULL)
+		return -ENOMEM;
+
+	if (g_hash_table_lookup(target_hash, path) != NULL)
 		return -EEXIST;
 
 	target = g_try_malloc0(sizeof(struct near_target));
 	if (target == NULL)
 		return -ENOMEM;
 
-	target->path = g_strdup_printf("%s/nfc%d/target%d", NFC_PATH,
-					adapter_idx, target_idx);
-	if (target->path == NULL) {
-		g_free(target);
-		return -ENOMEM;
-	}
-
+	target->path = path;
 	target->idx = target_idx;
 	target->adapter_idx = adapter_idx;
 	target->protocols = protocols;
 	target->type = type;
 	find_tag_type(target, sens_res, sel_res);
 
-	g_hash_table_insert(target_hash, GINT_TO_POINTER(target_idx), target);
+	g_hash_table_insert(target_hash, path, target);
 
 	DBG("connection %p", connection);
 
@@ -363,12 +363,9 @@ int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
 	return __near_adapter_add_target(adapter_idx, target);
 }
 
-void __near_target_remove(uint32_t target_idx)
+void __near_target_remove(struct near_target *target)
 {
-	struct near_target *target;
-
-	target = g_hash_table_lookup(target_hash, GINT_TO_POINTER(target_idx));
-	if (target == NULL)
+	if (g_hash_table_lookup(target_hash, target->path) == NULL)
 		return;
 
 	__near_adapter_remove_target(target->adapter_idx, target);
@@ -376,14 +373,22 @@ void __near_target_remove(uint32_t target_idx)
 	g_dbus_unregister_interface(connection, target->path,
 						NFC_TARGET_INTERFACE);
 
-	g_hash_table_remove(target_hash, GINT_TO_POINTER(target_idx));
+	g_hash_table_remove(target_hash, target->path);
 }
 
-struct near_tag *near_target_get_tag(uint32_t target_idx, size_t data_length)
+struct near_tag *near_target_add_tag(uint32_t adapter_idx, uint32_t target_idx,
+						size_t data_length)
 {
 	struct near_target *target;
+	char *path;
 
-	target = g_hash_table_lookup(target_hash, GINT_TO_POINTER(target_idx));
+	path = g_strdup_printf("%s/nfc%d/target%d", NFC_PATH,
+					adapter_idx, target_idx);
+	if (path == NULL)
+		return NULL;
+
+	target = g_hash_table_lookup(target_hash, path);
+	g_free(path);
 	if (target == NULL)
 		return NULL;
 
@@ -404,8 +409,8 @@ int __near_target_init(void)
 
 	connection = near_dbus_get_connection();
 
-	target_hash = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-							NULL, free_target);
+	target_hash = g_hash_table_new_full(g_str_hash, g_str_equal,
+						g_free, free_target);
 
 	return 0;
 }

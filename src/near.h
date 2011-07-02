@@ -98,7 +98,7 @@ uint32_t __near_target_get_protocols(struct near_target *target);
 int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
 		uint32_t protocols, enum near_target_type type,
 		uint16_t sens_res, uint8_t sel_res);
-void __near_target_remove(uint32_t target_idx);
+void __near_target_remove(struct near_target *target);
 int __near_target_init(void);
 void __near_target_cleanup(void);
 

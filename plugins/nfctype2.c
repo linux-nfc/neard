@@ -174,7 +174,8 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		goto out;
 	}
 
-	tag = near_target_get_tag(cookie->target_idx, TAG_DATA_LENGTH(cc));
+	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx,
+					TAG_DATA_LENGTH(cc));
 	if (tag == NULL) {
 		err = -ENOMEM;
 		goto out;

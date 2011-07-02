@@ -28,6 +28,7 @@
 
 #include <near/tag.h>
 
-struct near_tag *near_target_get_tag(uint32_t target_idx, size_t data_length);
+struct near_tag *near_target_add_tag(uint32_t adapter_idx, uint32_t target_idx,
+					size_t data_length);
 
 #endif
