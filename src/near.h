@@ -68,21 +68,6 @@ void __near_manager_adapter_remove(uint32_t idx);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
 
-#include <near/adapter.h>
-
-struct near_adapter * __near_adapter_create(uint32_t idx,
-				const char *name, uint32_t protocols);
-void __near_adapter_destroy(struct near_adapter *adapter);
-const char *__near_adapter_get_path(struct near_adapter *adapter);
-struct near_adapter *__near_adapter_get(uint32_t idx);
-int __near_adapter_add(struct near_adapter *adapter);
-void __near_adapter_remove(struct near_adapter *adapter);
-int __near_adapter_add_target(uint32_t idx, struct near_target *target);
-int __near_adapter_remove_target(uint32_t idx, struct near_target *target);
-void __near_adapter_list(DBusMessageIter *iter, void *user_data);
-int __near_adapter_init(void);
-void __near_adapter_cleanup(void);
-
 #include <near/target.h>
 
 enum near_target_type {
@@ -95,12 +80,30 @@ uint16_t __near_target_get_tag_type(struct near_target *target);
 uint32_t __near_target_get_idx(struct near_target *target);
 uint32_t __near_target_get_adapter_idx(struct near_target *target);
 uint32_t __near_target_get_protocols(struct near_target *target);
-int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
-		uint32_t protocols, enum near_target_type type,
-		uint16_t sens_res, uint8_t sel_res);
+struct near_target * __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
+			uint32_t protocols, enum near_target_type type,
+			uint16_t sens_res, uint8_t sel_res);
 void __near_target_remove(struct near_target *target);
 int __near_target_init(void);
 void __near_target_cleanup(void);
+
+#include <near/adapter.h>
+
+struct near_adapter * __near_adapter_create(uint32_t idx,
+				const char *name, uint32_t protocols);
+void __near_adapter_destroy(struct near_adapter *adapter);
+const char *__near_adapter_get_path(struct near_adapter *adapter);
+struct near_adapter *__near_adapter_get(uint32_t idx);
+int __near_adapter_add(struct near_adapter *adapter);
+void __near_adapter_remove(struct near_adapter *adapter);
+int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
+			uint32_t protocols, enum near_target_type type,
+			      uint16_t sens_res, uint8_t sel_res);
+int __near_adapter_remove_target(uint32_t idx, struct near_target *target);
+void __near_adapter_target_changed(uint32_t adapter_idx);
+void __near_adapter_list(DBusMessageIter *iter, void *user_data);
+int __near_adapter_init(void);
+void __near_adapter_cleanup(void);
 
 #include <near/ndef.h>
 

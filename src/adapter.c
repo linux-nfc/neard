@@ -165,8 +165,15 @@ static void append_target(DBusMessageIter *iter, void *user_data)
 							&target_path);
 }
 
-static void target_changed(struct near_adapter *adapter)
+void __near_adapter_target_changed(uint32_t adapter_idx)
 {
+	struct near_adapter *adapter;
+
+	adapter = g_hash_table_lookup(adapter_hash,
+				GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
 	near_dbus_property_changed_array(adapter->path,
 				NFC_ADAPTER_INTERFACE, "Target",
 				DBUS_TYPE_OBJECT_PATH, append_target,
@@ -343,23 +350,18 @@ void __near_adapter_remove(struct near_adapter *adapter)
 
 static void tag_read_cb(uint32_t adapter_idx, int status)
 {
-	struct near_adapter *adapter;
-
-	DBG("%d", status);
-
 	if (status < 0)
 		return;
 
-	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
-		return;
-
-	target_changed(adapter);
+	__near_adapter_target_changed(adapter_idx);
 }
 
-int __near_adapter_add_target(uint32_t idx, struct near_target *target)
+int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
+				uint32_t protocols, enum near_target_type type,
+				uint16_t sens_res, uint8_t sel_res)
 {
 	struct near_adapter *adapter;
+	struct near_target *target;
 
 	DBG("idx %d", idx);
 
@@ -367,11 +369,16 @@ int __near_adapter_add_target(uint32_t idx, struct near_target *target)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	/* TODO target reference */
-	adapter->target = target;
 	adapter->polling = FALSE;
-
 	polling_changed(adapter);
+
+	/* TODO target reference */
+	target = __near_target_add(idx, target_idx, protocols, type,
+							sens_res, sel_res);
+	if (target == NULL)
+		return -ENODEV;
+
+	adapter->target = target;
 
 	__near_tag_read(target, tag_read_cb);
 
@@ -393,6 +400,8 @@ int __near_adapter_remove_target(uint32_t idx, struct near_target *target)
 			close(adapter->sock);
 		adapter->target = NULL;
 	}
+
+	__near_target_remove(target);
 
 	return 0;
 }
@@ -602,6 +611,8 @@ int __near_adapter_init(void)
 
 void __near_adapter_cleanup(void)
 {
+	DBG("");
+
 	g_hash_table_destroy(adapter_hash);
 	adapter_hash = NULL;
 }

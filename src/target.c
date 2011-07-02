@@ -53,9 +53,10 @@ static void free_target(gpointer data)
 {
 	struct near_target *target = data;
 
+	DBG("");
+
 	if (target->tag != NULL)
 		__near_tag_free(target->tag);
-	g_free(target->path);
 	g_free(target);
 }
 
@@ -324,9 +325,9 @@ static void find_tag_type(struct near_target *target,
 	DBG("tag type 0x%x", target->tag_type);
 }
 
-int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
-			uint32_t protocols, enum near_target_type type,
-			uint16_t sens_res, uint8_t sel_res)
+struct near_target *__near_target_add(uint32_t adapter_idx, uint32_t target_idx,
+				uint32_t protocols, enum near_target_type type,
+				uint16_t sens_res, uint8_t sel_res)
 {
 	struct near_target *target;
 	char *path;
@@ -335,14 +336,14 @@ int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
 					adapter_idx, target_idx);
 
 	if (path == NULL)
-		return -ENOMEM;
+		return NULL;
 
 	if (g_hash_table_lookup(target_hash, path) != NULL)
-		return -EEXIST;
+		return NULL;
 
 	target = g_try_malloc0(sizeof(struct near_target));
 	if (target == NULL)
-		return -ENOMEM;
+		return NULL;
 
 	target->path = path;
 	target->idx = target_idx;
@@ -360,15 +361,13 @@ int __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
 					target_methods, target_signals,
 							NULL, target, NULL);
 
-	return __near_adapter_add_target(adapter_idx, target);
+	return target;
 }
 
 void __near_target_remove(struct near_target *target)
 {
 	if (g_hash_table_lookup(target_hash, target->path) == NULL)
 		return;
-
-	__near_adapter_remove_target(target->adapter_idx, target);
 
 	g_dbus_unregister_interface(connection, target->path,
 						NFC_TARGET_INTERFACE);
