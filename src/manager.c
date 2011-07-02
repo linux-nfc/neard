@@ -86,9 +86,9 @@ int __near_manager_adapter_add(uint32_t idx, const char *name, uint32_t protocol
 	}
 
 	err = __near_adapter_add(adapter);
-	if (err < 0)
+	if (err < 0) {
 		__near_adapter_destroy(adapter);
-	else {
+	} else {
 		near_dbus_property_changed_array(NFC_MANAGER_PATH,
 				NFC_MANAGER_INTERFACE, "Adapters",
 				DBUS_TYPE_OBJECT_PATH, __near_adapter_list,
