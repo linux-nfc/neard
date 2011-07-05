@@ -40,7 +40,7 @@
 #include <near/ndef.h>
 #include <near/tlv.h>
 
-#define CMD_READ_ALL		0x00	// Read all bytes (incl: HR)
+#define CMD_READ_ALL		0x00	/* Read all bytes (incl: HR) */
 
 #define OFFSET_STATUS_CMD	0x00
 #define OFFSET_HEADER_ROM	0x01
@@ -135,9 +135,9 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		err = near_tlv_parse(t1_tag->tag, t1_tag->cb,
 				cc + LEN_CC_BYTES, TAG_T1_DATA_LENGTH(cc));
 		near_adapter_disconnect(t1_tag->adapter_idx);
-	}
-	else
+	} else {
 		err = -EOPNOTSUPP ;
+	}
 
 out:
 	g_free(cookie);
@@ -160,8 +160,8 @@ static int nfctype1_read_all(uint32_t adapter_idx, uint32_t target_idx,
 
 	DBG("");
 
-	t1_cmd.cmd = CMD_READ_ALL;		/* Read ALL cmd give 124 bytes */
-	t1_cmd.offset = 0;				/* NA */
+	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
+	t1_cmd.offset = 0;	       /* NA */
 
 	cookie = g_try_malloc0(sizeof(struct recv_cookie));
 	cookie->adapter_idx = adapter_idx;
