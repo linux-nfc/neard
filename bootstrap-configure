@@ -7,5 +7,6 @@ fi
 ./bootstrap && \
     ./configure --enable-maintainer-mode \
 		--enable-debug \
+		--enable-nfctype1=builtin \
 		--enable-nfctype2=builtin \
 		--prefix=/usr $*
