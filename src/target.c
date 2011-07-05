@@ -318,6 +318,8 @@ static void find_tag_type(struct near_target *target,
 			break;
 		}
 
+	} else if (target->protocols & NFC_PROTO_FELICA_MASK) {
+		target->tag_type = NEAR_TAG_NFC_TYPE3;
 	} else {
 		target->tag_type = NEAR_TAG_NFC_UNKNOWN;
 	}
