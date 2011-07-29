@@ -9,4 +9,5 @@ fi
 		--enable-debug \
 		--enable-nfctype1=builtin \
 		--enable-nfctype2=builtin \
+		--enable-nfctype3=builtin \
 		--prefix=/usr $*

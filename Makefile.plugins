@@ -26,3 +26,15 @@ plugins_nfctype2_la_CFLAGS = $(plugin_cflags)
 plugins_nfctype2_la_LDFLAGS = $(plugin_ldflags)
 endif
 endif
+
+if NFCTYPE3
+if NFCTYPE3_BUILTIN
+builtin_modules += nfctype3
+builtin_sources += plugins/nfctype3.c
+else
+plugin_LTLIBRARIES += plugins/nfctype3.la
+plugin_objects += $(plugins_nfctype3_la_OBJECTS)
+plugins_nfctype3_la_CFLAGS = $(plugin_cflags)
+plugins_nfctype3_la_LDFLAGS = $(plugin_ldflags)
+endif
+endif
