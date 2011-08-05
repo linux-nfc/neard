@@ -8,3 +8,57 @@ Background
    lowest complexity. Complexity is a function of both task 'complexity'
    and task 'scope'.
 
+Core
+====
+
+- NDEF building library
+
+  Priority: High
+  Complexity: C4
+  Owner: Ravikumar Veeramally <ravikumar.veeramally@intel.com>
+
+  This library should provide a simple API to build NDEFs based on very high
+  level input, e.g. an image or an URL.
+
+
+- Card Emulation Mode
+
+  Priority: High
+  Complexity: C8
+  Dependencies: Core:NDEF building library
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  In card emulation mode, the NFC adapter is in passive mode, and gets
+  activated by an initiator mode device. Then the initiator sends command
+  that the target is supposed to interpret and respond to. Most of the
+  commands are tag specific.
+  For a proper card emulation mode support, the NFC adapter must enter the
+  polling loop and not only initiate the RF field, but then wait for intiator
+  to activate it. Once activated, the NFC socket should enter the accept
+  state, and dispatch the various commands to the right plugins (one per
+  protocol, a.k.a. tags).
+
+
+- p2p Mode
+
+  Priority: Medium
+  Complexity: C8
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+
+
+Reader mode
+===========
+
+- Type 4 tag support
+
+  Priority: High
+  Complexity: C4
+  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
+
+
+- Topaz 512 (type 1) tag support
+
+  Priority: High
+  Complexity: C2
+  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
