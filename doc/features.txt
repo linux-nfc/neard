@@ -4,7 +4,7 @@ neard - Near Field Communication daemon
 Purpose
 =======
 
-This document descirbes all the major functionalities
+This document describes all the major functionalities
 supported by neard.
 
 
