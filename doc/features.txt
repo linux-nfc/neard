@@ -1,0 +1,29 @@
+neard - Near Field Communication daemon
+=======================================
+
+Purpose
+=======
+
+This document descirbes all the major functionalities
+supported by neard.
+
+
+Reader Mode
+===========
+Supported tags:
+
+  * Type 1: neard only supports the Topaz 96 tags.
+  * Type 2: Supported.
+  * Type 3: Supported.
+  * Type 4: Not supported.
+
+
+Card Emulation Mode
+===================
+Not supported.
+
+
+Peer To Peer Mode
+=================
+Not supported.
+
