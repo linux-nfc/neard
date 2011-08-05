@@ -44,7 +44,13 @@ Core
   Priority: Medium
   Complexity: C8
   Owner: Samuel Ortiz <sameo@linux.intel.com>
+  Dependencies: Core:NDEF building library
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
 
+  In p2p mode, an NFC adapter can either be in target or initiator mode.
+  A link is established between 2 NFC adapters, and can be connection or
+  connection less oriented. NDEFs are exchanged through the SNEP (NFC
+  Forum draft) protocol.
 
 
 Reader mode
