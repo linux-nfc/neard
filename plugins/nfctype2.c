@@ -196,10 +196,10 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	err = data_read(t2_tag);
 
 out:
-	g_free(cookie);
-
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, err);
+
+	g_free(cookie);
 
 	return err;
 }
