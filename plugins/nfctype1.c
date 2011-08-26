@@ -80,7 +80,7 @@ struct recv_cookie {
 
 static int meta_recv(uint8_t *resp, int length, void *data)
 {
-    struct recv_cookie *cookie = data;
+	struct recv_cookie *cookie = data;
 	struct near_tag *tag;
 	struct type1_tag *t1_tag;
 	uint8_t *cc;
