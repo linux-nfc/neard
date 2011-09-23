@@ -42,35 +42,36 @@
 #define RECORD_TNF_UNKNOWN   0x05
 #define RECORD_TNF_UNCHANGED 0x06
 
-#define RECORD_TNF_WKT_TEXT             'T'
-#define RECORD_TNF_WKT_URI              'U'
-#define RECORD_TNF_WKT_SIZE             's'
-#define RECORD_TNF_WKT_TYPE             't'
-#define RECORD_TNF_WKT_SMART_POSTER     "Sp"
-#define RECORD_TNF_WKT_REC_ACTION       "act"
-#define RECORD_TNF_WKT_HANDOVER_REQUEST "Hr"
-#define RECORD_TNF_WKT_HANDOVER_SELECT  "Hs"
-#define RECORD_TNF_WKT_HANDOVER_CARRIER "Hc"
+#define RECORD_MB_BIT(val)  ((val & 0x80) >> 7)
+#define RECORD_ME_BIT(val)  ((val & 0x40) >> 6)
+#define RECORD_CF_BIT(val)  ((val & 0x20) >> 5)
+#define RECORD_SR_BIT(val)  ((val & 0x10) >> 4)
+#define RECORD_IL_BIT(val)  ((val & 0x8)  >> 3)
+#define RECORD_TNF_BIT(val) (val & 0x7)
 
-#define RECORD_MB(record)  (((record)[0] & 0x80) >> 7)
-#define RECORD_ME(record)  (((record)[0] & 0x40) >> 6)
-#define RECORD_CF(record)  (((record)[0] & 0x20) >> 5)
-#define RECORD_SR(record)  (((record)[0] & 0x10) >> 4)
-#define RECORD_IL(record)  (((record)[0] & 0x8)  >> 3)
-#define RECORD_TNF(record) ((record)[0] & 0x7)
+#define NDEF_MSG_MIN_LENGTH 0x03
+
+enum record_type {
+	RECORD_TYPE_WKT_SMART_POSTER          =   0x01,
+	RECORD_TYPE_WKT_URI                   =   0x02,
+	RECORD_TYPE_WKT_TEXT                  =   0x03,
+	RECORD_TYPE_WKT_SIZE                  =   0x04,
+	RECORD_TYPE_WKT_TYPE                  =   0x05,
+	RECORD_TYPE_WKT_ACTION                =   0x06,
+	RECORD_TYPE_WKT_HANDOVER_REQUEST      =   0x07,
+	RECORD_TYPE_WKT_HANDOVER_SELECT       =   0x08,
+	RECORD_TYPE_WKT_HANDOVER_CARRIER      =   0x09,
+	RECORD_TYPE_WKT_ALTERNATIVE_CARRIER   =   0x0a,
+	RECORD_TYPE_WKT_COLLISION_RESOLUTION  =   0x0b,
+	RECORD_TYPE_WKT_ERROR                 =   0x0c,
+	RECORD_TYPE_UNKNOWN                   =   0xfe,
+	RECORD_TYPE_ERROR                     =   0xff
+};
 
 struct near_ndef_record {
 	char *path;
-
 	uint8_t tnf;
-	gboolean smart_poster;
-	gboolean hand_over;
-
-	uint8_t *type;
-	size_t type_length;
-
-	uint8_t *payload;
-	size_t payload_length;
+	enum record_type type;
 };
 
 static DBusConnection *connection = NULL;
@@ -80,280 +81,64 @@ char *__near_ndef_record_get_path(struct near_ndef_record *record)
 	return record->path;
 }
 
-void __near_ndef_record_free(struct near_ndef_record *record)
-{
-	g_dbus_unregister_interface(connection, record->path,
-						NFC_RECORD_INTERFACE);
-
-	g_free(record->path);
-	g_free(record);
-}
-
-
-static gboolean record_sp(uint8_t tnf, uint8_t *type, size_t type_length)
-{
-	DBG("tnf 0x%x type length %zu", tnf, type_length);
-
-	if (tnf == RECORD_TNF_WELLKNOWN
-			&& type_length == 2
-	    		&& strncmp((char *)type, "Sp", 2) == 0)
-		return TRUE;
-
-	return FALSE;
-
-}
-
-static uint8_t record_type_offset(uint8_t *record, size_t *type_length)
-{
-	uint8_t sr, il;
-	uint32_t offset = 0;
-
-	sr = RECORD_SR(record);
-	il = RECORD_IL(record);
-	*type_length = record[1];
-
-	/* Record header */
-	offset += 1;
-
-	/* Type length */
-	offset += 1;
-
-	if (sr == 1)
-		offset += 1;
-	else
-		offset += 4;
-	
-	if (il == 1)
-		offset += 1;
-
-	return offset;
-}
-
-static uint8_t record_payload_offset(uint8_t *record, size_t *payload_length)
-{
-	uint8_t sr, tnf, il, type_length, id_length;
-	uint32_t offset = 0;
-
-	sr = RECORD_SR(record);
-	il = RECORD_IL(record);
-	tnf = RECORD_TNF(record);
-	type_length = record[1];
-
-	/* Record header */
-	offset += 1;
-
-	/* Type length */
-	offset += 1;
-
-	if (sr == 1) {
-		*payload_length = record[offset];
-		/* Payload length is 1 byte */
-		offset += 1;
-	} else {
-		*payload_length = *((uint32_t *)(record + offset));
-		/* Payload length is 4 bytes */
-		offset += 4;
-	}
-	
-	if (il == 1) {
-		id_length = record[offset];
-		offset += id_length;
-	} else {
-		id_length = 0;
-	}	
-
-	/* Type value */
-	offset += type_length;
-
-	if (tnf == 0) {
-		offset -= type_length;
-		offset -= id_length;
-	}
-
-	DBG("type length %d payload length %zu id length %d offset %d", type_length, *payload_length, id_length, offset);
-
-	return offset;
-}
-
-static void append_rtd_text(struct near_ndef_record *record,
-					DBusMessageIter *dict)
-{
-	uint8_t utf, language_length;
-	char *encoding, *language, *value;
-
-	DBG("");
-
-	utf = (record->payload[0] & 0x80) >> 7;
-	if (utf == 0)
-		encoding = "UTF-8";
-	else
-		encoding = "UTF-16";
-
-	DBG("encoding %s", encoding);
-
-	language_length  = record->payload[0] & 0x1f;
-	language = g_strndup((char *)&record->payload[1], language_length);
-
-	DBG("language %s", language);
-
-	value = g_strndup((char *)&record->payload[1 + language_length],
-				record->payload_length - 1 -language_length);
-
-	DBG("value %s", value);
-
-	near_dbus_dict_append_basic(dict, "Encoding",
-				    DBUS_TYPE_STRING, &encoding);
-
-	near_dbus_dict_append_basic(dict, "Language",
-				    DBUS_TYPE_STRING, &language);
-
-	near_dbus_dict_append_basic(dict, "Representation",
-				    DBUS_TYPE_STRING, &value);
-
-	g_free(language);
-	g_free(value);
-}
-
-static void append_rtd_uri(struct near_ndef_record *record,
-					DBusMessageIter *dict)
-{
-	char *prefix, *value, *uri;
-
-	switch (record->payload[0]) {
-	case 0x0:
-		prefix = NULL;
-		break;
-	case 0x1:
-		prefix = "http://www.";
-		break;
-	case 0x2:
-		prefix = "https://www.";
-		break;
-	case 0x3:
-		prefix = "http://";
-		break;
-	case 0x4:
-		prefix = "https://";
-		break;
-	case 0x5:
-		prefix = "tel:";
-		break;
-	case 0x6:
-		prefix = "mailto:";
-		break;
-	case 0x7:
-		prefix = "ftp://anonymous:anonymous@";
-		break;
-	case 0x8:
-		prefix = "ftp://ftp.";
-		break;
-	case 0x9:
-		prefix = "ftps://";
-		break;
-	default:
-		prefix = NULL;
-		break;
-	}
-
-	uri = g_strndup((char *)&record->payload[1],
-				record->payload_length - 1);
-	value = g_strdup_printf("%s%s", prefix, uri);
-
-	DBG("value %s", value);
-
-	near_dbus_dict_append_basic(dict, "Representation",
-				    DBUS_TYPE_STRING, &value);
-
-	g_free(uri);
-	g_free(value);
-}
-
-static void append_rtd(struct near_ndef_record *record, DBusMessageIter *dict)
-{
-	char *type = (char *) record->type;
-	char *dbus_type = NULL;
-
-	DBG("");
-
-	if (record->type_length == 1) {
-		switch (record->type[0]) {
-		case RECORD_TNF_WKT_TEXT:
-			dbus_type = "Text";
-			append_rtd_text(record, dict);
-			break;
-		case RECORD_TNF_WKT_URI:
-			dbus_type = "URI";
-			append_rtd_uri(record, dict);
-			break;
-		case RECORD_TNF_WKT_SIZE:
-			dbus_type = "Size";
-			break;
-		case RECORD_TNF_WKT_TYPE:
-			dbus_type = "MIME Type";
-			break;
-		}
-	} else if (record->type_length == 2) {
-		if (strncmp(type, RECORD_TNF_WKT_SMART_POSTER, 2))
-			dbus_type = "Smart Poster";
-		if (strncmp(type, RECORD_TNF_WKT_HANDOVER_REQUEST, 2))
-			dbus_type = "Hand Over Request";
-		if (strncmp(type, RECORD_TNF_WKT_HANDOVER_SELECT, 2))
-			dbus_type = "Hand Over Select";
-		if (strncmp(type, RECORD_TNF_WKT_HANDOVER_CARRIER, 2))
-			dbus_type = "Hand Over Carrier";
-	} else if (record->type_length == 3)
-		if (strncmp(type, RECORD_TNF_WKT_REC_ACTION, 3))
-			dbus_type = "Recommended Action";
-
-	if (dbus_type != NULL)
-		near_dbus_dict_append_basic(dict, "Type",
-				    DBUS_TYPE_STRING, &dbus_type);
-
-}
-
 static void append_record(struct near_ndef_record *record,
 					DBusMessageIter *dict)
 {
-	char *type = NULL;
-	gboolean representable = FALSE;
+	char *type;
 
-	if (record->tnf == RECORD_TNF_WELLKNOWN)
-		return append_rtd(record, dict);
+	DBG("");
 
-	switch (record->tnf) {
-	case RECORD_TNF_EMPTY:
-		type = "Empty";
+	if (record == NULL || dict == NULL)
+		return;
 
-	case RECORD_TNF_MIME:
-		type = "MIME";
-		representable = TRUE;
+	switch (record->type) {
+	case RECORD_TYPE_WKT_SIZE:
+	case RECORD_TYPE_WKT_TYPE:
+	case RECORD_TYPE_WKT_ACTION:
+	case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
+	case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
+	case RECORD_TYPE_WKT_ERROR:
+	case RECORD_TYPE_UNKNOWN:
+	case RECORD_TYPE_ERROR:
+		break;
 
-	case RECORD_TNF_URI:
+	case RECORD_TYPE_WKT_TEXT:
+		type = "Text";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		break;
+
+	case RECORD_TYPE_WKT_URI:
 		type = "URI";
-		representable = TRUE;
-	case RECORD_TNF_EXTERNAL:
-		type = "NFC Forum External";
-	case RECORD_TNF_UNKNOWN:
-		type = "Unknown";
-	case RECORD_TNF_UNCHANGED:
-		type = "Unchanged";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		break;
 
+	case RECORD_TYPE_WKT_SMART_POSTER:
+		type = "SmartPoster";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		break;
+
+	case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		type = "HandoverRequest";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		break;
+
+	case RECORD_TYPE_WKT_HANDOVER_SELECT:
+		type = "HandoverSelect";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		break;
+
+	case RECORD_TYPE_WKT_HANDOVER_CARRIER:
+		type = "HandoverCarrier";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		break;
 	}
 
-	near_dbus_dict_append_basic(dict, "Type",
-				    DBUS_TYPE_STRING, &type);
-
-	if (representable == TRUE) {
-		char *value;
-
-		value = g_strndup((char *)record->payload,
-					record->payload_length);
-
-		near_dbus_dict_append_basic(dict, "Representation",
-				    DBUS_TYPE_STRING, &value);
-
-		g_free(value);
-	}
 }
 
 static DBusMessage *get_properties(DBusConnection *conn,
@@ -365,6 +150,10 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
+	if (conn == NULL || msg == NULL ||
+		data == NULL)
+		return NULL;
+
 	reply = dbus_message_new_method_return(msg);
 	if (reply == NULL)
 		return NULL;
@@ -372,12 +161,6 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	dbus_message_iter_init_append(reply, &array);
 
 	near_dbus_dict_open(&array, &dict);
-
-	near_dbus_dict_append_basic(&dict, "SmartPoster",
-				    DBUS_TYPE_BOOLEAN, &record->smart_poster);
-
-	near_dbus_dict_append_basic(&dict, "HandOver",
-				    DBUS_TYPE_BOOLEAN, &record->hand_over);
 
 	append_record(record, &dict);
 
@@ -391,82 +174,198 @@ static GDBusMethodTable record_methods[] = {
 	{ },
 };
 
+static void free_ndef_record(struct near_ndef_record *record)
+{
+	if (record == NULL)
+		return;
+
+	g_free(record->path);
+
+	g_free(record);
+	record = NULL;
+}
+
+void __near_ndef_record_free(struct near_ndef_record *record)
+{
+	g_dbus_unregister_interface(connection, record->path,
+						NFC_RECORD_INTERFACE);
+
+	free_ndef_record(record);
+}
+
+/**
+ * @brief returns record type
+ * Validate type name format, type and type length and returns
+ * type.
+ *
+ * @param tnf     TypeNameFormat value
+ * @param type    Type name in hex foarmat
+ * @param type_lenth Type name length
+ *
+ * @return enum record type
+ */
+
+static enum record_type get_record_type(uint8_t tnf,
+				uint8_t *type, size_t type_length)
+{
+	DBG("");
+
+	if (tnf == RECORD_TNF_WELLKNOWN) {
+		if (type_length == 1) {
+			if (type[0] == 'T')
+				return RECORD_TYPE_WKT_TEXT;
+			else if (type[0] == 'U')
+				return RECORD_TYPE_WKT_URI;
+			else if (type[0] == 's')
+				return RECORD_TYPE_WKT_SIZE;
+			else if (type[0] == 't')
+				return RECORD_TYPE_WKT_TYPE;
+			else
+				return RECORD_TYPE_UNKNOWN;
+
+		} else if (type_length == 2) {
+			if (strncmp((char *)type, "Sp", 2) == 0)
+				return RECORD_TYPE_WKT_SMART_POSTER;
+			else if (strncmp((char *) type, "Hr", 2) == 0)
+				return RECORD_TYPE_WKT_HANDOVER_REQUEST;
+			else if (strncmp((char *) type, "Hs", 2) == 0)
+				return RECORD_TYPE_WKT_HANDOVER_SELECT;
+			else if (strncmp((char *) type, "Hc", 2) == 0)
+				return RECORD_TYPE_WKT_HANDOVER_CARRIER;
+			else if (strncmp((char *) type, "ac", 2) == 0)
+				return RECORD_TYPE_WKT_ALTERNATIVE_CARRIER;
+			else if (strncmp((char *) type, "cr", 2) == 0)
+				return RECORD_TYPE_WKT_COLLISION_RESOLUTION;
+			else
+				return RECORD_TYPE_UNKNOWN;
+
+		} else if (type_length == 3) {
+			if (strncmp((char *)type, "act", 3) == 0)
+				return RECORD_TYPE_WKT_ACTION;
+			else if (strncmp((char *)type, "err", 3) == 0)
+				return RECORD_TYPE_WKT_ERROR;
+			else
+				return RECORD_TYPE_UNKNOWN;
+
+		}
+
+	}
+
+	return RECORD_TYPE_UNKNOWN;
+}
+
 int near_ndef_parse(struct near_tag *tag,
 			uint8_t *ndef_data, size_t ndef_length)
 {
-	struct near_ndef_record *record;
-	uint8_t *raw_record, payload_offset, type_offset;
-	gboolean smart_poster;
+	uint8_t err;
+	uint32_t n_records, adapter_idx, target_idx;
+	size_t offset = 0;
+	struct near_ndef_record *record = NULL;
 
-	raw_record = ndef_data;
+	DBG("");
 
-	while (1) {
-		uint8_t mb, me, sr, tnf, il;
-		uint32_t n_records, target_idx, adapter_idx;
-		size_t i, type_length;
-	
-		mb = RECORD_MB(raw_record);
-		me = RECORD_ME(raw_record);
-		sr = RECORD_SR(raw_record);
-		il = RECORD_IL(raw_record);
-		tnf = RECORD_TNF(raw_record);
-		DBG("Record MB 0x%x ME 0x%x SR 0x%x IL 0x%x TNF 0x%x", mb, me, sr, il, tnf);
+	if (tag == NULL || ndef_data == NULL ||
+		ndef_length < NDEF_MSG_MIN_LENGTH) {
+			err = EINVAL;
+			goto fail;
+	}
 
-		type_offset = record_type_offset(raw_record, &type_length);
+	while (offset < ndef_length) {
+		uint8_t t_mb, t_me, t_sr, t_il, t_tnf;
+		uint8_t type_length, il_length = 0, r_type;
+		uint8_t *type = NULL;
+		uint32_t payload_length = 0;
 
-		smart_poster = record_sp(tnf, raw_record + type_offset,
-								type_length);
-		if (smart_poster == TRUE) {
-			size_t payload_length;
+		t_mb = RECORD_MB_BIT(ndef_data[offset]);
+		t_me = RECORD_ME_BIT(ndef_data[offset]);
+		t_sr = RECORD_SR_BIT(ndef_data[offset]);
+		t_il = RECORD_IL_BIT(ndef_data[offset]);
+		t_tnf = RECORD_TNF_BIT(ndef_data[offset]);
 
-			DBG("Smart Poster");
+		offset++;
+		type_length = ndef_data[offset];
 
-			payload_offset = record_payload_offset(raw_record, &payload_length);
+		offset++;
 
-			raw_record += payload_offset;
+		if (t_sr == 1) {
+			payload_length = ndef_data[offset];
+			offset++;
+		} else {
+			payload_length = *((uint32_t *)(ndef_data + offset));
+			offset += 4;
 
-			continue;
+			if (offset >= ndef_length) {
+				err = EINVAL;
+				goto fail;
+			}
+
 		}
 
+		if (t_il == 1) {
+			il_length = ndef_data[offset];
+			offset++;
+
+			if (offset >= ndef_length) {
+				err = EINVAL;
+				goto fail;
+			}
+
+		}
+
+		if ((offset + type_length + il_length + payload_length)
+			> ndef_length) {
+			err = EINVAL;
+			goto fail;
+		}
+
+		if (type_length > 0) {
+			type = g_try_malloc0(type_length);
+			if (type == NULL) {
+				err = ENOMEM;
+				goto fail;
+			}
+
+			memcpy(type, ndef_data + offset, type_length);
+		}
+
+		r_type = get_record_type(t_tnf, type, type_length);
+		offset += (type_length + il_length);
+
 		record = g_try_malloc0(sizeof(struct near_ndef_record));
-		if (record == NULL)
-			return -ENOMEM;
+		if (record == NULL) {
+			err = ENOMEM;
+			goto fail;
+		}
 
-		record->tnf = tnf;
+		record->tnf = t_tnf;
+		record->type = r_type;
 
-		payload_offset = record_payload_offset(raw_record, &record->payload_length);
-		record->payload = raw_record + payload_offset;
-
-		type_offset = record_type_offset(raw_record, &record->type_length);
-		record->type = raw_record + type_offset;
-
-		record->smart_poster = smart_poster;
-
-		n_records = __near_tag_n_records(tag);
-		target_idx = near_tag_get_target_idx(tag);
+		n_records   = __near_tag_n_records(tag);
+		target_idx  = near_tag_get_target_idx(tag);
 		adapter_idx = near_tag_get_adapter_idx(tag);
+
 		record->path = g_strdup_printf("%s/nfc%d/target%d/record%d",
-						NFC_PATH, adapter_idx, target_idx,
-						n_records); 
+							NFC_PATH, adapter_idx,
+							target_idx, n_records);
+		DBG("Record path '%s'", record->path);
 
-		for (i = 0; i < record->payload_length; i++)
-			DBG("Payload[%zu] %c 0x%x", i, record->payload[i], record->payload[i]);
-
-		DBG("Record path %s", record->path);
 		__near_tag_add_record(tag, record);
 
 		g_dbus_register_interface(connection, record->path,
-					NFC_RECORD_INTERFACE,
-					record_methods, NULL,
-						NULL, record, NULL);
-
-		if (me == 1)
-			break;
-
-		raw_record = record->payload + record->payload_length;
+							NFC_RECORD_INTERFACE,
+							record_methods,
+							NULL, NULL,
+							record, NULL);
+		offset += payload_length;
 	}
 
 	return 0;
+
+fail:
+	near_error("ndef parsing failed");
+	free_ndef_record(record);
+
+	return -err;
 }
 
 int __near_ndef_init(void)

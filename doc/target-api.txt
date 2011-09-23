@@ -60,21 +60,17 @@ Object path	[variable prefix]/{nfc0}/{target0}/{record0,record1,...}
 
 Method		dict GetProperties()
 
-			Returns all properties for the record. See the
-			properties section for available properties.
+			Returns all properties for the record. Each record
+                        has it's type and properties.
+
+                        See the properties section for available properties.
 
 			Possible Errors: org.neard.Error.DoesNotExist
 
-Properties	boolean SmartPoster [readonly]
+Properties	string Type [readonly]
 
-		boolean HandOver [readonly]
-
-		string Type [readonly]
-
-		string Language [readonly]
-
-		string Encoding [readonly]
-
-		array{byte} Value [readonly]
-
-		string Representation [readonly]
+			Type is ndef record type name.
+			Possible values are "SmartPoster", "Text", "URI",
+			"HandoverRequest", "HandoverSelect", "HandoverCarrier".
+			Depends upon this type name dbus api user can filter
+			other properties.

@@ -22,14 +22,7 @@ def extract_record(key, list):
 		print "        Record = [ %s ]" % (str(i))
 
 		for key in properties.keys():
-			if key in ["SmartPoster", "HandOver"]:
-				if properties[key] == dbus.Boolean(1):
-					val = "true"
-				else:
-					val = "false"
-			else:
-				val = str(properties[key])
-
+			val = str(properties[key])
 			print "                %s = %s" % (key, val)
 
 
