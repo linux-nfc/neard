@@ -254,10 +254,48 @@ static enum record_type get_record_type(uint8_t tnf,
 	return RECORD_TYPE_UNKNOWN;
 }
 
+static uint8_t validate_record_begin_and_end_bits(uint8_t *msg_mb,
+					uint8_t *msg_me, uint8_t rec_mb,
+					uint8_t rec_me)
+{
+	DBG("");
+
+	if (msg_mb == NULL || msg_me == NULL)
+		return 0;
+
+	/* Validating record header begin and end bits
+	 * eg: Single record: [mb:1,me:1]
+	 *     Two records:   [mb:1,me:0 - mb:0,me:1]
+	 *     Three or more records [mb:1,me:0 - mb:0,me:0 .. mb:0,me:1]
+	 **/
+
+	if (rec_mb == 1) {
+		if (*msg_mb != 1)
+			*msg_mb = rec_mb;
+		else
+			return -EINVAL;
+
+	}
+
+	if (rec_me == 1) {
+		if (*msg_me != 1) {
+			if (*msg_mb == 1)
+				*msg_me = rec_me;
+			else
+				return -EINVAL;
+
+		} else
+			return -EINVAL;
+
+	}
+
+	return 0;
+}
+
 int near_ndef_parse(struct near_tag *tag,
 			uint8_t *ndef_data, size_t ndef_length)
 {
-	uint8_t err;
+	uint8_t p_mb = 0, p_me = 0, err;
 	uint32_t n_records, adapter_idx, target_idx;
 	size_t offset = 0;
 	struct near_ndef_record *record = NULL;
@@ -271,16 +309,24 @@ int near_ndef_parse(struct near_tag *tag,
 	}
 
 	while (offset < ndef_length) {
-		uint8_t t_mb, t_me, t_sr, t_il, t_tnf;
+		uint8_t c_mb, c_me, t_sr, t_il, t_tnf;
 		uint8_t type_length, il_length = 0, r_type;
 		uint8_t *type = NULL;
 		uint32_t payload_length = 0;
 
-		t_mb = RECORD_MB_BIT(ndef_data[offset]);
-		t_me = RECORD_ME_BIT(ndef_data[offset]);
+		c_mb = RECORD_MB_BIT(ndef_data[offset]);
+		c_me = RECORD_ME_BIT(ndef_data[offset]);
 		t_sr = RECORD_SR_BIT(ndef_data[offset]);
 		t_il = RECORD_IL_BIT(ndef_data[offset]);
 		t_tnf = RECORD_TNF_BIT(ndef_data[offset]);
+
+		/* Validate record header begin and end bits*/
+		if (validate_record_begin_and_end_bits(&p_mb, &p_me,
+							c_mb, c_me) != 0) {
+			DBG("validate mb me failed");
+			err = EINVAL;
+			goto fail;
+		}
 
 		offset++;
 		type_length = ndef_data[offset];
