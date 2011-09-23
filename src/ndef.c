@@ -89,6 +89,31 @@ char *__near_ndef_record_get_path(struct near_ndef_record *record)
 	return record->path;
 }
 
+static void append_text_record(struct near_ndef_text_record *text,
+					DBusMessageIter *dict)
+{
+	DBG("");
+
+	if (text == NULL || dict == NULL)
+		return;
+
+	if (text->encoding != NULL)
+		near_dbus_dict_append_basic(dict, "Encoding",
+						DBUS_TYPE_STRING,
+						&(text->encoding));
+
+	if (text->language_code != NULL)
+		near_dbus_dict_append_basic(dict, "Language",
+						DBUS_TYPE_STRING,
+						&(text->language_code));
+
+	if (text->data != NULL)
+		near_dbus_dict_append_basic(dict, "Representation",
+						DBUS_TYPE_STRING,
+						&(text->data));
+
+}
+
 static void append_record(struct near_ndef_record *record,
 					DBusMessageIter *dict)
 {
@@ -114,6 +139,7 @@ static void append_record(struct near_ndef_record *record,
 		type = "Text";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
+		append_text_record(record->text, dict);
 		break;
 
 	case RECORD_TYPE_WKT_URI:

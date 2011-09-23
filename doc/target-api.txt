@@ -63,6 +63,9 @@ Method		dict GetProperties()
 			Returns all properties for the record. Each record
                         has it's type and properties.
 
+                        If type has "Text", possible properties are "Encoding",
+                        "Language" and "Representation".
+
                         See the properties section for available properties.
 
 			Possible Errors: org.neard.Error.DoesNotExist
@@ -74,3 +77,18 @@ Properties	string Type [readonly]
 			"HandoverRequest", "HandoverSelect", "HandoverCarrier".
 			Depends upon this type name dbus api user can filter
 			other properties.
+
+                string Encoding [readonly]
+
+                       Can exist in Text record. Encoding is either "UTF-8" or
+                       "UTF-16".
+
+                string Language [readonly]
+
+                       Can exist in Text record. ISO/IANA language code.
+
+                       Examples: "fi", "en-US", "fr-CA", "jp".
+
+                string Representation [readonly]
+
+                       Can exist in Text record. The actual text in record.
