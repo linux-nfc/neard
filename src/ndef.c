@@ -122,6 +122,54 @@ static void append_text_record(struct near_ndef_text_record *text,
 
 }
 
+static void append_uri_record(struct near_ndef_uri_record *uri,
+					DBusMessageIter *dict)
+{
+	char *value, *prefix = NULL;
+
+	DBG("");
+
+	if (uri == NULL || dict == NULL)
+		return;
+
+	switch (uri->identifier) {
+	case 0x1:
+		prefix = "http://www.";
+		break;
+	case 0x2:
+		prefix = "https://www.";
+		break;
+	case 0x3:
+		prefix = "http://";
+		break;
+	case 0x4:
+		prefix = "https://";
+		break;
+	case 0x5:
+		prefix = "tel:";
+		break;
+	case 0x6:
+		prefix = "mailto:";
+		break;
+	case 0x7:
+		prefix = "ftp://anonymous:anonymous@";
+		break;
+	case 0x8:
+		prefix = "ftp://ftp.";
+		break;
+	case 0x9:
+		prefix = "ftps://";
+		break;
+	}
+
+	value = g_strdup_printf("%s%.*s", prefix, uri->field_length,
+							 uri->field);
+
+	near_dbus_dict_append_basic(dict, "URI", DBUS_TYPE_STRING, &value);
+
+	g_free(value);
+}
+
 static void append_record(struct near_ndef_record *record,
 					DBusMessageIter *dict)
 {
@@ -154,6 +202,7 @@ static void append_record(struct near_ndef_record *record,
 		type = "URI";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
+		append_uri_record(record->uri, dict);
 		break;
 
 	case RECORD_TYPE_WKT_SMART_POSTER:

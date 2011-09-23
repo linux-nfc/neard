@@ -92,3 +92,12 @@ Properties	string Type [readonly]
                 string Representation [readonly]
 
                        Can exist in Text record. The actual text in record.
+
+		string URI [readonly]
+
+			Can exist in URI record. Here URI identifier is
+                        prefixed to URI field.
+
+                        Example: If the content of URI identifier is 0x02, and
+                        the content of the URI field reads as "nfc-forum.org",
+                        the resulting URI is "https://www.nfc-forum.org".
