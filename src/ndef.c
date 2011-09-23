@@ -74,12 +74,20 @@ struct near_ndef_text_record {
 	char *data;
 };
 
+struct near_ndef_uri_record {
+	uint8_t identifier;
+
+	uint32_t  field_length;
+	uint8_t  *field;
+};
+
 struct near_ndef_record {
 	char *path;
 	uint8_t tnf;
 	enum record_type type;
 
 	struct near_ndef_text_record *text;
+	struct near_ndef_uri_record  *uri;
 };
 
 static DBusConnection *connection = NULL;
@@ -221,6 +229,17 @@ static void free_text_record(struct near_ndef_text_record *text)
 	text = NULL;
 }
 
+static void free_uri_record(struct near_ndef_uri_record *uri)
+{
+	if (uri == NULL)
+		return;
+
+	g_free(uri->field);
+	g_free(uri);
+
+	uri = NULL;
+}
+
 static void free_ndef_record(struct near_ndef_record *record)
 {
 	if (record == NULL)
@@ -230,7 +249,6 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 	switch (record->type) {
 	case RECORD_TYPE_WKT_SMART_POSTER:
-	case RECORD_TYPE_WKT_URI:
 	case RECORD_TYPE_WKT_SIZE:
 	case RECORD_TYPE_WKT_TYPE:
 	case RECORD_TYPE_WKT_ACTION:
@@ -246,6 +264,10 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 	case RECORD_TYPE_WKT_TEXT:
 		free_text_record(record->text);
+		break;
+
+	case RECORD_TYPE_WKT_URI:
+		free_uri_record(record->uri);
 		break;
 	}
 
@@ -437,6 +459,72 @@ fail:
 	return NULL;
 }
 
+/**
+ * @brief Parse the URI record
+ *
+ * Parse the URI record.
+ *
+ * @param[in] ndef_data      NDEF raw data pointer
+ * @param[in] ndef_length    NDEF raw data length
+ * @param[in] offset         URI record payload offset
+ * @param[in] payload_length URI record payload length
+ *
+ * @return struct near_ndef_uri_record * Record on Success
+ *                                       NULL   on Failure
+ */
+
+static struct near_ndef_uri_record *parse_uri_record(uint8_t *ndef_data,
+				size_t ndef_length, size_t offset,
+				uint32_t payload_length)
+{
+	struct near_ndef_uri_record *uri_record = NULL;
+	uint32_t index;
+
+	DBG("");
+
+	if (ndef_data == NULL || ((offset + payload_length) > ndef_length))
+		return NULL;
+
+	uri_record = g_try_malloc0(sizeof(struct near_ndef_uri_record));
+	if (uri_record == NULL)
+		return NULL;
+
+	uri_record->identifier = ndef_data[offset];
+	offset++;
+
+	uri_record->field_length = payload_length - 1;
+
+	if (uri_record->field_length > 0) {
+		uri_record->field = g_try_malloc0(uri_record->field_length);
+		if (uri_record->field == NULL)
+			goto fail;
+
+		memcpy(uri_record->field, ndef_data + offset,
+				uri_record->field_length);
+
+		for (index = 0; index < uri_record->field_length; index++) {
+			/* URI Record Type Definition 1.0 [3.2.3]
+			 * Any character value within the URI between
+			 * (and including) 0 and 31 SHALL be recorded as
+			 * an error, and the URI record to be discarded */
+			if (uri_record->field[index] <= 31)
+				goto fail;
+		}
+
+	}
+
+	DBG("Identfier  '0X%X'", uri_record->identifier);
+	DBG("Field  '%.*s'", uri_record->field_length, uri_record->field);
+
+	return uri_record;
+
+fail:
+	near_error("uri record parsing failed");
+	free_uri_record(uri_record);
+
+	return NULL;
+}
+
 int near_ndef_parse(struct near_tag *tag,
 			uint8_t *ndef_data, size_t ndef_length)
 {
@@ -533,7 +621,6 @@ int near_ndef_parse(struct near_tag *tag,
 
 		switch (r_type) {
 		case RECORD_TYPE_WKT_SMART_POSTER:
-		case RECORD_TYPE_WKT_URI:
 		case RECORD_TYPE_WKT_SIZE:
 		case RECORD_TYPE_WKT_TYPE:
 		case RECORD_TYPE_WKT_ACTION:
@@ -553,6 +640,18 @@ int near_ndef_parse(struct near_tag *tag,
 								payload_length);
 
 			if (record->text == NULL) {
+				err = EINVAL;
+				goto fail;
+			}
+
+			break;
+
+		case RECORD_TYPE_WKT_URI:
+			record->uri = parse_uri_record(ndef_data, ndef_length,
+								offset,
+								payload_length);
+
+			if (record->uri == NULL) {
 				err = EINVAL;
 				goto fail;
 			}
