@@ -184,6 +184,37 @@ static void append_uri_record(struct near_ndef_uri_record *uri,
 	g_free(value);
 }
 
+static void append_smart_poster_record(struct near_ndef_sp_record *sp,
+						DBusMessageIter *dict)
+{
+	uint8_t i;
+
+	DBG("");
+
+	if (sp == NULL || dict == NULL)
+		return;
+
+	near_dbus_dict_append_basic(dict, "Action", DBUS_TYPE_BYTE,
+							&(sp->action));
+
+	if (sp->uri != NULL)
+		append_uri_record(sp->uri, dict);
+
+	if (sp->title_records != NULL &&
+			sp->number_of_title_records > 0) {
+		for (i = 0; i < sp->number_of_title_records; i++)
+			append_text_record(sp->title_records[i], dict);
+	}
+
+	if (sp->type != NULL)
+		near_dbus_dict_append_basic(dict, "MIMEType", DBUS_TYPE_STRING,
+								&(sp->type));
+
+	if (sp->size > 0)
+		near_dbus_dict_append_basic(dict, "Size", DBUS_TYPE_UINT32,
+							&(sp->size));
+}
+
 static void append_record(struct near_ndef_record *record,
 					DBusMessageIter *dict)
 {
@@ -223,6 +254,7 @@ static void append_record(struct near_ndef_record *record,
 		type = "SmartPoster";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
+		append_smart_poster_record(record->sp, dict);
 		break;
 
 	case RECORD_TYPE_WKT_HANDOVER_REQUEST:

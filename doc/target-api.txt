@@ -80,24 +80,50 @@ Properties	string Type [readonly]
 
                 string Encoding [readonly]
 
-                       Can exist in Text record. Encoding is either "UTF-8" or
-                       "UTF-16".
+                       Can exist in Text and SmartPoster(Title) record. Encoding
+                       is either "UTF-8" or "UTF-16".
 
                 string Language [readonly]
 
-                       Can exist in Text record. ISO/IANA language code.
+                       Can exist in Text and SmartPoster(Title) record. ISO/IANA
+                       language code.
 
                        Examples: "fi", "en-US", "fr-CA", "jp".
 
                 string Representation [readonly]
 
-                       Can exist in Text record. The actual text in record.
+                       Can exist in Text and SmartPoster(Title) record.
+                       The actual text in record.
 
 		string URI [readonly]
 
-			Can exist in URI record. Here URI identifier is
-                        prefixed to URI field.
+			Can exist in URI and SmartPoster record. Here URI
+                        identifier is prefixed to URI field.
 
                         Example: If the content of URI identifier is 0x02, and
                         the content of the URI field reads as "nfc-forum.org",
-                        the resulting URI is "https://www.nfc-forum.org".
+                        the resulting URI is "https://www.nfc-forum.org"
+
+		byte Action [readonly]
+
+			Can exist in SmartPoster(Action) record. It suggests
+                        a course of action that the device should do with the
+                        content.
+
+                        Example:
+                                0 - Do the action.
+                                1 - Save for later.
+                                2 - Open for editing.
+
+		uint32 Size [readonly]
+
+			Can exist in SmartPoster(Size) record, which contains
+                        the size of object that the URI field refers to. This
+                        value may be used by the device to determine whether it
+                        can accommodate the referenced file or not.
+
+		string MIMEType [readinly]
+
+			can exist in SmartPoster(Type) record. UTF-8 formatted
+                        string that describes MIME type which describes the
+                        type of the object that can be reached through the URI.
