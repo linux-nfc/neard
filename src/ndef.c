@@ -68,10 +68,18 @@ enum record_type {
 	RECORD_TYPE_ERROR                     =   0xff
 };
 
+struct near_ndef_text_record {
+	char *encoding;
+	char *language_code;
+	char *data;
+};
+
 struct near_ndef_record {
 	char *path;
 	uint8_t tnf;
 	enum record_type type;
+
+	struct near_ndef_text_record *text;
 };
 
 static DBusConnection *connection = NULL;
@@ -174,12 +182,46 @@ static GDBusMethodTable record_methods[] = {
 	{ },
 };
 
+static void free_text_record(struct near_ndef_text_record *text)
+{
+	if (text == NULL)
+		return;
+
+	g_free(text->encoding);
+	g_free(text->language_code);
+	g_free(text->data);
+	g_free(text);
+
+	text = NULL;
+}
+
 static void free_ndef_record(struct near_ndef_record *record)
 {
 	if (record == NULL)
 		return;
 
 	g_free(record->path);
+
+	switch (record->type) {
+	case RECORD_TYPE_WKT_SMART_POSTER:
+	case RECORD_TYPE_WKT_URI:
+	case RECORD_TYPE_WKT_SIZE:
+	case RECORD_TYPE_WKT_TYPE:
+	case RECORD_TYPE_WKT_ACTION:
+	case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+	case RECORD_TYPE_WKT_HANDOVER_SELECT:
+	case RECORD_TYPE_WKT_HANDOVER_CARRIER:
+	case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
+	case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
+	case RECORD_TYPE_WKT_ERROR:
+	case RECORD_TYPE_UNKNOWN:
+	case RECORD_TYPE_ERROR:
+		break;
+
+	case RECORD_TYPE_WKT_TEXT:
+		free_text_record(record->text);
+		break;
+	}
 
 	g_free(record);
 	record = NULL;
@@ -292,6 +334,83 @@ static uint8_t validate_record_begin_and_end_bits(uint8_t *msg_mb,
 	return 0;
 }
 
+/**
+ * @brief Parse the Text record
+ *
+ * Parse the Text record.
+ *
+ * @param[in] ndef_data      NDEF raw data pointer
+ * @param[in] ndef_length    NDEF raw data length
+ * @param[in] offset         Text record payload offset
+ * @param[in] payload_length Text record payload length
+ *
+ * @return struct near_ndef_text_record * Record on Success
+ *                                       NULL   on Failure
+ */
+
+static struct near_ndef_text_record *parse_text_record(uint8_t *ndef_data,
+				size_t ndef_length, size_t offset,
+				uint32_t payload_length)
+{
+	struct near_ndef_text_record *text_record = NULL;
+	uint8_t status, lang_length;
+
+	DBG("");
+
+	if ((ndef_data == NULL) || ((offset + payload_length) > ndef_length))
+		return NULL;
+
+
+	text_record = g_try_malloc0(sizeof(struct near_ndef_text_record));
+	if (text_record == NULL)
+		return NULL;
+
+	/* 0x80 is used to get 7th bit value (0th bit is LSB) */
+	status = ((ndef_data[offset] & 0x80) >> 7);
+
+	text_record->encoding = (status == 0) ?
+					g_strdup("UTF-8") : g_strdup("UTF-16");
+
+	/* 0x3F is used to get 5th-0th bits value (0th bit is LSB) */
+	lang_length = (ndef_data[offset] & 0x3F);
+	offset++;
+
+	if (lang_length > 0) {
+		if ((offset + lang_length) >= ndef_length)
+			goto fail;
+
+		text_record->language_code = g_strndup(
+						(char *)(ndef_data+offset),
+						lang_length);
+	} else {
+		text_record->language_code = NULL;
+	}
+
+	offset += lang_length;
+
+	if ((payload_length - lang_length - 1) > 0) {
+		text_record->data = g_strndup((char *)(ndef_data+offset),
+					payload_length - lang_length - 1);
+	} else {
+		text_record->data = NULL;
+	}
+
+	if (offset >= ndef_length)
+		goto fail;
+
+	DBG("Encoding  '%s'", text_record->encoding);
+	DBG("Language Code  '%s'", text_record->language_code);
+	DBG("Data  '%s'", text_record->data);
+
+	return text_record;
+
+fail:
+	near_error("text record parsing failed");
+	free_text_record(text_record);
+
+	return NULL;
+}
+
 int near_ndef_parse(struct near_tag *tag,
 			uint8_t *ndef_data, size_t ndef_length)
 {
@@ -385,6 +504,35 @@ int near_ndef_parse(struct near_tag *tag,
 
 		record->tnf = t_tnf;
 		record->type = r_type;
+
+		switch (r_type) {
+		case RECORD_TYPE_WKT_SMART_POSTER:
+		case RECORD_TYPE_WKT_URI:
+		case RECORD_TYPE_WKT_SIZE:
+		case RECORD_TYPE_WKT_TYPE:
+		case RECORD_TYPE_WKT_ACTION:
+		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		case RECORD_TYPE_WKT_HANDOVER_SELECT:
+		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
+		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
+		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
+		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_UNKNOWN:
+		case RECORD_TYPE_ERROR:
+			break;
+
+		case RECORD_TYPE_WKT_TEXT:
+			record->text = parse_text_record(ndef_data, ndef_length,
+								offset,
+								payload_length);
+
+			if (record->text == NULL) {
+				err = EINVAL;
+				goto fail;
+			}
+
+			break;
+		}
 
 		n_records   = __near_tag_n_records(tag);
 		target_idx  = near_tag_get_target_idx(tag);
