@@ -81,6 +81,19 @@ struct near_ndef_uri_record {
 	uint8_t  *field;
 };
 
+struct near_ndef_sp_record {
+	uint8_t action;
+
+	struct near_ndef_uri_record *uri;
+
+	uint8_t number_of_title_records;
+	struct near_ndef_text_record **title_records;
+
+	uint32_t size; /* from Size record*/
+	char *type;    /* from Type record*/
+	/* TODO add icon and other records fields*/
+};
+
 struct near_ndef_record {
 	char *path;
 	uint8_t tnf;
@@ -88,6 +101,7 @@ struct near_ndef_record {
 
 	struct near_ndef_text_record *text;
 	struct near_ndef_uri_record  *uri;
+	struct near_ndef_sp_record   *sp;
 };
 
 static DBusConnection *connection = NULL;
@@ -289,6 +303,27 @@ static void free_uri_record(struct near_ndef_uri_record *uri)
 	uri = NULL;
 }
 
+static void free_sp_record(struct near_ndef_sp_record *sp)
+{
+	uint8_t i;
+
+	if (sp == NULL)
+		return;
+
+	free_uri_record(sp->uri);
+
+	if (sp->title_records != NULL) {
+		for (i = 0; i < sp->number_of_title_records; i++)
+			free_text_record(sp->title_records[i]);
+	}
+
+	g_free(sp->title_records);
+	g_free(sp->type);
+	g_free(sp);
+
+	sp = NULL;
+}
+
 static void free_ndef_record(struct near_ndef_record *record)
 {
 	if (record == NULL)
@@ -297,7 +332,6 @@ static void free_ndef_record(struct near_ndef_record *record)
 	g_free(record->path);
 
 	switch (record->type) {
-	case RECORD_TYPE_WKT_SMART_POSTER:
 	case RECORD_TYPE_WKT_SIZE:
 	case RECORD_TYPE_WKT_TYPE:
 	case RECORD_TYPE_WKT_ACTION:
@@ -317,6 +351,10 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 	case RECORD_TYPE_WKT_URI:
 		free_uri_record(record->uri);
+		break;
+
+	case RECORD_TYPE_WKT_SMART_POSTER:
+		free_sp_record(record->sp);
 		break;
 	}
 
@@ -574,6 +612,268 @@ fail:
 	return NULL;
 }
 
+/**
+ * @brief Validate titles records language code in Smartposter.
+ * There must not be two or more records with the same language identifier.
+ *
+ * @param[in] GSList *  list of title recods (struct near_ndef_text_record *)
+ *
+ * @return Zero on success
+ *         Negative value on failure
+ */
+
+static int8_t validate_language_code_in_sp_record(GSList *titles)
+{
+	uint8_t i, j, length;
+	struct near_ndef_text_record *title1, *title2;
+
+	DBG("");
+
+	if (titles == NULL)
+		return -EINVAL;
+
+	length = g_slist_length(titles);
+
+	for (i = 0; i < length; i++) {
+		title1 = g_slist_nth_data(titles, i);
+
+		for (j = i + 1; j < length; j++) {
+			title2 = g_slist_nth_data(titles, j);
+
+			if ((title1->language_code == NULL) &&
+					(title2->language_code == NULL))
+				continue;
+
+			if (g_strcmp0(title1->language_code,
+					title2->language_code) == 0)
+				return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * @brief Parse the smart poster record.
+ *
+ * Parse the smart poster record and cache the
+ * data in respective fields of smart poster structure.
+ *
+ * @note Caller responsibility to free the memory.
+ *
+ * @param[in] ndef_data      NDEF raw data pointer
+ * @param[in] ndef_length    NDEF raw data length
+ * @param[in] offset         Sp record payload offset
+ *
+ * @return struct near_ndef_sp_record * Record on Success
+ *                                      NULL   on Failure
+ */
+
+static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
+					 size_t ndef_length, size_t offset,
+					 uint32_t payload_length)
+{
+	struct near_ndef_sp_record *sp_record = NULL;
+	uint8_t mb = 0, me = 0, i;
+	size_t t_offset;
+	GSList *titles = NULL, *temp;
+
+	DBG("");
+
+	if (ndef_data == NULL || offset >= ndef_length)
+		return NULL;
+
+	t_offset = offset;
+	sp_record = g_try_malloc0(sizeof(struct near_ndef_sp_record));
+	if (sp_record == NULL)
+		return NULL;
+
+	while (t_offset < (offset + payload_length)) {
+		uint8_t t_mb, t_me, t_sr, t_cf, t_il, t_tnf;
+		uint8_t type_length, il_length = 0, r_type = 0xfe;
+		uint8_t *type = NULL;
+		uint32_t payload_length;
+
+		DBG("Record header : 0x%x", ndef_data[t_offset]);
+
+		t_mb = RECORD_MB_BIT(ndef_data[t_offset]);
+		t_me = RECORD_ME_BIT(ndef_data[t_offset]);
+		t_sr = RECORD_SR_BIT(ndef_data[t_offset]);
+		t_cf = RECORD_CF_BIT(ndef_data[t_offset]);
+		t_il = RECORD_IL_BIT(ndef_data[t_offset]);
+		t_tnf = RECORD_TNF_BIT(ndef_data[t_offset]);
+
+		if (validate_record_begin_and_end_bits(&mb,
+						&me, t_mb, t_me) != 0) {
+			DBG("validate mb me failed");
+			goto fail;
+		}
+
+		/*
+		 * calculate ndef length is enough or not against id,
+		 * typename and payload to extract Sp sub-records(eg: Uri,
+		 * Title, Action, Size, Type and Other)
+		 */
+		t_offset++;
+		type_length = ndef_data[t_offset];
+		t_offset++;
+
+		if (t_sr == 1) {
+			payload_length = ndef_data[t_offset];
+			t_offset++;
+		} else {
+			payload_length = *((uint32_t *)(ndef_data + t_offset));
+			t_offset += 4;
+
+			if (t_offset >= ndef_length)
+				goto fail;
+		}
+
+		if (t_il == 1) {
+			il_length = ndef_data[t_offset];
+			t_offset++;
+
+			if (t_offset >= ndef_length)
+				goto fail;
+		}
+
+		if ((t_offset + type_length + il_length + payload_length)
+				> ndef_length)
+			goto fail;
+
+		if (type_length > 0) {
+			type = g_try_malloc0(type_length);
+			if (type == NULL)
+				goto fail;
+
+			memcpy(type, ndef_data+t_offset, type_length);
+		}
+
+		r_type = get_record_type(t_tnf, type, type_length);
+
+		t_offset += type_length + il_length;
+
+		switch (r_type) {
+		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		case RECORD_TYPE_WKT_HANDOVER_SELECT:
+		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
+		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
+		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
+		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_UNKNOWN:
+		case RECORD_TYPE_ERROR:
+			break;
+
+		case RECORD_TYPE_WKT_URI:
+			/* URI record should be only one. */
+			if (sp_record->uri != NULL)
+				goto fail;
+
+			sp_record->uri = parse_uri_record(ndef_data,
+							ndef_length, t_offset,
+							payload_length);
+
+			if (sp_record->uri == NULL)
+				goto fail;
+
+			break;
+
+		case RECORD_TYPE_WKT_TEXT:
+			/*
+			 * Title records can zero or more. First fill the
+			 * records in list and validate language identifier
+			 * and then cache them into sp record structure.
+			 */
+			{
+			struct near_ndef_text_record *title;
+			title = parse_text_record(ndef_data, ndef_length,
+						t_offset, payload_length);
+
+			if (title == NULL)
+				goto fail;
+
+			titles = g_slist_append(titles, title);
+			}
+			break;
+
+		case RECORD_TYPE_WKT_SIZE:
+			/*
+			 * If paylaod length is not exactly 4 bytes
+			 * then record is wrong.
+			 */
+			if (payload_length != 4)
+				goto fail;
+
+			sp_record->size = *((uint32_t *)(ndef_data + t_offset));
+			break;
+
+		case RECORD_TYPE_WKT_TYPE:
+
+			if (payload_length > 0) {
+				sp_record->type = g_try_malloc0(payload_length);
+				if (sp_record->type == NULL)
+					goto fail;
+
+				sp_record->type = g_strndup(
+						(char *) ndef_data + t_offset,
+								payload_length);
+			}
+
+			break;
+
+		case RECORD_TYPE_WKT_ACTION:
+			/*
+			 * If the action record exists, payload should be
+			 * single byte, otherwise consider it as error.
+			 */
+			if (payload_length != 1)
+				goto fail;
+
+			sp_record->action = ndef_data[t_offset];
+			break;
+		}
+
+		t_offset += payload_length;
+	}
+
+	/*
+	 * Code to fill smart poster record structure from
+	 * 'titles' list.
+	 */
+	if (titles == NULL)
+		return sp_record;
+
+	if (validate_language_code_in_sp_record(titles) != 0) {
+		DBG("language code validation failed");
+		goto fail;
+	}
+
+	temp = titles;
+	sp_record->number_of_title_records = g_slist_length(temp);
+	sp_record->title_records = g_try_malloc0(
+				sp_record->number_of_title_records *
+				 sizeof(struct near_ndef_text_record *));
+	if (sp_record->title_records == NULL)
+		goto fail;
+
+	for (i = 0; i < sp_record->number_of_title_records; i++) {
+		sp_record->title_records[i] = temp->data;
+		temp = temp->next;
+	}
+
+	g_slist_free(titles);
+	titles = NULL;
+
+	return sp_record;
+
+fail:
+	near_error("smart poster record parsing failed");
+	free_sp_record(sp_record);
+	g_slist_free(titles);
+
+	return NULL;
+}
+
 int near_ndef_parse(struct near_tag *tag,
 			uint8_t *ndef_data, size_t ndef_length)
 {
@@ -669,7 +969,6 @@ int near_ndef_parse(struct near_tag *tag,
 		record->type = r_type;
 
 		switch (r_type) {
-		case RECORD_TYPE_WKT_SMART_POSTER:
 		case RECORD_TYPE_WKT_SIZE:
 		case RECORD_TYPE_WKT_TYPE:
 		case RECORD_TYPE_WKT_ACTION:
@@ -701,6 +1000,18 @@ int near_ndef_parse(struct near_tag *tag,
 								payload_length);
 
 			if (record->uri == NULL) {
+				err = EINVAL;
+				goto fail;
+			}
+
+			break;
+
+		case RECORD_TYPE_WKT_SMART_POSTER:
+			record->sp = parse_smart_poster_record(ndef_data,
+							ndef_length, offset,
+							payload_length);
+
+			if (record->sp == NULL) {
 				err = EINVAL;
 				goto fail;
 			}
