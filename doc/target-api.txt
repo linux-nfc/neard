@@ -72,37 +72,60 @@ Method		dict GetProperties()
 
 Properties	string Type [readonly]
 
-			Type is ndef record type name.
+			The NDEF record type name.
+
 			Possible values are "SmartPoster", "Text", "URI",
 			"HandoverRequest", "HandoverSelect", "HandoverCarrier".
-			Depends upon this type name dbus api user can filter
-			other properties.
 
                 string Encoding [readonly]
 
-                       Can exist in Text and SmartPoster(Title) record. Encoding
-                       is either "UTF-8" or "UTF-16".
+			The character encoding.
+
+			Possible values are "UTF-8" or "UTF-16".
+			This property is only valid for Text and SmartPoster's
+			title records.
 
                 string Language [readonly]
 
-                       Can exist in Text and SmartPoster(Title) record. ISO/IANA
-                       language code.
+			The ISO/IANA language code (For example "en" or "jp").
 
-                       Examples: "fi", "en-US", "fr-CA", "jp".
+			This property is only valid for Text and SmartPoster's
+			title records.
 
                 string Representation [readonly]
 
-                       Can exist in Text and SmartPoster(Title) record.
-                       The actual text in record.
+			The human readable representation of a text or
+			title record.
+
+			This property is only valid for Text and SmartPoster's
+			title records.
 
 		string URI [readonly]
 
-			Can exist in URI and SmartPoster record. Here URI
-                        identifier is prefixed to URI field.
+			The record URI (for example https://nfc-forum.org).
 
-                        Example: If the content of URI identifier is 0x02, and
-                        the content of the URI field reads as "nfc-forum.org",
-                        the resulting URI is "https://www.nfc-forum.org"
+			This is the complete URI, including the scheme and
+			the resource.
+			This property is only valid for SmartPoster's URI records.
+
+		string MIMEType [readonly]
+
+			The URI object MIME type.
+
+			This is a description of the MIME type of the object
+			the URI points at.
+			This is not a mandatory field and is only valid for
+			Smart Posters carrying a URI record.
+
+		uint32 Size [readonly]
+
+			The URI object size.
+
+			This is the size of the object the URI points at.
+			It should be used by applications to decide if they can
+			afford to fetch the object or not.
+			This is not a mandatory field and is only valid for
+			Smart Posters carrying a URI record.
 
 		byte Action [readonly]
 
@@ -114,16 +137,3 @@ Properties	string Type [readonly]
                                 0 - Do the action.
                                 1 - Save for later.
                                 2 - Open for editing.
-
-		uint32 Size [readonly]
-
-			Can exist in SmartPoster(Size) record, which contains
-                        the size of object that the URI field refers to. This
-                        value may be used by the device to determine whether it
-                        can accommodate the referenced file or not.
-
-		string MIMEType [readinly]
-
-			can exist in SmartPoster(Type) record. UTF-8 formatted
-                        string that describes MIME type which describes the
-                        type of the object that can be reached through the URI.
