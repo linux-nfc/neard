@@ -721,7 +721,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 		return NULL;
 
 	while (t_offset < (offset + payload_length)) {
-		uint8_t t_mb, t_me, t_sr, t_cf, t_il, t_tnf;
+		uint8_t t_mb, t_me, t_sr, t_il, t_tnf;
 		uint8_t type_length, il_length = 0, r_type = 0xfe;
 		uint8_t *type = NULL;
 		uint32_t payload_length;
@@ -731,7 +731,6 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 		t_mb = RECORD_MB_BIT(ndef_data[t_offset]);
 		t_me = RECORD_ME_BIT(ndef_data[t_offset]);
 		t_sr = RECORD_SR_BIT(ndef_data[t_offset]);
-		t_cf = RECORD_CF_BIT(ndef_data[t_offset]);
 		t_il = RECORD_IL_BIT(ndef_data[t_offset]);
 		t_tnf = RECORD_TNF_BIT(ndef_data[t_offset]);
 
