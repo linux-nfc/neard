@@ -42,6 +42,10 @@
 #define RECORD_TNF_UNKNOWN   0x05
 #define RECORD_TNF_UNCHANGED 0x06
 
+#define RECORD_ACTION_DO   0x00
+#define RECORD_ACTION_SAVE 0x01
+#define RECORD_ACTION_EDIT 0x02
+
 #define RECORD_MB_BIT(val)  ((val & 0x80) >> 7)
 #define RECORD_ME_BIT(val)  ((val & 0x40) >> 6)
 #define RECORD_CF_BIT(val)  ((val & 0x20) >> 5)
@@ -82,8 +86,6 @@ struct near_ndef_uri_record {
 };
 
 struct near_ndef_sp_record {
-	uint8_t action;
-
 	struct near_ndef_uri_record *uri;
 
 	uint8_t number_of_title_records;
@@ -91,6 +93,7 @@ struct near_ndef_sp_record {
 
 	uint32_t size; /* from Size record*/
 	char *type;    /* from Type record*/
+	char *action;
 	/* TODO add icon and other records fields*/
 };
 
@@ -194,7 +197,8 @@ static void append_smart_poster_record(struct near_ndef_sp_record *sp,
 	if (sp == NULL || dict == NULL)
 		return;
 
-	near_dbus_dict_append_basic(dict, "Action", DBUS_TYPE_BYTE,
+	if (sp->action != NULL)
+		near_dbus_dict_append_basic(dict, "Action", DBUS_TYPE_STRING,
 							&(sp->action));
 
 	if (sp->uri != NULL)
@@ -351,6 +355,7 @@ static void free_sp_record(struct near_ndef_sp_record *sp)
 
 	g_free(sp->title_records);
 	g_free(sp->type);
+	g_free(sp->action);
 	g_free(sp);
 
 	sp = NULL;
@@ -400,6 +405,21 @@ void __near_ndef_record_free(struct near_ndef_record *record)
 						NFC_RECORD_INTERFACE);
 
 	free_ndef_record(record);
+}
+
+static char * action_to_string(uint8_t action)
+{
+	switch (action) {
+	case RECORD_ACTION_DO:
+		return "Do";
+	case RECORD_ACTION_SAVE:
+		return "Save";
+	case RECORD_ACTION_EDIT:
+		return "Edit";
+	default:
+		near_error("Unknown action 0x%x", action);
+		return NULL;
+	}
 }
 
 /**
@@ -860,7 +880,9 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			if (payload_length != 1)
 				goto fail;
 
-			sp_record->action = ndef_data[t_offset];
+			sp_record->action =
+				g_strdup(action_to_string(ndef_data[t_offset]));
+
 			break;
 		}
 
