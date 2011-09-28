@@ -60,7 +60,7 @@
 
 struct type1_cmd {
 	uint8_t cmd;
-	uint8_t offset;
+	uint8_t addr;
 	uint8_t data[];
 } __attribute__((packed));
 
@@ -161,7 +161,7 @@ static int nfctype1_read_all(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
-	t1_cmd.offset = 0;	       /* NA */
+	t1_cmd.addr = 0;	       /* NA */
 
 	cookie = g_try_malloc0(sizeof(struct recv_cookie));
 	cookie->adapter_idx = adapter_idx;
