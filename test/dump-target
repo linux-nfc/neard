@@ -22,12 +22,8 @@ def extract_record(key, list):
 		print "        Record = [ %s ]" % (str(i))
 
 		for key in properties.keys():
-			if key in ["Action"]:
-				val = properties[key]
-				print "              %s = %d" % (key, val)
-			else:
-				val = str(properties[key])
-				print "              %s = %s" % (key, val)
+			val = str(properties[key])
+			print "              %s = %s" % (key, val)
 
 target = dbus.Interface(bus.get_object("org.neard", sys.argv[1]),
 						"org.neard.Target")
