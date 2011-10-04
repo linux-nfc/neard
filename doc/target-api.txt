@@ -21,6 +21,28 @@ Method		dict GetProperties()
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
 
+		object path AddRecord(string type)
+
+			Creates and add an NDEF record to the record array.
+			The type argument specifies the record type that
+			needs to be created.
+
+			Possible values for type are "SmartPoster", "Text",
+			"URI", "HandoverRequest", "HandoverSelect" and
+			"HandoverCarrier".
+
+			The record object path will be returned for
+			applications to configure it properly.
+
+			Possible Errors: org.neard.Error.PermissionDenied
+					 org.neard.Error.InvalidArguments
+
+		void RemoveRecord(object path)
+
+			Removes an NDEF record from the record array.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+
 Signals		PropertyChanged(string name, variant value)
 
 			This signal indicates a changed value of the given
