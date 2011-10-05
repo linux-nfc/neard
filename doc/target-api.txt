@@ -21,18 +21,16 @@ Method		dict GetProperties()
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
 
-		object path AddRecord(string type)
+		object path AddRecord(dict attributes)
 
 			Creates and add an NDEF record to the record array.
-			The type argument specifies the record type that
-			needs to be created.
 
-			Possible values for type are "SmartPoster", "Text",
-			"URI", "HandoverRequest", "HandoverSelect" and
-			"HandoverCarrier".
+			The attribute argument should at least contain a
+			record type and is described by the Record properties.
+			For example, one would add a type, a Language, an
+			Encoding and a Representation for a text record.
 
-			The record object path will be returned for
-			applications to configure it properly.
+			The record object path will be returned.
 
 			Possible Errors: org.neard.Error.PermissionDenied
 					 org.neard.Error.InvalidArguments
