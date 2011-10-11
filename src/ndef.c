@@ -55,6 +55,23 @@
 
 #define NDEF_MSG_MIN_LENGTH 0x03
 
+#define RECORD_MB    0x80
+#define RECORD_ME    0x40
+#define RECORD_CF    0x20
+#define RECORD_SR    0x10
+#define RECORD_IL    0x08
+#define RECORD_TNF_EMPTY_SET(val)     ((val & ~0x7) | RECORD_TNF_EMPTY)
+#define RECORD_TNF_WKT_SET(val)       ((val & ~0x7) | RECORD_TNF_WELLKNOWN)
+#define RECORD_TNF_MIME_SET(val)      ((val & ~0x7) | RECORD_TNF_MIME)
+#define RECORD_TNF_URI_SET(val)       ((val & ~0x7) | RECORD_TNF_URI)
+#define RECORD_TNF_EXTERNAL_SET(val)  ((val & ~0x7) | RECORD_TNF_EXTERNAL)
+#define RECORD_TNF_UKNOWN_SET(val)    ((val & ~0x7) | RECORD_TNF_UNKNOWN)
+#define RECORD_TNF_UNCHANGED_SET(val) ((val & ~0x7) | RECORD_TNF_UNCHANGED)
+
+#define NDEF_MSG_SHORT_RECORD_MAX_LENGTH 0xFF
+#define NDEF_TEXT_RECORD_TYPE_NAME_HEX_VALUE 0x54
+#define NDEF_TEXT_RECORD_UTF16_STATUS 0x80
+
 enum record_type {
 	RECORD_TYPE_WKT_SMART_POSTER          =   0x01,
 	RECORD_TYPE_WKT_URI                   =   0x02,
@@ -108,6 +125,23 @@ struct near_ndef_record {
 };
 
 static DBusConnection *connection = NULL;
+
+static inline void fillb8(uint8_t *ptr, uint32_t len)
+{
+	(*(uint8_t *)(ptr)) = ((uint8_t)(len));
+}
+
+static inline void fillb16(uint8_t *ptr, uint32_t len)
+{
+	fillb8((ptr), (uint16_t)(len) >> 8);
+	fillb8((uint8_t *)(ptr) + 1, len);
+}
+
+static inline void fillb32(uint8_t *ptr, uint32_t len)
+{
+	fillb16((ptr), (uint32_t)(len) >> 16);
+	fillb16((uint8_t *)(ptr) + 2, (uint32_t)(len));
+}
 
 char *__near_ndef_record_get_path(struct near_ndef_record *record)
 {
@@ -1098,6 +1132,154 @@ fail:
 	free_ndef_record(record);
 
 	return -err;
+}
+
+/**
+ * @brief Allocates ndef message struture
+ *
+ * Allocates ndef message structure and fill message header byte,
+ * type length byte, payload length and type name. Offset is payload
+ * first byte (caller of this API can start filling their payload
+ * from offset value).
+ *
+ * @note : caller responsibility to free the input and output
+ *         parameters memory.
+ *
+ * @param[in] type_name    Record type name
+ * @param[in] payload_len  Record payload length
+ *
+ * @return struct near_ndef_message * - Success
+ *         NULL - Failure
+ */
+static struct near_ndef_message *ndef_message_alloc(char* type_name,
+							uint32_t payload_len)
+{
+	struct near_ndef_message *msg;
+	uint8_t hdr = 0, type_len, sr_bit;
+
+	msg = g_try_malloc0(sizeof(struct near_ndef_message));
+	if (msg == NULL)
+		return NULL;
+
+	msg->length = 0;
+	msg->offset = 0;
+	msg->length++; /* record header*/
+	msg->length++; /* type name length byte*/
+
+	type_len = (type_name != NULL) ? strlen(type_name) : 0;
+	sr_bit =  (payload_len <= NDEF_MSG_SHORT_RECORD_MAX_LENGTH)
+			? TRUE : FALSE;
+
+	msg->length += (sr_bit == TRUE) ? 1 : 4;
+	msg->length += type_len;
+	msg->length += payload_len;
+
+	msg->data = g_try_malloc0(msg->length);
+	if (msg->data == NULL)
+		goto fail;
+
+	hdr |= RECORD_MB;
+	hdr |= RECORD_ME;
+
+	if (sr_bit == TRUE)
+		hdr |= RECORD_SR;
+
+	hdr = RECORD_TNF_WKT_SET(hdr);
+
+	msg->data[msg->offset++] = hdr;
+	msg->data[msg->offset++] = type_len;
+
+	if (sr_bit == TRUE) {
+		msg->data[msg->offset++] = payload_len;
+	} else {
+		fillb32((msg->data + msg->offset), payload_len);
+		msg->offset += 4;
+	}
+
+	if (type_name != NULL) {
+		memcpy(msg->data + msg->offset, type_name, type_len);
+		msg->offset += type_len;
+	}
+
+	return msg;
+
+fail:
+	near_error("ndef message struct allocation failed");
+	g_free(msg->data);
+	g_free(msg);
+
+	return NULL;
+}
+
+/**
+ * @brief Prepare Text ndef record
+ *
+ * Prepare text ndef record with provided input data and return
+ * ndef message structure (lenght and byte stream) in success or
+ * NULL in failure case.
+ *
+ * @note : caller responsibility to free the input and output
+ *         parameters memory.
+ *
+ * @param[in] encoding      Encoding (UTF-8 | UTF-16)
+ * @param[in] language_code Language Code
+ * @param[in] text          Actual text
+ *
+ * @return struct near_ndef_message * - Success
+ *         NULL - Failure
+ */
+struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
+						char *language_code, char *text)
+{
+	struct near_ndef_message *msg;
+	uint32_t text_len, payload_length;
+	uint8_t  code_len, status = 0;
+
+	DBG("");
+
+	/* Validate input parameters*/
+	if (((g_strcmp0(encoding, "UTF-8") != 0) &&
+		 (g_strcmp0(encoding, "UTF-16") != 0)) ||
+		 (language_code == NULL) ||
+		 (text == NULL)) {
+		return NULL;
+	}
+
+	code_len = strlen(language_code);
+	text_len = strlen(text);
+	payload_length = 1 + code_len + text_len;
+
+	msg = ndef_message_alloc("T", payload_length);
+	if (msg == NULL)
+		return NULL;
+
+	if (g_strcmp0(encoding, "UTF-16") == 0)
+		status |= NDEF_TEXT_RECORD_UTF16_STATUS;
+
+	status = status | code_len;
+	msg->data[msg->offset++] = status;
+
+	if (code_len > 0)
+		memcpy(msg->data + msg->offset, language_code, code_len);
+
+	msg->offset += code_len;
+
+	if (text_len > 0)
+		memcpy(msg->data + msg->offset, text, text_len);
+
+	msg->offset += text_len;
+
+	if (msg->offset > msg->length)
+		goto fail;
+
+	return msg;
+
+fail:
+	near_error("text record preparation failed");
+	g_free(msg->data);
+	g_free(msg);
+
+	return NULL;
 }
 
 int __near_ndef_init(void)
