@@ -1282,6 +1282,63 @@ fail:
 	return NULL;
 }
 
+/**
+ * @brief Prepare URI ndef record
+ *
+ * Prepare uri ndef record with provided input data and return
+ * ndef message structure (length and byte stream) in success or
+ * NULL in failure case.
+ *
+ * @note : caller responsibility to free the input and output
+ *         parameters memory.
+ *
+ * @param[in] identifier    URI Identifier
+ * @param[in] field_length  URI field length
+ * @param[in] field         URI field
+ *
+ * @return struct near_ndef_message * - Success
+ *         NULL - Failure
+ */
+struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
+					uint32_t field_length, uint8_t *field)
+{
+	struct near_ndef_message *msg = NULL;
+	uint32_t payload_length;
+
+	DBG("");
+
+	/* Validate input parameters*/
+	if ((field_length == 0 && field != NULL) ||
+		(field_length != 0 && field == NULL)) {
+		return NULL;
+	}
+
+	payload_length = field_length + 1;
+
+	msg = ndef_message_alloc("U", payload_length);
+	if (msg == NULL)
+		return NULL;
+
+	msg->data[msg->offset++] = identifier;
+
+	if (field_length > 0) {
+		memcpy(msg->data + msg->offset, field, field_length);
+		msg->offset += field_length;
+	}
+
+	if (msg->offset > msg->length)
+		goto fail;
+
+	return msg;
+
+fail:
+	near_error("uri record preparation failed");
+	g_free(msg->data);
+	g_free(msg);
+
+	return NULL;
+}
+
 int __near_ndef_init(void)
 {
 	DBG("");

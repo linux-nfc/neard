@@ -37,4 +37,7 @@ int near_ndef_parse(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length
 struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 					char *language_code, char *text);
 
+struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
+					 uint32_t field_length, uint8_t *field);
+
 #endif
