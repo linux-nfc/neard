@@ -21,6 +21,16 @@ Core
   level input, e.g. an image or an URL.
 
 
+- Writer Mode
+
+  Priority: Medium
+  Complexity: C4
+  Dependencies: Core:NDEF building library
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  In writer mode, neard allows application to write to an NFC tag.
+
+
 - Card Emulation Mode
 
   Priority: High
@@ -52,6 +62,25 @@ Core
   connection less oriented. NDEFs are exchanged through the SNEP (NFC
   Forum draft) protocol.
 
+
+- Read/Write permission check
+
+  Priority: Medium
+  Complexity: C2
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  A tag can be in read only or read/write mode, and that needs to be
+  exported trough the D-Bus interface.
+
+
+- UID export
+
+  Priority: Medium
+  Complexity: C2
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  Many NFC tags do have a UID associated to it. This is tag type dependent
+  but could be exported through the D-Bus interface as well.
 
 Reader mode
 ===========
