@@ -41,6 +41,7 @@ struct near_tag {
 	uint32_t target_idx;
 
 	uint8_t uid[TAG_UID_MAX_LEN];
+	near_bool_t readonly;
 
 	size_t data_length;
 	uint8_t *data;
@@ -142,6 +143,13 @@ int near_tag_set_uid(struct near_tag *tag, uint8_t *uid, size_t uid_length)
 
 	memset(tag->uid, 0, TAG_UID_MAX_LEN);
 	memcpy(tag->uid, uid, uid_length);
+
+	return 0;
+}
+
+int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
+{
+	tag->readonly = readonly;
 
 	return 0;
 }
