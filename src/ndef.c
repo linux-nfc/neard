@@ -441,7 +441,7 @@ void __near_ndef_record_free(struct near_ndef_record *record)
 	free_ndef_record(record);
 }
 
-static char * action_to_string(uint8_t action)
+static char *action_to_string(uint8_t action)
 {
 	switch (action) {
 	case RECORD_ACTION_DO:
@@ -807,7 +807,8 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			payload_length = ndef_data[t_offset];
 			t_offset++;
 		} else {
-			payload_length = *((uint32_t *)(ndef_data + t_offset));
+			payload_length =
+				g_ntohl(*((uint32_t *)(ndef_data + t_offset)));
 			t_offset += 4;
 
 			if (t_offset >= ndef_length)
@@ -883,13 +884,14 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 
 		case RECORD_TYPE_WKT_SIZE:
 			/*
-			 * If paylaod length is not exactly 4 bytes
+			 * If payload length is not exactly 4 bytes
 			 * then record is wrong.
 			 */
 			if (payload_length != 4)
 				goto fail;
 
-			sp_record->size = *((uint32_t *)(ndef_data + t_offset));
+			sp_record->size =
+				g_ntohl(*((uint32_t *)(ndef_data + t_offset)));
 			break;
 
 		case RECORD_TYPE_WKT_TYPE:
@@ -1006,7 +1008,8 @@ int near_ndef_parse(struct near_tag *tag,
 			payload_length = ndef_data[offset];
 			offset++;
 		} else {
-			payload_length = *((uint32_t *)(ndef_data + offset));
+			payload_length =
+				g_ntohl(*((uint32_t *)(ndef_data + offset)));
 			offset += 4;
 
 			if (offset >= ndef_length) {
