@@ -324,12 +324,16 @@ static void find_tag_type(struct near_target *target,
 		target->tag_type = NEAR_TAG_NFC_UNKNOWN;
 	}
 
+	if ((target->tag_type & NEAR_TAG_NFC_DEP) != 0)
+		target->type = NEAR_TARGET_TYPE_DEVICE;
+	else
+		target->type = NEAR_TARGET_TYPE_TAG;
+
 	DBG("tag type 0x%x", target->tag_type);
 }
 
 struct near_target *__near_target_add(uint32_t adapter_idx, uint32_t target_idx,
-				uint32_t protocols, enum near_target_type type,
-				uint16_t sens_res, uint8_t sel_res)
+				uint32_t protocols, uint16_t sens_res, uint8_t sel_res)
 {
 	struct near_target *target;
 	char *path;
@@ -351,7 +355,6 @@ struct near_target *__near_target_add(uint32_t adapter_idx, uint32_t target_idx,
 	target->idx = target_idx;
 	target->adapter_idx = adapter_idx;
 	target->protocols = protocols;
-	target->type = type;
 	find_tag_type(target, sens_res, sel_res);
 
 	g_hash_table_insert(target_hash, path, target);

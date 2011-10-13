@@ -373,8 +373,7 @@ static void tag_read_cb(uint32_t adapter_idx, int status)
 }
 
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
-				uint32_t protocols, enum near_target_type type,
-				uint16_t sens_res, uint8_t sel_res)
+			uint32_t protocols, uint16_t sens_res, uint8_t sel_res)
 {
 	struct near_adapter *adapter;
 	struct near_target *target;
@@ -389,8 +388,8 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	polling_changed(adapter);
 
 	/* TODO target reference */
-	target = __near_target_add(idx, target_idx, protocols, type,
-							sens_res, sel_res);
+	target = __near_target_add(idx, target_idx, protocols,
+						sens_res, sel_res);
 	if (target == NULL)
 		return -ENODEV;
 

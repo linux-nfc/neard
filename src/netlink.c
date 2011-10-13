@@ -313,7 +313,7 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 	    target_idx, protocols, sens_res, sel_res);
 
 	__near_adapter_add_target(adapter_idx, target_idx, protocols,
-				NEAR_TARGET_TYPE_TAG, sens_res, sel_res);
+							sens_res, sel_res);
 
 	return 0;
 }
