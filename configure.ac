@@ -100,4 +100,10 @@ AC_ARG_ENABLE(nfctype3,
 AM_CONDITIONAL(NFCTYPE3, test "${enable_nfctype3}" != "no")
 AM_CONDITIONAL(NFCTYPE3_BUILTIN, test "${enable_nfctype3}" = "builtin")
 
+AC_ARG_ENABLE(nfctype4,
+	AC_HELP_STRING([--enable-nfctype4], [enable NFC forum type 4 tags support]),
+			[enable_nfctype4=${enableval}], [enable_nfctype4="no"])
+AM_CONDITIONAL(NFCTYPE4, test "${enable_nfctype4}" != "no")
+AM_CONDITIONAL(NFCTYPE4_BUILTIN, test "${enable_nfctype4}" = "builtin")
+
 AC_OUTPUT(Makefile include/version.h)
