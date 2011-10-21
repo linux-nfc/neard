@@ -36,6 +36,38 @@
 
 #include "near.h"
 
+#ifdef NEED_LIBNL_COMPAT
+#define nl_sock nl_handle
+
+static inline struct nl_handle *nl_socket_alloc(void)
+{
+	return nl_handle_alloc();
+}
+
+static inline void nl_socket_free(struct nl_sock *h)
+{
+	nl_handle_destroy(h);
+}
+
+static inline int __genl_ctrl_alloc_cache(struct nl_sock *h, struct nl_cache **cache)
+{
+	struct nl_cache *tmp = genl_ctrl_alloc_cache(h);
+	if (!tmp)
+		return -ENOMEM;
+	*cache = tmp;
+	return 0;
+}
+#define genl_ctrl_alloc_cache __genl_ctrl_alloc_cache
+
+#define NLE_MISSING_ATTR	14
+
+static inline void __nl_perror(int error, const char *s)
+{
+	nl_perror(s);
+}
+#define nl_perror __nl_perror
+#endif
+
 struct nlnfc_state {
 	struct nl_sock *nl_sock;
 	struct nl_cache *nl_cache;
