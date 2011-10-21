@@ -73,8 +73,17 @@ AC_CHECK_LIB(dbus-1, dbus_watch_get_unix_fd, dummy=yes,
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
-PKG_CHECK_MODULES(NETLINK, libnl-2.0, dummy=yes,
+PKG_CHECK_MODULES(LIBNL2, libnl-2.0, [
+	NETLINK_CFLAGS=${IBNL2_CFLAGS}
+	NETLINK_LIBS=${LIBNL2_LIBS}
+], [
+	PKG_CHECK_MODULES(LIBNL1, libnl-1, dummy=yes,
 				AC_MSG_ERROR(Netlink library is required))
+	AC_DEFINE(NEED_LIBNL_COMPAT, 1,
+			[Define to 1 if you need libnl-1 compat functions.])
+	NETLINK_CFLAGS=${LIBNL1_CFLAGS}
+	NETLINK_LIBS=${LIBNL1_LIBS}
+])
 AC_SUBST(NETLINK_CFLAGS)
 AC_SUBST(NETLINK_LIBS)
 
