@@ -194,7 +194,6 @@ static int t4_cookie_release(int err, struct recv_cookie *cookie)
 		near_adapter_disconnect(cookie->adapter_idx);
 	}
 
-	g_free(cookie->tag);
 	g_free(cookie);
 
 	return err;
