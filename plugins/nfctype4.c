@@ -52,6 +52,9 @@
 #define APDU_OK			0x9000
 #define APDU_NOT_FOUND		0x6A82
 
+#define T4_ALL_ACCESS		0x00
+#define T4_READ_ONLY		0xFF
+
 #define APDU_STATUS(a) (g_ntohs(*((uint16_t *)(a))))
 
 /* Tag Type 4 version ID */
@@ -99,6 +102,7 @@ struct recv_cookie {
 	struct near_tag *tag;
 	uint16_t read_data;
 	uint16_t r_apdu_max_size;
+	uint8_t write_access ;
 };
 
 /* ISO functions: This code prepares APDU */
@@ -293,6 +297,12 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	/* save the tag */
 	cookie->tag = tag;
 
+	/* Set write conditions */
+	if (cookie->write_access == T4_READ_ONLY)
+		near_tag_set_ro(tag, TRUE);
+	else
+		near_tag_set_ro(tag, FALSE);
+
 	/* TODO: see how we can get the UID value:
 	 *  near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
 	 *  */
@@ -381,6 +391,9 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 		err = -EINVAL ;
 		goto out_err ;
 	}
+
+	/* save rw conditions */
+	cookie->write_access = read_cc->tlv_fc.write_access;
 
 	err = ISO_Select((uint8_t *)&read_cc->tlv_fc.file_id,
 			LEN_ISO_CC_FILEID, 0, t4_select_NDEF_ID, cookie);
