@@ -58,6 +58,9 @@
 #define TAG_T1_DATA_LENGTH(cc) ((cc)[2] * 8 - LEN_CC_BYTES)
 #define TAG_T1_DATA_NFC(cc) ((cc)[0] & TYPE1_MAGIC)
 
+#define TYPE1_NOWRITE_ACCESS	0x0F
+#define TAG_T1_WRITE_FLAG(cc) ((cc)[3] & TYPE1_NOWRITE_ACCESS)
+
 struct type1_cmd {
 	uint8_t cmd;
 	uint8_t addr;
@@ -129,6 +132,12 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	/* Save the UID */
 	near_tag_set_uid(tag, resp + LEN_SPEC_BYTES, LEN_UID_BYTES);
+
+	/*s Set the ReadWrite flag */
+	if (TAG_T1_WRITE_FLAG(cc) == TYPE1_NOWRITE_ACCESS)
+		near_tag_set_ro(tag, TRUE);
+	else
+		near_tag_set_ro(tag, FALSE);
 
 	/* Check Static or Dynamic memory model */
 	if (resp[OFFSET_HEADER_ROM] == HR0_TYPE1_STATIC) {
