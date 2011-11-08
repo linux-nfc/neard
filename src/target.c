@@ -209,6 +209,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	struct near_target *target = data;
 	DBusMessage *reply;
 	DBusMessageIter array, dict;
+	near_bool_t ronly;
 	const char *type;
 
 	DBG("conn %p", conn);
@@ -236,6 +237,12 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 		near_dbus_dict_append_array(&dict, "Records",
 				DBUS_TYPE_OBJECT_PATH, append_records, target);
+
+		if (target->tag != NULL) {
+			ronly = __near_tag_get_ro(target->tag);
+			near_dbus_dict_append_basic(&dict, "ReadOnly",
+					DBUS_TYPE_BOOLEAN, &ronly);
+		}
 	}
 
 	near_dbus_dict_close(&array, &dict);

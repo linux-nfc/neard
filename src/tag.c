@@ -78,6 +78,7 @@ static int tag_initialize(struct near_tag *tag,
 	tag->adapter_idx = adapter_idx;
 	tag->target_idx = target_idx;
 	tag->n_records = 0;
+	tag->readonly = 0;
 
 	if (data_length > 0) {
 		tag->data_length = data_length;
@@ -152,6 +153,11 @@ int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
 	tag->readonly = readonly;
 
 	return 0;
+}
+
+near_bool_t __near_tag_get_ro(struct near_tag *tag)
+{
+	return tag->readonly;
 }
 
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length)
