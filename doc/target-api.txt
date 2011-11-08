@@ -70,6 +70,11 @@ Properties	string Type [readonly]
 			List of NDEF records object paths.
 			This is only valid for tag type targets.
 
+		boolean ReadOnly [readonly]
+
+			Give the current status of tag's read mode
+			This is valid for tag type and device targets
+
 
 Record hierarchy
 ================
