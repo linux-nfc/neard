@@ -245,7 +245,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 		goto out;
 	}
 
-	/* length is a 3 bytes value */
+	/* Block 0:[11 - 13]: length is a 3 bytes value */
 	ndef_data_length =  resp[OFS_READ_DATA + 11] * 0x100;
 	ndef_data_length += resp[OFS_READ_DATA + 12];
 	ndef_data_length *= 0x100;
@@ -258,6 +258,12 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 		err = -ENOMEM;
 		goto out;
 	}
+
+	/* Block 0:[10]: RW Flag. 1 for RW */
+	if (resp[OFS_READ_DATA + 10] == 0)
+		near_tag_set_ro(tag, TRUE);
+	else
+		near_tag_set_ro(tag, FALSE);
 
 	t3_tag = g_try_malloc0(sizeof(struct type3_tag));
 	if (t3_tag == NULL) {
@@ -332,8 +338,8 @@ static int nfctype3_read_UID(uint32_t adapter_idx, uint32_t target_idx,
 
 	/* CMD POLL */
 	cmd.cmd	 = CMD_POLL;	/* POLL command */
-	cmd.data[0] = 0xFF;     /* System code (ANY) */
-	cmd.data[1] = 0xFF;
+	cmd.data[0] = 0x12;     /* System code (NFC SC) */
+	cmd.data[1] = 0xFC;
 	cmd.data[2] = 01;	/* request code */
 	cmd.data[3] = 0x00;	/* time slot */
 
