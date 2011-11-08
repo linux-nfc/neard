@@ -54,6 +54,9 @@
 #define TAG_DATA_LENGTH(cc) ((cc)[2] * 8)
 #define TAG_DATA_NFC(cc) ((cc)[0] & TYPE2_MAGIC)
 
+#define TYPE2_NOWRITE_ACCESS	0x0F
+#define TAG_T2_WRITE_FLAG(cc) ((cc)[3] & TYPE2_NOWRITE_ACCESS)
+
 struct type2_cmd {
 	uint8_t cmd;
 	uint8_t block;
@@ -192,6 +195,12 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	t2_tag->tag = tag;
 
 	near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
+
+	/* Set the ReadWrite flag */
+	if (TAG_T2_WRITE_FLAG(cc) == TYPE2_NOWRITE_ACCESS)
+		near_tag_set_ro(tag, TRUE);
+	else
+		near_tag_set_ro(tag, FALSE);
 
 	err = data_read(t2_tag);
 
