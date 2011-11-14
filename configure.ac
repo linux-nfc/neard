@@ -115,4 +115,10 @@ AC_ARG_ENABLE(nfctype4,
 AM_CONDITIONAL(NFCTYPE4, test "${enable_nfctype4}" != "no")
 AM_CONDITIONAL(NFCTYPE4_BUILTIN, test "${enable_nfctype4}" = "builtin")
 
+AC_ARG_ENABLE(p2p,
+	AC_HELP_STRING([--enable-p2p], [enable NFC peer to peer support]),
+			[enable_p2p=${enableval}], [enable_p2p="no"])
+AM_CONDITIONAL(P2P, test "${enable_p2p}" != "no")
+AM_CONDITIONAL(P2P_BUILTIN, test "${enable_p2p}" = "builtin")
+
 AC_OUTPUT(Makefile include/version.h)

@@ -50,3 +50,15 @@ plugins_nfctype4_la_CFLAGS = $(plugin_cflags)
 plugins_nfctype4_la_LDFLAGS = $(plugin_ldflags)
 endif
 endif
+
+if P2P
+if P2P_BUILTIN
+builtin_modules += p2p
+builtin_sources += plugins/p2p.c
+else
+plugin_LTLIBRARIES += plugins/p2p.la
+plugin_objects += $(plugins_p2p_la_OBJECTS)
+plugins_p2p_la_CFLAGS = $(plugin_cflags)
+plugins_p2p_la_LDFLAGS = $(plugin_ldflags)
+endif
+endif
