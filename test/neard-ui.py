@@ -207,7 +207,7 @@ class NeardUI(Neard):
                     if value is None:
                         value = protos
                     else:
-                        value = value + "-" + protos
+                        value = value + " " + protos
 
             if value is not None:
                 self.adapters_list.set_value(i, col, value)
@@ -314,13 +314,12 @@ class NeardUI(Neard):
         if name in record_properties:
             value = record_properties[name]
         else:
-            value = "{"
+            value = ""
             for rec_data in record_properties:
                 if rec_data != "Type":
-                     if value != "{":
-                         value = value + "-"
-                     value = value + rec_data + ":" +record_properties[rec_data]
-            value = value + "}"
+                     if value != "":
+                         value = value + "\n"
+                     value = value + rec_data + " :   " +record_properties[rec_data]
 
         if value is not None:
             self.records_list.set_value(i, col, value)
