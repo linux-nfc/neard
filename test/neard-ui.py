@@ -64,11 +64,6 @@ class Neard:
             self.target_updateDetails(adapt_properties)
         else:
             self.adapter_update(adapt_path, adapt_properties)
-#
-
-    def adapter_TargetFound(self, adapt_path = None):
-        print("Target Found Prop changed: %s") % adapt_path
-        self.target_updateDetails(adapt_path)
 
         #Update the records UI
     def record_updateDetails(self, target_properties):
@@ -86,18 +81,23 @@ class Neard:
 
     #Update the targets UI
     def target_updateDetails(self, adapt_properties):
-        for target_path in adapt_properties["Targets"]:
-            print ("TGT %s ") % target_path
-            target_obj = self.sessionBus.get_object('org.neard', target_path)
+        if adapt_properties["Targets"]:
+            for target_path in adapt_properties["Targets"]:
+                print ("TGT %s ") % target_path
+                target_obj = self.sessionBus.get_object('org.neard', target_path)
 
-            target_iface = dbus.Interface(target_obj,'org.neard.Target')
-            target_properties = target_iface.GetProperties()
+                target_iface = dbus.Interface(target_obj,'org.neard.Target')
+                target_properties = target_iface.GetProperties()
 
-            self.targetregistered[target_path] = True
-            # call UI update
-            self.targets_update(target_path, target_properties)
-            #Process the records
-            self.record_updateDetails(target_properties)
+                self.targetregistered[target_path] = True
+                # call UI update
+                self.targets_update(target_path, target_properties)
+                #Process the records
+                self.record_updateDetails(target_properties)
+        else:
+            print ("remove targets and records")
+            self.targets_update()
+            self.records_update()
 
 
     #Something changed, must update the UI
@@ -229,8 +229,6 @@ class NeardUI(Neard):
             if i:
                 print ("Delete adapter %s") % path
                 self.adapters_list.remove(i)
-##                self.target_UpdateUI(path)
-
             else:
                 print ("Already deleted adapter %s") % path
             return
@@ -284,18 +282,17 @@ class NeardUI(Neard):
                 break
             i = self.targets_list.iter_next(i)
 
-        #Delete mode:
+        #Delete mode: Remove all
         if target_properties is None:
             i = self.targets_list.get_iter_first()
             while i is not None:
                 path_name = self.targets_list.get_value(i, 0)
-
-                if path == path_name[:len(path)-1]:
-                    print ("Delete target %s") % path_name
-                    self.targets_list.remove(i)
+                print ("Deleted target %s") % path_name
+                self.targets_list.remove(i)
+                if self.targets_list.iter_is_valid(i):
+                    i = self.targets_list.iter_next(i)
                 else:
-                    print ("Already deleted target %s") % path_name
-                i = self.targets_list.iter_next(i)
+                    i = None
             return
 
         if i is None:
@@ -334,12 +331,17 @@ class NeardUI(Neard):
                 break
             i = self.records_list.iter_next(i)
 
+         #Delete mode: Remove all records
         if record_properties is None:
-            if i:
-                print ("Delete record %s") % path
+            i = self.records_list.get_iter_first()
+            while i is not None:
+                path_name = self.records_list.get_value(i, 0)
+                print ("Delete record %s") % path_name
                 self.records_list.remove(i)
-            else:
-                print ("Already deleted record %s") % path
+                if self.records_list.iter_is_valid(i):
+                    i = self.records_list.iter_next(i)
+                else:
+                    i = None
             return
 
         if i is None:
