@@ -245,6 +245,13 @@ static DBusMessage *start_poll(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
+	if (g_hash_table_size(adapter->targets) > 0) {
+		DBG("Clearing targets");
+
+		g_hash_table_remove_all(adapter->targets);
+		__near_adapter_target_changed(adapter->idx);
+	}
+
 	err = __near_netlink_start_poll(adapter->idx, adapter->protocols);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
@@ -412,6 +419,8 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 		return -ENODEV;
 
 	g_hash_table_remove(adapter->targets, GINT_TO_POINTER(target_idx));
+
+	__near_adapter_target_changed(idx);
 
 	return 0;
 }
