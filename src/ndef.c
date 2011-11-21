@@ -1050,6 +1050,7 @@ int near_ndef_parse(struct near_tag *tag,
 
 		r_type = get_record_type(t_tnf, type, type_length);
 		offset += (type_length + il_length);
+		g_free(type);
 
 		record = g_try_malloc0(sizeof(struct near_ndef_record));
 		if (record == NULL) {
