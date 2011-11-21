@@ -85,6 +85,7 @@ enum record_type {
 	RECORD_TYPE_WKT_ALTERNATIVE_CARRIER   =   0x0a,
 	RECORD_TYPE_WKT_COLLISION_RESOLUTION  =   0x0b,
 	RECORD_TYPE_WKT_ERROR                 =   0x0c,
+	RECORD_TYPE_MIME_TYPE                 =   0x0d,
 	RECORD_TYPE_UNKNOWN                   =   0xfe,
 	RECORD_TYPE_ERROR                     =   0xff
 };
@@ -114,15 +115,23 @@ struct near_ndef_sp_record {
 	/* TODO add icon and other records fields*/
 };
 
+struct near_ndef_mime_record {
+	char *type;
+};
+
 struct near_ndef_record {
 	char *path;
 	uint8_t tnf;
 	enum record_type type;
 	char *type_name;
 
+	/* WKT record */
 	struct near_ndef_text_record *text;
 	struct near_ndef_uri_record  *uri;
 	struct near_ndef_sp_record   *sp;
+
+	/* MIME type */
+	struct near_ndef_mime_record *mime;
 };
 
 static DBusConnection *connection = NULL;
@@ -254,6 +263,20 @@ static void append_smart_poster_record(struct near_ndef_sp_record *sp,
 							&(sp->size));
 }
 
+static void append_mime_record(struct near_ndef_mime_record *mime,
+					DBusMessageIter *dict)
+{
+	DBG("");
+
+	if (mime == NULL || dict == NULL)
+		return;
+
+	if (mime->type != NULL)
+		near_dbus_dict_append_basic(dict, "MIME",
+						DBUS_TYPE_STRING,
+						&(mime->type));
+}
+
 static void append_record(struct near_ndef_record *record,
 					DBusMessageIter *dict)
 {
@@ -312,6 +335,13 @@ static void append_record(struct near_ndef_record *record,
 		type = "HandoverCarrier";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
+		break;
+
+	case RECORD_TYPE_MIME_TYPE:
+		type = "MIME Type (RFC 2046)";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		append_mime_record(record->mime, dict);
 		break;
 	}
 
@@ -396,6 +426,11 @@ static void free_sp_record(struct near_ndef_sp_record *sp)
 	sp = NULL;
 }
 
+static void free_mime_record(struct near_ndef_mime_record *mime)
+{
+	g_free(mime->type);
+}
+
 static void free_ndef_record(struct near_ndef_record *record)
 {
 	if (record == NULL)
@@ -429,6 +464,9 @@ static void free_ndef_record(struct near_ndef_record *record)
 	case RECORD_TYPE_WKT_SMART_POSTER:
 		free_sp_record(record->sp);
 		break;
+
+	case RECORD_TYPE_MIME_TYPE:
+		free_mime_record(record->mime);
 	}
 
 	g_free(record);
@@ -475,7 +513,15 @@ static enum record_type get_record_type(uint8_t tnf,
 {
 	DBG("");
 
-	if (tnf == RECORD_TNF_WELLKNOWN) {
+	switch (tnf) {
+	case RECORD_TNF_EMPTY:
+	case RECORD_TNF_URI:
+	case RECORD_TNF_EXTERNAL:
+	case RECORD_TNF_UNKNOWN:
+	case RECORD_TNF_UNCHANGED:
+		break;
+
+	case RECORD_TNF_WELLKNOWN:
 		if (type_length == 1) {
 			if (type[0] == 'T')
 				return RECORD_TYPE_WKT_TEXT;
@@ -513,6 +559,9 @@ static enum record_type get_record_type(uint8_t tnf,
 				return RECORD_TYPE_UNKNOWN;
 
 		}
+
+	case RECORD_TNF_MIME:
+		return RECORD_TYPE_MIME_TYPE;
 
 	}
 
@@ -965,6 +1014,29 @@ fail:
 	return NULL;
 }
 
+static struct near_ndef_mime_record *
+parse_mime_type(struct near_ndef_record *record,
+			uint8_t *ndef_data, size_t ndef_length, size_t offset,
+			uint32_t payload_length)
+{
+	struct near_ndef_mime_record *mime = NULL;
+
+	DBG("");
+
+	if ((ndef_data == NULL) || ((offset + payload_length) > ndef_length))
+		return NULL;
+
+	mime = g_try_malloc0(sizeof(struct near_ndef_mime_record));
+	if (mime == NULL)
+		return NULL;
+
+	mime->type = g_strdup(record->type_name);
+
+	DBG("MIME Type  '%s'", mime->type);
+
+	return mime;
+}
+
 int near_ndef_parse(struct near_tag *tag,
 			uint8_t *ndef_data, size_t ndef_length)
 {
@@ -1106,6 +1178,18 @@ int near_ndef_parse(struct near_tag *tag,
 							payload_length);
 
 			if (record->sp == NULL) {
+				err = EINVAL;
+				goto fail;
+			}
+
+			break;
+
+		case RECORD_TYPE_MIME_TYPE:
+			record->mime = parse_mime_type(record, ndef_data,
+							ndef_length, offset,
+							payload_length);
+
+			if (record->mime == NULL) {
 				err = EINVAL;
 				goto fail;
 			}
