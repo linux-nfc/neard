@@ -34,13 +34,15 @@
 
 #include "near.h"
 
-#define RECORD_TNF_EMPTY     0x00
-#define RECORD_TNF_WELLKNOWN 0x01
-#define RECORD_TNF_MIME      0x02
-#define RECORD_TNF_URI       0x03
-#define RECORD_TNF_EXTERNAL  0x04
-#define RECORD_TNF_UNKNOWN   0x05
-#define RECORD_TNF_UNCHANGED 0x06
+enum record_tnf {
+	RECORD_TNF_EMPTY     = 0x00,
+	RECORD_TNF_WELLKNOWN = 0x01,
+	RECORD_TNF_MIME      = 0x02,
+	RECORD_TNF_URI       = 0x03,
+	RECORD_TNF_EXTERNAL  = 0x04,
+	RECORD_TNF_UNKNOWN   = 0x05,
+	RECORD_TNF_UNCHANGED = 0x06,
+};
 
 #define RECORD_ACTION_DO   0x00
 #define RECORD_ACTION_SAVE 0x01
@@ -508,7 +510,7 @@ static char *action_to_string(uint8_t action)
  * @return enum record type
  */
 
-static enum record_type get_record_type(uint8_t tnf,
+static enum record_type get_record_type(enum record_tnf tnf,
 				uint8_t *type, size_t type_length)
 {
 	DBG("");
