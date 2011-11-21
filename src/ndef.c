@@ -118,6 +118,7 @@ struct near_ndef_record {
 	char *path;
 	uint8_t tnf;
 	enum record_type type;
+	char *type_name;
 
 	struct near_ndef_text_record *text;
 	struct near_ndef_uri_record  *uri;
@@ -401,6 +402,7 @@ static void free_ndef_record(struct near_ndef_record *record)
 		return;
 
 	g_free(record->path);
+	g_free(record->type_name);
 
 	switch (record->type) {
 	case RECORD_TYPE_WKT_SIZE:
@@ -1057,6 +1059,7 @@ int near_ndef_parse(struct near_tag *tag,
 
 		record->tnf = t_tnf;
 		record->type = r_type;
+		record->type_name = g_strndup((char *)type, type_length);
 
 		switch (r_type) {
 		case RECORD_TYPE_WKT_SIZE:
