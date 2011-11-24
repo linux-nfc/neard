@@ -40,6 +40,7 @@ struct near_target {
 	uint32_t adapter_idx;
 	uint32_t protocols;
 	enum near_target_type type;
+	enum near_target_sub_type sub_type;
 
 	uint16_t tag_type;
 	struct near_tag *tag;
@@ -284,6 +285,32 @@ static GDBusSignalTable target_signals[] = {
 #define NFC_TAG_A_SENS_RES_SSD(sens_res) ((sens_res) & 0x001f)
 #define NFC_TAG_A_SENS_RES_PLATCONF(sens_res) (((sens_res) & 0x0f00) >> 8)
 
+static enum near_target_sub_type get_tag_type2_sub_type(uint8_t sel_res)
+{
+	switch(sel_res) {
+	case 0x00 :
+		return NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT;
+	case 0x08:
+		return NEAR_TAG_NFC_T2_MIFARE_1K;
+	case 0x09:
+		return NEAR_TAG_NFC_T2_MIFARE_MINI;
+	case 0x18:
+		return NEAR_TAG_NFC_T2_MIFARE_STD_4K;
+	case 0x20:
+		return NEAR_TAG_NFC_T2_MIFARE_DESFIRE;
+	case 0x28 :
+		return NEAR_TAG_NFC_T2_JCOP30;
+	case 0x38:
+		return NEAR_TAG_NFC_T2_MIFARE_4K_EMUL;
+	case 0x88:
+		return NEAR_TAG_NFC_T2_MIFARE_1K_INFINEON;
+	case 0x98:
+		return NEAR_TAG_NFC_T2_MPCOS;
+	}
+
+	return NEAR_TAG_NFC_SUBTYPE_UNKNOWN;
+}
+
 static void find_tag_type(struct near_target *target,
 				uint16_t sens_res, uint8_t sel_res)
 {
@@ -312,6 +339,7 @@ static void find_tag_type(struct near_target *target,
 		switch(proto) {
 		case NFC_TAG_A_TYPE2:
 			target->tag_type = NEAR_TAG_NFC_TYPE2;
+			target->sub_type = get_tag_type2_sub_type(sel_res);
 			break;
 		case NFC_TAG_A_TYPE4:
 			target->tag_type = NEAR_TAG_NFC_TYPE4;
@@ -385,6 +413,26 @@ void __near_target_remove(struct near_target *target)
 						NFC_TARGET_INTERFACE);
 
 	g_hash_table_remove(target_hash, target->path);
+}
+
+enum near_target_sub_type near_target_get_subtype(uint32_t adapter_idx,
+				uint32_t target_idx)
+
+{
+	struct near_target *target;
+	char *path;
+
+	path = g_strdup_printf("%s/nfc%d/target%d", NFC_PATH,
+					adapter_idx, target_idx);
+	if (path == NULL)
+		return NEAR_TAG_NFC_SUBTYPE_UNKNOWN;
+
+	target = g_hash_table_lookup(target_hash, path);
+	g_free(path);
+	if (target == NULL)
+		return NEAR_TAG_NFC_SUBTYPE_UNKNOWN;
+
+	return target->sub_type;
 }
 
 struct near_tag *near_target_add_tag(uint32_t adapter_idx, uint32_t target_idx,

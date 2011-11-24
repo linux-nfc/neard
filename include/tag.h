@@ -35,6 +35,19 @@
 #define	NEAR_TAG_NFC_DEP     0x10
 #define	NEAR_TAG_NFC_UNKNOWN 0xff
 
+enum near_target_sub_type {
+	NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT = 0,	// SAK 0x00
+	NEAR_TAG_NFC_T2_MIFARE_1K,		// SAK:0x08
+	NEAR_TAG_NFC_T2_MIFARE_MINI,		// SAK 0x09
+	NEAR_TAG_NFC_T2_MIFARE_STD_4K,		// SAK:0x18
+	NEAR_TAG_NFC_T2_MIFARE_DESFIRE,		// SAK:0x20
+	NEAR_TAG_NFC_T2_JCOP30,			// SAK:0x28
+	NEAR_TAG_NFC_T2_MIFARE_4K_EMUL,		// SAK:0x38
+	NEAR_TAG_NFC_T2_MIFARE_1K_INFINEON,	// SAK:0x88
+	NEAR_TAG_NFC_T2_MPCOS,			// SAK:0x98
+	NEAR_TAG_NFC_SUBTYPE_UNKNOWN = 0xFF
+};
+
 typedef void (*near_tag_read_cb) (uint32_t adapter_idx, int status);
 
 struct near_tag_driver {
