@@ -237,8 +237,11 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_read_cb cb)
 {
 	int err;
+	enum near_target_sub_type tgt_subtype;
 
 	DBG("");
+
+	tgt_subtype = near_target_get_subtype(adapter_idx, target_idx);
 
 	err = near_adapter_connect(adapter_idx, target_idx, NFC_PROTO_MIFARE);
 	if (err < 0) {
@@ -247,7 +250,13 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 		return err;
 	}
 
-	err = nfctype2_read_meta(adapter_idx, target_idx, cb);
+	if (tgt_subtype == NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT)
+		err = nfctype2_read_meta(adapter_idx, target_idx, cb);
+	else {
+		DBG("Unknown TAG Type 2 subtype (%d)", tgt_subtype);
+		err = -1;
+	}
+
 	if (err < 0)
 		near_adapter_disconnect(adapter_idx);
 
