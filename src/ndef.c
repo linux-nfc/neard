@@ -1124,17 +1124,18 @@ int near_ndef_parse(struct near_tag *tag,
 
 		r_type = get_record_type(t_tnf, type, type_length);
 		offset += (type_length + il_length);
-		g_free(type);
 
 		record = g_try_malloc0(sizeof(struct near_ndef_record));
 		if (record == NULL) {
 			err = ENOMEM;
+			g_free(type);
 			goto fail;
 		}
 
 		record->tnf = t_tnf;
 		record->type = r_type;
 		record->type_name = g_strndup((char *)type, type_length);
+		g_free(type);
 
 		switch (r_type) {
 		case RECORD_TYPE_WKT_SIZE:
