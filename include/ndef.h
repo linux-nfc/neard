@@ -40,4 +40,9 @@ struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 					 uint32_t field_length, uint8_t *field);
 
+struct near_ndef_message *
+near_ndef_prepare_smartposter_record(uint8_t uri_identifier,
+					uint32_t uri_field_length,
+					uint8_t *uri_field);
+
 #endif

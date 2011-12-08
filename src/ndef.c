@@ -1436,6 +1436,70 @@ fail:
 	return NULL;
 }
 
+/**
+ * @brief Prepare Smartposter ndef record with mandatory URI fields.
+ *
+ * Prepare smartposter ndef record with provided input data and
+ * return ndef message structure (length and byte stream) in success or
+ * NULL in failure case.
+ *
+ * @note : caller responsibility to free the input and output
+ *         parameters memory.
+ *
+ * @param[in] uri_identfier
+ * @param[in] uri_field_length
+ * @param[in] uri_field
+ *
+ * @return struct near_ndef_message * - Success
+ *         NULL - Failure
+ */
+struct near_ndef_message *
+near_ndef_prepare_smartposter_record(uint8_t uri_identifier,
+					uint32_t uri_field_length,
+					uint8_t *uri_field)
+{
+	struct near_ndef_message *msg = NULL, *uri = NULL;
+
+	/* URI is mandatory in Smartposter */
+	uri = near_ndef_prepare_uri_record(uri_identifier, uri_field_length,
+								uri_field);
+	if (uri == NULL)
+		goto fail;
+
+	/* URI record length is equal to payload length of Sp record */
+	msg = ndef_message_alloc("Sp", uri->length);
+	if (msg == NULL)
+		goto fail;
+
+	memcpy(msg->data + msg->offset, uri->data, uri->length);
+	msg->offset += uri->length;
+
+	if (msg->offset > msg->length)
+		goto fail;
+
+	if (uri != NULL) {
+		g_free(uri->data);
+		g_free(uri);
+	}
+
+	return msg;
+
+fail:
+	near_error("smartposter record preparation failed");
+
+	if (uri != NULL) {
+		g_free(uri->data);
+		g_free(uri);
+	}
+
+	if (msg != NULL) {
+		g_free(msg->data);
+		g_free(msg);
+	}
+
+	return NULL;
+}
+
 int __near_ndef_init(void)
 {
 	DBG("");
