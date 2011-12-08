@@ -431,6 +431,9 @@ static void free_sp_record(struct near_ndef_sp_record *sp)
 static void free_mime_record(struct near_ndef_mime_record *mime)
 {
 	g_free(mime->type);
+	g_free(mime);
+
+	mime = NULL;
 }
 
 static void free_ndef_record(struct near_ndef_record *record)
