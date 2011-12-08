@@ -92,6 +92,21 @@ enum record_type {
 	RECORD_TYPE_ERROR                     =   0xff
 };
 
+struct near_ndef_record_header {
+	uint8_t mb;
+	uint8_t me;
+	uint8_t cf;
+	uint8_t sr;
+	uint8_t il;
+	uint8_t tnf;
+	uint8_t il_length;
+	uint8_t *il_field;
+	uint32_t payload_len;
+	uint32_t offset;
+	enum record_type rec_type;
+	char *type_name;
+};
+
 struct near_ndef_text_record {
 	char *encoding;
 	char *language_code;
@@ -123,9 +138,8 @@ struct near_ndef_mime_record {
 
 struct near_ndef_record {
 	char *path;
-	uint8_t tnf;
-	enum record_type type;
-	char *type_name;
+
+	struct near_ndef_record_header *header;
 
 	/* WKT record */
 	struct near_ndef_text_record *text;
@@ -289,7 +303,7 @@ static void append_record(struct near_ndef_record *record,
 	if (record == NULL || dict == NULL)
 		return;
 
-	switch (record->type) {
+	switch (record->header->rec_type) {
 	case RECORD_TYPE_WKT_SIZE:
 	case RECORD_TYPE_WKT_TYPE:
 	case RECORD_TYPE_WKT_ACTION:
@@ -442,9 +456,9 @@ static void free_ndef_record(struct near_ndef_record *record)
 		return;
 
 	g_free(record->path);
-	g_free(record->type_name);
+	g_free(record->header->type_name);
 
-	switch (record->type) {
+	switch (record->header->rec_type) {
 	case RECORD_TYPE_WKT_SIZE:
 	case RECORD_TYPE_WKT_TYPE:
 	case RECORD_TYPE_WKT_ACTION:
@@ -472,6 +486,12 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 	case RECORD_TYPE_MIME_TYPE:
 		free_mime_record(record->mime);
+	}
+
+	if (record->header != NULL) {
+		g_free(record->header->il_field);
+		g_free(record->header->type_name);
+		g_free(record->header);
 	}
 
 	g_free(record);
@@ -609,6 +629,121 @@ static uint8_t validate_record_begin_and_end_bits(uint8_t *msg_mb,
 	}
 
 	return 0;
+}
+
+/**
+ * @brief Parse the ndef record header.
+ *
+ * Parse the ndef record header and cache the begin, end, chunkflag,
+ * short-record and type-name-format bits. ID length and field, record
+ * type, paylaod length and offset (where payload byte starts in input
+ * parameter). Validate offset for everystep forward against total
+ * available length.
+ *
+ * @note : Caller responsibility to free the memory.
+ *
+ * @param[in] rec      ndef byte stream
+ * @param[in] offset   record header offset
+ * @param[in] length   total length in byte stream
+ *
+ * @return struct near_ndef_record_header * RecordHeader on Success
+ *                                          NULL   on Failure
+ */
+static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
+					uint32_t offset, uint32_t length)
+{
+	struct near_ndef_record_header *rec_header = NULL;
+	uint8_t type_len, *type = NULL;
+
+	if (rec == NULL || offset >= length)
+		return NULL;
+
+	/* This check is for empty record. */
+	if ((length - offset) < NDEF_MSG_MIN_LENGTH)
+		return NULL;
+
+	rec_header = g_try_malloc0(sizeof(struct near_ndef_record_header));
+	if (rec_header == NULL)
+		return NULL;
+
+	rec_header->mb = RECORD_MB_BIT(rec[offset]);
+	rec_header->me = RECORD_ME_BIT(rec[offset]);
+	rec_header->sr = RECORD_SR_BIT(rec[offset]);
+	rec_header->il = RECORD_IL_BIT(rec[offset]);
+	rec_header->tnf = RECORD_TNF_BIT(rec[offset]);
+
+	offset++;
+	type_len = rec[offset++];
+
+	if (rec_header->sr == 1) {
+		rec_header->payload_len = rec[offset++];
+	} else {
+		rec_header->payload_len =
+			g_ntohl(*((uint32_t *)(rec + offset)));
+		offset += 4;
+
+		if (offset >= length)
+			goto fail;
+	}
+
+	if (rec_header->il == 1) {
+		rec_header->il_length = rec[offset++];
+
+		if (offset >= length)
+			goto fail;
+	}
+
+	if (type_len > 0) {
+		if ((offset + type_len) > length)
+			goto fail;
+
+		type = g_try_malloc0(type_len);
+		if (type == NULL)
+			goto fail;
+
+		memcpy(type, rec + offset, type_len);
+		offset += type_len;
+
+		if (offset >= length)
+			goto fail;
+	}
+
+	if (rec_header->il_length > 0) {
+		if ((offset + rec_header->il_length) > length)
+			goto fail;
+
+		rec_header->il_field = g_try_malloc0(rec_header->il_length);
+		if (rec_header->il_field == NULL)
+			goto fail;
+
+		memcpy(rec_header->il_field, rec + offset,
+					rec_header->il_length);
+		offset += rec_header->il_length;
+
+		if (offset >= length)
+			goto fail;
+	}
+
+	if ((offset + rec_header->payload_len) > length)
+		goto fail;
+
+	rec_header->rec_type = get_record_type(rec_header->tnf, type, type_len);
+	rec_header->offset = offset;
+	rec_header->type_name = g_strndup((char *) type, type_len);
+
+	g_free(type);
+
+	return rec_header;
+
+fail:
+	near_error("parsing record header failed");
+
+	g_free(type);
+	g_free(rec_header->il_field);
+	g_free(rec_header->type_name);
+	g_free(rec_header);
+
+	return NULL;
 }
 
 /**
@@ -816,6 +951,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 					 uint32_t payload_length)
 {
 	struct near_ndef_sp_record *sp_record = NULL;
+	struct near_ndef_record_header *rec_header = NULL;
 	uint8_t mb = 0, me = 0, i;
 	size_t t_offset;
 	GSList *titles = NULL, *temp;
@@ -831,76 +967,30 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 		return NULL;
 
 	while (t_offset < (offset + payload_length)) {
-		uint8_t t_mb, t_me, t_sr, t_il, t_tnf;
-		uint8_t type_length, il_length = 0, r_type = 0xfe;
-		uint8_t *type = NULL;
-		uint32_t payload_length;
 
 		DBG("Record header : 0x%x", ndef_data[t_offset]);
 
-		t_mb = RECORD_MB_BIT(ndef_data[t_offset]);
-		t_me = RECORD_ME_BIT(ndef_data[t_offset]);
-		t_sr = RECORD_SR_BIT(ndef_data[t_offset]);
-		t_il = RECORD_IL_BIT(ndef_data[t_offset]);
-		t_tnf = RECORD_TNF_BIT(ndef_data[t_offset]);
+		rec_header = parse_record_header(ndef_data, t_offset,
+							ndef_length);
+		if (rec_header == NULL)
+			goto fail;
 
-		if (validate_record_begin_and_end_bits(&mb,
-						&me, t_mb, t_me) != 0) {
+		if (validate_record_begin_and_end_bits(&mb, &me,
+					rec_header->mb,	rec_header->me) != 0) {
 			DBG("validate mb me failed");
 			goto fail;
 		}
 
-		/*
-		 * calculate ndef length is enough or not against id,
-		 * typename and payload to extract Sp sub-records(eg: Uri,
-		 * Title, Action, Size, Type and Other)
-		 */
-		t_offset++;
-		type_length = ndef_data[t_offset];
-		t_offset++;
+		t_offset = rec_header->offset;
 
-		if (t_sr == 1) {
-			payload_length = ndef_data[t_offset];
-			t_offset++;
-		} else {
-			payload_length =
-				g_ntohl(*((uint32_t *)(ndef_data + t_offset)));
-			t_offset += 4;
-
-			if (t_offset >= ndef_length)
-				goto fail;
-		}
-
-		if (t_il == 1) {
-			il_length = ndef_data[t_offset];
-			t_offset++;
-
-			if (t_offset >= ndef_length)
-				goto fail;
-		}
-
-		if ((t_offset + type_length + il_length + payload_length)
-				> ndef_length)
-			goto fail;
-
-		if (type_length > 0) {
-			type = g_try_malloc0(type_length);
-			if (type == NULL)
-				goto fail;
-
-			memcpy(type, ndef_data+t_offset, type_length);
-		}
-
-		r_type = get_record_type(t_tnf, type, type_length);
-
-		t_offset += type_length + il_length;
-
-		switch (r_type) {
+		switch (rec_header->rec_type) {
+		case RECORD_TYPE_WKT_SMART_POSTER:
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
 		case RECORD_TYPE_WKT_HANDOVER_SELECT:
 		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
+		case RECORD_TYPE_MIME_TYPE:
 		case RECORD_TYPE_WKT_ERROR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
@@ -912,9 +1002,8 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 				goto fail;
 
 			sp_record->uri = parse_uri_record(ndef_data,
-							ndef_length, t_offset,
-							payload_length);
-
+						ndef_length, t_offset,
+						rec_header->payload_len);
 			if (sp_record->uri == NULL)
 				goto fail;
 
@@ -929,8 +1018,8 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			{
 			struct near_ndef_text_record *title;
 			title = parse_text_record(ndef_data, ndef_length,
-						t_offset, payload_length);
-
+						t_offset,
+						rec_header->payload_len);
 			if (title == NULL)
 				goto fail;
 
@@ -952,14 +1041,15 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 
 		case RECORD_TYPE_WKT_TYPE:
 
-			if (payload_length > 0) {
-				sp_record->type = g_try_malloc0(payload_length);
+			if (rec_header->payload_len > 0) {
+				sp_record->type = g_try_malloc0(
+						rec_header->payload_len);
 				if (sp_record->type == NULL)
 					goto fail;
 
 				sp_record->type = g_strndup(
 						(char *) ndef_data + t_offset,
-								payload_length);
+						rec_header->payload_len);
 			}
 
 			break;
@@ -969,7 +1059,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			 * If the action record exists, payload should be
 			 * single byte, otherwise consider it as error.
 			 */
-			if (payload_length != 1)
+			if (rec_header->payload_len != 1)
 				goto fail;
 
 			sp_record->action =
@@ -978,8 +1068,12 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			break;
 		}
 
-		t_offset += payload_length;
-	}
+		t_offset += rec_header->payload_len;
+		g_free(rec_header->il_field);
+		g_free(rec_header->type_name);
+		g_free(rec_header);
+		rec_header = NULL;
+}
 
 	/*
 	 * Code to fill smart poster record structure from
@@ -1013,6 +1107,13 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 
 fail:
 	near_error("smart poster record parsing failed");
+
+	if (rec_header != NULL) {
+		g_free(rec_header->type_name);
+		g_free(rec_header->il_field);
+		g_free(rec_header);
+	}
+
 	free_sp_record(sp_record);
 	g_slist_free(titles);
 
@@ -1035,7 +1136,7 @@ parse_mime_type(struct near_ndef_record *record,
 	if (mime == NULL)
 		return NULL;
 
-	mime->type = g_strdup(record->type_name);
+	mime->type = g_strdup(record->header->type_name);
 
 	DBG("MIME Type  '%s'", mime->type);
 
@@ -1045,7 +1146,7 @@ parse_mime_type(struct near_ndef_record *record,
 int near_ndef_parse(struct near_tag *tag,
 			uint8_t *ndef_data, size_t ndef_length)
 {
-	uint8_t p_mb = 0, p_me = 0, err;
+	uint8_t p_mb = 0, p_me = 0, err = EINVAL;
 	uint32_t n_records, adapter_idx, target_idx;
 	size_t offset = 0;
 	struct near_ndef_record *record = NULL;
@@ -1059,88 +1160,33 @@ int near_ndef_parse(struct near_tag *tag,
 	}
 
 	while (offset < ndef_length) {
-		uint8_t c_mb, c_me, t_sr, t_il, t_tnf;
-		uint8_t type_length, il_length = 0, r_type;
-		uint8_t *type = NULL;
-		uint32_t payload_length = 0;
 
-		c_mb = RECORD_MB_BIT(ndef_data[offset]);
-		c_me = RECORD_ME_BIT(ndef_data[offset]);
-		t_sr = RECORD_SR_BIT(ndef_data[offset]);
-		t_il = RECORD_IL_BIT(ndef_data[offset]);
-		t_tnf = RECORD_TNF_BIT(ndef_data[offset]);
+		DBG("Record Header : 0x%X", ndef_data[offset]);
 
-		/* Validate record header begin and end bits*/
+		record = g_try_malloc0(sizeof(struct near_ndef_record));
+		if (record == NULL) {
+			err = ENOMEM;
+			goto fail;
+		}
+
+		record->header = parse_record_header(ndef_data, offset,
+							ndef_length);
+		if (record->header == NULL) {
+			err = EINVAL;
+			goto fail;
+		}
+
 		if (validate_record_begin_and_end_bits(&p_mb, &p_me,
-							c_mb, c_me) != 0) {
+					record->header->mb,
+					record->header->me) != 0) {
 			DBG("validate mb me failed");
 			err = EINVAL;
 			goto fail;
 		}
 
-		offset++;
-		type_length = ndef_data[offset];
+		offset = record->header->offset;
 
-		offset++;
-
-		if (t_sr == 1) {
-			payload_length = ndef_data[offset];
-			offset++;
-		} else {
-			payload_length =
-				g_ntohl(*((uint32_t *)(ndef_data + offset)));
-			offset += 4;
-
-			if (offset >= ndef_length) {
-				err = EINVAL;
-				goto fail;
-			}
-
-		}
-
-		if (t_il == 1) {
-			il_length = ndef_data[offset];
-			offset++;
-
-			if (offset >= ndef_length) {
-				err = EINVAL;
-				goto fail;
-			}
-
-		}
-
-		if ((offset + type_length + il_length + payload_length)
-			> ndef_length) {
-			err = EINVAL;
-			goto fail;
-		}
-
-		if (type_length > 0) {
-			type = g_try_malloc0(type_length);
-			if (type == NULL) {
-				err = ENOMEM;
-				goto fail;
-			}
-
-			memcpy(type, ndef_data + offset, type_length);
-		}
-
-		r_type = get_record_type(t_tnf, type, type_length);
-		offset += (type_length + il_length);
-
-		record = g_try_malloc0(sizeof(struct near_ndef_record));
-		if (record == NULL) {
-			err = ENOMEM;
-			g_free(type);
-			goto fail;
-		}
-
-		record->tnf = t_tnf;
-		record->type = r_type;
-		record->type_name = g_strndup((char *)type, type_length);
-		g_free(type);
-
-		switch (r_type) {
+		switch (record->header->rec_type) {
 		case RECORD_TYPE_WKT_SIZE:
 		case RECORD_TYPE_WKT_TYPE:
 		case RECORD_TYPE_WKT_ACTION:
@@ -1156,8 +1202,7 @@ int near_ndef_parse(struct near_tag *tag,
 
 		case RECORD_TYPE_WKT_TEXT:
 			record->text = parse_text_record(ndef_data, ndef_length,
-								offset,
-								payload_length);
+					offset,	record->header->payload_len);
 
 			if (record->text == NULL) {
 				err = EINVAL;
@@ -1168,8 +1213,8 @@ int near_ndef_parse(struct near_tag *tag,
 
 		case RECORD_TYPE_WKT_URI:
 			record->uri = parse_uri_record(ndef_data, ndef_length,
-								offset,
-								payload_length);
+						offset,
+						record->header->payload_len);
 
 			if (record->uri == NULL) {
 				err = EINVAL;
@@ -1180,8 +1225,8 @@ int near_ndef_parse(struct near_tag *tag,
 
 		case RECORD_TYPE_WKT_SMART_POSTER:
 			record->sp = parse_smart_poster_record(ndef_data,
-							ndef_length, offset,
-							payload_length);
+						ndef_length, offset,
+						record->header->payload_len);
 
 			if (record->sp == NULL) {
 				err = EINVAL;
@@ -1192,8 +1237,9 @@ int near_ndef_parse(struct near_tag *tag,
 
 		case RECORD_TYPE_MIME_TYPE:
 			record->mime = parse_mime_type(record, ndef_data,
-							ndef_length, offset,
-							payload_length);
+						ndef_length, offset,
+						record->header->payload_len);
+
 
 			if (record->mime == NULL) {
 				err = EINVAL;
@@ -1219,7 +1265,7 @@ int near_ndef_parse(struct near_tag *tag,
 							record_methods,
 							NULL, NULL,
 							record, NULL);
-		offset += payload_length;
+		offset += record->header->payload_len;
 	}
 
 	return 0;
