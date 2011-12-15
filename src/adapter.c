@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 #include <glib.h>
 
@@ -373,6 +374,12 @@ void __near_adapter_remove(struct near_adapter *adapter)
 	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(adapter->idx));
 }
 
+static int dep_link_up(uint32_t idx, uint32_t target_idx)
+{
+	return __near_netlink_dep_link_up(idx, target_idx,
+					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
+}
+
 static void tag_read_cb(uint32_t adapter_idx, int status)
 {
 	if (status < 0)
@@ -406,6 +413,9 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			GINT_TO_POINTER(target_idx), target);	
 
 	__near_tag_read(target, tag_read_cb);
+
+	if (protocols & NFC_PROTO_NFC_DEP_MASK)
+		dep_link_up(idx, target_idx);
 
 	return 0;
 }
