@@ -40,7 +40,10 @@
 #include <near/ndef.h>
 #include <near/tlv.h>
 
+#ifndef AF_NFC
 #define AF_NFC 39
+#endif
+
 #define TLV_SIZE 2
 
 struct p2p_npp_channel {
