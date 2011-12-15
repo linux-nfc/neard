@@ -66,7 +66,9 @@ struct near_adapter_ioreq {
 };
 
 /* HACK HACK */
+#ifndef AF_NFC
 #define AF_NFC 39
+#endif
 
 static void free_adapter(gpointer data)
 {
