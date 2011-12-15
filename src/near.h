@@ -126,6 +126,9 @@ int __near_tag_read(struct near_target *target, near_tag_read_cb cb);
 int __near_netlink_get_adapters(void);
 int __near_netlink_start_poll(int idx, uint32_t protocols);
 int __near_netlink_stop_poll(int idx);
+int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
+				uint8_t comm_mode, uint8_t rf_mode);
+int __near_netlink_dep_link_down(uint32_t idx);
 int __near_netlink_activate_target(uint32_t adapter_idx,
 					uint32_t target_idx,
 					uint32_t protocol);

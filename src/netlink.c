@@ -272,6 +272,72 @@ nla_put_failure:
 	return err;
 }
 
+int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
+				uint8_t comm_mode, uint8_t rf_mode)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	int family, err = 0;
+
+	DBG("");
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		return -ENOMEM;
+
+	family = genl_family_get_id(nfc_state->nlnfc);
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+			NLM_F_REQUEST, NFC_CMD_DEP_LINK_UP, NFC_GENL_VERSION);
+	if (hdr == NULL) {
+		err = -EINVAL;
+		goto nla_put_failure;
+	}
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
+	NLA_PUT_U32(msg, NFC_ATTR_TARGET_INDEX, target_idx);
+	NLA_PUT_U8(msg, NFC_ATTR_COMM_MODE, comm_mode);
+	NLA_PUT_U8(msg, NFC_ATTR_RF_MODE, rf_mode);
+
+	err = nl_send_msg(nfc_state->nl_sock, msg, NULL, NULL);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
+int __near_netlink_dep_link_down(uint32_t idx)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	int family, err = 0;
+
+	DBG("");
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		return -ENOMEM;
+
+	family = genl_family_get_id(nfc_state->nlnfc);
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+			NLM_F_REQUEST, NFC_CMD_DEP_LINK_DOWN, NFC_GENL_VERSION);
+	if (hdr == NULL) {
+		err = -EINVAL;
+		goto nla_put_failure;
+	}
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
+
+	err = nl_send_msg(nfc_state->nl_sock, msg, NULL, NULL);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
 static int no_seq_check(struct nl_msg *n, void *arg)
 {
 	DBG("");
@@ -393,6 +459,46 @@ nla_put_failure:
 	return err;
 }
 
+static int nfc_netlink_event_dep_up(struct genlmsghdr *gnlh)
+{
+	struct nlattr *attrs[NFC_ATTR_MAX + 1];
+	uint32_t idx, target_idx = 0;
+	uint8_t rf_mode;
+
+	DBG("");
+
+	nla_parse(attrs, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL) {
+		near_error("Missing device index");
+		return -ENODEV;
+	}
+
+	if (attrs[NFC_ATTR_COMM_MODE] == NULL ||
+			attrs[NFC_ATTR_RF_MODE] == NULL) {
+		near_error("Missing rf or comm modes");
+		return -ENODEV;
+	}
+
+	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
+	rf_mode = nla_get_u8(attrs[NFC_ATTR_RF_MODE]);
+
+	if (rf_mode == NFC_RF_INITIATOR) {
+		if (attrs[NFC_ATTR_TARGET_INDEX] == NULL) {
+			near_error("Missing target index");
+			return -ENODEV;
+		};
+
+		target_idx = nla_get_u32(attrs[NFC_ATTR_TARGET_INDEX]);
+
+		DBG("%d %d", idx, target_idx);
+
+		return 0;
+	} else {
+		return -EOPNOTSUPP;
+	}
+}
+
 static int nfc_netlink_event(struct nl_msg *n, void *arg)
 {
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
@@ -412,6 +518,12 @@ static int nfc_netlink_event(struct nl_msg *n, void *arg)
 	case NFC_EVENT_DEVICE_REMOVED:
 		DBG("Adapter removed");
 		nfc_netlink_event_adapter(gnlh, FALSE);
+
+		break;
+
+	case NFC_CMD_DEP_LINK_UP:
+		DBG("DEP link is up");
+		nfc_netlink_event_dep_up(gnlh);
 
 		break;
 	}
