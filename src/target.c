@@ -232,7 +232,9 @@ static DBusMessage *get_properties(DBusConnection *conn,
 		near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, target);
 
-	if (target->type == NEAR_TARGET_TYPE_TAG) {
+	if (target->type == NEAR_TARGET_TYPE_TAG ||
+			(target->type == NEAR_TARGET_TYPE_DEVICE &&
+					target->tag != NULL)) {
 		near_dbus_dict_append_array(&dict, "TagType",
 				DBUS_TYPE_STRING, append_tag_type, target);
 
