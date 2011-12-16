@@ -40,26 +40,33 @@
 #include <near/ndef.h>
 #include <near/tlv.h>
 
-#define CMD_READ_ALL		0x00	/* Read all bytes (incl: HR) */
+#define CMD_READ_ALL		0x00	/* Read seg 0 (incl: HR) */
+#define CMD_READ_SEGS		0x10	/* Read 16 blocks (128 bytes) */
 
 #define OFFSET_STATUS_CMD	0x00
 #define OFFSET_HEADER_ROM	0x01
 
 #define HR0_TYPE1_STATIC	0x11
+#define HR0_TYPE2_HIGH		0x10
+#define HR0_TYPE2_LOW		0x0F
 
+#define BLOCK_SIZE		8
 #define LEN_STATUS_BYTE		0x01	/* Status byte */
 #define LEN_SPEC_BYTES		(LEN_STATUS_BYTE + 0x02)	/* HRx */
 #define LEN_UID_BYTES		(LEN_STATUS_BYTE + 0x07)	/* UID bytes */
 #define LEN_CC_BYTES		0x04	/* Capab. container */
+#define LEN_DYN_BYTES		0x0A	/* Bytes CtrlIT and TLV - Dyn. only */
 
 #define TYPE1_MAGIC 0xe1
 
-#define TAG_T1_DATA_CC(data) ((data) + LEN_SPEC_BYTES + LEN_UID_BYTES )
-#define TAG_T1_DATA_LENGTH(cc) ((cc)[2] * 8 - LEN_CC_BYTES)
+#define TAG_T1_DATA_CC(data) ((data) + LEN_SPEC_BYTES + LEN_UID_BYTES)
+#define TAG_T1_DATA_LENGTH(cc) ((cc[2] + 1) * 8 - LEN_CC_BYTES)
+
 #define TAG_T1_DATA_NFC(cc) ((cc)[0] & TYPE1_MAGIC)
 
 #define TYPE1_NOWRITE_ACCESS	0x0F
 #define TAG_T1_WRITE_FLAG(cc) ((cc)[3] & TYPE1_NOWRITE_ACCESS)
+#define TAG_T1_SEGMENT_SIZE	128
 
 struct type1_cmd {
 	uint8_t cmd;
@@ -70,6 +77,9 @@ struct type1_cmd {
 struct type1_tag {
 	uint32_t adapter_idx;
 	uint16_t current_block;
+	uint16_t current_seg;
+	uint16_t last_seg;
+	uint16_t data_read;
 
 	near_tag_read_cb cb;
 	struct near_tag *tag;
@@ -81,35 +91,132 @@ struct recv_cookie {
 	near_tag_read_cb cb;
 };
 
-static int meta_recv(uint8_t *resp, int length, void *data)
+/* Read segments (128 bytes)and store them to the tag data block */
+static int segment_read_recv(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
-	struct near_tag *tag;
-	struct type1_tag *t1_tag;
-	uint8_t *cc;
+	struct type1_tag *t1_tag = data;
+	struct type1_cmd t1_cmd;
+	uint8_t *tagdata;
+	size_t data_length;
+
 	int err;
 
 	DBG("%d", length);
 
 	if (length < 0) {
 		err = length;
-		goto out;
+		goto out_err;
+	}
+
+	length = length - LEN_STATUS_BYTE;  /* ignore first byte */
+
+	/* Add data to tag mem*/
+	tagdata = near_tag_get_data(t1_tag->tag, &data_length);
+	memcpy(tagdata + t1_tag->data_read, resp+1, length);
+
+	/* Next segment */
+	t1_tag->data_read =  t1_tag->data_read + length;
+	t1_tag->current_seg = t1_tag->current_seg + 1;
+
+	if (t1_tag->current_seg <= t1_tag->last_seg) {
+		/* RSEG cmd */
+		t1_cmd.cmd = CMD_READ_SEGS;
+		t1_cmd.addr = (t1_tag->current_seg << 4) & 0xFF;
+
+		err = near_adapter_send(t1_tag->adapter_idx,
+				(uint8_t *)&t1_cmd, sizeof(t1_cmd),
+				segment_read_recv, t1_tag);
+		if (err < 0)
+			goto out_err;
+	} else { /* This is the end */
+		DBG("READ Static complete");
+		err = near_tlv_parse(t1_tag->tag,
+					t1_tag->cb,
+					tagdata,
+					t1_tag->data_read);
+
+		err = near_adapter_disconnect(t1_tag->adapter_idx);
+		/* free memory */
+		g_free(t1_tag);
+	}
+
+out_err:
+	return err;
+}
+
+/* The dynamic read function:
+ * Bytes [0..3] : CC
+ * [4..8]: TLV Lock ControlIT (0x01, 0x03, v1, V2, V3)
+ * [9..13]: TLV Reserved Memory Control	(0x02, 0x03, V1, V2, V3)
+ * [14..]: TLV NDEF (0x03, L0, L1, L2, V1,V2 ...)
+ */
+static int read_dynamic_tag(uint8_t *cc, int length, void *data)
+{
+	struct type1_tag *t1_tag = data;
+	struct type1_cmd t1_cmd;
+
+	uint8_t *tagdata;
+	uint8_t	*pndef;
+	size_t data_length;
+
+	DBG("Dynamic Mode");
+
+	tagdata = near_tag_get_data(t1_tag->tag, &data_length);
+
+	/* Skip un-needed bytes */
+	pndef = cc + 4;		/* right after CC bytes */
+	pndef = pndef + 5;	/* skip TLV Lock bits bytes */
+	pndef = pndef + 5;	/* skip TLV ControlIT bytes */
+
+	/* Save first NFC bytes to tag memory
+	 * 10 blocks[0x3..0xC] of 8 bytes + 2 bytes from block 2
+	 * */
+	memcpy(tagdata,	pndef, 10 * BLOCK_SIZE + 2);
+
+	/* Read the next one, up to the end of the data area */
+	t1_tag->current_seg = 1;
+	t1_tag->last_seg = ((cc[2] * BLOCK_SIZE) / TAG_T1_SEGMENT_SIZE);
+	t1_tag->data_read = 10 * BLOCK_SIZE + 2;
+
+	/* T1 read segment */
+	t1_cmd.cmd = CMD_READ_SEGS;
+	/* 5.3.3 ADDS operand is [b8..b5] */
+	t1_cmd.addr = (t1_tag->current_seg << 4) & 0xFF;
+
+	return near_adapter_send(t1_tag->adapter_idx,
+			(uint8_t *)&t1_cmd, sizeof(t1_cmd),
+			segment_read_recv, t1_tag);
+}
+
+static int meta_recv(uint8_t *resp, int length, void *data)
+{
+	struct recv_cookie *cookie = data;
+	struct near_tag *tag;
+	struct type1_tag *t1_tag = NULL;
+
+	uint8_t *cc;
+	int err = -EOPNOTSUPP;
+
+	DBG("%d", length);
+
+	if (length < 0) {
+		err = length;
+		goto out_err;
 	}
 
 	/* First byte is cmd status */
 	if (resp[OFFSET_STATUS_CMD] != 0) {
 		DBG("Command failed: 0x%x",resp[OFFSET_STATUS_CMD]);
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	/* Check Magic NFC tag */
 	cc = TAG_T1_DATA_CC(resp);
-
 	if (TAG_T1_DATA_NFC(cc) == 0) {
 		DBG("Not a valid NFC magic tag: 0x%x",cc[0]);
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	/* Associate the DATA length to the tag */
@@ -117,13 +224,13 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 					TAG_T1_DATA_LENGTH(cc));
 	if (tag == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	t1_tag = g_try_malloc0(sizeof(struct type1_tag));
 	if (t1_tag == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	t1_tag->adapter_idx = cookie->adapter_idx;
@@ -141,18 +248,27 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	/* Check Static or Dynamic memory model */
 	if (resp[OFFSET_HEADER_ROM] == HR0_TYPE1_STATIC) {
+		DBG("READ Static complete");
 		err = near_tlv_parse(t1_tag->tag, t1_tag->cb,
-				cc + LEN_CC_BYTES, TAG_T1_DATA_LENGTH(cc));
+			cc + LEN_CC_BYTES, TAG_T1_DATA_LENGTH(cc));
+		if (err < 0)
+			goto out_err;
+
 		near_adapter_disconnect(t1_tag->adapter_idx);
+		g_free(t1_tag);
+	} else if ((resp[OFFSET_HEADER_ROM] & 0xF0) == HR0_TYPE2_HIGH) {
+			err = read_dynamic_tag(cc, length, t1_tag);
 	} else {
 		err = -EOPNOTSUPP ;
 	}
 
-out:
-	g_free(cookie);
-
-	if (err < 0 && cookie->cb)
+out_err:
+	if (err < 0 && cookie->cb) {
 		cookie->cb(cookie->adapter_idx, err);
+		if (t1_tag)
+			near_adapter_disconnect(t1_tag->adapter_idx);
+	}
+	g_free(cookie);
 
 	return err;
 }
