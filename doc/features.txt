@@ -12,7 +12,7 @@ Reader Mode
 ===========
 Supported tags:
 
-  * Type 1: neard only supports the Topaz 96 tags.
+  * Type 1: Supported.
   * Type 2: Supported.
   * Type 3: Supported.
   * Type 4: Supported.
@@ -25,5 +25,5 @@ Not supported.
 
 Peer To Peer Mode
 =================
-Not supported.
-
+neard reads NDEFs from p2p devices in active mode.
+Write mode and passive mode to be implemented.
