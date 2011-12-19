@@ -73,7 +73,7 @@ Properties:	string Mode [readwrite]
 
 		boolean Powered [readwrite]
 
-		       Switch an adapter on or off.
+			Switch an adapter on or off.
 
 		boolean Polling [readonly]
 
