@@ -199,7 +199,7 @@ void near_tag_driver_unregister(struct near_tag_driver *driver)
 	driver_list = g_list_remove(driver_list, driver);
 }
 
-int __near_tag_read(struct near_target *target,near_tag_read_cb cb)
+int __near_tag_read(struct near_target *target, near_tag_read_cb cb)
 {
 	GList *list;
 	uint16_t type;
