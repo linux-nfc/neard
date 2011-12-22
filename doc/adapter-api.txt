@@ -44,6 +44,32 @@ Methods:	dict GetProperties()
 					 org.neard.Error.Failed
 					 org.neard.Error.NotSupported
 
+		object StartEmulation(string TagType)
+
+			Starts tag emulation mode.
+
+			Adapters can only emulate one target at a time, so
+			subsequent calls to this method will always return
+			the same object path.
+
+			Valid tag types are "Type 1", "Type 2", "Type 3",
+			"Type 4" and "NFC-DEP".
+
+			Returns the object path for the emulated target.
+
+			Possible errors: org.neard.Error.NotReady
+					 org.neard.Error.Failed
+					 org.neard.Error.NotSupported
+
+		void StopEmulation()
+
+			Stops tag emulation mode.
+
+			Possible errors: org.neard.Error.NotReady
+					 org.neard.Error.Failed
+					 org.neard.Error.NotSupported
+
+
 Signals		PropertyChanged(string name, variant value)
 
 			This signal indicates a changed value of the given
