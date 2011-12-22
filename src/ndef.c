@@ -456,7 +456,6 @@ static void free_ndef_record(struct near_ndef_record *record)
 		return;
 
 	g_free(record->path);
-	g_free(record->header->type_name);
 
 	switch (record->header->rec_type) {
 	case RECORD_TYPE_WKT_SIZE:
