@@ -81,14 +81,14 @@ struct type1_tag {
 	uint16_t last_seg;
 	uint16_t data_read;
 
-	near_tag_read_cb cb;
+	near_tag_io_cb cb;
 	struct near_tag *tag;
 };
 
 struct recv_cookie {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
-	near_tag_read_cb cb;
+	near_tag_io_cb cb;
 };
 
 /* Read segments (128 bytes)and store them to the tag data block */
@@ -278,7 +278,7 @@ out_err:
  * This should allow to get the HR0 byte
  */
 static int nfctype1_read_all(uint32_t adapter_idx, uint32_t target_idx,
-							near_tag_read_cb cb)
+							near_tag_io_cb cb)
 {
 	struct type1_cmd t1_cmd;
 	struct recv_cookie *cookie;
@@ -298,7 +298,7 @@ static int nfctype1_read_all(uint32_t adapter_idx, uint32_t target_idx,
 }
 
 static int nfctype1_read_tag(uint32_t adapter_idx,
-				uint32_t target_idx, near_tag_read_cb cb)
+				uint32_t target_idx, near_tag_io_cb cb)
 {
 	int err;
 

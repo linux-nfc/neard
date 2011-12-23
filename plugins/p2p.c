@@ -47,7 +47,7 @@
 #define TLV_SIZE 2
 
 struct p2p_npp_channel {
-	near_tag_read_cb cb;
+	near_tag_io_cb cb;
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 	int fd;
@@ -186,7 +186,7 @@ static gboolean npp_listener_event(GIOChannel *channel, GIOCondition condition,
 }
 
 static int npp_bind(uint32_t adapter_idx, uint32_t target_idx,
-						near_tag_read_cb cb)
+						near_tag_io_cb cb)
 {
 	int err;
 	struct sockaddr_nfc_llcp addr;
@@ -233,7 +233,7 @@ static int npp_bind(uint32_t adapter_idx, uint32_t target_idx,
 }
 
 static int p2p_read(uint32_t adapter_idx,
-		uint32_t target_idx, near_tag_read_cb cb)
+		uint32_t target_idx, near_tag_io_cb cb)
 {
 	int err;
 

@@ -73,7 +73,7 @@ uint8_t *near_tlv_data(uint8_t *tlv)
 	return tlv + 1 + l_length;
 }
 
-int near_tlv_parse(struct near_tag *tag, near_tag_read_cb cb,
+int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb,
 			uint8_t *data, uint16_t length)
 {
 	uint8_t *tlv = data, t;

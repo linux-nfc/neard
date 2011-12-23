@@ -67,7 +67,7 @@ struct type2_tag {
 	uint32_t adapter_idx;
 	uint16_t current_block;
 
-	near_tag_read_cb cb;
+	near_tag_io_cb cb;
 	struct near_tag *tag;
 };
 
@@ -147,7 +147,7 @@ static int data_read(struct type2_tag *tag)
 struct recv_cookie {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
-	near_tag_read_cb cb;
+	near_tag_io_cb cb;
 };
 
 static int meta_recv(uint8_t *resp, int length, void *data)
@@ -214,7 +214,7 @@ out:
 }
 
 static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
-							near_tag_read_cb cb)
+							near_tag_io_cb cb)
 {
 	struct type2_cmd cmd;
 	struct recv_cookie *cookie;
@@ -234,7 +234,7 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 }
 
 static int nfctype2_read_tag(uint32_t adapter_idx,
-				uint32_t target_idx, near_tag_read_cb cb)
+				uint32_t target_idx, near_tag_io_cb cb)
 {
 	int err;
 	enum near_target_sub_type tgt_subtype;

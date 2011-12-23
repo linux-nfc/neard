@@ -98,7 +98,7 @@ struct type4_cc {			/* Capability Container */
 struct recv_cookie {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
-	near_tag_read_cb cb;
+	near_tag_io_cb cb;
 	struct near_tag *tag;
 	uint16_t read_data;
 	uint16_t r_apdu_max_size;
@@ -520,7 +520,7 @@ out_err:
 }
 
 static int nfctype4_read_meta_v2(uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_read_cb cb)
+		near_tag_io_cb cb)
 {
 	struct recv_cookie *cookie;
 	int err = 0;
@@ -552,7 +552,7 @@ out_err:
 }
 
 static int nfctype4_read_tag(uint32_t adapter_idx,
-		uint32_t target_idx, near_tag_read_cb cb)
+		uint32_t target_idx, near_tag_io_cb cb)
 {
 	int err;
 
