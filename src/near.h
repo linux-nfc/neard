@@ -120,6 +120,9 @@ struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
 				size_t data_length);
 void __near_tag_free(struct near_tag *tag);
 int __near_tag_read(struct near_target *target, near_tag_io_cb cb);
+int __near_tag_add_ndef(struct near_target *target,
+				struct near_ndef_message *ndef,
+				near_tag_io_cb cb);
 
 #include <near/tlv.h>
 

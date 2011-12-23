@@ -229,3 +229,37 @@ int __near_tag_read(struct near_target *target, near_tag_io_cb cb)
 
 	return 0;
 }
+
+int __near_tag_add_ndef(struct near_target *target,
+				struct near_ndef_message *ndef,
+				near_tag_io_cb cb)
+{
+	GList *list;
+	uint16_t type;
+
+	DBG("");
+
+	type = __near_target_get_tag_type(target);
+	if (type == NEAR_TAG_NFC_UNKNOWN)
+		return -ENODEV;
+
+	DBG("type 0x%x", type);
+
+	for (list = driver_list; list; list = list->next) {
+		struct near_tag_driver *driver = list->data;
+
+		DBG("driver type 0x%x", driver->type);
+
+		if (driver->type & type) {
+			uint32_t adapter_idx, target_idx;
+
+			target_idx = __near_target_get_idx(target);
+			adapter_idx = __near_target_get_adapter_idx(target);
+
+			return driver->add_ndef(adapter_idx, target_idx,
+								ndef, cb);
+		}
+	}
+
+	return 0;
+}

@@ -50,11 +50,16 @@ enum near_target_sub_type {
 
 typedef void (*near_tag_io_cb) (uint32_t adapter_idx, int status);
 
+struct near_ndef_message;
+
 struct near_tag_driver {
 	uint16_t type;
 
 	int (*read_tag)(uint32_t adapter_idx, uint32_t target_idx,
 						near_tag_io_cb cb);
+	int (*add_ndef)(uint32_t adapter_idx, uint32_t target_idx,
+					struct near_ndef_message *ndef,
+					near_tag_io_cb cb);
 };
 
 struct near_tag;
