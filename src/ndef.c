@@ -926,47 +926,44 @@ static int8_t validate_language_code_in_sp_record(GSList *titles)
 }
 
 /**
- * @brief Parse the smart poster record.
+ * @brief Parse the smart poster record payload.
  *
  * Parse the smart poster record and cache the
  * data in respective fields of smart poster structure.
  *
  * @note Caller responsibility to free the memory.
  *
- * @param[in] ndef_data      NDEF raw data pointer
- * @param[in] ndef_length    NDEF raw data length
- * @param[in] offset         Sp record payload offset
+ * @param[in] rec         NDEF pointer set to record payload first byte
+ * @param[in] length Record payload length
  *
  * @return struct near_ndef_sp_record * Record on Success
  *                                      NULL   on Failure
  */
 
-static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
-					 size_t ndef_length, size_t offset,
-					 uint32_t payload_length)
+static struct near_ndef_sp_record *
+parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 {
 	struct near_ndef_sp_record *sp_record = NULL;
 	struct near_ndef_record_header *rec_header = NULL;
 	uint8_t mb = 0, me = 0, i;
-	size_t t_offset;
+	uint32_t offset;
 	GSList *titles = NULL, *temp;
 
 	DBG("");
 
-	if (ndef_data == NULL || offset >= ndef_length)
+	if (rec == NULL)
 		return NULL;
 
-	t_offset = offset;
+	offset = 0;
 	sp_record = g_try_malloc0(sizeof(struct near_ndef_sp_record));
 	if (sp_record == NULL)
 		return NULL;
 
-	while (t_offset < (offset + payload_length)) {
+	while (offset < length) {
 
-		DBG("Record header : 0x%x", ndef_data[t_offset]);
+		DBG("Record header : 0x%x", rec[offset]);
 
-		rec_header = parse_record_header(ndef_data, t_offset,
-							ndef_length);
+		rec_header = parse_record_header(rec, offset, length);
 		if (rec_header == NULL)
 			goto fail;
 
@@ -976,7 +973,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			goto fail;
 		}
 
-		t_offset = rec_header->offset;
+		offset = rec_header->offset;
 
 		switch (rec_header->rec_type) {
 		case RECORD_TYPE_WKT_SMART_POSTER:
@@ -996,7 +993,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			if (sp_record->uri != NULL)
 				goto fail;
 
-			sp_record->uri = parse_uri_record(ndef_data + t_offset,
+			sp_record->uri = parse_uri_record(rec + offset,
 						rec_header->payload_len);
 			if (sp_record->uri == NULL)
 				goto fail;
@@ -1011,7 +1008,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			 */
 			{
 			struct near_ndef_text_record *title;
-			title = parse_text_record(ndef_data + t_offset,
+			title = parse_text_record(rec + offset,
 						rec_header->payload_len);
 			if (title == NULL)
 				goto fail;
@@ -1025,11 +1022,11 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			 * If payload length is not exactly 4 bytes
 			 * then record is wrong.
 			 */
-			if (payload_length != 4)
+			if (rec_header->payload_len != 4)
 				goto fail;
 
 			sp_record->size =
-				g_ntohl(*((uint32_t *)(ndef_data + t_offset)));
+				g_ntohl(*((uint32_t *)(rec + offset)));
 			break;
 
 		case RECORD_TYPE_WKT_TYPE:
@@ -1041,7 +1038,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 					goto fail;
 
 				sp_record->type = g_strndup(
-						(char *) ndef_data + t_offset,
+						(char *) rec + offset,
 						rec_header->payload_len);
 			}
 
@@ -1056,17 +1053,17 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 				goto fail;
 
 			sp_record->action =
-				g_strdup(action_to_string(ndef_data[t_offset]));
+				g_strdup(action_to_string(rec[offset]));
 
 			break;
 		}
 
-		t_offset += rec_header->payload_len;
+		offset += rec_header->payload_len;
 		g_free(rec_header->il_field);
 		g_free(rec_header->type_name);
 		g_free(rec_header);
 		rec_header = NULL;
-}
+	}
 
 	/*
 	 * Code to fill smart poster record structure from
@@ -1216,8 +1213,8 @@ int near_ndef_parse(struct near_tag *tag,
 			break;
 
 		case RECORD_TYPE_WKT_SMART_POSTER:
-			record->sp = parse_smart_poster_record(ndef_data,
-						ndef_length, offset,
+			record->sp = parse_smart_poster_record(
+						ndef_data + offset,
 						record->header->payload_len);
 
 			if (record->sp == NULL) {
