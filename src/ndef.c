@@ -746,52 +746,50 @@ fail:
 }
 
 /**
- * @brief Parse the Text record
+ * @brief Parse the Text record payload
  *
  * Parse the Text record.
  *
- * @param[in] ndef_data      NDEF raw data pointer
- * @param[in] ndef_length    NDEF raw data length
- * @param[in] offset         Text record payload offset
- * @param[in] payload_length Text record payload length
+ * @param[in] rec     NDEF pointer set to record payload first byte
+ * @param[in] length  payload_len
  *
  * @return struct near_ndef_text_record * Record on Success
  *                                       NULL   on Failure
  */
 
-static struct near_ndef_text_record *parse_text_record(uint8_t *ndef_data,
-				size_t ndef_length, size_t offset,
-				uint32_t payload_length)
+static struct near_ndef_text_record *
+parse_text_record(uint8_t *rec, uint32_t length)
 {
 	struct near_ndef_text_record *text_record = NULL;
 	uint8_t status, lang_length;
+	uint32_t offset;
 
 	DBG("");
 
-	if ((ndef_data == NULL) || ((offset + payload_length) > ndef_length))
+	if (rec == NULL)
 		return NULL;
 
-
+	offset = 0;
 	text_record = g_try_malloc0(sizeof(struct near_ndef_text_record));
 	if (text_record == NULL)
 		return NULL;
 
 	/* 0x80 is used to get 7th bit value (0th bit is LSB) */
-	status = ((ndef_data[offset] & 0x80) >> 7);
+	status = ((rec[offset] & 0x80) >> 7);
 
 	text_record->encoding = (status == 0) ?
 					g_strdup("UTF-8") : g_strdup("UTF-16");
 
 	/* 0x3F is used to get 5th-0th bits value (0th bit is LSB) */
-	lang_length = (ndef_data[offset] & 0x3F);
+	lang_length = (rec[offset] & 0x3F);
 	offset++;
 
 	if (lang_length > 0) {
-		if ((offset + lang_length) >= ndef_length)
+		if ((offset + lang_length) >= length)
 			goto fail;
 
 		text_record->language_code = g_strndup(
-						(char *)(ndef_data+offset),
+						(char *)(rec + offset),
 						lang_length);
 	} else {
 		text_record->language_code = NULL;
@@ -799,14 +797,14 @@ static struct near_ndef_text_record *parse_text_record(uint8_t *ndef_data,
 
 	offset += lang_length;
 
-	if ((payload_length - lang_length - 1) > 0) {
-		text_record->data = g_strndup((char *)(ndef_data+offset),
-					payload_length - lang_length - 1);
+	if ((length - lang_length - 1) > 0) {
+		text_record->data = g_strndup((char *)(rec + offset),
+					length - lang_length - 1);
 	} else {
 		text_record->data = NULL;
 	}
 
-	if (offset >= ndef_length)
+	if (offset >= length)
 		goto fail;
 
 	DBG("Encoding  '%s'", text_record->encoding);
@@ -1016,8 +1014,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			 */
 			{
 			struct near_ndef_text_record *title;
-			title = parse_text_record(ndef_data, ndef_length,
-						t_offset,
+			title = parse_text_record(ndef_data + t_offset,
 						rec_header->payload_len);
 			if (title == NULL)
 				goto fail;
@@ -1200,8 +1197,8 @@ int near_ndef_parse(struct near_tag *tag,
 			break;
 
 		case RECORD_TYPE_WKT_TEXT:
-			record->text = parse_text_record(ndef_data, ndef_length,
-					offset,	record->header->payload_len);
+			record->text = parse_text_record(ndef_data + offset,
+						record->header->payload_len);
 
 			if (record->text == NULL) {
 				err = EINVAL;
