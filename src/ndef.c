@@ -821,46 +821,44 @@ fail:
 }
 
 /**
- * @brief Parse the URI record
+ * @brief Parse the URI record payload
  *
  * Parse the URI record.
  *
- * @param[in] ndef_data      NDEF raw data pointer
- * @param[in] ndef_length    NDEF raw data length
- * @param[in] offset         URI record payload offset
- * @param[in] payload_length URI record payload length
+ * @param[in] rec          NDEF pointer set to record payload first byte
+ * @param[in] length  Payload length
  *
  * @return struct near_ndef_uri_record * Record on Success
  *                                       NULL   on Failure
  */
 
-static struct near_ndef_uri_record *parse_uri_record(uint8_t *ndef_data,
-				size_t ndef_length, size_t offset,
-				uint32_t payload_length)
+static struct near_ndef_uri_record *
+parse_uri_record(uint8_t *rec, uint32_t length)
 {
 	struct near_ndef_uri_record *uri_record = NULL;
-	uint32_t index;
+	uint32_t index, offset;
 
 	DBG("");
 
-	if (ndef_data == NULL || ((offset + payload_length) > ndef_length))
+	if (rec == NULL)
 		return NULL;
 
+	offset = 0;
 	uri_record = g_try_malloc0(sizeof(struct near_ndef_uri_record));
 	if (uri_record == NULL)
 		return NULL;
 
-	uri_record->identifier = ndef_data[offset];
+	uri_record->identifier = rec[offset];
 	offset++;
 
-	uri_record->field_length = payload_length - 1;
+	uri_record->field_length = length - 1;
 
 	if (uri_record->field_length > 0) {
 		uri_record->field = g_try_malloc0(uri_record->field_length);
 		if (uri_record->field == NULL)
 			goto fail;
 
-		memcpy(uri_record->field, ndef_data + offset,
+		memcpy(uri_record->field, rec + offset,
 				uri_record->field_length);
 
 		for (index = 0; index < uri_record->field_length; index++) {
@@ -998,8 +996,7 @@ static struct near_ndef_sp_record *parse_smart_poster_record(uint8_t *ndef_data,
 			if (sp_record->uri != NULL)
 				goto fail;
 
-			sp_record->uri = parse_uri_record(ndef_data,
-						ndef_length, t_offset,
+			sp_record->uri = parse_uri_record(ndef_data + t_offset,
 						rec_header->payload_len);
 			if (sp_record->uri == NULL)
 				goto fail;
@@ -1208,8 +1205,7 @@ int near_ndef_parse(struct near_tag *tag,
 			break;
 
 		case RECORD_TYPE_WKT_URI:
-			record->uri = parse_uri_record(ndef_data, ndef_length,
-						offset,
+			record->uri = parse_uri_record(ndef_data + offset,
 						record->header->payload_len);
 
 			if (record->uri == NULL) {
