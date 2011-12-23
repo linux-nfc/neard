@@ -44,7 +44,7 @@ Methods:	dict GetProperties()
 					 org.neard.Error.Failed
 					 org.neard.Error.NotSupported
 
-		object StartEmulation(string TagType)
+		object StartEmulation(dict attributes)
 
 			Starts tag emulation mode.
 
@@ -52,8 +52,11 @@ Methods:	dict GetProperties()
 			subsequent calls to this method will always return
 			the same object path.
 
-			Valid tag types are "Type 1", "Type 2", "Type 3",
-			"Type 4" and "NFC-DEP".
+			The attributes dictionary is described by the
+			Record properties.
+			For example, one would add a type, a Language, an
+			Encoding and a Representation for emulating a text
+			NDEF record.
 
 			Returns the object path for the emulated target.
 
