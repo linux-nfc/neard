@@ -389,7 +389,8 @@ static void tag_read_cb(uint32_t adapter_idx, int status)
 }
 
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
-			uint32_t protocols, uint16_t sens_res, uint8_t sel_res)
+			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
+			uint8_t *nfcid, uint8_t nfcid_len)
 {
 	struct near_adapter *adapter;
 	struct near_target *target;

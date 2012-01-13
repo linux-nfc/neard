@@ -390,6 +390,7 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 	uint32_t adapter_idx, target_idx, protocols;
 	uint16_t sens_res = 0;
 	uint8_t sel_res = 0;
+	uint8_t nfcid[NFC_MAX_NFCID1_LEN], nfcid_len;
 
 	DBG("");
 
@@ -407,11 +408,20 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 		sel_res =
 			nla_get_u16(attrs[NFC_ATTR_TARGET_SEL_RES]);
 
-	DBG("target idx %d proto 0x%x sens_res 0x%x sel_res 0x%x",
-	    target_idx, protocols, sens_res, sel_res);
+	if (attrs[NFC_ATTR_TARGET_NFCID1] != NULL) {
+		nfcid_len = nla_len(attrs[NFC_ATTR_TARGET_NFCID1]);
+		if (nfcid_len <= NFC_MAX_NFCID1_LEN)
+			memcpy(nfcid, nla_data(attrs[NFC_ATTR_TARGET_NFCID1]),
+								nfcid_len);
+	} else {
+		nfcid_len = 0;
+	}
+
+	DBG("target idx %d proto 0x%x sens_res 0x%x sel_res 0x%x NFCID len %d",
+	    target_idx, protocols, sens_res, sel_res, nfcid_len);
 
 	__near_adapter_add_target(adapter_idx, target_idx, protocols,
-							sens_res, sel_res);
+				  sens_res, sel_res, nfcid, nfcid_len);
 
 	return 0;
 }

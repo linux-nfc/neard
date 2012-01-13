@@ -96,7 +96,8 @@ struct near_adapter *__near_adapter_get(uint32_t idx);
 int __near_adapter_add(struct near_adapter *adapter);
 void __near_adapter_remove(struct near_adapter *adapter);
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
-			uint32_t protocols, uint16_t sens_res, uint8_t sel_res);
+			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
+			uint8_t *nfcid, uint8_t nfcid_len);
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx);
 void __near_adapter_target_changed(uint32_t adapter_idx);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
