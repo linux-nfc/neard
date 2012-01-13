@@ -81,7 +81,8 @@ uint32_t __near_target_get_idx(struct near_target *target);
 uint32_t __near_target_get_adapter_idx(struct near_target *target);
 uint32_t __near_target_get_protocols(struct near_target *target);
 struct near_target * __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
-			uint32_t protocols, uint16_t sens_res, uint8_t sel_res);
+			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
+			uint8_t *nfcid, uint8_t nfcid_len);
 void __near_target_remove(struct near_target *target);
 int __near_target_init(void);
 void __near_target_cleanup(void);

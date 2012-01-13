@@ -406,7 +406,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 
 	/* TODO target reference */
 	target = __near_target_add(idx, target_idx, protocols,
-						sens_res, sel_res);
+					sens_res, sel_res, nfcid, nfcid_len);
 	if (target == NULL)
 		return -ENODEV;
 

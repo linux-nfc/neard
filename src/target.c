@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 
 #include <glib.h>
 
@@ -41,6 +42,8 @@ struct near_target {
 	uint32_t protocols;
 	enum near_target_type type;
 	enum near_target_sub_type sub_type;
+	uint8_t nfcid[NFC_MAX_NFCID1_LEN];
+	uint8_t nfcid_len;
 
 	uint16_t tag_type;
 	struct near_tag *tag;
@@ -370,7 +373,8 @@ static void find_tag_type(struct near_target *target,
 }
 
 struct near_target *__near_target_add(uint32_t adapter_idx, uint32_t target_idx,
-				uint32_t protocols, uint16_t sens_res, uint8_t sel_res)
+			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
+			uint8_t *nfcid, uint8_t nfcid_len)
 {
 	struct near_target *target;
 	char *path;
@@ -392,6 +396,11 @@ struct near_target *__near_target_add(uint32_t adapter_idx, uint32_t target_idx,
 	target->idx = target_idx;
 	target->adapter_idx = adapter_idx;
 	target->protocols = protocols;
+	if (nfcid_len <= NFC_MAX_NFCID1_LEN) {
+		target->nfcid_len = nfcid_len;
+		memcpy(target->nfcid, nfcid, nfcid_len);
+	}
+
 	find_tag_type(target, sens_res, sel_res);
 
 	g_hash_table_insert(target_hash, path, target);
