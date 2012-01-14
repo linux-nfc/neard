@@ -21,22 +21,12 @@ Method		dict GetProperties()
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
 
-		void AddRecord(dict attributes)
-
-			Creates and add an NDEF record to the record array.
-
-			The attribute argument should at least contain a
-			record type and is described by the Record properties.
-			For example, one would add a type, a Language, an
-			Encoding and a Representation for a text record.
-
-			Possible Errors: org.neard.Error.PermissionDenied
-					 org.neard.Error.InvalidArguments
 
 Signals		PropertyChanged(string name, variant value)
 
 			This signal indicates a changed value of the given
 			property.
+
 
 Properties	string Type [readonly]
 
@@ -57,7 +47,7 @@ Properties	string Type [readonly]
 			"Type 4" and "NFC-DEP"
 			This is only valid for tag type targets.
 
-		array{object} Records [readwrite]
+		array{object} Records [readonly]
 
 			List of NDEF records object paths.
 			This is only valid for tag type targets.
