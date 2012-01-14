@@ -446,6 +446,37 @@ enum near_target_sub_type near_target_get_subtype(uint32_t adapter_idx,
 	return target->sub_type;
 }
 
+uint8_t *near_target_get_nfcid(uint32_t adapter_idx, uint32_t target_idx,
+				uint8_t *nfcid_len)
+{
+	struct near_target *target;
+	char *path;
+	uint8_t *nfcid;
+
+	path = g_strdup_printf("%s/nfc%d/target%d", NFC_PATH,
+					adapter_idx, target_idx);
+	if (path == NULL)
+		goto fail;
+
+	target = g_hash_table_lookup(target_hash, path);
+	g_free(path);
+	if (target == NULL)
+		goto fail;
+
+	nfcid = g_try_malloc0(target->nfcid_len);
+	if (nfcid == NULL)
+		goto fail;
+
+	memcpy(nfcid, target->nfcid, target->nfcid_len);
+	*nfcid_len = target->nfcid_len;
+
+	return nfcid;
+
+fail:
+	*nfcid_len = 0;
+	return NULL;
+}
+
 struct near_tag *near_target_add_tag(uint32_t adapter_idx, uint32_t target_idx,
 						size_t data_length)
 {
