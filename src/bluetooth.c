@@ -41,9 +41,6 @@
 #define BT_NOINPUTOUTPUT		"NoInputNoOutput"
 #define BT_DISPLAY_YESNO		"DisplayYesNo"
 
-#define BLUEZ_ERROR_NOT_EXIST		"Does Not Exist"
-#define BLUEZ_ERROR_ALREADY_EXIST	"Already Exists"
-
 /* BT EIR list */
 #define EIR_NAME_SHORT		0x08 /* shortened local name */
 #define EIR_NAME_COMPLETE	0x09 /* complete local name */
