@@ -60,7 +60,7 @@
 struct near_oob_data {
 	char *def_adapter;
 
-	char *bt_addr;		/* oob mandatory */
+	char *bd_addr;		/* oob mandatory */
 
 	/* optional */
 	uint8_t *bt_name;			/* short or long name */
@@ -81,7 +81,7 @@ static void bt_eir_free(struct near_oob_data *oob)
 	DBG("");
 
 	g_free(oob->def_adapter);
-	g_free(oob->bt_addr);
+	g_free(oob->bd_addr);
 	g_free(oob->bt_name);
 	g_free(oob->spair_hash);
 	g_free(oob->spair_randomizer);
@@ -186,7 +186,7 @@ static int bt_create_paired_device(DBusConnection *conn,
 			oob->def_adapter, ADAPTER_INTF, "CreatePairedDevice",
 			bt_create_paired_device_cb,
 			/* params */
-			DBUS_TYPE_STRING, &oob->bt_addr,
+			DBUS_TYPE_STRING, &oob->bd_addr,
 			DBUS_TYPE_OBJECT_PATH, &agent_path,
 			DBUS_TYPE_STRING, &capabilities,
 			DBUS_TYPE_INVALID);
@@ -242,7 +242,7 @@ static int bt_oob_add_remote_data(DBusConnection *conn,
 			oob->def_adapter, OOB_INTF, "AddRemoteData",
 			bt_oob_add_remote_data_cb,
 			/* params */
-			DBUS_TYPE_STRING, &oob->bt_addr,
+			DBUS_TYPE_STRING, &oob->bd_addr,
 			DBUS_TYPE_ARRAY,
 				DBUS_TYPE_BYTE, &oob->spair_hash, hash_len,
 			DBUS_TYPE_ARRAY,
@@ -255,7 +255,7 @@ static int bt_do_pairing(struct near_oob_data *oob)
 {
 	int err = 0;
 
-	DBG("%s", oob->bt_addr);
+	DBG("%s", oob->bd_addr);
 
 	/* Is this a *real* oob pairing or a "JustWork" */
 	if ((oob->spair_hash) && (oob->spair_randomizer))
@@ -420,9 +420,9 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 		bt_oob_data_size = *((uint16_t *)(bt_data));
 		bt_oob_data_size -= 2 ; /* remove oob datas size len */
 
-		/* First item: bt_address (mandatory) */
+		/* First item: BD_ADDR (mandatory) */
 		ptr = &bt_data[2];
-		oob->bt_addr = g_strdup_printf("%02X:%02X:%02X:%02X:%02X:%02X",
+		oob->bd_addr = g_strdup_printf("%02X:%02X:%02X:%02X:%02X:%02X",
 				ptr[5],	ptr[4], ptr[3], ptr[2], ptr[1], ptr[0]);
 
 		/* Skip to the next element (optional) */
@@ -434,7 +434,7 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 	} else if (version == BT_MIME_V2_0) {
 		marker = *ptr++;	/* could be '$' */
 
-		oob->bt_addr = g_strdup_printf(
+		oob->bd_addr = g_strdup_printf(
 				"%02X:%02X:%02X:%02X:%02X:%02X",
 				ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5]);
 		ptr = ptr + BT_ADDRESS_SIZE;
