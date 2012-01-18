@@ -11,24 +11,15 @@ Background
 Core
 ====
 
-- NDEF building library
-
-  Priority: High
-  Complexity: C4
-  Owner: Ravikumar Veeramally <ravikumar.veeramally@intel.com>
-
-  This library should provide a simple API to build NDEFs based on very high
-  level input, e.g. an image or an URL.
-
-
 - Writer Mode
 
   Priority: Medium
   Complexity: C4
   Dependencies: Core:NDEF building library
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
+  Owner: Ravi kumar Veeramally <ravikumar.veeramally@linux.intel.com>
 
-  In writer mode, neard allows application to write to an NFC tag.
+  In writer mode, neard allows application to write to an NFC tag, or to push
+  data to a p2p device.
 
 
 - Card Emulation Mode
@@ -49,51 +40,50 @@ Core
   protocol, a.k.a. tags).
 
 
-- p2p Mode
-
-  Priority: Medium
-  Complexity: C8
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-  Dependencies: Core:NDEF building library
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-
-  In p2p mode, an NFC adapter can either be in target or initiator mode.
-  A link is established between 2 NFC adapters, and can be connection or
-  connection less oriented. NDEFs are exchanged through the SNEP (NFC
-  Forum draft) protocol.
-
-
-- Read/Write permission check
-
-  Priority: Medium
-  Complexity: C2
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-
-  A tag can be in read only or read/write mode, and that needs to be
-  exported trough the D-Bus interface.
-
-
-- UID export
-
-  Priority: Medium
-  Complexity: C2
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-
-  Many NFC tags do have a UID associated to it. This is tag type dependent
-  but could be exported through the D-Bus interface as well.
-
 Reader mode
 ===========
 
-- Type 4 tag support
+- MIFARE tag support
 
-  Priority: High
+  Priority: Medium
   Complexity: C4
   Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
 
+- Bluetooth Handover integration
 
-- Topaz 512 (type 1) tag support
+  Priority: Medium
+  Complexity: C4
+  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
+
+  The handover integration has to be done between bluetoothd, obexd and
+  neard. obexd should be able to expose and OOB NDEF in order for an NFC
+  peer to initiate a BT pairing. The potentially queued OBEX transfers
+  should then start once the pairing is done.
+  On the other hand, neard should be able to talk with bluetoothd for
+  pairing with a remote peer exporting an OOB NDEF. Once the pairing is
+  done, obexd should be able to handle the OBEX transfer.
+
+
+p2p mode
+========
+
+- NPP client support
+
+  Priority: Low
+  Conplexity: C2
+  Dependencies: Core:Writer mode
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  For pushing NDEFs through NPP over LLCP, neard has to behave
+  as an NPP client.
+
+- SNEP support
 
   Priority: High
-  Complexity: C2
-  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
+  Conplexity: C4
+  Dependencies: Core:Writer mode
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  SNEP is the NFC Forum defined standard for exchanging NDEFs over
+  an LLCP link. SNEP can be run as a client or a server, respectively
+  to send and receive NDEFs.
