@@ -23,6 +23,11 @@ Card Emulation Mode
 Not supported.
 
 
+Writer Mode
+===========
+Not supported.
+
+
 Peer To Peer Mode
 =================
 neard reads NDEFs from p2p devices in active mode.
