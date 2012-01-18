@@ -146,3 +146,11 @@ void __near_netlink_cleanup(void);
 
 int __near_plugin_init(const char *pattern, const char *exclude);
 void __near_plugin_cleanup(void);
+
+/* NFC Bluetooth Secure Simple Pairing */
+#define BT_MIME_V2_0		0
+#define BT_MIME_V2_1		1
+
+int __near_bluetooth_init(void);
+void __near_bluetooth_cleanup(void);
+int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data);

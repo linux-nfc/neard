@@ -521,6 +521,28 @@ static char *action_to_string(uint8_t action)
 }
 
 /**
+ * @brief returns record type for external type
+ * Validate type and type length and returns
+ * type.
+ *
+ * @param type    Type name in hex foarmat
+ * @param type_lenth Type name length
+ *
+ * @return enum record type
+ */
+
+static enum record_type get_external_record_type(uint8_t *type,
+						size_t type_length)
+{
+	DBG("");
+
+	if (strncmp((char *) type, "nokia.com:bt", 12) == 0)
+		return RECORD_TYPE_MIME_TYPE;
+	else
+		return RECORD_TYPE_UNKNOWN;
+}
+
+/**
  * @brief returns record type
  * Validate type name format, type and type length and returns
  * type.
@@ -540,7 +562,6 @@ static enum record_type get_record_type(enum record_tnf tnf,
 	switch (tnf) {
 	case RECORD_TNF_EMPTY:
 	case RECORD_TNF_URI:
-	case RECORD_TNF_EXTERNAL:
 	case RECORD_TNF_UNKNOWN:
 	case RECORD_TNF_UNCHANGED:
 		break;
@@ -586,6 +607,9 @@ static enum record_type get_record_type(enum record_tnf tnf,
 
 	case RECORD_TNF_MIME:
 		return RECORD_TYPE_MIME_TYPE;
+
+	case RECORD_TNF_EXTERNAL:
+		return get_external_record_type(type, type_length);
 
 	}
 
@@ -1116,6 +1140,7 @@ parse_mime_type(struct near_ndef_record *record,
 			uint32_t payload_length)
 {
 	struct near_ndef_mime_record *mime = NULL;
+	int err = 0;
 
 	DBG("");
 
@@ -1129,6 +1154,24 @@ parse_mime_type(struct near_ndef_record *record,
 	mime->type = g_strdup(record->header->type_name);
 
 	DBG("MIME Type  '%s'", mime->type);
+	if (strcmp(mime->type, "application/vnd.bluetooth.ep.oob") == 0) {
+		err = __near_bt_parse_oob_record(BT_MIME_V2_1,
+				&ndef_data[offset]);
+	} else {
+		if (strcmp(mime->type, "nokia.com:bt") == 0) {
+		err = __near_bt_parse_oob_record(BT_MIME_V2_0,
+				&ndef_data[offset]);
+		}
+		else
+			err = -EOPNOTSUPP;
+	}
+
+	if (err < 0) {
+		DBG("Parsing mime error %d", err);
+		g_free(mime->type);
+		g_free(mime);
+		return NULL;
+	}
 
 	return mime;
 }
