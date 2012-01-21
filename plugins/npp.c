@@ -156,7 +156,13 @@ static gboolean npp_listener_event(GIOChannel *channel, GIOCondition condition,
 	DBG("condition 0x%x", condition);
 
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
-		near_error("ERROR");
+		if (npp_server.watch > 0)
+			g_source_remove(npp_server.watch);
+		npp_server.watch = 0;
+
+		near_error("Error with NPP server channel");
+
+		return FALSE;
 	}
 
 	if (condition & G_IO_IN) {

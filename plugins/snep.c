@@ -69,7 +69,13 @@ static gboolean snep_listener_event(GIOChannel *channel, GIOCondition condition,
 	DBG("condition 0x%x", condition);
 
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
-		near_error("ERROR");
+		if (snep_server.watch > 0)
+			g_source_remove(snep_server.watch);
+		snep_server.watch = 0;
+
+		near_error("Error with SNEP server channel");
+
+		return FALSE;
 	}
 
 	if (condition & G_IO_IN) {
