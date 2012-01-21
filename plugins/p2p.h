@@ -26,3 +26,4 @@
 #define TLV_SIZE 2
 
 int npp_bind(uint32_t adapter_idx, uint32_t target_idx, near_tag_io_cb cb);
+int snep_bind(uint32_t adapter_idx, uint32_t target_idx, near_tag_io_cb cb);

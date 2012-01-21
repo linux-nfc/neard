@@ -42,6 +42,8 @@
 
 #include "p2p.h"
 
+#define NPP_SN "com.android.npp"
+
 struct p2p_npp_channel {
 	near_tag_io_cb cb;
 	uint32_t adapter_idx;
@@ -198,8 +200,8 @@ int npp_bind(uint32_t adapter_idx, uint32_t target_idx,
 	addr.sa_family = AF_NFC;
 	addr.dev_idx = adapter_idx;
 	addr.nfc_protocol = NFC_PROTO_NFC_DEP;
-	addr.service_name_len = strlen("com.android.npp");
-	strcpy(addr.service_name, "com.android.npp");
+	addr.service_name_len = strlen(NPP_SN);
+	strcpy(addr.service_name, NPP_SN);
 
 	err = bind(npp_server.fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_nfc_llcp));
 	if (err < 0) {
