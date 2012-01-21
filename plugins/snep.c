@@ -44,6 +44,22 @@
 
 #define SNEP_SN "urn.nfc.sn.snep"
 
+/* Request codes */
+#define SNEP_REQ_CONTINUE 0x00
+#define SNEP_REQ_GET      0x01
+#define SNEP_REQ_PUT      0x02
+#define SNEP_REQ_REJECT   0x7f
+
+/* Response codes */
+#define SNEP_RESP_CONTINUE  0x80
+#define SNEP_RESP_SUCCESS   0x81
+#define SNEP_RESP_NOT_FOUND 0x80
+#define SNEP_RESP_EXCESS    0x80
+#define SNEP_RESP_BAD_REQ   0x80
+#define SNEP_RESP_NOT_IMPL  0x80
+#define SNEP_RESP_VERSION   0x80
+#define SNEP_RESP_REJECT    0x80
+
 struct p2p_snep_channel {
 	near_tag_io_cb cb;
 	uint32_t adapter_idx;
@@ -51,12 +67,87 @@ struct p2p_snep_channel {
 	int fd;
 	guint watch;
 	GIOChannel *channel;
+	uint8_t *nfc_data;
+	uint32_t nfc_data_length;
+	uint8_t *nfc_data_ptr;
 };
+
+struct p2p_snep_req_frame {
+	uint8_t version;
+	uint8_t request;
+	uint32_t length;
+	uint8_t ndef[];
+} __attribute__((packed));
+
+struct p2p_snep_resp_frame {
+	uint8_t version;
+	uint8_t response;
+	uint32_t length;
+	uint8_t info[];
+} __attribute__((packed));
 
 static struct p2p_snep_channel snep_server;
 
-static void snep_read_ndef(int client_fd)
+static void snep_response_noinfo(int client_fd, uint8_t response)
 {
+	struct p2p_snep_resp_frame resp;
+
+	resp.response = response;
+	resp.length = 0;
+
+	send(client_fd, &resp, sizeof(resp), 0);
+}
+
+static void snep_read_ndef(int client_fd, int ndef_length)
+{
+	int bytes_recv;
+
+	if (snep_server.nfc_data_length > 0)
+		g_free(snep_server.nfc_data);
+
+	snep_server.nfc_data = g_try_malloc0(ndef_length + TLV_SIZE);
+	if (snep_server.nfc_data == NULL)
+		return;
+
+	snep_server.nfc_data[0] = TLV_NDEF;
+	snep_server.nfc_data[1] = ndef_length;
+
+	snep_server.nfc_data_length = ndef_length + TLV_SIZE;
+	snep_server.nfc_data_ptr = snep_server.nfc_data + TLV_SIZE;
+
+	bytes_recv = recv(client_fd, snep_server.nfc_data_ptr, ndef_length, 0);
+	if (bytes_recv < 0) {
+		near_error("Could not read SNEP NDEF buffer %d", bytes_recv);
+		return;
+	}
+
+	if (bytes_recv == ndef_length)
+		snep_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
+	else
+		snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
+}
+
+static void snep_read(int client_fd)
+{
+	struct p2p_snep_req_frame frame;
+	int bytes_recv;
+	uint32_t ndef_length;
+
+	bytes_recv = recv(client_fd, &frame, sizeof(frame), 0);
+	if (bytes_recv < 0) {
+		near_error("Could not read SNEP frame %d", bytes_recv);
+		return;
+	}
+
+	switch (frame.request) {
+	case SNEP_REQ_CONTINUE:
+	case SNEP_REQ_GET:
+		near_error("Unsupported SNEP request code");
+		break;
+	case SNEP_REQ_PUT:
+		ndef_length = GINT_FROM_BE(frame.length);
+		snep_read_ndef(client_fd, ndef_length);
+	}
 }
 
 static gboolean snep_listener_event(GIOChannel *channel, GIOCondition condition,
@@ -93,7 +184,7 @@ static gboolean snep_listener_event(GIOChannel *channel, GIOCondition condition,
 		DBG("client dsap %d ssap %d",
 			client_addr.dsap, client_addr.ssap);
 
-		snep_read_ndef(client_fd);
+		snep_read(client_fd);
 
 		close(client_fd);
 
