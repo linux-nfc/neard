@@ -143,6 +143,7 @@ static void snep_read(int client_fd)
 	case SNEP_REQ_CONTINUE:
 	case SNEP_REQ_GET:
 		near_error("Unsupported SNEP request code");
+		snep_response_noinfo(client_fd, SNEP_RESP_NOT_IMPL);
 		break;
 	case SNEP_REQ_PUT:
 		ndef_length = GINT_FROM_BE(frame.length);
