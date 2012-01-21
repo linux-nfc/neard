@@ -121,4 +121,4 @@ AC_ARG_ENABLE(p2p,
 AM_CONDITIONAL(P2P, test "${enable_p2p}" != "no")
 AM_CONDITIONAL(P2P_BUILTIN, test "${enable_p2p}" = "builtin")
 
-AC_OUTPUT(Makefile include/version.h)
+AC_OUTPUT(Makefile include/version.h neard.pc)

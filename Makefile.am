@@ -71,6 +71,18 @@ include Makefile.plugins
 
 EXTRA_DIST += $(test_scripts)
 
+pkgconfigdir = $(libdir)/pkgconfig
+
+pkgconfig_DATA = neard.pc
+
+DISTCHECK_CONFIGURE_FLAGS = --enable-nfctype1 \
+			    --enable-nfctype2 \
+			    --enable-nfctype3 \
+			    --enable-nfctype4 \
+		            --enable-p2p
+
+DISTCLEANFILES = $(pkgconfig_DATA)
+
 MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \
 	ltmain.sh depcomp compile missing install-sh mkinstalldirs
