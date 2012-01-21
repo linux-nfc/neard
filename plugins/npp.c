@@ -156,7 +156,7 @@ static gboolean npp_listener_event(GIOChannel *channel, GIOCondition condition,
 	DBG("condition 0x%x", condition);
 
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
-		DBG("ERROR");
+		near_error("ERROR");
 	}
 
 	if (condition & G_IO_IN) {
@@ -164,7 +164,7 @@ static gboolean npp_listener_event(GIOChannel *channel, GIOCondition condition,
 
 		client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
 		if (client_fd < 0) {
-			DBG("accept failed %d", client_fd);
+			near_error("accept failed %d", client_fd);
 
 			close(server_fd);
 			return FALSE;
@@ -205,7 +205,7 @@ int npp_bind(uint32_t adapter_idx, uint32_t target_idx,
 
 	err = bind(npp_server.fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_nfc_llcp));
 	if (err < 0) {
-		DBG("bind failed %d", err);
+		near_error("NPP bind failed %d", err);
 
 		close(npp_server.fd);
 		return err;
@@ -213,7 +213,7 @@ int npp_bind(uint32_t adapter_idx, uint32_t target_idx,
 
 	err = listen(npp_server.fd, 10);
 	if (err < 0) {
-		DBG("listen failed %d", err);
+		near_error("NPP listen failed %d", err);
 
 		close(npp_server.fd);
 		return err;

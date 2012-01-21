@@ -87,7 +87,7 @@ int snep_bind(uint32_t adapter_idx, uint32_t target_idx,
 
 	err = bind(snep_server.fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_nfc_llcp));
 	if (err < 0) {
-		DBG("bind failed %d", err);
+		near_error("SNEP bind failed %d", err);
 
 		close(snep_server.fd);
 		return err;
@@ -95,7 +95,7 @@ int snep_bind(uint32_t adapter_idx, uint32_t target_idx,
 
 	err = listen(snep_server.fd, 10);
 	if (err < 0) {
-		DBG("listen failed %d", err);
+		near_error("SNEP listen failed %d", err);
 
 		close(snep_server.fd);
 		return err;
