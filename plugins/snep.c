@@ -55,10 +55,44 @@ struct p2p_snep_channel {
 
 static struct p2p_snep_channel snep_server;
 
+static void snep_read_ndef(int client_fd)
+{
+}
+
 static gboolean snep_listener_event(GIOChannel *channel, GIOCondition condition,
 							gpointer user_data)
 {
+	struct sockaddr_nfc_llcp client_addr;
+	int server_fd, client_fd;
+	socklen_t client_addr_len;
+
 	DBG("condition 0x%x", condition);
+
+	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
+		near_error("ERROR");
+	}
+
+	if (condition & G_IO_IN) {
+		server_fd = g_io_channel_unix_get_fd(channel);
+
+		client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
+							&client_addr_len);
+		if (client_fd < 0) {
+			near_error("SNEP accept failed %d", client_fd);
+
+			close(server_fd);
+			return FALSE;
+		}
+
+		DBG("client dsap %d ssap %d",
+			client_addr.dsap, client_addr.ssap);
+
+		snep_read_ndef(client_fd);
+
+		close(client_fd);
+
+		return FALSE;
+	}
 
 	return FALSE;
 }
