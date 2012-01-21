@@ -54,11 +54,12 @@ endif
 if P2P
 if P2P_BUILTIN
 builtin_modules += p2p
-builtin_sources += plugins/p2p.c plugins/npp.c plugins/p2p.h
+builtin_sources += plugins/p2p.c plugins/npp.c plugins/snep.c plugins/p2p.h
 else
 plugin_LTLIBRARIES += plugins/p2p.la
 plugin_objects += $(plugins_p2p_la_OBJECTS)
-plugins_p2p_la_SOURCES = plugins/p2p.c plugins/npp.c plugins/p2p.h
+plugins_p2p_la_SOURCES = plugins/p2p.c plugins/npp.c plugins/snep.c \
+							plugins/p2p.h
 plugins_p2p_la_CFLAGS = $(plugin_cflags)
 plugins_p2p_la_LDFLAGS = $(plugin_ldflags)
 endif

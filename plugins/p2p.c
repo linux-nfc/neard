@@ -35,9 +35,11 @@ static int p2p_read(uint32_t adapter_idx,
 {
 	int err;
 
-	err = npp_bind(adapter_idx, target_idx, cb);
+	err = snep_bind(adapter_idx, target_idx, cb);
+	if (err < 0)
+		return err;
 
-	return err;
+	return npp_bind(adapter_idx, target_idx, cb);
 }
 
 static struct near_tag_driver p2p_driver = {
