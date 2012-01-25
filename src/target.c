@@ -245,7 +245,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 				DBUS_TYPE_OBJECT_PATH, append_records, target);
 
 		if (target->tag != NULL) {
-			ronly = __near_tag_get_ro(target->tag);
+			ronly = near_tag_get_ro(target->tag);
 			near_dbus_dict_append_basic(&dict, "ReadOnly",
 					DBUS_TYPE_BOOLEAN, &ronly);
 		}

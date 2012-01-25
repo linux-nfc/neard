@@ -115,7 +115,6 @@ char *__near_ndef_record_get_path(struct near_ndef_record *record);
 #include <near/tag.h>
 
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter);
-near_bool_t __near_tag_get_ro(struct near_tag *tag);
 uint32_t __near_tag_n_records(struct near_tag *tag);
 int __near_tag_add_record(struct near_tag *tag, struct near_ndef_record *record);
 struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
