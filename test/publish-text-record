@@ -1,0 +1,19 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+
+if len(sys.argv) < 5:
+	print "Usage: %s <adapter-path> <encoding> <language> <representation>" % (sys.argv[0])
+	print "e.g. <./add-text-record /org/neard/nfc0 UTF-8 en-US hello,Type2! >"
+	sys.exit(1)
+
+bus = dbus.SessionBus()
+
+adapter = dbus.Interface(bus.get_object("org.neard", sys.argv[1]),
+						"org.neard.Adapter")
+
+adapter.Publish(({ "Type" : "Text",
+			"Encoding" : sys.argv[2],
+			"Language" : sys.argv[3],
+			"Representation" : sys.argv[4] }))
