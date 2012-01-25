@@ -100,7 +100,6 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 	if (current_length + length_read == data_length) {
 		/* TODO parse tag->data for NDEFS, and notify target.c */
-		near_adapter_disconnect(adapter_idx);
 		tag->current_block = 0;
 
 		DBG("Done reading");

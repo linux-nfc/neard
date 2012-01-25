@@ -178,7 +178,6 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	memcpy(nfc_data + current_length, resp + OFS_READ_DATA, length_read);
 
 	if (current_length + length_read >= data_length) {
-		near_adapter_disconnect(adapter_idx);
 		tag->current_block = 0;
 
 		DBG("Done reading %d bytes at %p", data_length, nfc_data);
@@ -302,10 +301,8 @@ static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 	}
 
 	err = check_recv_frame(resp, RESP_POLL);
-	if (err < 0) {
-		near_adapter_disconnect(rcv_cookie->adapter_idx);
+	if (err < 0)
 		goto out;
-	}
 
 	snd_cookie = g_try_malloc0(sizeof(struct recv_cookie));
 	snd_cookie->adapter_idx = rcv_cookie->adapter_idx;

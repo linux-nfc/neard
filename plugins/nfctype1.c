@@ -135,7 +135,6 @@ static int segment_read_recv(uint8_t *resp, int length, void *data)
 					tagdata,
 					t1_tag->data_read);
 
-		err = near_adapter_disconnect(t1_tag->adapter_idx);
 		/* free memory */
 		g_free(t1_tag);
 	}
@@ -254,7 +253,6 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		if (err < 0)
 			goto out_err;
 
-		near_adapter_disconnect(t1_tag->adapter_idx);
 		g_free(t1_tag);
 	} else if ((resp[OFFSET_HEADER_ROM] & 0xF0) == HR0_TYPE2_HIGH) {
 			err = read_dynamic_tag(cc, length, t1_tag);
@@ -263,10 +261,9 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	}
 
 out_err:
-	if (err < 0 && cookie->cb) {
+	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, err);
-		near_adapter_disconnect(cookie->adapter_idx);
-	}
+
 	g_free(cookie);
 
 	return err;

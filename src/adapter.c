@@ -495,9 +495,12 @@ static int dep_link_up(uint32_t idx, uint32_t target_idx)
 static void tag_read_cb(uint32_t adapter_idx, int status)
 {
 	if (status < 0)
-		return;
+		goto out;
 
 	__near_adapter_target_changed(adapter_idx);
+
+out:
+	near_adapter_disconnect(adapter_idx);
 }
 
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
