@@ -201,6 +201,8 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	else
 		near_tag_set_ro(tag, FALSE);
 
+	near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
+
 	err = data_read(t2_tag);
 
 out:

@@ -42,6 +42,7 @@ struct near_tag {
 
 	uint8_t uid[TAG_UID_MAX_LEN];
 	near_bool_t readonly;
+	enum near_tag_memory_layout layout;
 
 	size_t data_length;
 	uint8_t *data;
@@ -178,6 +179,23 @@ uint32_t near_tag_get_adapter_idx(struct near_tag *tag)
 uint32_t near_tag_get_target_idx(struct near_tag *tag)
 {
 	return tag->target_idx;
+}
+
+enum near_tag_memory_layout near_tag_get_memory_layout(struct near_tag *tag)
+{
+	if (tag == NULL)
+		return NEAR_TAG_MEMORY_UNKNOWN;
+
+	return tag->layout;
+}
+
+void near_tag_set_memory_layout(struct near_tag *tag,
+					enum near_tag_memory_layout layout)
+{
+	if (tag == NULL)
+		return;
+
+	tag->layout = layout;
 }
 
 int near_tag_driver_register(struct near_tag_driver *driver)

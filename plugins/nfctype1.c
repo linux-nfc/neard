@@ -248,6 +248,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	/* Check Static or Dynamic memory model */
 	if (resp[OFFSET_HEADER_ROM] == HR0_TYPE1_STATIC) {
 		DBG("READ Static complete");
+		near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
 		err = near_tlv_parse(t1_tag->tag, t1_tag->cb,
 			cc + LEN_CC_BYTES, TAG_T1_DATA_LENGTH(cc));
 		if (err < 0)
@@ -255,7 +256,8 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 		g_free(t1_tag);
 	} else if ((resp[OFFSET_HEADER_ROM] & 0xF0) == HR0_TYPE2_HIGH) {
-			err = read_dynamic_tag(cc, length, t1_tag);
+		near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_DYNAMIC);
+		err = read_dynamic_tag(cc, length, t1_tag);
 	} else {
 		err = -EOPNOTSUPP ;
 	}

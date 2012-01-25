@@ -48,6 +48,13 @@ enum near_target_sub_type {
 	NEAR_TAG_NFC_SUBTYPE_UNKNOWN = 0xFF
 };
 
+enum near_tag_memory_layout {
+	NEAR_TAG_MEMORY_STATIC = 0,
+	NEAR_TAG_MEMORY_DYNAMIC,
+	NEAR_TAG_MEMORY_OTHER,
+	NEAR_TAG_MEMORY_UNKNOWN = 0xFF
+};
+
 typedef void (*near_tag_io_cb) (uint32_t adapter_idx, uint32_t target_idx,
 								int status);
 
@@ -74,5 +81,8 @@ uint32_t near_tag_get_target_idx(struct near_tag *tag);
 int near_tag_add_ndef(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length);
 int near_tag_driver_register(struct near_tag_driver *driver);
 void near_tag_driver_unregister(struct near_tag_driver *driver);
+void near_tag_set_memory_layout(struct near_tag *tag,
+					enum near_tag_memory_layout);
+enum near_tag_memory_layout near_tag_get_memory_layout(struct near_tag *tag);
 
 #endif
