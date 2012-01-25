@@ -477,6 +477,24 @@ fail:
 	return NULL;
 }
 
+struct near_tag *near_target_get_tag(uint32_t adapter_idx, uint32_t target_idx)
+{
+	struct near_target *target;
+	char *path;
+
+	path = g_strdup_printf("%s/nfc%d/target%d", NFC_PATH,
+					adapter_idx, target_idx);
+	if (path == NULL)
+		return NULL;
+
+	target = g_hash_table_lookup(target_hash, path);
+	g_free(path);
+	if (target == NULL)
+		return NULL;
+
+	return target->tag;
+}
+
 struct near_tag *near_target_add_tag(uint32_t adapter_idx, uint32_t target_idx,
 						size_t data_length)
 {
