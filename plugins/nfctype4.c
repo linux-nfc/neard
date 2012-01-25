@@ -194,7 +194,7 @@ static int t4_cookie_release(int err, struct recv_cookie *cookie)
 		return err;
 
 	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, err);
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
 	g_free(cookie);
 
@@ -238,7 +238,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 
 		near_ndef_parse(cookie->tag, nfc_data, data_length);
 		/* Notify the change */
-		cookie->cb(cookie->adapter_idx, err);
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
 		err = 0;
 		goto out_err;

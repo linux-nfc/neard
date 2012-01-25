@@ -492,7 +492,7 @@ static int dep_link_up(uint32_t idx, uint32_t target_idx)
 					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
 }
 
-static void tag_read_cb(uint32_t adapter_idx, int status)
+static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	if (status < 0)
 		goto out;

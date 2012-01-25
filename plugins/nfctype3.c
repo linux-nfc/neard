@@ -280,7 +280,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 
 out:
 	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, err);
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 	g_free(cookie);
 
 	return err;
@@ -318,7 +318,8 @@ static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 
 out:
 	if (err < 0 && rcv_cookie->cb)
-		rcv_cookie->cb(rcv_cookie->adapter_idx, err);
+		rcv_cookie->cb(rcv_cookie->adapter_idx,
+				rcv_cookie->target_idx, err);
 
 	g_free(rcv_cookie);
 

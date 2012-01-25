@@ -78,6 +78,7 @@ int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb,
 {
 	uint8_t *tlv = data, t;
 	uint32_t adapter_idx = near_tag_get_adapter_idx(tag);
+	uint32_t target_idx = near_tag_get_target_idx(tag);
 
 	DBG("");
 
@@ -110,7 +111,7 @@ int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb,
 	DBG("Done");
 
 	if (cb)
-		cb(adapter_idx, 0);
+		cb(adapter_idx, target_idx, 0);
 
 	return 0;
 }

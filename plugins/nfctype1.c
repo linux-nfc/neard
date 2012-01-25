@@ -262,7 +262,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 out_err:
 	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, err);
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
 	g_free(cookie);
 
