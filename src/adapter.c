@@ -56,6 +56,7 @@ struct near_adapter {
 	GIOChannel *channel;
 	guint watch;
 	GList *ioreq_list;
+	GList *ndef_q;
 };
 
 struct near_adapter_ioreq {
@@ -285,11 +286,122 @@ static DBusMessage *stop_poll(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
+static int __push_ndef_queue(struct near_adapter *adapter,
+					struct near_ndef_message *ndef)
+{
+	if (adapter == NULL || ndef == NULL)
+		return -EINVAL;
+
+	adapter->ndef_q = g_list_append(adapter->ndef_q, ndef);
+
+	return 0;
+}
+
+static int __publish_text_record(DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter, arr_iter;
+	struct near_ndef_message *ndef;
+	char *cod = NULL, *lang = NULL, *rep = NULL;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+					DBUS_TYPE_INVALID) {
+		const char *key;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			if (g_strcmp0(key, "Encoding") == 0)
+				dbus_message_iter_get_basic(&var_iter, &cod);
+			else if (g_strcmp0(key, "Language") == 0)
+				dbus_message_iter_get_basic(&var_iter, &lang);
+			else if (g_strcmp0(key, "Representation") == 0)
+				dbus_message_iter_get_basic(&var_iter, &rep);
+
+			break;
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+	ndef = near_ndef_prepare_text_record(cod, lang, rep);
+	if (ndef == NULL)
+		return -EINVAL;
+
+	return __push_ndef_queue(data, ndef);
+}
+
+static DBusMessage *publish(DBusConnection *conn,
+				DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter;
+	DBusMessageIter arr_iter;
+	struct near_adapter *adapter = data;
+
+	DBG("conn %p", conn);
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+						DBUS_TYPE_INVALID) {
+		const char *key, *value;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+
+		if (g_strcmp0(key, "Type") == 0) {
+			dbus_message_iter_next(&ent_iter);
+			dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+			switch (dbus_message_iter_get_arg_type(&var_iter)) {
+			case DBUS_TYPE_STRING:
+				dbus_message_iter_get_basic(&var_iter, &value);
+
+				if (g_strcmp0(value, "Text") == 0) {
+					if (__publish_text_record(msg, adapter)
+							< 0)
+						goto error;
+
+					goto reply;
+				} else {
+					DBG(" '%s' not supported", value);
+					goto error;
+				}
+
+				break;
+			}
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+error:
+	return g_dbus_create_error(msg, "org.neard.Error.InvalidArguments",
+							"Invalid arguments");
+
+reply:
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
 static GDBusMethodTable adapter_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
 	{ "StartPoll",         "",      "",      start_poll         },
 	{ "StopPoll",          "",      "",      stop_poll          },
+	{ "Publish",         "a{sv}",   "",      publish            },
 	{ },
 };
 
