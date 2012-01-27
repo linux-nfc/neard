@@ -27,6 +27,7 @@ Writer Mode
 ===========
 Supported tags:
 
+  * Type 1: Supported.
   * Type 2: Supported.
 
 

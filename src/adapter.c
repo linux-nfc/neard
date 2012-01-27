@@ -553,7 +553,8 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	tag_type = __near_target_get_tag_type(target);
 
 	/* Add NDEF header information depends upon tag type */
-	if (tag_type & NEAR_TAG_NFC_TYPE2) {
+	if (tag_type & NEAR_TAG_NFC_TYPE1 ||
+			tag_type & NEAR_TAG_NFC_TYPE2) {
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
 		if (ndef_with_header == NULL)
