@@ -25,7 +25,9 @@ Not supported.
 
 Writer Mode
 ===========
-Not supported.
+Supported tags:
+
+  * Type 2: Supported.
 
 
 Peer To Peer Mode

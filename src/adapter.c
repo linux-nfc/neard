@@ -522,7 +522,8 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
 	struct near_target *target;
-	struct near_ndef_message *ndef;
+	struct near_ndef_message *ndef, *ndef_with_header = NULL;
+	uint16_t tag_type;
 	int err;
 
 	if (status < 0)
@@ -549,16 +550,47 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	if (ndef == NULL)
 		goto out;
 
-	err = __near_tag_add_ndef(target, ndef, __add_ndef_cb);
+	tag_type = __near_target_get_tag_type(target);
+
+	/* Add NDEF header information depends upon tag type */
+	if (tag_type & NEAR_TAG_NFC_TYPE2) {
+		ndef_with_header = g_try_malloc0(sizeof(
+					struct near_ndef_message));
+		if (ndef_with_header == NULL)
+			goto out;
+
+		ndef_with_header->offset = 0;
+		ndef_with_header->length = ndef->length + 3;
+		ndef_with_header->data = g_try_malloc0(ndef->length + 3);
+		if (ndef_with_header->data == NULL)
+			goto out;
+
+		ndef_with_header->data[0] = TLV_NDEF;
+		ndef_with_header->data[1] = ndef->length;
+		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
+		ndef_with_header->data[ndef->length + 2] = TLV_END;
+
+	} else
+		goto out;
+
+	g_free(ndef->data);
+	g_free(ndef);
+
+	err = __near_tag_add_ndef(target, ndef_with_header, __add_ndef_cb);
 	if (err < 0) {
-		g_free(ndef->data);
-		g_free(ndef);
+		g_free(ndef_with_header->data);
+		g_free(ndef_with_header);
 		goto out;
 	}
 
 	return;
 
 out:
+	if (ndef_with_header != NULL) {
+		g_free(ndef_with_header->data);
+		g_free(ndef_with_header);
+	}
+
 	near_adapter_disconnect(adapter_idx);
 }
 

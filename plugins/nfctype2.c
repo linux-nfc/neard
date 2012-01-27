@@ -57,10 +57,12 @@
 #define TYPE2_NOWRITE_ACCESS	0x0F
 #define TAG_T2_WRITE_FLAG(cc) ((cc)[3] & TYPE2_NOWRITE_ACCESS)
 
+#define NDEF_MAX_SIZE	0x30
+
 struct type2_cmd {
 	uint8_t cmd;
 	uint8_t block;
-	uint8_t data[];
+	uint8_t data[BLOCK_SIZE];
 } __attribute__((packed));
 
 struct type2_tag {
@@ -70,6 +72,27 @@ struct type2_tag {
 	near_tag_io_cb cb;
 	struct near_tag *tag;
 };
+
+struct recv_cookie {
+	uint32_t adapter_idx;
+	uint32_t target_idx;
+	uint8_t current_block;
+	struct near_ndef_message *ndef;
+	near_tag_io_cb cb;
+};
+
+static void release_recv_cookie(struct recv_cookie *cookie)
+{
+	if (cookie == NULL)
+		return;
+
+	if (cookie->ndef)
+		g_free(cookie->ndef->data);
+
+	g_free(cookie->ndef);
+	g_free(cookie);
+	cookie = NULL;
+}
 
 static int data_recv(uint8_t *resp, int length, void *data)
 {
@@ -143,12 +166,6 @@ static int data_read(struct type2_tag *tag)
 					data_recv, tag);
 }
 
-struct recv_cookie {
-	uint32_t adapter_idx;
-	uint32_t target_idx;
-	near_tag_io_cb cb;
-};
-
 static int meta_recv(uint8_t *resp, int length, void *data)
 {
         struct recv_cookie *cookie = data;
@@ -204,12 +221,18 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
 
 	err = data_read(t2_tag);
+	if (err < 0)
+		goto out;
+
+	release_recv_cookie(cookie);
+
+	return 0;
 
 out:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	g_free(cookie);
+	release_recv_cookie(cookie);
 
 	return err;
 }
@@ -264,9 +287,154 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 	return err;
 }
 
+static int data_write_resp(uint8_t *resp, int length, void *data)
+{
+	int err;
+	struct recv_cookie *cookie = data;
+	struct type2_cmd cmd;
+
+	DBG("");
+
+	if (length < 0 || resp[0] != 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	if (cookie->ndef->offset > cookie->ndef->length) {
+		DBG("Done writing");
+
+		if (cookie->cb)
+			cookie->cb(cookie->adapter_idx, cookie->target_idx, 0);
+
+		release_recv_cookie(cookie);
+
+		return 0;
+	}
+
+	cmd.cmd = CMD_WRITE;
+	cmd.block = cookie->current_block;
+	cookie->current_block++;
+
+	if ((cookie->ndef->offset + BLOCK_SIZE) <
+			cookie->ndef->length) {
+		memcpy(cmd.data, cookie->ndef->data +
+					cookie->ndef->offset, BLOCK_SIZE);
+		cookie->ndef->offset += BLOCK_SIZE;
+	} else {
+		memcpy(cmd.data, cookie->ndef->data + cookie->ndef->offset,
+				cookie->ndef->length - cookie->ndef->offset);
+		cookie->ndef->offset = cookie->ndef->length + 1;
+	}
+
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+					sizeof(cmd), data_write_resp, cookie);
+
+
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	if (err < 0 && cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	release_recv_cookie(cookie);
+
+	return err;
+}
+
+static int data_write(uint32_t adapter_idx, uint32_t target_idx,
+				struct near_ndef_message *ndef,
+				near_tag_io_cb cb)
+{
+	struct type2_cmd cmd;
+	struct recv_cookie *cookie;
+	int err;
+
+	DBG("");
+
+	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->current_block = DATA_BLOCK_START;
+	cookie->ndef = ndef;
+	cookie->cb = cb;
+
+	cmd.cmd = CMD_WRITE;
+	cmd.block = cookie->current_block;
+	memcpy(cmd.data, cookie->ndef->data, BLOCK_SIZE);
+	cookie->ndef->offset += BLOCK_SIZE;
+	cookie->current_block++;
+
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+					sizeof(cmd), data_write_resp, cookie);
+
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	release_recv_cookie(cookie);
+
+	return err;
+}
+
+static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
+				struct near_ndef_message *ndef,
+				near_tag_io_cb cb)
+{
+	int err;
+	struct near_tag *tag;
+	enum near_target_sub_type tgt_subtype;
+
+	DBG("");
+
+	if (ndef == NULL || cb == NULL)
+		return -EINVAL;
+
+	tag = near_target_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -EINVAL;
+
+	if (near_tag_get_ro(tag) == TRUE) {
+		DBG("tag is read-only");
+		return -EPERM;
+	}
+
+	tgt_subtype = near_target_get_subtype(adapter_idx, target_idx);
+
+	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
+		DBG("Unknown Tag Type 2 subtype (%d)", tgt_subtype);
+		return -1;
+	}
+
+	/* This check is valid for only static tags.
+	 * Max data length on Type 2 Tag including TLV's is NDEF_MAX_SIZE */
+	if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
+		if ((ndef->length + 3) > NDEF_MAX_SIZE) {
+			near_error("not enough space on tag");
+			return -ENOSPC;
+		}
+	}
+
+	err = data_write(adapter_idx, target_idx, ndef, cb);
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	near_adapter_disconnect(adapter_idx);
+
+	return err;
+}
+
 static struct near_tag_driver type2_driver = {
 	.type     = NEAR_TAG_NFC_TYPE2,
 	.read_tag = nfctype2_read_tag,
+	.add_ndef = nfctype2_write_tag,
 };
 
 static int nfctype2_init(void)
