@@ -297,6 +297,26 @@ static int __push_ndef_queue(struct near_adapter *adapter,
 	return 0;
 }
 
+static struct near_ndef_message *
+__pop_ndef_queue(struct near_adapter *adapter)
+{
+	GList *list;
+	struct near_ndef_message *ndef;
+
+	if (adapter == NULL)
+		return NULL;
+
+	list = g_list_first(adapter->ndef_q);
+	if (list == NULL)
+		return NULL;
+
+	ndef = list->data;
+	if (ndef != NULL)
+		adapter->ndef_q = g_list_remove(adapter->ndef_q, ndef);
+
+	return ndef;
+}
+
 static int __publish_text_record(DBusMessage *msg, void *data)
 {
 	DBusMessageIter iter, arr_iter;
@@ -339,6 +359,12 @@ static int __publish_text_record(DBusMessage *msg, void *data)
 		return -EINVAL;
 
 	return __push_ndef_queue(data, ndef);
+}
+
+static void __add_ndef_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
+{
+	DBG(" %d", status);
+	near_adapter_disconnect(adapter_idx);
 }
 
 static DBusMessage *publish(DBusConnection *conn,
@@ -494,10 +520,43 @@ static int dep_link_up(uint32_t idx, uint32_t target_idx)
 
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
+	struct near_adapter *adapter;
+	struct near_target *target;
+	struct near_ndef_message *ndef;
+	int err;
+
 	if (status < 0)
 		goto out;
 
 	__near_adapter_target_changed(adapter_idx);
+
+	/* Check if adapter ndef queue has any ndef messages,
+	 * then write the ndef data on tag. */
+	adapter = g_hash_table_lookup(adapter_hash,
+					GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		goto out;
+
+	if (g_list_length(adapter->ndef_q) == 0)
+		goto out;
+
+	target = g_hash_table_lookup(adapter->targets,
+					GINT_TO_POINTER(target_idx));
+	if (target == NULL)
+		goto out;
+
+	ndef = __pop_ndef_queue(adapter);
+	if (ndef == NULL)
+		goto out;
+
+	err = __near_tag_add_ndef(target, ndef, __add_ndef_cb);
+	if (err < 0) {
+		g_free(ndef->data);
+		g_free(ndef);
+		goto out;
+	}
+
+	return;
 
 out:
 	near_adapter_disconnect(adapter_idx);
