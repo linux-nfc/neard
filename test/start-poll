@@ -7,7 +7,7 @@ if len(sys.argv) < 2:
 	print "Usage: %s <nfc device>" % (sys.argv[0])
 	sys.exit(1)
 
-bus = dbus.SessionBus()
+bus = dbus.SystemBus()
 
 manager = dbus.Interface(bus.get_object("org.neard", "/"),
 					"org.neard.Manager")

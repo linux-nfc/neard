@@ -69,7 +69,7 @@ class Neard:
     def record_updateDetails(self, target_properties):
          for record_path in target_properties["Records"]:
             print ("REC %s ") % record_path
-            record_obj = self.sessionBus.get_object('org.neard',
+            record_obj = self.systemBus.get_object('org.neard',
                                                      record_path)
             record_iface = dbus.Interface(record_obj,'org.neard.Record')
             record_properties = record_iface.GetProperties()
@@ -84,7 +84,7 @@ class Neard:
         if adapt_properties["Targets"]:
             for target_path in adapt_properties["Targets"]:
                 print ("TGT %s ") % target_path
-                target_obj = self.sessionBus.get_object('org.neard', target_path)
+                target_obj = self.systemBus.get_object('org.neard', target_path)
 
                 target_iface = dbus.Interface(target_obj,'org.neard.Target')
                 target_properties = target_iface.GetProperties()
@@ -108,7 +108,7 @@ class Neard:
                     print (" already registered %s") % adapt_path
                 else:
                     #Get valuable informations from the object
-                    adapter_obj = self.sessionBus.get_object('org.neard',
+                    adapter_obj = self.systemBus.get_object('org.neard',
                                                          adapt_path)
                     adapter_obj.connect_to_signal('PropertyChanged',
                                                self.adapter_PropertyChanged,
@@ -151,10 +151,10 @@ class Neard:
         self.targetregistered = {}
         self.recordregistered = {}
 
-        self.sessionBus = dbus.SessionBus()
+        self.systemBus = dbus.SessionBus()
 
         #Prepare the first handler
-        self.sessionBus.watch_name_owner('org.neard',
+        self.systemBus.watch_name_owner('org.neard',
                                          self.neardNameOwnerChanged)
 
 ##=================================================================
@@ -171,7 +171,7 @@ class NeardUI(Neard):
         if path:
             i = self.adapters_list.get_iter(path)
             objpath = self.adapters_list.get_value(i, 0)
-            adapter_obj = self.sessionBus.get_object('org.neard', objpath)
+            adapter_obj = self.systemBus.get_object('org.neard', objpath)
             adapt_iface = dbus.Interface(adapter_obj,'org.neard.Adapter')
 
             if self.adapters_actionToggle(i, 3):

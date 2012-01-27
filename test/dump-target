@@ -3,7 +3,7 @@
 import sys
 import dbus
 
-bus = dbus.SessionBus()
+bus = dbus.SystemBus()
 
 def extract_list(list):
 	val = "["

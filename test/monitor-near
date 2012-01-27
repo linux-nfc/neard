@@ -44,7 +44,7 @@ def property_changed_manager(name, value, path):
 if __name__ == '__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-	bus = dbus.SessionBus()
+	bus = dbus.SystemBus()
 
 	bus.add_signal_receiver(property_changed_manager,
 				bus_name="org.neard",

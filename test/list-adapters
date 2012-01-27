@@ -10,7 +10,7 @@ def extract_list(list):
 	val += " ]"
 	return val
 
-bus = dbus.SessionBus()
+bus = dbus.SystemBus()
 
 manager = dbus.Interface(bus.get_object("org.neard", "/"),
 					"org.neard.Manager")

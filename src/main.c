@@ -127,13 +127,13 @@ int main(int argc, char *argv[])
 
 	dbus_error_init(&err);
 
-	conn = g_dbus_setup_bus(DBUS_BUS_SESSION, NFC_SERVICE, &err);
+	conn = g_dbus_setup_bus(DBUS_BUS_SYSTEM, NFC_SERVICE, &err);
 	if (conn == NULL) {
 		if (dbus_error_is_set(&err) == TRUE) {
 			fprintf(stderr, "%s\n", err.message);
 			dbus_error_free(&err);
 		} else
-			fprintf(stderr, "Can't register with session bus\n");
+			fprintf(stderr, "Can't register with system bus\n");
 		exit(1);
 	}
 
