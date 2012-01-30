@@ -457,42 +457,43 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 	g_free(record->path);
 
-	switch (record->header->rec_type) {
-	case RECORD_TYPE_WKT_SIZE:
-	case RECORD_TYPE_WKT_TYPE:
-	case RECORD_TYPE_WKT_ACTION:
-	case RECORD_TYPE_WKT_HANDOVER_REQUEST:
-	case RECORD_TYPE_WKT_HANDOVER_SELECT:
-	case RECORD_TYPE_WKT_HANDOVER_CARRIER:
-	case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
-	case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
-	case RECORD_TYPE_WKT_ERROR:
-	case RECORD_TYPE_UNKNOWN:
-	case RECORD_TYPE_ERROR:
-		break;
-
-	case RECORD_TYPE_WKT_TEXT:
-		free_text_record(record->text);
-		break;
-
-	case RECORD_TYPE_WKT_URI:
-		free_uri_record(record->uri);
-		break;
-
-	case RECORD_TYPE_WKT_SMART_POSTER:
-		free_sp_record(record->sp);
-		break;
-
-	case RECORD_TYPE_MIME_TYPE:
-		free_mime_record(record->mime);
-	}
-
 	if (record->header != NULL) {
+
+		switch (record->header->rec_type) {
+		case RECORD_TYPE_WKT_SIZE:
+		case RECORD_TYPE_WKT_TYPE:
+		case RECORD_TYPE_WKT_ACTION:
+		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		case RECORD_TYPE_WKT_HANDOVER_SELECT:
+		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
+		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
+		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
+		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_UNKNOWN:
+		case RECORD_TYPE_ERROR:
+			break;
+
+		case RECORD_TYPE_WKT_TEXT:
+			free_text_record(record->text);
+			break;
+
+		case RECORD_TYPE_WKT_URI:
+			free_uri_record(record->uri);
+			break;
+
+		case RECORD_TYPE_WKT_SMART_POSTER:
+			free_sp_record(record->sp);
+			break;
+
+		case RECORD_TYPE_MIME_TYPE:
+			free_mime_record(record->mime);
+		}
+
 		g_free(record->header->il_field);
 		g_free(record->header->type_name);
-		g_free(record->header);
 	}
 
+	g_free(record->header);
 	g_free(record);
 	record = NULL;
 }
