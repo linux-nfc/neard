@@ -31,7 +31,7 @@ class Neard:
     #add/remove adapter
     def manager_Connect(self):
         try:
-            manager_obj = self.sessionBus.get_object('org.neard', "/")
+            manager_obj = self.systemBus.get_object('org.neard', "/")
             # Add 2 handlers to follow Adapters
             manager_obj.connect_to_signal('AdapterAdded',
                                            self.manager_Added,
@@ -130,10 +130,10 @@ class Neard:
     #Search DBUS to find any neard instance
     def neardNameOwnerChanged(self, proxy):
         if proxy:
-            print("Neard is connected to session bus")
+            print("Neard is connected to System bus")
             self.manager_Connect()
         else:
-            print("Neard is disconnected from session bus")
+            print("Neard is disconnected from System bus")
             self.iface_manager = None
             self.adaptregistered = {}
             self.manager_getDetails()
@@ -151,7 +151,7 @@ class Neard:
         self.targetregistered = {}
         self.recordregistered = {}
 
-        self.systemBus = dbus.SessionBus()
+        self.systemBus = dbus.SystemBus()
 
         #Prepare the first handler
         self.systemBus.watch_name_owner('org.neard',
