@@ -236,7 +236,37 @@ static DBusMessage *get_properties(DBusConnection *conn,
 static DBusMessage *set_property(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
+	struct near_adapter *adapter = data;
+	DBusMessageIter iter, value;
+	const char *name;
+	int type, err;
+
 	DBG("conn %p", conn);
+
+	if (dbus_message_iter_init(msg, &iter) == FALSE)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &name);
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &value);
+
+	type = dbus_message_iter_get_arg_type(&value);
+
+	if (g_str_equal(name, "Powered") == TRUE) {
+		near_bool_t powered;
+
+		if (type != DBUS_TYPE_BOOLEAN)
+			return __near_error_invalid_arguments(msg);
+
+		dbus_message_iter_get_basic(&value, &powered);
+
+		err = __near_netlink_adapter_enable(adapter->idx, powered);
+		if (err < 0)
+			return __near_error_failed(msg, -err);
+
+		adapter->powered = powered;
+	} else
+		return __near_error_invalid_property(msg);
 
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
