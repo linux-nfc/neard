@@ -1,0 +1,23 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+
+if len(sys.argv) < 2:
+	print "Usage: %s <nfc device>" % (sys.argv[0])
+	sys.exit(1)
+
+bus = dbus.SystemBus()
+
+manager = dbus.Interface(bus.get_object("org.neard", "/"),
+					"org.neard.Manager")
+
+
+path = "/org/neard/" + sys.argv[1]
+adapter = dbus.Interface(bus.get_object("org.neard", path),
+					"org.neard.Adapter")
+
+try:
+	adapter.SetProperty("Powered", dbus.Boolean(0))
+except dbus.DBusException, error:
+	print "%s: %s" % (error._dbus_error_name, error.message)
