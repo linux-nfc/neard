@@ -63,7 +63,8 @@ DBusMessage *__near_error_operation_timeout(DBusMessage *msg);
 DBusMessage *__near_error_invalid_service(DBusMessage *msg);
 DBusMessage *__near_error_invalid_property(DBusMessage *msg);
 
-int __near_manager_adapter_add(uint32_t idx, const char *name, uint32_t protocols);
+int __near_manager_adapter_add(uint32_t idx, const char *name,
+			uint32_t protocols, near_bool_t powered);
 void __near_manager_adapter_remove(uint32_t idx);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
@@ -90,7 +91,7 @@ void __near_target_cleanup(void);
 #include <near/adapter.h>
 
 struct near_adapter * __near_adapter_create(uint32_t idx,
-				const char *name, uint32_t protocols);
+		const char *name, uint32_t protocols, near_bool_t powered);
 void __near_adapter_destroy(struct near_adapter *adapter);
 const char *__near_adapter_get_path(struct near_adapter *adapter);
 struct near_adapter *__near_adapter_get(uint32_t idx);

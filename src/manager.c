@@ -67,7 +67,8 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
-int __near_manager_adapter_add(uint32_t idx, const char *name, uint32_t protocols)
+int __near_manager_adapter_add(uint32_t idx, const char *name,
+				uint32_t protocols, near_bool_t powered)
 {
 	struct near_adapter *adapter;
 	const char *path;
@@ -75,7 +76,7 @@ int __near_manager_adapter_add(uint32_t idx, const char *name, uint32_t protocol
 
 	DBG("idx %d", idx);
 
-	adapter = __near_adapter_create(idx, name, protocols);
+	adapter = __near_adapter_create(idx, name, protocols, powered);
 	if (adapter == NULL)
 		return -ENOMEM;
 

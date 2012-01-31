@@ -157,6 +157,7 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 	struct nlattr *attrs[NFC_ATTR_MAX + 1];
 	char *name;
 	uint32_t idx, protocols;
+	near_bool_t powered;
 
 	DBG("");
 
@@ -167,11 +168,17 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 		return NL_STOP;
 	}
 
+
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 	name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 	protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 
-	__near_manager_adapter_add(idx, name, protocols);
+	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL)
+		powered = FALSE;
+	else
+		powered = nla_get_u8(attrs[NFC_ATTR_DEVICE_POWERED]);
+
+	__near_manager_adapter_add(idx, name, protocols, powered);
 
 	return NL_SKIP;
 }
@@ -371,11 +378,17 @@ static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
 	if (add == TRUE) {
 		char *name;
 		uint32_t protocols;
+		near_bool_t powered;
 
 		name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 		protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
+		if (attrs[NFC_ATTR_DEVICE_POWERED] == NULL)
+			powered = FALSE;
+		else
+			powered = nla_get_u8(attrs[NFC_ATTR_DEVICE_POWERED]);
 
-		return __near_manager_adapter_add(idx, name, protocols);
+		return __near_manager_adapter_add(idx, name,
+						protocols, powered);
 	} else {
 		__near_manager_adapter_remove(idx);
 	}
