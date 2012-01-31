@@ -163,7 +163,9 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 
 	genlmsg_parse(nlh, 0, attrs, NFC_ATTR_MAX, NULL);
 
-	if (!attrs[NFC_ATTR_DEVICE_INDEX] || !attrs[NFC_ATTR_DEVICE_NAME]) {
+	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL ||
+	    attrs[NFC_ATTR_DEVICE_NAME] == NULL ||
+	    attrs[NFC_ATTR_PROTOCOLS] == NULL) {
 		nl_perror(NLE_MISSING_ATTR, "NFC_CMD_GET_DEVICE");
 		return NL_STOP;
 	}
