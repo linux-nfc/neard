@@ -84,5 +84,9 @@ void near_tag_driver_unregister(struct near_tag_driver *driver);
 void near_tag_set_memory_layout(struct near_tag *tag,
 					enum near_tag_memory_layout);
 enum near_tag_memory_layout near_tag_get_memory_layout(struct near_tag *tag);
+void near_tag_set_max_ndef_size(struct near_tag *tag, uint16_t size);
+uint16_t near_tag_get_max_ndef_size(struct near_tag *tag);
+void near_tag_set_c_apdu_max_size(struct near_tag *tag, uint16_t size);
+uint16_t near_tag_get_c_apdu_max_size(struct near_tag *tag);
 
 #endif

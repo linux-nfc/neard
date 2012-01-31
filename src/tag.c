@@ -49,6 +49,11 @@ struct near_tag {
 
 	uint32_t n_records;
 	GList *records;
+
+	struct {
+		uint16_t max_ndef_size;
+		uint16_t c_apdu_max_size;
+	} t4;
 };
 
 static GList *driver_list = NULL;
@@ -196,6 +201,38 @@ void near_tag_set_memory_layout(struct near_tag *tag,
 		return;
 
 	tag->layout = layout;
+}
+
+void near_tag_set_max_ndef_size(struct near_tag *tag, uint16_t size)
+{
+	if (tag == NULL)
+		return;
+
+	tag->t4.max_ndef_size = size;
+}
+
+uint16_t near_tag_get_max_ndef_size(struct near_tag *tag)
+{
+	if (tag == NULL)
+		return 0;
+
+	return tag->t4.max_ndef_size;
+}
+
+void near_tag_set_c_apdu_max_size(struct near_tag *tag, uint16_t size)
+{
+	if (tag == NULL)
+		return;
+
+	tag->t4.c_apdu_max_size = size;
+}
+
+uint16_t near_tag_get_c_apdu_max_size(struct near_tag *tag)
+{
+	if (tag == NULL)
+		return 0;
+
+	return tag->t4.c_apdu_max_size;
 }
 
 int near_tag_driver_register(struct near_tag_driver *driver)
