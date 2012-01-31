@@ -571,6 +571,21 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
 		ndef_with_header->data[ndef->length + 2] = TLV_END;
 
+	} else if (tag_type & NEAR_TAG_NFC_TYPE4) {
+		ndef_with_header = g_try_malloc0(sizeof(
+					struct near_ndef_message));
+		if (ndef_with_header == NULL)
+			goto out;
+
+		ndef_with_header->offset = 0;
+		ndef_with_header->length = ndef->length + 2;
+		ndef_with_header->data = g_try_malloc0(ndef->length + 2);
+		if (ndef_with_header->data == NULL)
+			goto out;
+
+		ndef_with_header->data[0] = (uint8_t)(ndef->length >> 8);
+		ndef_with_header->data[1] = (uint8_t)(ndef->length);
+		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
 	} else
 		goto out;
 

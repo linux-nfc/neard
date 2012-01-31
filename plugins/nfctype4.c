@@ -90,7 +90,7 @@ struct type4_cc {			/* Capability Container */
 	uint16_t CCLEN;
 	uint8_t mapping_version;
 	uint16_t max_R_apdu_data_size;
-	uint16_t mac_C_apdu_data_size;
+	uint16_t max_C_apdu_data_size;
 	struct type4_NDEF_file_control_tlv tlv_fc ;
 	uint8_t tlv_blocks[];
 } __attribute__((packed));
@@ -102,7 +102,10 @@ struct recv_cookie {
 	struct near_tag *tag;
 	uint16_t read_data;
 	uint16_t r_apdu_max_size;
-	uint8_t write_access ;
+	uint16_t c_apdu_max_size;
+	uint16_t max_ndef_size;
+	uint8_t write_access;
+	struct near_ndef_message *ndef;
 };
 
 /* ISO functions: This code prepares APDU */
@@ -188,6 +191,22 @@ static int ISO_ReadBinary(uint16_t offset, uint8_t readsize,
 			cookie);
 }
 
+/* ISO 7816 command: Update data */
+static int ISO_Update(uint16_t offset, uint8_t nlen,
+			uint8_t *data, near_recv cb, void *cookie)
+{
+	DBG("");
+	return ISO_send_cmd(
+			0x00,			/* CLA */
+			0xD6,			/* INS: Select file */
+			(uint8_t)((offset & 0xFF00) >> 8),
+			(uint8_t)(offset & 0xFF),
+			data,			/* length of NDEF data */
+			nlen,			/* NLEN + NDEF data */
+			cb,
+			cookie);
+}
+
 static int t4_cookie_release(int err, struct recv_cookie *cookie)
 {
 	if (cookie == NULL)
@@ -196,6 +215,10 @@ static int t4_cookie_release(int err, struct recv_cookie *cookie)
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
+	if (cookie->ndef)
+		g_free(cookie->ndef->data);
+
+	g_free(cookie->ndef);
 	g_free(cookie);
 
 	return err;
@@ -291,6 +314,9 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 		goto out_err;
 	}
 
+	near_tag_set_max_ndef_size(tag, cookie->max_ndef_size);
+	near_tag_set_c_apdu_max_size(tag, cookie->c_apdu_max_size);
+
 	/* save the tag */
 	cookie->tag = tag;
 
@@ -380,6 +406,8 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 
 	cookie->r_apdu_max_size = g_ntohs(read_cc->max_R_apdu_data_size) -
 			APDU_HEADER_LEN ;
+	cookie->c_apdu_max_size = g_ntohs(read_cc->max_C_apdu_data_size);
+	cookie->max_ndef_size = g_ntohs(read_cc->tlv_fc.max_ndef_size);
 
 	/* TODO 5.1.1 :TLV blocks can be zero, one or more...  */
 	/* TODO 5.1.2 :Must ignore proprietary blocks (x05)...  */
@@ -569,9 +597,132 @@ static int nfctype4_read_tag(uint32_t adapter_idx,
 	return err;
 }
 
+static int data_write_cb(uint8_t *resp, int length, void *data)
+{
+	struct recv_cookie *cookie = data;
+	int err = 0;
+
+	DBG("%d", length);
+
+	if (length < 0)
+		return t4_cookie_release(err, cookie);
+
+	if (APDU_STATUS(resp + length - 2) != APDU_OK) {
+		near_error("write failed SWx%04x",
+				APDU_STATUS(resp + length - 2));
+		err = -EIO;
+
+		return t4_cookie_release(err, cookie);
+	}
+
+	if (cookie->ndef->offset >= cookie->ndef->length) {
+		DBG("Done writing");
+		near_adapter_disconnect(cookie->adapter_idx);
+
+		return t4_cookie_release(0, cookie);
+	}
+
+	if ((cookie->ndef->length - cookie->ndef->offset) >
+			cookie->c_apdu_max_size) {
+		err = ISO_Update(cookie->ndef->offset,
+				cookie->c_apdu_max_size,
+				cookie->ndef->data + cookie->ndef->offset,
+				data_write_cb, cookie);
+		cookie->ndef->offset += cookie->c_apdu_max_size;
+	} else {
+		err = ISO_Update(cookie->ndef->offset,
+				cookie->ndef->length - cookie->ndef->offset,
+				cookie->ndef->data + cookie->ndef->offset,
+				data_write_cb, cookie);
+		cookie->ndef->offset = cookie->ndef->length;
+	}
+
+	if (err < 0)
+		return t4_cookie_release(err, cookie);
+
+	return err;
+}
+
+static int data_write(uint32_t adapter_idx, uint32_t target_idx,
+				struct near_ndef_message *ndef,
+				struct near_tag *tag, near_tag_io_cb cb)
+{
+	struct recv_cookie *cookie;
+	int err;
+
+	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	if (cookie == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+	cookie->tag = NULL;
+	cookie->read_data = 0;
+	cookie->max_ndef_size = near_tag_get_max_ndef_size(tag);
+	cookie->c_apdu_max_size = near_tag_get_c_apdu_max_size(tag);
+	cookie->ndef = ndef;
+
+	if (cookie->max_ndef_size < cookie->ndef->length) {
+		near_error("not enough space on tag to write data");
+		err = -ENOMEM;
+		goto out;
+	}
+
+	if ((cookie->ndef->length - cookie->ndef->offset) >
+			cookie->c_apdu_max_size) {
+		err = ISO_Update(cookie->ndef->offset,
+				cookie->c_apdu_max_size,
+				cookie->ndef->data,
+				data_write_cb, cookie);
+		cookie->ndef->offset += cookie->c_apdu_max_size;
+	} else {
+		err = ISO_Update(cookie->ndef->offset,
+				cookie->ndef->length,
+				cookie->ndef->data,
+				data_write_cb, cookie);
+		cookie->ndef->offset = cookie->ndef->length;
+	}
+
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	t4_cookie_release(err, cookie);
+
+	return err;
+}
+
+static int nfctype4_write_tag(uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef, near_tag_io_cb cb)
+{
+	struct near_tag *tag;
+
+	DBG("");
+
+	if (ndef == NULL || cb == NULL)
+		return -EINVAL;
+
+	tag = near_target_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -EINVAL;
+
+	if (near_tag_get_ro(tag) == TRUE) {
+		DBG("tag is read-only");
+		return -EPERM;
+	}
+
+	return data_write(adapter_idx, target_idx, ndef, tag, cb);
+}
+
 static struct near_tag_driver type4_driver = {
-		.type     = NEAR_TAG_NFC_TYPE4,
-		.read_tag = nfctype4_read_tag,
+	.type     = NEAR_TAG_NFC_TYPE4,
+	.read_tag = nfctype4_read_tag,
+	.add_ndef = nfctype4_write_tag,
 };
 
 static int nfctype4_init(void)
