@@ -199,45 +199,65 @@ static void append_text_record(struct near_ndef_text_record *text,
 
 }
 
+#define NFC_MAX_URI_ID 0x23
+static const char *uri_prefix[NFC_MAX_URI_ID + 1] = {
+	"",
+	"http://www.",
+	"https://www.",
+	"http://",
+	"https://",
+	"tel:",
+	"mailto:",
+	"ftp://anonymous:anonymous@",
+	"ftp://ftp.",
+	"ftps://",
+	"sftp://",
+	"smb://",
+	"nfs://",
+	"ftp://",
+	"dav://",
+	"news:",
+	"telnet://",
+	"imap:",
+	"rstp://",
+	"urn:",
+	"pop:",
+	"sip:",
+	"sips:",
+	"tftp:",
+	"btspp://",
+	"btl2cap://",
+	"btgoep://",
+	"tcpobex://",
+	"irdaobex://",
+	"file://",
+	"urn:epc:id:",
+	"urn:epc:tag:",
+	"urn:epc:pat:",
+	"urn:epc:raw:",
+	"urn:epc:",
+	"urn:nfc:",
+};
+
 static void append_uri_record(struct near_ndef_uri_record *uri,
 					DBusMessageIter *dict)
 {
-	char *value, *prefix = NULL;
+	char *value;
+	const char *prefix = NULL;
 
 	DBG("");
 
 	if (uri == NULL || dict == NULL)
 		return;
 
-	switch (uri->identifier) {
-	case 0x1:
-		prefix = "http://www.";
-		break;
-	case 0x2:
-		prefix = "https://www.";
-		break;
-	case 0x3:
-		prefix = "http://";
-		break;
-	case 0x4:
-		prefix = "https://";
-		break;
-	case 0x5:
-		prefix = "tel:";
-		break;
-	case 0x6:
-		prefix = "mailto:";
-		break;
-	case 0x7:
-		prefix = "ftp://anonymous:anonymous@";
-		break;
-	case 0x8:
-		prefix = "ftp://ftp.";
-		break;
-	case 0x9:
-		prefix = "ftps://";
-		break;
+	if (uri->identifier > NFC_MAX_URI_ID) {
+		near_error("Invalid URI identifier 0x%x", uri->identifier);
+		return;
 	}
+
+	prefix = uri_prefix[uri->identifier];
+
+	DBG("URI prefix %s", prefix);
 
 	value = g_strdup_printf("%s%.*s", prefix, uri->field_length,
 							 uri->field);
