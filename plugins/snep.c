@@ -135,8 +135,25 @@ static void snep_read_ndef(int client_fd, int ndef_length,
 	snep_server.nfc_data_current_length += bytes_recv;
 
 	if (snep_server.nfc_data_length == snep_server.nfc_data_current_length) {
+		struct near_tag *tag;
+		size_t tag_length;
+		uint8_t *nfc_data;
+
 		snep_server.nfc_data_current_length = 0;
 		snep_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
+		tag = near_target_add_tag(snep_server.adapter_idx,
+					snep_server.target_idx,
+					snep_server.nfc_data_length);
+		if (tag == NULL) {
+			g_free(snep_server.nfc_data);
+			return;
+		}
+
+		nfc_data = near_tag_get_data(tag, &tag_length);
+		memcpy(nfc_data, snep_server.nfc_data, tag_length);
+
+		near_tlv_parse(tag, snep_server.cb, nfc_data, tag_length);
+		g_free(snep_server.nfc_data);
 	} else {
 		snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
 	}
