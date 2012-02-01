@@ -42,7 +42,7 @@
 
 #include "p2p.h"
 
-#define SNEP_SN "urn.nfc.sn.snep"
+#define SNEP_SN "urn:nfc:sn:snep"
 
 /* Request codes */
 #define SNEP_REQ_CONTINUE 0x00
@@ -69,6 +69,7 @@ struct p2p_snep_channel {
 	GIOChannel *channel;
 	uint8_t *nfc_data;
 	uint32_t nfc_data_length;
+	uint32_t nfc_data_current_length;
 	uint8_t *nfc_data_ptr;
 };
 
@@ -92,39 +93,53 @@ static void snep_response_noinfo(int client_fd, uint8_t response)
 {
 	struct p2p_snep_resp_frame resp;
 
+	DBG("Response 0x%x", response);
+
 	resp.response = response;
 	resp.length = 0;
 
 	send(client_fd, &resp, sizeof(resp), 0);
 }
 
-static void snep_read_ndef(int client_fd, int ndef_length)
+static void snep_read_ndef(int client_fd, int ndef_length,
+					near_bool_t allocate)
 {
-	int bytes_recv;
+	int bytes_recv, remaining_bytes;
 
-	if (snep_server.nfc_data_length > 0)
+	DBG("");
+
+	if (allocate == TRUE) {
 		g_free(snep_server.nfc_data);
 
-	snep_server.nfc_data = g_try_malloc0(ndef_length + TLV_SIZE);
-	if (snep_server.nfc_data == NULL)
-		return;
+		snep_server.nfc_data = g_try_malloc0(ndef_length + TLV_SIZE);
+		if (snep_server.nfc_data == NULL)
+			return;
 
-	snep_server.nfc_data[0] = TLV_NDEF;
-	snep_server.nfc_data[1] = ndef_length;
+		snep_server.nfc_data[0] = TLV_NDEF;
+		snep_server.nfc_data[1] = ndef_length;
 
-	snep_server.nfc_data_length = ndef_length + TLV_SIZE;
-	snep_server.nfc_data_ptr = snep_server.nfc_data + TLV_SIZE;
+		snep_server.nfc_data_length = ndef_length + TLV_SIZE;
+		snep_server.nfc_data_current_length = TLV_SIZE;
+		snep_server.nfc_data_ptr = snep_server.nfc_data + TLV_SIZE;
+	}
 
-	bytes_recv = recv(client_fd, snep_server.nfc_data_ptr, ndef_length, 0);
+	remaining_bytes = snep_server.nfc_data_length - snep_server.nfc_data_current_length;
+	bytes_recv = recv(client_fd, snep_server.nfc_data_ptr, remaining_bytes, 0);
 	if (bytes_recv < 0) {
 		near_error("Could not read SNEP NDEF buffer %d", bytes_recv);
 		return;
 	}
 
-	if (bytes_recv == ndef_length)
+	DBG("Received %d bytes", bytes_recv);
+
+	snep_server.nfc_data_current_length += bytes_recv;
+
+	if (snep_server.nfc_data_length == snep_server.nfc_data_current_length) {
+		snep_server.nfc_data_current_length = 0;
 		snep_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
-	else
+	} else {
 		snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
+	}
 }
 
 static void snep_read(int client_fd)
@@ -133,11 +148,21 @@ static void snep_read(int client_fd)
 	int bytes_recv;
 	uint32_t ndef_length;
 
+	DBG("");
+
+	/* If current length is not 0, we're waiting for a fragment */
+	if (snep_server.nfc_data_current_length > 0) {
+		snep_read_ndef(client_fd, 0, FALSE);
+		return;
+	}
+
 	bytes_recv = recv(client_fd, &frame, sizeof(frame), 0);
 	if (bytes_recv < 0) {
 		near_error("Could not read SNEP frame %d", bytes_recv);
 		return;
 	}
+
+	DBG("Request 0x%x", frame.request);
 
 	switch (frame.request) {
 	case SNEP_REQ_CONTINUE:
@@ -147,7 +172,7 @@ static void snep_read(int client_fd)
 		break;
 	case SNEP_REQ_PUT:
 		ndef_length = GINT_FROM_BE(frame.length);
-		snep_read_ndef(client_fd, ndef_length);
+		snep_read_ndef(client_fd, ndef_length, TRUE);
 	}
 }
 
