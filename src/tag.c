@@ -36,6 +36,9 @@
 
 #define TAG_UID_MAX_LEN 8
 
+#define TYPE3_IDM_LEN 8
+#define TYPE3_ATTR_BLOCK_SIZE 16
+
 struct near_tag {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
@@ -49,6 +52,11 @@ struct near_tag {
 
 	uint32_t n_records;
 	GList *records;
+
+	struct {
+		uint8_t IDm[TYPE3_IDM_LEN];
+		uint8_t attr[TYPE3_ATTR_BLOCK_SIZE];
+	} t3;
 
 	struct {
 		uint16_t max_ndef_size;
@@ -233,6 +241,42 @@ uint16_t near_tag_get_c_apdu_max_size(struct near_tag *tag)
 		return 0;
 
 	return tag->t4.c_apdu_max_size;
+}
+
+void near_tag_set_idm(struct near_tag *tag, uint8_t *idm, uint8_t len)
+{
+	if (tag == NULL || len > TYPE3_IDM_LEN)
+		return;
+
+	memset(tag->t3.IDm, 0, TYPE3_IDM_LEN);
+	memcpy(tag->t3.IDm, idm, len);
+}
+
+uint8_t *near_tag_get_idm(struct near_tag *tag, uint8_t *len)
+{
+	if (tag == NULL || len == NULL)
+		return NULL;
+
+	*len = TYPE3_IDM_LEN;
+	return tag->t3.IDm;
+}
+
+void near_tag_set_attr_block(struct near_tag *tag, uint8_t *attr, uint8_t len)
+{
+	if (tag == NULL || len > TYPE3_ATTR_BLOCK_SIZE)
+		return;
+
+	memset(tag->t3.attr, 0, TYPE3_ATTR_BLOCK_SIZE);
+	memcpy(tag->t3.attr, attr, len);
+}
+
+uint8_t *near_tag_get_attr_block(struct near_tag *tag, uint8_t *len)
+{
+	if (tag == NULL || len == NULL)
+		return NULL;
+
+	*len = TYPE3_ATTR_BLOCK_SIZE;
+	return tag->t3.attr;
 }
 
 int near_tag_driver_register(struct near_tag_driver *driver)

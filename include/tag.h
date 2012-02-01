@@ -88,5 +88,9 @@ void near_tag_set_max_ndef_size(struct near_tag *tag, uint16_t size);
 uint16_t near_tag_get_max_ndef_size(struct near_tag *tag);
 void near_tag_set_c_apdu_max_size(struct near_tag *tag, uint16_t size);
 uint16_t near_tag_get_c_apdu_max_size(struct near_tag *tag);
+void near_tag_set_idm(struct near_tag *tag, uint8_t *idm, uint8_t len);
+uint8_t *near_tag_get_idm(struct near_tag *tag, uint8_t *len);
+void near_tag_set_attr_block(struct near_tag *tag, uint8_t *attr, uint8_t len);
+uint8_t *near_tag_get_attr_block(struct near_tag *tag, uint8_t *len);
 
 #endif
