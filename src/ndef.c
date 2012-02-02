@@ -1178,13 +1178,11 @@ parse_mime_type(struct near_ndef_record *record,
 	if (strcmp(mime->type, "application/vnd.bluetooth.ep.oob") == 0) {
 		err = __near_bt_parse_oob_record(BT_MIME_V2_1,
 				&ndef_data[offset]);
-	} else {
-		if (strcmp(mime->type, "nokia.com:bt") == 0) {
+	} else if (strcmp(mime->type, "nokia.com:bt") == 0) {
 		err = __near_bt_parse_oob_record(BT_MIME_V2_0,
 				&ndef_data[offset]);
-		}
-		else
-			err = -EOPNOTSUPP;
+	} else {
+		err = -EOPNOTSUPP;
 	}
 
 	if (err < 0) {
