@@ -23,7 +23,20 @@
 #define AF_NFC 39
 #endif
 
+struct near_p2p_driver {
+	const char *name;
+	const char *service_name;
+	int (*read)(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
+		near_tag_io_cb cb);
+};
+
 #define TLV_SIZE 2
 
-int npp_bind(uint32_t adapter_idx, uint32_t target_idx, near_tag_io_cb cb);
-int snep_bind(uint32_t adapter_idx, uint32_t target_idx, near_tag_io_cb cb);
+int npp_init(void);
+void npp_exit(void);
+
+int snep_init(void);
+void snep_exit(void);
+
+int near_p2p_register(struct near_p2p_driver *driver);
+void near_p2p_unregister(struct near_p2p_driver *driver);
