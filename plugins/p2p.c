@@ -202,6 +202,7 @@ static int p2p_init(void)
 
 	npp_init();
 	snep_init();
+	handover_init();
 
 	return near_tag_driver_register(&p2p_driver);
 }
@@ -212,6 +213,7 @@ static void p2p_exit(void)
 
 	snep_exit();
 	npp_exit();
+	handover_exit();
 
 	near_tag_driver_unregister(&p2p_driver);
 }

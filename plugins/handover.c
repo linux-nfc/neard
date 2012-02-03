@@ -19,27 +19,48 @@
  *
  */
 
-#ifndef AF_NFC
-#define AF_NFC 39
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
-struct near_p2p_driver {
-	const char *name;
-	const char *service_name;
-	int (*read)(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb);
+#include <stdint.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/socket.h>
+
+#include <linux/socket.h>
+#include <linux/nfc.h>
+
+#include <near/log.h>
+#include <near/types.h>
+#include <near/adapter.h>
+#include <near/target.h>
+#include <near/tag.h>
+#include <near/ndef.h>
+#include <near/tlv.h>
+
+#include "p2p.h"
+
+static int handover_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
+		near_tag_io_cb cb)
+{
+	DBG("");
+
+	return 0;
+}
+
+struct near_p2p_driver handover_driver = {
+	.name = "Handover",
+	.service_name = "urn:nfc:sn:handover",
+	.read = handover_read,
 };
 
-#define TLV_SIZE 2
+int handover_init(void)
+{
+	return near_p2p_register(&handover_driver);
+}
 
-int npp_init(void);
-void npp_exit(void);
-
-int snep_init(void);
-void snep_exit(void);
-
-int handover_init(void);
-void handover_exit(void);
-
-int near_p2p_register(struct near_p2p_driver *driver);
-void near_p2p_unregister(struct near_p2p_driver *driver);
+void handover_exit(void)
+{
+	near_p2p_unregister(&handover_driver);
+}
