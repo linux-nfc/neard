@@ -42,8 +42,6 @@
 
 #include "p2p.h"
 
-#define SNEP_SN "urn:nfc:sn:snep"
-
 /* Request codes */
 #define SNEP_REQ_CONTINUE 0x00
 #define SNEP_REQ_GET      0x01
