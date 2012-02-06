@@ -60,8 +60,13 @@ typedef void (*near_tag_io_cb) (uint32_t adapter_idx, uint32_t target_idx,
 
 struct near_ndef_message;
 
+#define NEAR_TAG_PRIORITY_LOW      -100
+#define NEAR_TAG_PRIORITY_DEFAULT     0
+#define NEAR_TAG_PRIORITY_HIGH      100
+
 struct near_tag_driver {
 	uint16_t type;
+	int priority;
 
 	int (*read_tag)(uint32_t adapter_idx, uint32_t target_idx,
 						near_tag_io_cb cb);

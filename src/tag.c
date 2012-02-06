@@ -64,7 +64,7 @@ struct near_tag {
 	} t4;
 };
 
-static GList *driver_list = NULL;
+static GSList *driver_list = NULL;
 
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
 {
@@ -279,6 +279,14 @@ uint8_t *near_tag_get_attr_block(struct near_tag *tag, uint8_t *len)
 	return tag->t3.attr;
 }
 
+static gint cmp_prio(gconstpointer a, gconstpointer b)
+{
+	const struct near_tag_driver *driver1 = a;
+	const struct near_tag_driver *driver2 = b;
+
+	return driver2->priority - driver1->priority;
+}
+
 int near_tag_driver_register(struct near_tag_driver *driver)
 {
 	DBG("");
@@ -286,7 +294,7 @@ int near_tag_driver_register(struct near_tag_driver *driver)
 	if (driver->read_tag == NULL)
 		return -EINVAL;
 
-	driver_list = g_list_append(driver_list, driver);
+	driver_list = g_slist_insert_sorted(driver_list, driver, cmp_prio);
 
 	return 0;
 }
@@ -295,12 +303,12 @@ void near_tag_driver_unregister(struct near_tag_driver *driver)
 {
 	DBG("");
 
-	driver_list = g_list_remove(driver_list, driver);
+	driver_list = g_slist_remove(driver_list, driver);
 }
 
 int __near_tag_read(struct near_target *target, near_tag_io_cb cb)
 {
-	GList *list;
+	GSList *list;
 	uint16_t type;
 
 	DBG("");
@@ -333,7 +341,7 @@ int __near_tag_add_ndef(struct near_target *target,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
-	GList *list;
+	GSList *list;
 	uint16_t type;
 
 	DBG("");
