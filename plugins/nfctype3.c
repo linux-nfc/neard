@@ -269,7 +269,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 
 	/* Associate the DATA length to the tag */
 	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx,
-					ndef_data_length);
+					NULL, ndef_data_length);
 	if (tag == NULL) {
 		err = -ENOMEM;
 		goto out;

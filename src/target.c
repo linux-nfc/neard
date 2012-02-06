@@ -496,7 +496,7 @@ struct near_tag *near_target_get_tag(uint32_t adapter_idx, uint32_t target_idx)
 }
 
 struct near_tag *near_target_add_tag(uint32_t adapter_idx, uint32_t target_idx,
-						size_t data_length)
+					uint8_t *data, size_t data_length)
 {
 	struct near_target *target;
 	char *path;
@@ -514,7 +514,8 @@ struct near_tag *near_target_add_tag(uint32_t adapter_idx, uint32_t target_idx,
 	if (target->tag != NULL)
 		return target->tag;
 
-	target->tag = __near_tag_new(target->adapter_idx, target_idx, data_length);
+	target->tag = __near_tag_new(target->adapter_idx, target_idx,
+							data, data_length);
 	if (target->tag == NULL)
 		return NULL;
 

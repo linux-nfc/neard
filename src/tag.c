@@ -85,7 +85,7 @@ void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
 
 static int tag_initialize(struct near_tag *tag,
 			uint32_t adapter_idx, uint32_t target_idx,
-				size_t data_length)
+			uint8_t * data, size_t data_length)
 {
 	DBG("data length %zu", data_length);
 
@@ -99,12 +99,16 @@ static int tag_initialize(struct near_tag *tag,
 		tag->data = g_try_malloc0(data_length);
 		if (tag->data == NULL)
 			return -ENOMEM;
+
+		if (data != NULL)
+			memcpy(tag->data, data, data_length);
 	}
 
 	return 0;
 }
 
-struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx, size_t data_length)
+struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
+				uint8_t *data, size_t data_length)
 {
 	struct near_tag *tag;
 
@@ -112,7 +116,8 @@ struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx, size_
 	if (tag == NULL)
 		return NULL;
 
-	if (tag_initialize(tag, adapter_idx, target_idx, data_length) < 0) {
+	if (tag_initialize(tag, adapter_idx, target_idx,
+					data, data_length) < 0) {
 		g_free(tag);
 		return NULL;
 	}

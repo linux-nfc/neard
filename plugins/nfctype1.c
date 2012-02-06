@@ -239,7 +239,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	/* Associate the DATA length to the tag */
 	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx,
-					TAG_T1_DATA_LENGTH(cc));
+					NULL, TAG_T1_DATA_LENGTH(cc));
 	if (tag == NULL) {
 		err = -ENOMEM;
 		goto out_err;

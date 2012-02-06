@@ -305,7 +305,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 		goto out_err;
 	}
 
-	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx,
+	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx, NULL,
 			g_ntohs(*((uint16_t *)(resp + NFC_STATUS_BYTE_LEN))));
 
 	if (tag == NULL) {

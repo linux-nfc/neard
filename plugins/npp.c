@@ -61,8 +61,7 @@ static int npp_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
 	struct p2p_npp_frame frame;
 	struct p2p_npp_ndef_entry entry;
 	int bytes_recv, n_ndef, i, ndef_length, total_ndef_length, err;
-	size_t tag_length;
-	uint8_t *ndefs, *nfc_data, *current_ndef;
+	uint8_t *ndefs, *current_ndef;
 
 	ndefs = NULL;
 	total_ndef_length = 0;
@@ -120,7 +119,7 @@ static int npp_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
 	DBG("Total NDEF length %d", total_ndef_length);
 
 	tag = near_target_add_tag(adapter_idx, target_idx,
-					total_ndef_length);
+					ndefs, total_ndef_length);
 	if (tag == NULL) {
 		g_free(ndefs);
 		return -ENOMEM;
@@ -128,9 +127,6 @@ static int npp_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
 
 	for (i = 0; i < total_ndef_length; i++)
 		DBG("NDEF[%d] 0x%x", i, ndefs[i]);
-
-	nfc_data = near_tag_get_data(tag, &tag_length);
-	memcpy(nfc_data, ndefs, total_ndef_length);
 
 	near_tlv_parse(tag, cb);
 
