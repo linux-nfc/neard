@@ -464,6 +464,9 @@ static void free_sp_record(struct near_ndef_sp_record *sp)
 
 static void free_mime_record(struct near_ndef_mime_record *mime)
 {
+	if (mime == NULL)
+		return;
+
 	g_free(mime->type);
 	g_free(mime);
 
@@ -1181,8 +1184,6 @@ parse_mime_type(struct near_ndef_record *record,
 	} else if (strcmp(mime->type, "nokia.com:bt") == 0) {
 		err = __near_bt_parse_oob_record(BT_MIME_V2_0,
 				&ndef_data[offset]);
-	} else {
-		err = -EOPNOTSUPP;
 	}
 
 	if (err < 0) {
