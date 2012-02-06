@@ -32,6 +32,6 @@
 uint16_t near_tlv_length(uint8_t *tlv);
 uint8_t *near_tlv_next(uint8_t *tlv);
 uint8_t *near_tlv_data(uint8_t *tlv);
-int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb, uint8_t *data, uint16_t length);
+int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb);
 
 #endif

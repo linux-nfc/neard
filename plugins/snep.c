@@ -144,7 +144,7 @@ static void snep_read_ndef(int client_fd,
 		nfc_data = near_tag_get_data(tag, &tag_length);
 		memcpy(nfc_data, snep_data.nfc_data, tag_length);
 
-		near_tlv_parse(tag, cb, nfc_data, tag_length);
+		near_tlv_parse(tag, cb);
 		g_free(snep_data.nfc_data);
 	} else {
 		snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);

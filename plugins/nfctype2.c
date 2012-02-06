@@ -127,7 +127,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 		DBG("Done reading");
 
-		near_tlv_parse(tag->tag, tag->cb, nfc_data, data_length);
+		near_tlv_parse(tag->tag, tag->cb);
 
 		g_free(tag);
 

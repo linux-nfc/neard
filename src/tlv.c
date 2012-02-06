@@ -73,14 +73,17 @@ uint8_t *near_tlv_data(uint8_t *tlv)
 	return tlv + 1 + l_length;
 }
 
-int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb,
-			uint8_t *data, uint16_t length)
+int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb)
 {
-	uint8_t *tlv = data, t;
+	uint8_t *tlv, *data, t;
+	size_t tlv_length;
 	uint32_t adapter_idx = near_tag_get_adapter_idx(tag);
 	uint32_t target_idx = near_tag_get_target_idx(tag);
 
 	DBG("");
+
+	tlv = near_tag_get_data(tag, &tlv_length);
+	data = tlv;
 
 	while(1) {
 		t = tlv[0];
@@ -104,7 +107,7 @@ int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb,
 
 		tlv = near_tlv_next(tlv);
 
-		if (tlv - data >= length)
+		if (tlv - data >= (uint16_t) tlv_length)
 			break;
 	}
 

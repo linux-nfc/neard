@@ -150,11 +150,9 @@ static int segment_read_recv(uint8_t *resp, int length, void *data)
 		if (err < 0)
 			goto out_err;
 	} else { /* This is the end */
-		DBG("READ Static complete");
-		err = near_tlv_parse(t1_tag->tag,
-					t1_tag->cb,
-					tagdata,
-					t1_tag->data_read);
+		DBG("READ complete");
+
+		err = near_tlv_parse(t1_tag->tag, t1_tag->cb);
 
 		/* free memory */
 		g_free(t1_tag);
@@ -268,10 +266,17 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	/* Check Static or Dynamic memory model */
 	if (resp[OFFSET_HEADER_ROM] == HR0_TYPE1_STATIC) {
+		uint8_t *tagdata;
+		size_t data_length;
+
 		DBG("READ Static complete");
+
+		tagdata = near_tag_get_data(t1_tag->tag, &data_length);
+		memcpy(tagdata, cc + LEN_CC_BYTES, TAG_T1_DATA_LENGTH(cc));
+
 		near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
-		err = near_tlv_parse(t1_tag->tag, t1_tag->cb,
-			cc + LEN_CC_BYTES, TAG_T1_DATA_LENGTH(cc));
+
+		err = near_tlv_parse(t1_tag->tag, t1_tag->cb);
 		if (err < 0)
 			goto out_err;
 

@@ -132,7 +132,7 @@ static int npp_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
 	nfc_data = near_tag_get_data(tag, &tag_length);
 	memcpy(nfc_data, ndefs, total_ndef_length);
 
-	near_tlv_parse(tag, cb, nfc_data, total_ndef_length);
+	near_tlv_parse(tag, cb);
 
 	g_free(ndefs);
 
