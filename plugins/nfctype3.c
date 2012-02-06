@@ -158,18 +158,22 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	uint8_t *nfc_data;
 	uint16_t current_length, length_read, data_length;
 	uint32_t adapter_idx;
+	uint32_t target_idx;
 	int read_blocks;
+	int err;
 
 	DBG("%d", length);
 
+	adapter_idx = near_tag_get_adapter_idx(tag->tag);
+	target_idx = near_tag_get_target_idx(tag->tag);
+
 	if (length < 0) {
 		g_free(tag);
-		return  length;
+		err = -EIO;
+		goto out;
 	}
 
 	nfc_data = near_tag_get_data(tag->tag, (size_t *)&data_length);
-	adapter_idx = near_tag_get_adapter_idx(tag->tag);
-
 	length_read = length - OFS_READ_DATA  ;
 	current_length = tag->current_block * BLOCK_SIZE;
 	if (current_length + (length - OFS_READ_DATA) > data_length)
@@ -183,6 +187,9 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 		DBG("Done reading %d bytes at %p", data_length, nfc_data);
 		near_ndef_parse(tag->tag, nfc_data, data_length);
 
+		if (tag->cb)
+			tag->cb(adapter_idx, target_idx, 0);
+
 		g_free(tag);
 
 		return 0;
@@ -195,8 +202,18 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	prepare_read_block(DATA_BLOCK_START + tag->current_block,
 				tag->IDm, &cmd );
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, cmd.len,
+	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, cmd.len,
 			nfctype3_data_recv, tag);
+	if (err == 0)
+		return 0;
+
+out:
+	if (err < 0 && tag->cb)
+		tag->cb(adapter_idx, target_idx, err);
+
+	g_free(tag);
+
+	return err;
 }
 
 static int nfctype3_data_read(struct type3_tag *tag)
@@ -230,7 +247,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	DBG("%d", length);
 
 	if (length < 0) {
-		err = length;
+		err = -EIO;
 		goto out;
 	}
 
@@ -281,6 +298,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 out:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
 	g_free(cookie);
 
 	return err;
@@ -296,7 +314,7 @@ static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 	DBG(" length: %d", length);
 
 	if (length < 0) {
-		err = length;
+		err = -EIO;
 		goto out;
 	}
 
