@@ -29,6 +29,7 @@ Supported tags:
 
   * Type 1: Supported.
   * Type 2: Supported.
+  * Type 3: Supported.
   * Type 4: Supported.
 
 

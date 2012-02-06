@@ -89,6 +89,7 @@
 #define OFS_READ_FLAG	12
 #define OFS_READ_DATA	14
 #define BLOCK_SIZE	16
+#define CHECKSUM_LEN	2
 
 #define MAX_DATA_SIZE	254
 
@@ -112,7 +113,43 @@ struct recv_cookie {
 	uint32_t target_idx;
 	near_tag_io_cb cb;
 	uint8_t IDm[LEN_ID];
+	uint8_t current_block;
+	uint8_t attr[BLOCK_SIZE];
+	struct near_ndef_message *ndef;
 };
+
+static void release_recv_cookie(struct recv_cookie *cookie)
+{
+	if (cookie == NULL)
+		return;
+
+	if (cookie->ndef != NULL)
+		g_free(cookie->ndef->data);
+
+	g_free(cookie->ndef);
+	g_free(cookie);
+	cookie = NULL;
+}
+
+/* common: Intialize structure to write block */
+static void prepare_write_block(uint8_t *UID, struct type3_cmd *cmd,
+					uint8_t block, uint8_t *data)
+{
+	cmd->cmd = CMD_WRITE_WO_ENCRYPT;	/* command */
+	memcpy(cmd->data, UID, LEN_ID);		/* IDm */
+
+	cmd->data[LEN_ID] = 1;			/* number of services */
+	cmd->data[LEN_ID + 1] = 0x09;		/* service 0x0009 */
+	cmd->data[LEN_ID + 2] = 0x00;
+
+	cmd->data[LEN_ID + 3] = 0x01;		/* number of blocks */
+	cmd->data[LEN_ID + 4] = 0x80;		/* 2 byte block number format */
+	cmd->data[LEN_ID + 5] = block;		/* block number */
+	memcpy(cmd->data + LEN_ID + 6, data, BLOCK_SIZE); /* data to write */
+
+	cmd->len = LEN_ID + LEN_CMD + LEN_CMD_LEN + 6 + BLOCK_SIZE;
+
+}
 
 /* common: Initialize structure to read block */
 static void prepare_read_block(uint8_t cur_block,
@@ -288,6 +325,10 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	}
 
 	memcpy(t3_tag->IDm, cookie->IDm , LEN_ID);
+
+	near_tag_set_idm(tag, cookie->IDm, LEN_ID);
+	near_tag_set_attr_block(tag, resp + OFS_READ_DATA, BLOCK_SIZE);
+
 	t3_tag->adapter_idx = cookie->adapter_idx;
 	t3_tag->cb = cookie->cb;
 	t3_tag->tag = tag;
@@ -299,7 +340,7 @@ out:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	g_free(cookie);
+	release_recv_cookie(cookie);
 
 	return err;
 }
@@ -339,7 +380,7 @@ out:
 		rcv_cookie->cb(rcv_cookie->adapter_idx,
 				rcv_cookie->target_idx, err);
 
-	g_free(rcv_cookie);
+	release_recv_cookie(rcv_cookie);
 
 	return err;
 }
@@ -391,10 +432,220 @@ static int nfctype3_read_tag(uint32_t adapter_idx,
 	return err;
 }
 
+static int update_attr_block_cb(uint8_t *resp, int length, void *data)
+{
+	struct recv_cookie *cookie = data;
+	int err;
+
+	DBG("");
+
+	if (length < 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
+	if (err < 0)
+		goto out;
+
+	DBG("Done writing");
+
+out:
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	release_recv_cookie(cookie);
+
+	return err;
+}
+
+static int update_attr_block(struct recv_cookie *cookie)
+{
+	struct type3_cmd cmd;
+	uint16_t checksum;
+	uint8_t i;
+
+	DBG("");
+
+	cookie->attr[9] = 0x00; /* writing data completed */
+	cookie->attr[11] = (uint8_t) (cookie->ndef->length >> 16);
+	cookie->attr[12] = (uint8_t) (cookie->ndef->length >> 8);
+	cookie->attr[13] = (uint8_t) cookie->ndef->length;
+	checksum = 0;
+
+	for (i = 0; i < (BLOCK_SIZE - CHECKSUM_LEN); i++)
+		checksum += cookie->attr[i];
+
+	cookie->attr[14] = (uint8_t) (checksum >> 8);
+	cookie->attr[15] = (uint8_t) checksum;
+
+	prepare_write_block(cookie->IDm, &cmd, 0, cookie->attr);
+
+	return near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd, cmd.len,
+						update_attr_block_cb, cookie);
+}
+
+static int data_write_resp(uint8_t *resp, int length, void *data)
+{
+	struct recv_cookie *cookie = data;
+	struct type3_cmd cmd;
+	uint8_t padding[BLOCK_SIZE] = {0};
+	int err;
+
+	DBG("");
+
+	if (length < 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
+	if (err < 0)
+		goto out;
+
+	if (cookie->ndef->offset >= cookie->ndef->length) {
+		err = update_attr_block(cookie);
+		if (err < 0)
+			goto out;
+
+		return 0;
+	}
+
+	if ((cookie->ndef->length - cookie->ndef->offset) <
+			BLOCK_SIZE) {
+		memcpy(padding, cookie->ndef->data + cookie->ndef->offset,
+				cookie->ndef->length - cookie->ndef->offset);
+		prepare_write_block(cookie->IDm, &cmd,
+					cookie->current_block, padding);
+	} else {
+		prepare_write_block(cookie->IDm, &cmd, cookie->current_block,
+				cookie->ndef->data + cookie->ndef->offset);
+	}
+
+	cookie->current_block++;
+	cookie->ndef->offset += BLOCK_SIZE;
+
+	err =  near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd, cmd.len,
+						data_write_resp, cookie);
+	if (err == 0)
+		return 0;
+
+out:
+	if (err < 0 && cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	release_recv_cookie(cookie);
+
+	return err;
+}
+
+static int data_write(uint32_t adapter_idx, uint32_t target_idx,
+				struct near_ndef_message *ndef,
+				struct near_tag *tag,
+				near_tag_io_cb cb)
+{
+	struct recv_cookie *cookie;
+	struct type3_cmd cmd;
+	uint16_t checksum, nmaxb;
+	uint8_t i, len = 0;
+	uint8_t *idm, *attr;
+	int err;
+
+	DBG("");
+
+	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	if (cookie == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->ndef = ndef;
+	cookie->cb = cb;
+	cookie->current_block = 0;
+
+	idm = near_tag_get_idm(tag, &len);
+	if (idm == NULL) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	memcpy(cookie->IDm, idm, len);
+
+	attr = near_tag_get_attr_block(tag, &len);
+	if (attr == NULL) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	memcpy(cookie->attr, attr, len);
+	nmaxb = (((uint16_t)(cookie->attr[3])) << 8) | cookie->attr[4];
+
+	if (cookie->ndef->length > (nmaxb * BLOCK_SIZE)) {
+		near_error("not enough space on tag");
+		err = -ENOSPC;
+		goto out;
+	}
+
+	cookie->attr[9] = 0x0F; /* writing data in progress */
+	checksum = 0;
+
+	for (i = 0; i < 14; i++)
+		checksum += cookie->attr[i];
+
+	cookie->attr[14] = (uint8_t)(checksum >> 8);
+	cookie->attr[15] = (uint8_t)(checksum);
+
+	prepare_write_block(cookie->IDm, &cmd, cookie->current_block,
+							cookie->attr);
+	cookie->current_block++;
+
+	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, cmd.len,
+						data_write_resp, cookie);
+	if (err == 0)
+		return 0;
+
+out:
+	release_recv_cookie(cookie);
+
+	return err;
+}
+
+static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
+				struct near_ndef_message *ndef,
+				near_tag_io_cb cb)
+{
+	int err;
+	struct near_tag *tag;
+
+	DBG("");
+
+	if (ndef == NULL || cb == NULL)
+		return -EINVAL;
+
+	tag = near_target_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -EINVAL;
+
+	if (near_tag_get_ro(tag) == TRUE) {
+		DBG("tag is read-only");
+		return -EPERM;
+	}
+
+	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
+
+	if (err < 0)
+		near_adapter_disconnect(adapter_idx);
+
+	return err;
+}
+
 static struct near_tag_driver type1_driver = {
 	.type     = NEAR_TAG_NFC_TYPE3,
 	.priority = NEAR_TAG_PRIORITY_DEFAULT,
 	.read_tag = nfctype3_read_tag,
+	.add_ndef = nfctype3_write_tag,
 };
 
 static int nfctype3_init(void)
