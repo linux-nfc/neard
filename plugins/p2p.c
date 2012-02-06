@@ -175,8 +175,9 @@ static int p2p_read(uint32_t adapter_idx,
 }
 
 static struct near_tag_driver p2p_driver = {
-		.type     = NEAR_TAG_NFC_DEP,
-		.read_tag = p2p_read,
+	.type     = NEAR_TAG_NFC_DEP,
+	.priority = NEAR_TAG_PRIORITY_HIGH,
+	.read_tag = p2p_read,
 };
 
 

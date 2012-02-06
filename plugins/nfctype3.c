@@ -375,6 +375,7 @@ static int nfctype3_read_tag(uint32_t adapter_idx,
 
 static struct near_tag_driver type1_driver = {
 	.type     = NEAR_TAG_NFC_TYPE3,
+	.priority = NEAR_TAG_PRIORITY_DEFAULT,
 	.read_tag = nfctype3_read_tag,
 };
 

@@ -721,6 +721,7 @@ static int nfctype4_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 
 static struct near_tag_driver type4_driver = {
 	.type     = NEAR_TAG_NFC_TYPE4,
+	.priority = NEAR_TAG_PRIORITY_DEFAULT,
 	.read_tag = nfctype4_read_tag,
 	.add_ndef = nfctype4_write_tag,
 };
