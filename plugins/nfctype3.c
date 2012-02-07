@@ -205,7 +205,6 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	target_idx = near_tag_get_target_idx(tag->tag);
 
 	if (length < 0) {
-		g_free(tag);
 		err = -EIO;
 		goto out;
 	}
@@ -241,8 +240,10 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 
 	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, cmd.len,
 			nfctype3_data_recv, tag);
-	if (err == 0)
-		return 0;
+	if (err < 0)
+		goto out;
+
+	return 0;
 
 out:
 	if (err < 0 && tag->cb)
@@ -278,7 +279,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	struct recv_cookie *cookie = data;
 	int err = 0;
 	struct near_tag *tag;
-	struct type3_tag *t3_tag;
+	struct type3_tag *t3_tag = NULL;
 	uint32_t  ndef_data_length;
 
 	DBG("%d", length);
@@ -337,8 +338,10 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	err = nfctype3_data_read(t3_tag);
 
 out:
-	if (err < 0 && cookie->cb)
+	if (err < 0 && cookie->cb) {
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+		g_free(t3_tag);
+	}
 
 	release_recv_cookie(cookie);
 
