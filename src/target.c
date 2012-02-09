@@ -327,7 +327,9 @@ static void find_tag_type(struct near_target *target,
 		return;
 	}
 
-	if (target->protocols & NFC_PROTO_JEWEL_MASK) {
+	if (target->protocols & NFC_PROTO_NFC_DEP_MASK) {
+		target->tag_type = NEAR_TAG_NFC_DEP;
+	} else if (target->protocols & NFC_PROTO_JEWEL_MASK) {
 		uint8_t platconf = NFC_TAG_A_SENS_RES_PLATCONF(sens_res);
 		uint8_t ssd = NFC_TAG_A_SENS_RES_SSD(sens_res);
 
@@ -348,9 +350,6 @@ static void find_tag_type(struct near_target *target,
 			break;
 		case NFC_TAG_A_TYPE4:
 			target->tag_type = NEAR_TAG_NFC_TYPE4;
-			break;
-		case NFC_TAG_A_NFC_DEP:
-			target->tag_type = NEAR_TAG_NFC_DEP;
 			break;
 		case NFC_TAG_A_TYPE4_DEP:
 			target->tag_type = NEAR_TAG_NFC_TYPE4 |
