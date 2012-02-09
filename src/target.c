@@ -322,11 +322,6 @@ static void find_tag_type(struct near_target *target,
 	DBG("protocols 0x%x sens_res 0x%x sel_res 0x%x", target->protocols,
 							sens_res, sel_res);
 
-	if (target->type != NEAR_TARGET_TYPE_TAG) {
-		target->tag_type = NEAR_TAG_NFC_UNKNOWN;
-		return;
-	}
-
 	if (target->protocols & NFC_PROTO_NFC_DEP_MASK) {
 		target->tag_type = NEAR_TAG_NFC_DEP;
 	} else if (target->protocols & NFC_PROTO_JEWEL_MASK) {
