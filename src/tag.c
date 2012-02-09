@@ -319,7 +319,7 @@ int __near_tag_read(struct near_target *target, near_tag_io_cb cb)
 	DBG("");
 
 	type = __near_target_get_tag_type(target);
-	if (type == NEAR_TAG_NFC_UNKNOWN)
+	if (type == NFC_PROTO_MAX)
 		return -ENODEV;
 
 	DBG("type 0x%x", type);
@@ -352,7 +352,7 @@ int __near_tag_add_ndef(struct near_target *target,
 	DBG("");
 
 	type = __near_target_get_tag_type(target);
-	if (type == NEAR_TAG_NFC_UNKNOWN)
+	if (type == NFC_PROTO_MAX)
 		return -ENODEV;
 
 	DBG("type 0x%x", type);

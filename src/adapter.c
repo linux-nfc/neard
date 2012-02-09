@@ -583,8 +583,9 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	tag_type = __near_target_get_tag_type(target);
 
 	/* Add NDEF header information depends upon tag type */
-	if (tag_type & NEAR_TAG_NFC_TYPE1 ||
-			tag_type & NEAR_TAG_NFC_TYPE2) {
+	switch (tag_type) {
+	case NFC_PROTO_JEWEL:
+	case NFC_PROTO_MIFARE:
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
 		if (ndef_with_header == NULL)
@@ -601,7 +602,9 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
 		ndef_with_header->data[ndef->length + 2] = TLV_END;
 
-	} else if (tag_type & NEAR_TAG_NFC_TYPE3) {
+		break;
+
+	case NFC_PROTO_FELICA:
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
 		if (ndef_with_header == NULL)
@@ -616,7 +619,9 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 		memcpy(ndef_with_header->data, ndef->data, ndef->length);
 
-	} else if (tag_type & NEAR_TAG_NFC_TYPE4) {
+		break;
+
+	case NFC_PROTO_ISO14443:
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
 		if (ndef_with_header == NULL)
@@ -631,8 +636,12 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 		ndef_with_header->data[0] = (uint8_t)(ndef->length >> 8);
 		ndef_with_header->data[1] = (uint8_t)(ndef->length);
 		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
-	} else
+
+		break;
+
+	default:
 		goto out;
+	}
 
 	g_free(ndef->data);
 	g_free(ndef);

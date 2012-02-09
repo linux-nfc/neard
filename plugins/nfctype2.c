@@ -432,7 +432,7 @@ out:
 }
 
 static struct near_tag_driver type2_driver = {
-	.type     = NEAR_TAG_NFC_TYPE2,
+	.type     = NFC_PROTO_MIFARE,
 	.priority = NEAR_TAG_PRIORITY_DEFAULT,
 	.read_tag = nfctype2_read_tag,
 	.add_ndef = nfctype2_write_tag,

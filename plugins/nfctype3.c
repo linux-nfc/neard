@@ -645,7 +645,7 @@ static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 }
 
 static struct near_tag_driver type1_driver = {
-	.type     = NEAR_TAG_NFC_TYPE3,
+	.type     = NFC_PROTO_FELICA,
 	.priority = NEAR_TAG_PRIORITY_DEFAULT,
 	.read_tag = nfctype3_read_tag,
 	.add_ndef = nfctype3_write_tag,

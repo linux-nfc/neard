@@ -145,39 +145,45 @@ static void append_tag_type(DBusMessageIter *iter, void *user_data)
 
 	DBG("tag 0x%x", target->tag_type);
 
-	if (target->tag_type & NEAR_TAG_NFC_TYPE1) {
+	switch (target->tag_type) {
+	case NFC_PROTO_JEWEL:
 		str = "Type 1";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
-	}
 
-	if (target->tag_type & NEAR_TAG_NFC_TYPE2) {
+		break;
+
+	case NFC_PROTO_MIFARE:
 		str = "Type 2";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
-	}
 
-	if (target->tag_type & NEAR_TAG_NFC_TYPE3) {
+		break;
+
+	case NFC_PROTO_FELICA:
 		str = "Type 3";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
-	}
 
-	if (target->tag_type & NEAR_TAG_NFC_TYPE4) {
+		break;
+
+	case NFC_PROTO_ISO14443:
 		str = "Type 4";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
-	}
 
-	if (target->tag_type & NEAR_TAG_NFC_DEP) {
+		break;
+
+	case NFC_PROTO_NFC_DEP:
 		str = "NFC-DEP";
 
 		dbus_message_iter_append_basic(iter,
 				DBUS_TYPE_STRING, &str);
+		break;
 	}
 }
 
@@ -323,7 +329,7 @@ static void find_tag_type(struct near_target *target,
 							sens_res, sel_res);
 
 	if (target->protocols & NFC_PROTO_NFC_DEP_MASK) {
-		target->tag_type = NEAR_TAG_NFC_DEP;
+		target->tag_type = NFC_PROTO_NFC_DEP;
 	} else if (target->protocols & NFC_PROTO_JEWEL_MASK) {
 		uint8_t platconf = NFC_TAG_A_SENS_RES_PLATCONF(sens_res);
 		uint8_t ssd = NFC_TAG_A_SENS_RES_SSD(sens_res);
@@ -332,7 +338,7 @@ static void find_tag_type(struct near_target *target,
 
 		if ((ssd == NFC_TAG_A_SENS_RES_SSD_JEWEL) &&
 				(platconf == NFC_TAG_A_SENS_RES_PLATCONF_JEWEL))
-			target->tag_type = NEAR_TAG_NFC_TYPE1;
+			target->tag_type = NFC_PROTO_JEWEL;
 	} else if (target->protocols & NFC_TAG_A) {
 		uint8_t proto = NFC_TAG_A_SEL_PROT(sel_res);
 
@@ -340,25 +346,24 @@ static void find_tag_type(struct near_target *target,
 
 		switch(proto) {
 		case NFC_TAG_A_TYPE2:
-			target->tag_type = NEAR_TAG_NFC_TYPE2;
+			target->tag_type = NFC_PROTO_MIFARE;
 			target->sub_type = get_tag_type2_sub_type(sel_res);
 			break;
 		case NFC_TAG_A_TYPE4:
-			target->tag_type = NEAR_TAG_NFC_TYPE4;
+			target->tag_type = NFC_PROTO_ISO14443;
 			break;
 		case NFC_TAG_A_TYPE4_DEP:
-			target->tag_type = NEAR_TAG_NFC_TYPE4 |
-						NEAR_TAG_NFC_DEP;
+			target->tag_type = NFC_PROTO_NFC_DEP;
 			break;
 		}
 
 	} else if (target->protocols & NFC_PROTO_FELICA_MASK) {
-		target->tag_type = NEAR_TAG_NFC_TYPE3;
+		target->tag_type = NFC_PROTO_FELICA;
 	} else {
-		target->tag_type = NEAR_TAG_NFC_UNKNOWN;
+		target->tag_type = NFC_PROTO_MAX;
 	}
 
-	if ((target->tag_type & NEAR_TAG_NFC_DEP) != 0)
+	if (target->tag_type == NFC_PROTO_NFC_DEP)
 		target->type = NEAR_TARGET_TYPE_DEVICE;
 	else
 		target->type = NEAR_TARGET_TYPE_TAG;
