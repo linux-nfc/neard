@@ -510,8 +510,10 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 
 	err =  near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd, cmd.len,
 						data_write_resp, cookie);
-	if (err == 0)
-		return 0;
+	if (err < 0)
+		goto out;
+
+	return 0;
 
 out:
 	if (err < 0 && cookie->cb)
@@ -586,8 +588,10 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, cmd.len,
 						data_write_resp, cookie);
-	if (err == 0)
-		return 0;
+	if (err < 0)
+		goto out;
+
+	return 0;
 
 out:
 	release_recv_cookie(cookie);
