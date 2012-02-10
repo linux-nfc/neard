@@ -41,12 +41,13 @@
 
 #include "p2p.h"
 
-static int handover_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb)
+static near_bool_t handover_read(int client_fd,
+				uint32_t adapter_idx, uint32_t target_idx,
+				near_tag_io_cb cb)
 {
 	DBG("");
 
-	return 0;
+	return FALSE;
 }
 
 struct near_p2p_driver handover_driver = {

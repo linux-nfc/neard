@@ -93,7 +93,7 @@ static void snep_response_noinfo(int client_fd, uint8_t response)
 	send(client_fd, &resp, sizeof(resp), 0);
 }
 
-static void snep_read_ndef(int client_fd,
+static near_bool_t snep_read_ndef(int client_fd,
 		uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, int ndef_length, near_bool_t allocate)
 {
@@ -106,7 +106,7 @@ static void snep_read_ndef(int client_fd,
 
 		snep_data.nfc_data = g_try_malloc0(ndef_length + TLV_SIZE);
 		if (snep_data.nfc_data == NULL)
-			return;
+			return FALSE;
 
 		snep_data.nfc_data[0] = TLV_NDEF;
 		snep_data.nfc_data[1] = ndef_length;
@@ -120,7 +120,7 @@ static void snep_read_ndef(int client_fd,
 	bytes_recv = recv(client_fd, snep_data.nfc_data_ptr, remaining_bytes, 0);
 	if (bytes_recv < 0) {
 		near_error("Could not read SNEP NDEF buffer %d", bytes_recv);
-		return;
+		return FALSE;
 	}
 
 	DBG("Received %d bytes", bytes_recv);
@@ -137,18 +137,23 @@ static void snep_read_ndef(int client_fd,
 					snep_data.nfc_data_length);
 		if (tag == NULL) {
 			g_free(snep_data.nfc_data);
-			return;
+			return FALSE;
 		}
 
 		near_tlv_parse(tag, cb);
 		g_free(snep_data.nfc_data);
+
+		return FALSE;
 	} else {
 		snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
+
+		return TRUE;
 	}
 }
 
-static int snep_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb)
+static near_bool_t snep_read(int client_fd,
+				uint32_t adapter_idx, uint32_t target_idx,
+				near_tag_io_cb cb)
 {
 	struct p2p_snep_req_frame frame;
 	int bytes_recv;
@@ -158,9 +163,8 @@ static int snep_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
 
 	/* If current length is not 0, we're waiting for a fragment */
 	if (snep_data.nfc_data_current_length > 0) {
-		snep_read_ndef(client_fd, adapter_idx, target_idx, cb,
+		return snep_read_ndef(client_fd, adapter_idx, target_idx, cb,
 								0, FALSE);
-		return 0;
 	}
 
 	bytes_recv = recv(client_fd, &frame, sizeof(frame), 0);
@@ -176,15 +180,15 @@ static int snep_read(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
 	case SNEP_REQ_GET:
 		near_error("Unsupported SNEP request code");
 		snep_response_noinfo(client_fd, SNEP_RESP_NOT_IMPL);
-		return -EOPNOTSUPP;
+		return FALSE;
 	case SNEP_REQ_PUT:
 		ndef_length = GINT_FROM_BE(frame.length);
-		snep_read_ndef(client_fd, adapter_idx, target_idx, cb,
+		return snep_read_ndef(client_fd, adapter_idx, target_idx, cb,
 				ndef_length, TRUE);
 		break;
 	}
 
-	return 0;
+	return FALSE;
 }
 
 struct near_p2p_driver snep_driver = {

@@ -73,6 +73,8 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 	}
 
 	if (condition & G_IO_IN) {
+		near_bool_t more;
+
 		server_fd = g_io_channel_unix_get_fd(channel);
 
 		client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
@@ -87,12 +89,12 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 		DBG("client dsap %d ssap %d",
 			client_addr.dsap, client_addr.ssap);
 
-		driver->read(client_fd, driver_data->adapter_idx,
+		more = driver->read(client_fd, driver_data->adapter_idx,
 				driver_data->target_idx, driver_data->cb);
 
 		close(client_fd);
 
-		return FALSE;
+		return more;
 	}
 
 	return FALSE;
