@@ -388,8 +388,8 @@ out:
 	return err;
 }
 
-static int nfctype3_read_UID(uint32_t adapter_idx, uint32_t target_idx,
-							near_tag_io_cb cb)
+static int nfctype3_read_tag(uint32_t adapter_idx,
+				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type3_cmd cmd;
 	struct recv_cookie *cookie;
@@ -413,26 +413,6 @@ static int nfctype3_read_UID(uint32_t adapter_idx, uint32_t target_idx,
 
 	return near_adapter_send(adapter_idx, (uint8_t *)&cmd,
 			cmd.len , nfctype3_recv_UID, cookie);
-}
-
-static int nfctype3_read_tag(uint32_t adapter_idx,
-				uint32_t target_idx, near_tag_io_cb cb)
-{
-	int err;
-
-	DBG("");
-
-	err = near_adapter_connect(adapter_idx, target_idx, NFC_PROTO_FELICA);
-	if (err < 0) {
-		near_error("Could not connect %d", err);
-		return err;
-	}
-
-	err = nfctype3_read_UID(adapter_idx, target_idx, cb);
-	if (err < 0)
-		near_adapter_disconnect(adapter_idx);
-
-	return err;
 }
 
 static int update_attr_block_cb(uint8_t *resp, int length, void *data)
@@ -619,7 +599,6 @@ static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
-	int err;
 	struct near_tag *tag;
 
 	DBG("");
@@ -636,12 +615,7 @@ static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 		return -EPERM;
 	}
 
-	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
-
-	if (err < 0)
-		near_adapter_disconnect(adapter_idx);
-
-	return err;
+	return data_write(adapter_idx, target_idx, ndef, tag, cb);
 }
 
 static struct near_tag_driver type1_driver = {

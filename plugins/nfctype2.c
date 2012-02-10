@@ -267,22 +267,12 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 
 	tgt_subtype = near_target_get_subtype(adapter_idx, target_idx);
 
-	err = near_adapter_connect(adapter_idx, target_idx, NFC_PROTO_MIFARE);
-	if (err < 0) {
-		near_error("Could not connect %d", err);
-
-		return err;
-	}
-
 	if (tgt_subtype == NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT)
 		err = nfctype2_read_meta(adapter_idx, target_idx, cb);
 	else {
 		DBG("Unknown TAG Type 2 subtype (%d)", tgt_subtype);
 		err = -1;
 	}
-
-	if (err < 0)
-		near_adapter_disconnect(adapter_idx);
 
 	return err;
 }
@@ -385,7 +375,6 @@ static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
-	int err;
 	struct near_tag *tag;
 	enum near_target_sub_type tgt_subtype;
 
@@ -419,16 +408,7 @@ static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 		}
 	}
 
-	err = data_write(adapter_idx, target_idx, ndef, cb);
-	if (err < 0)
-		goto out;
-
-	return 0;
-
-out:
-	near_adapter_disconnect(adapter_idx);
-
-	return err;
+	return data_write(adapter_idx, target_idx, ndef, cb);
 }
 
 static struct near_tag_driver type2_driver = {

@@ -544,8 +544,8 @@ out_err:
 	return t4_cookie_release(err, cookie);
 }
 
-static int nfctype4_read_meta_v2(uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb)
+static int nfctype4_read_tag(uint32_t adapter_idx,
+		uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct recv_cookie *cookie;
 	int err = 0;
@@ -574,27 +574,6 @@ static int nfctype4_read_meta_v2(uint32_t adapter_idx, uint32_t target_idx,
 
 out_err:
 	return t4_cookie_release(err, cookie);
-}
-
-static int nfctype4_read_tag(uint32_t adapter_idx,
-		uint32_t target_idx, near_tag_io_cb cb)
-{
-	int err;
-
-	DBG("");
-
-	err = near_adapter_connect(adapter_idx, target_idx, NFC_PROTO_ISO14443);
-	if (err < 0) {
-		near_error("Could not connect %d", err);
-
-		return err;
-	}
-
-	err = nfctype4_read_meta_v2(adapter_idx, target_idx, cb);
-	if (err < 0)
-		near_adapter_disconnect(adapter_idx);
-
-	return err;
 }
 
 static int data_write_cb(uint8_t *resp, int length, void *data)

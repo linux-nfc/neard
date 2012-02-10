@@ -329,7 +329,7 @@ int __near_tag_read(struct near_target *target, near_tag_io_cb cb)
 
 		DBG("driver type 0x%x", driver->type);
 
-		if (driver->type & type) {
+		if (driver->type == type) {
 			uint32_t adapter_idx, target_idx;		
 
 			target_idx = __near_target_get_idx(target);
@@ -362,7 +362,7 @@ int __near_tag_add_ndef(struct near_target *target,
 
 		DBG("driver type 0x%x", driver->type);
 
-		if (driver->type & type) {
+		if (driver->type == type) {
 			uint32_t adapter_idx, target_idx;
 
 			target_idx = __near_target_get_idx(target);

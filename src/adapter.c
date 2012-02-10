@@ -670,6 +670,8 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 {
 	struct near_adapter *adapter;
 	struct near_target *target;
+	uint16_t tag_type;
+	int err;
 
 	DBG("idx %d", idx);
 
@@ -689,12 +691,27 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	g_hash_table_insert(adapter->targets,
 			GINT_TO_POINTER(target_idx), target);	
 
-	__near_tag_read(target, tag_read_cb);
+	tag_type = __near_target_get_tag_type(target);
 
-	if (protocols & NFC_PROTO_NFC_DEP_MASK)
-		dep_link_up(idx, target_idx);
+	if (tag_type != NFC_PROTO_NFC_DEP) {
+		err = near_adapter_connect(idx, target_idx, tag_type);
+		if (err < 0) {
+			near_error("Could not connect");
+			return err;
+		}
 
-	return 0;
+		err = __near_tag_read(target, tag_read_cb);
+	} else {
+		err = __near_tag_read(target, tag_read_cb);
+		if (err < 0) {
+			near_error("Could not read tag");
+			return err;
+		}
+
+		err = dep_link_up(idx, target_idx);
+	}
+
+	return err;
 }
 
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
@@ -759,7 +776,6 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 		near_error("Error while reading NFC bytes");
 
 		adapter_flush_rx(adapter, -EIO);
-		near_adapter_disconnect(adapter->idx);
 		return FALSE;
 	}
 
@@ -853,7 +869,6 @@ int near_adapter_disconnect(uint32_t idx)
 	close(adapter->sock);
 	adapter->sock = -1;
 	adapter->link = NULL;
-	adapter_flush_rx(adapter, -ENOLINK);
 
 	return 0;
 }

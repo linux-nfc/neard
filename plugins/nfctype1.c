@@ -303,8 +303,8 @@ out_err:
  * This cmd is common to static and dynamic targets
  * This should allow to get the HR0 byte
  */
-static int nfctype1_read_all(uint32_t adapter_idx, uint32_t target_idx,
-							near_tag_io_cb cb)
+static int nfctype1_read_tag(uint32_t adapter_idx,
+				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type1_cmd t1_cmd;
 	struct recv_cookie *cookie;
@@ -321,27 +321,7 @@ static int nfctype1_read_all(uint32_t adapter_idx, uint32_t target_idx,
 
 	return near_adapter_send(adapter_idx, (uint8_t *)&t1_cmd, sizeof(t1_cmd),
 							meta_recv, cookie);
-}
 
-static int nfctype1_read_tag(uint32_t adapter_idx,
-				uint32_t target_idx, near_tag_io_cb cb)
-{
-	int err;
-
-	DBG("");
-
-	err = near_adapter_connect(adapter_idx, target_idx, NFC_PROTO_JEWEL);
-	if (err < 0) {
-		near_error("Could not connect %d", err);
-
-		return err;
-	}
-
-	err = nfctype1_read_all(adapter_idx, target_idx, cb);
-	if (err < 0)
-		near_adapter_disconnect(adapter_idx);
-
-	return err;
 }
 
 static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
@@ -483,7 +463,6 @@ static int nfctype1_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
-	int err;
 	struct near_tag *tag;
 
 	DBG("");
@@ -510,11 +489,7 @@ static int nfctype1_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 		}
 	}
 
-	err = write_nmn_0(adapter_idx, target_idx, ndef, cb);
-	if (err < 0)
-		near_adapter_disconnect(adapter_idx);
-
-	return err;
+	return write_nmn_0(adapter_idx, target_idx, ndef, cb);
 }
 
 static struct near_tag_driver type1_driver = {
