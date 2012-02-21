@@ -548,6 +548,11 @@ static int dep_link_up(uint32_t idx, uint32_t target_idx)
 					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
 }
 
+static int dep_link_down(uint32_t idx)
+{
+	return __near_netlink_dep_link_down(idx);
+}
+
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
@@ -702,13 +707,14 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 
 		err = __near_tag_read(target, tag_read_cb);
 	} else {
+		/* For p2p, reading is service binding */
 		err = __near_tag_read(target, tag_read_cb);
 		if (err < 0) {
 			near_error("Could not read tag");
 			return err;
 		}
 
-		err = dep_link_up(idx, target_idx);
+		err = near_adapter_connect(idx, target_idx, tag_type);
 	}
 
 	return err;
@@ -815,6 +821,18 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	if (target == NULL)
 		return -ENOLINK;
 
+	if (protocol == NFC_PROTO_NFC_DEP) {
+		err = dep_link_up(idx, target_idx);
+		if (err < 0)
+			return err;
+
+		adapter->link = target;
+
+		DBG("link %p", adapter->link);
+
+		return 0;
+	}
+
 	sock = socket(AF_NFC, SOCK_SEQPACKET, NFC_SOCKPROTO_RAW);
 	if (sock == -1)
 		return sock;
@@ -850,12 +868,27 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 int near_adapter_disconnect(uint32_t idx)
 {
 	struct near_adapter *adapter;
+	uint16_t tag_type;
 
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (adapter == NULL)
 		return -ENODEV;
+
+	DBG("link %p", adapter->link);
+
+	if (adapter->link == NULL)
+		return -ENOLINK;
+
+	tag_type = __near_target_get_tag_type(adapter->link);
+
+	DBG("tag type %d", tag_type);
+
+	if (tag_type == NFC_PROTO_NFC_DEP) {
+		adapter->link = NULL;
+		return dep_link_down(idx);
+	}
 
 	if (adapter->sock == -1)
 		return -ENOLINK;
