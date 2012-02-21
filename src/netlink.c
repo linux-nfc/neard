@@ -175,7 +175,7 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 	name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 	protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 
-	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL)
+	if (attrs[NFC_ATTR_DEVICE_POWERED] == NULL)
 		powered = FALSE;
 	else
 		powered = nla_get_u8(attrs[NFC_ATTR_DEVICE_POWERED]);
