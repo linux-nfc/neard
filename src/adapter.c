@@ -655,8 +655,13 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	if (adapter == NULL)
 		goto out;
 
-	if (status < 0)
-		goto out;
+	if (status < 0) {
+		near_adapter_disconnect(adapter->idx);
+		if (adapter->periodic_poll == TRUE)
+			adapter_start_poll(adapter);
+
+		return;
+	}
 
 	__near_adapter_target_changed(adapter_idx);
 
