@@ -96,6 +96,28 @@ static void polling_changed(struct near_adapter *adapter)
 					DBUS_TYPE_BOOLEAN, &adapter->polling);
 }
 
+static int adapter_start_poll(struct near_adapter *adapter)
+{
+	int err;
+
+	if (g_hash_table_size(adapter->targets) > 0) {
+		DBG("Clearing targets");
+
+		g_hash_table_remove_all(adapter->targets);
+		__near_adapter_target_changed(adapter->idx);
+	}
+
+	err = __near_netlink_start_poll(adapter->idx, adapter->protocols);
+	if (err < 0)
+		return err;
+
+	adapter->polling = TRUE;
+
+	polling_changed(adapter);
+
+	return 0;
+}
+
 static void append_path(gpointer key, gpointer value, gpointer user_data)
 {
 	struct near_adapter *adapter = value;
@@ -279,20 +301,9 @@ static DBusMessage *start_poll(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
-	if (g_hash_table_size(adapter->targets) > 0) {
-		DBG("Clearing targets");
-
-		g_hash_table_remove_all(adapter->targets);
-		__near_adapter_target_changed(adapter->idx);
-	}
-
-	err = __near_netlink_start_poll(adapter->idx, adapter->protocols);
+	err = adapter_start_poll(adapter);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
-
-	adapter->polling = TRUE;
-
-	polling_changed(adapter);
 
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
