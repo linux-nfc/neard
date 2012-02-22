@@ -879,6 +879,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 int near_adapter_disconnect(uint32_t idx)
 {
 	struct near_adapter *adapter;
+	uint32_t target_idx;
 	uint16_t tag_type;
 
 	DBG("idx %d", idx);
@@ -893,8 +894,11 @@ int near_adapter_disconnect(uint32_t idx)
 		return -ENOLINK;
 
 	tag_type = __near_target_get_tag_type(adapter->link);
+	target_idx = __near_target_get_idx(adapter->link);
 
 	DBG("tag type %d", tag_type);
+
+	__near_adapter_remove_target(adapter->idx, target_idx);
 
 	if (tag_type == NFC_PROTO_NFC_DEP) {
 		adapter->link = NULL;
