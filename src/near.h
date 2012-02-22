@@ -125,6 +125,7 @@ int __near_tag_read(struct near_target *target, near_tag_io_cb cb);
 int __near_tag_add_ndef(struct near_target *target,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb);
+int __near_tag_check_presence(struct near_target *target, near_tag_io_cb cb);
 
 #include <near/tlv.h>
 

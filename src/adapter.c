@@ -35,6 +35,9 @@
 
 #include "near.h"
 
+/* We check for the tag being present every 2 seconds */
+#define CHECK_PRESENCE_PERIOD 2
+
 static DBusConnection *connection = NULL;
 
 static GHashTable *adapter_hash;
@@ -48,6 +51,7 @@ struct near_adapter {
 
 	near_bool_t powered;
 	near_bool_t polling;
+	near_bool_t periodic_poll;
 
 	GHashTable *targets;
 	struct near_target *link;
@@ -57,6 +61,8 @@ struct near_adapter {
 	guint watch;
 	GList *ioreq_list;
 	GList *ndef_q;
+
+	guint presence_timeout;
 };
 
 struct near_adapter_ioreq {
@@ -75,6 +81,9 @@ struct near_adapter_ioreq {
 static void free_adapter(gpointer data)
 {
 	struct near_adapter *adapter = data;
+
+	if (adapter->presence_timeout > 0)
+		g_source_remove(adapter->presence_timeout);
 
 	g_free(adapter->name);
 	g_free(adapter->path);
@@ -220,7 +229,6 @@ void __near_adapter_target_changed(uint32_t adapter_idx)
 				DBUS_TYPE_OBJECT_PATH, append_targets,
 				adapter);
 }
-
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -402,10 +410,77 @@ static int __publish_text_record(DBusMessage *msg, void *data)
 	return __push_ndef_queue(data, ndef);
 }
 
+static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
+								int status);
+
+static gboolean check_presence(gpointer user_data)
+{
+	struct near_adapter *adapter = user_data;
+	struct near_target *target;
+	int err;
+
+	DBG("");
+
+	if (adapter == NULL)
+		return FALSE;
+
+	target = adapter->link;
+	if (target == NULL)
+		return FALSE;
+
+	err = __near_tag_check_presence(target, tag_present_cb);
+	if (err < 0) {
+		DBG("Could not check target presence");
+
+		near_adapter_disconnect(adapter->idx);
+		if (adapter->periodic_poll == TRUE)
+			adapter_start_poll(adapter);
+	}
+
+	return FALSE;
+}
+
+static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
+								int status)
+{
+	struct near_adapter *adapter;
+
+	DBG("");
+
+	adapter = g_hash_table_lookup(adapter_hash,
+					GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
+	if (status < 0) {
+		DBG("Target is gone");
+
+		near_adapter_disconnect(adapter->idx);
+		if (adapter->periodic_poll == TRUE)
+			adapter_start_poll(adapter);
+
+		return;
+	}
+
+	adapter->presence_timeout =
+		g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
+					check_presence, adapter);
+}
+
 static void __add_ndef_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
-	DBG(" %d", status);
-	near_adapter_disconnect(adapter_idx);
+	struct near_adapter *adapter;
+
+	DBG("%d", status);
+
+	adapter = g_hash_table_lookup(adapter_hash,
+					GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
+	adapter->presence_timeout =
+		g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
+					check_presence, adapter);
 }
 
 static DBusMessage *publish(DBusConnection *conn,
@@ -496,6 +571,7 @@ struct near_adapter * __near_adapter_create(uint32_t idx,
 	adapter->idx = idx;
 	adapter->protocols = protocols;
 	adapter->powered = powered;
+	adapter->periodic_poll = FALSE;
 	adapter->targets = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 							NULL, free_target);
 	adapter->sock = -1;
@@ -572,6 +648,13 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	uint16_t tag_type;
 	int err;
 
+	DBG("");
+
+	adapter = g_hash_table_lookup(adapter_hash,
+					GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		goto out;
+
 	if (status < 0)
 		goto out;
 
@@ -579,11 +662,6 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	/* Check if adapter ndef queue has any ndef messages,
 	 * then write the ndef data on tag. */
-	adapter = g_hash_table_lookup(adapter_hash,
-					GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
-		goto out;
-
 	if (g_list_length(adapter->ndef_q) == 0)
 		goto out;
 
@@ -677,7 +755,10 @@ out:
 		g_free(ndef_with_header);
 	}
 
-	near_adapter_disconnect(adapter_idx);
+	if (adapter != NULL)
+		adapter->presence_timeout =
+			g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
+						check_presence, adapter);
 }
 
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
