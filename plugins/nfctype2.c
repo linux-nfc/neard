@@ -411,11 +411,49 @@ static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 	return data_write(adapter_idx, target_idx, ndef, cb);
 }
 
+static int check_presence(uint8_t *resp, int length, void *data)
+{
+	struct recv_cookie *cookie = data;
+	int err = 0;
+
+	DBG("%d", length);
+
+	if (length < 0)
+		err = -EIO;
+
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx,
+				cookie->target_idx, err);
+
+	return 0;
+}
+
+static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
+							near_tag_io_cb cb)
+{
+	struct type2_cmd cmd;
+	struct recv_cookie *cookie;
+
+	DBG("");
+
+	cmd.cmd = CMD_READ;
+	cmd.block = META_BLOCK_START;
+
+	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+
+	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd),
+							check_presence, cookie);
+}
+
 static struct near_tag_driver type2_driver = {
-	.type     = NFC_PROTO_MIFARE,
-	.priority = NEAR_TAG_PRIORITY_DEFAULT,
-	.read_tag = nfctype2_read_tag,
-	.add_ndef = nfctype2_write_tag,
+	.type           = NFC_PROTO_MIFARE,
+	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
+	.read_tag       = nfctype2_read_tag,
+	.add_ndef       = nfctype2_write_tag,
+	.check_presence = nfctype2_check_presence,
 };
 
 static int nfctype2_init(void)
