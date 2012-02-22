@@ -622,11 +622,56 @@ static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 	return data_write(adapter_idx, target_idx, ndef, tag, cb);
 }
 
+static int nfctype3_check_recv_UID(uint8_t *resp, int length, void *data)
+{
+	struct recv_cookie *rcv_cookie = data;
+	int err = 0;
+
+	DBG("length %d", length);
+
+	if (length < 0)
+		err = -EIO;
+
+	if (rcv_cookie->cb)
+		rcv_cookie->cb(rcv_cookie->adapter_idx,
+				rcv_cookie->target_idx, err);
+
+	return 0;
+}
+
+static int nfctype3_check_presence(uint32_t adapter_idx,
+				uint32_t target_idx, near_tag_io_cb cb)
+{
+	struct type3_cmd cmd;
+	struct recv_cookie *cookie;
+
+	DBG("");
+
+	/* CMD POLL */
+	cmd.cmd	 = CMD_POLL;	/* POLL command */
+	cmd.data[0] = 0x12;     /* System code (NFC SC) */
+	cmd.data[1] = 0xFC;
+	cmd.data[2] = 01;	/* request code */
+	cmd.data[3] = 0x00;	/* time slot */
+
+	/* data len + 2 bytes */
+	cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
+
+	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+
+	return near_adapter_send(adapter_idx, (uint8_t *)&cmd,
+			cmd.len , nfctype3_check_recv_UID, cookie);
+}
+
 static struct near_tag_driver type1_driver = {
-	.type     = NFC_PROTO_FELICA,
-	.priority = NEAR_TAG_PRIORITY_DEFAULT,
-	.read_tag = nfctype3_read_tag,
-	.add_ndef = nfctype3_write_tag,
+	.type           = NFC_PROTO_FELICA,
+	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
+	.read_tag       = nfctype3_read_tag,
+	.add_ndef       = nfctype3_write_tag,
+	.check_presence = nfctype3_check_presence,
 };
 
 static int nfctype3_init(void)
