@@ -90,7 +90,7 @@ struct type1_tag {
 	struct near_tag *tag;
 };
 
-struct recv_cookie {
+struct t1_cookie {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 	uint32_t current_block; /* Static tag */
@@ -99,7 +99,7 @@ struct recv_cookie {
 	near_tag_io_cb cb;
 };
 
-static void release_recv_cookie(struct recv_cookie *cookie)
+static void t1_cookie_release(struct t1_cookie *cookie)
 {
 	if (cookie == NULL)
 		return;
@@ -208,7 +208,7 @@ static int read_dynamic_tag(uint8_t *cc, int length, void *data)
 
 static int meta_recv(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t1_cookie *cookie = data;
 	struct near_tag *tag;
 	struct type1_tag *t1_tag = NULL;
 
@@ -294,7 +294,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	release_recv_cookie(cookie);
+	t1_cookie_release(cookie);
 
 	return err;
 }
@@ -307,14 +307,14 @@ static int nfctype1_read_tag(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type1_cmd t1_cmd;
-	struct recv_cookie *cookie;
+	struct t1_cookie *cookie;
 
 	DBG("");
 
 	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
 	t1_cmd.addr = 0;	       /* NA */
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t1_cookie));
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
@@ -327,7 +327,7 @@ static int nfctype1_read_tag(uint32_t adapter_idx,
 static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
 {
 	int err = 0;
-	struct recv_cookie *cookie = data;
+	struct t1_cookie *cookie = data;
 
 	DBG("");
 
@@ -341,12 +341,12 @@ static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
 
 	cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	release_recv_cookie(cookie);
+	t1_cookie_release(cookie);
 
 	return err;
 }
 
-static int write_nmn_e1(struct recv_cookie *cookie)
+static int write_nmn_e1(struct t1_cookie *cookie)
 {
 	struct type1_cmd cmd;
 
@@ -362,7 +362,7 @@ static int write_nmn_e1(struct recv_cookie *cookie)
 
 static int data_write(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t1_cookie *cookie = data;
 	uint8_t addr = 0;
 	struct type1_cmd cmd;
 	int err;
@@ -405,7 +405,7 @@ out:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	release_recv_cookie(cookie);
+	t1_cookie_release(cookie);
 
 	return err;
 }
@@ -415,7 +415,7 @@ static int write_nmn_0(uint32_t adapter_idx, uint32_t target_idx,
 {
 	int err;
 	struct type1_cmd cmd;
-	struct recv_cookie *cookie;
+	struct t1_cookie *cookie;
 
 	DBG("");
 
@@ -423,7 +423,7 @@ static int write_nmn_0(uint32_t adapter_idx, uint32_t target_idx,
 	cmd.addr = 0x08;
 	cmd.data[0] = 0x00;
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t1_cookie));
 	if (cookie == NULL) {
 		err = -ENOMEM;
 		return err;
@@ -444,7 +444,7 @@ static int write_nmn_0(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out:
-	release_recv_cookie(cookie);
+	t1_cookie_release(cookie);
 
 	return err;
 }
@@ -494,7 +494,7 @@ static int nfctype1_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 
 static int check_presence(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t1_cookie *cookie = data;
 	int err = 0;
 
 	DBG("%d", length);
@@ -513,14 +513,14 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type1_cmd t1_cmd;
-	struct recv_cookie *cookie;
+	struct t1_cookie *cookie;
 
 	DBG("");
 
 	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
 	t1_cmd.addr = 0;	       /* NA */
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t1_cookie));
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
