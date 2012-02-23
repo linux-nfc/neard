@@ -95,7 +95,7 @@ struct type4_cc {			/* Capability Container */
 	uint8_t tlv_blocks[];
 } __attribute__((packed));
 
-struct recv_cookie {
+struct t4_cookie {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 	near_tag_io_cb cb;
@@ -119,7 +119,7 @@ static int ISO_send_cmd(uint8_t class,
 			void *in_data)
 {
 	struct type4_cmd *cmd;
-	struct recv_cookie *in_rcv = in_data;
+	struct t4_cookie *in_rcv = in_data;
 	int err;
 
 	DBG("CLA:x%02x INS:x%02x P1:%02x P2:%02x",
@@ -207,7 +207,7 @@ static int ISO_Update(uint16_t offset, uint8_t nlen,
 			cookie);
 }
 
-static int t4_cookie_release(int err, struct recv_cookie *cookie)
+static int t4_cookie_release(int err, struct t4_cookie *cookie)
 {
 	if (cookie == NULL)
 		return err;
@@ -227,7 +227,7 @@ static int t4_cookie_release(int err, struct recv_cookie *cookie)
 
 static int data_read_cb(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data ;
+	struct t4_cookie *cookie = data ;
 	uint8_t *nfc_data;
 	uint16_t data_length, length_read, current_length;
 	uint16_t remain_bytes;
@@ -288,7 +288,7 @@ out_err:
 
 static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data ;
+	struct t4_cookie *cookie = data ;
 	struct near_tag *tag;
 	int err = 0;
 
@@ -344,7 +344,7 @@ out_err:
 
 static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t4_cookie *cookie = data;
 	int err = 0;
 
 	DBG("%d", length);
@@ -376,7 +376,7 @@ out_err:
 
 static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data ;
+	struct t4_cookie *cookie = data ;
 	struct type4_cc	*read_cc ;
 	int err = 0;
 
@@ -433,7 +433,7 @@ out_err:
 
 static int t4_select_cc(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t4_cookie *cookie = data;
 	int err = 0;
 
 	DBG("%d", length);
@@ -463,7 +463,7 @@ out_err:
 
 static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t4_cookie *cookie = data;
 	int err = 0 ;
 
 	DBG("%d", length);
@@ -500,7 +500,7 @@ out_err:
 
 static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t4_cookie *cookie = data;
 	int err = 0 ;
 
 	DBG("%d", length);
@@ -547,12 +547,12 @@ out_err:
 static int nfctype4_read_tag(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
-	struct recv_cookie *cookie;
+	struct t4_cookie *cookie;
 	int err = 0;
 
 	DBG("");
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t4_cookie));
 	if (cookie == NULL) {
 		err = -ENOMEM;
 		goto out_err;
@@ -578,7 +578,7 @@ out_err:
 
 static int data_write_cb(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t4_cookie *cookie = data;
 	int err = 0;
 
 	DBG("%d", length);
@@ -626,10 +626,10 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_ndef_message *ndef,
 				struct near_tag *tag, near_tag_io_cb cb)
 {
-	struct recv_cookie *cookie;
+	struct t4_cookie *cookie;
 	int err;
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t4_cookie));
 	if (cookie == NULL) {
 		err = -ENOMEM;
 		goto out;
@@ -700,7 +700,7 @@ static int nfctype4_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 
 static int check_presence(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t4_cookie *cookie = data;
 	int err = 0;
 
 	DBG("%d", length);
@@ -718,12 +718,12 @@ static int check_presence(uint8_t *resp, int length, void *data)
 static int nfctype4_check_presence(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
-	struct recv_cookie *cookie;
+	struct t4_cookie *cookie;
 	int err = 0;
 
 	DBG("");
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t4_cookie));
 	if (cookie == NULL) {
 		err = -ENOMEM;
 		goto out_err;
