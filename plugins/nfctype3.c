@@ -108,7 +108,7 @@ struct type3_tag {
 	struct near_tag *tag;
 };
 
-struct recv_cookie {
+struct t3_cookie {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 	near_tag_io_cb cb;
@@ -118,7 +118,7 @@ struct recv_cookie {
 	struct near_ndef_message *ndef;
 };
 
-static void release_recv_cookie(struct recv_cookie *cookie)
+static void t3_cookie_release(struct t3_cookie *cookie)
 {
 	if (cookie == NULL)
 		return;
@@ -276,7 +276,7 @@ static int nfctype3_data_read(struct type3_tag *tag)
 /* Read block 0 to retrieve the data length */
 static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t3_cookie *cookie = data;
 	int err = 0;
 	struct near_tag *tag;
 	struct type3_tag *t3_tag = NULL;
@@ -343,15 +343,15 @@ out:
 		g_free(t3_tag);
 	}
 
-	release_recv_cookie(cookie);
+	t3_cookie_release(cookie);
 
 	return err;
 }
 
 static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *rcv_cookie = data;
-	struct recv_cookie *snd_cookie;
+	struct t3_cookie *rcv_cookie = data;
+	struct t3_cookie *snd_cookie;
 	int err = 0;
 	struct type3_cmd cmd;
 
@@ -366,7 +366,7 @@ static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 	if (err < 0)
 		goto out;
 
-	snd_cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	snd_cookie = g_try_malloc0(sizeof(struct t3_cookie));
 	snd_cookie->adapter_idx = rcv_cookie->adapter_idx;
 	snd_cookie->target_idx = rcv_cookie->target_idx;
 	snd_cookie->cb = rcv_cookie->cb;
@@ -383,7 +383,7 @@ out:
 		rcv_cookie->cb(rcv_cookie->adapter_idx,
 				rcv_cookie->target_idx, err);
 
-	release_recv_cookie(rcv_cookie);
+	t3_cookie_release(rcv_cookie);
 
 	return err;
 }
@@ -392,7 +392,7 @@ static int nfctype3_read_tag(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type3_cmd cmd;
-	struct recv_cookie *cookie;
+	struct t3_cookie *cookie;
 
 	DBG("");
 
@@ -406,7 +406,7 @@ static int nfctype3_read_tag(uint32_t adapter_idx,
 	/* data len + 2 bytes */
 	cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t3_cookie));
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
@@ -417,7 +417,7 @@ static int nfctype3_read_tag(uint32_t adapter_idx,
 
 static int update_attr_block_cb(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t3_cookie *cookie = data;
 	int err;
 
 	DBG("");
@@ -437,12 +437,12 @@ out:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	release_recv_cookie(cookie);
+	t3_cookie_release(cookie);
 
 	return err;
 }
 
-static int update_attr_block(struct recv_cookie *cookie)
+static int update_attr_block(struct t3_cookie *cookie)
 {
 	struct type3_cmd cmd;
 	uint16_t checksum;
@@ -470,7 +470,7 @@ static int update_attr_block(struct recv_cookie *cookie)
 
 static int data_write_resp(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *cookie = data;
+	struct t3_cookie *cookie = data;
 	struct type3_cmd cmd;
 	uint8_t padding[BLOCK_SIZE] = {0};
 	int err;
@@ -519,7 +519,7 @@ out:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	release_recv_cookie(cookie);
+	t3_cookie_release(cookie);
 
 	return err;
 }
@@ -529,7 +529,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_tag *tag,
 				near_tag_io_cb cb)
 {
-	struct recv_cookie *cookie;
+	struct t3_cookie *cookie;
 	struct type3_cmd cmd;
 	uint16_t checksum, nmaxb;
 	uint8_t i, len = 0;
@@ -538,7 +538,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	DBG("");
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t3_cookie));
 	if (cookie == NULL) {
 		err = -ENOMEM;
 		goto out;
@@ -594,7 +594,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out:
-	release_recv_cookie(cookie);
+	t3_cookie_release(cookie);
 
 	return err;
 }
@@ -624,7 +624,7 @@ static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 
 static int nfctype3_check_recv_UID(uint8_t *resp, int length, void *data)
 {
-	struct recv_cookie *rcv_cookie = data;
+	struct t3_cookie *rcv_cookie = data;
 	int err = 0;
 
 	DBG("length %d", length);
@@ -643,7 +643,7 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type3_cmd cmd;
-	struct recv_cookie *cookie;
+	struct t3_cookie *cookie;
 
 	DBG("");
 
@@ -657,7 +657,7 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 	/* data len + 2 bytes */
 	cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
 
-	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	cookie = g_try_malloc0(sizeof(struct t3_cookie));
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
