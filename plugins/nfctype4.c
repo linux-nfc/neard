@@ -698,11 +698,61 @@ static int nfctype4_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 	return data_write(adapter_idx, target_idx, ndef, tag, cb);
 }
 
+static int check_presence(uint8_t *resp, int length, void *data)
+{
+	struct recv_cookie *cookie = data;
+	int err = 0;
+
+	DBG("%d", length);
+
+	if (length < 0)
+		err = -EIO;
+
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx,
+				cookie->target_idx, err);
+
+	return 0;
+}
+
+static int nfctype4_check_presence(uint32_t adapter_idx,
+		uint32_t target_idx, near_tag_io_cb cb)
+{
+	struct recv_cookie *cookie;
+	int err = 0;
+
+	DBG("");
+
+	cookie = g_try_malloc0(sizeof(struct recv_cookie));
+	if (cookie == NULL) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+	cookie->tag = NULL;
+	cookie->read_data = 0;;
+
+	/* Check for V2 type 4 tag */
+	err = ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
+			0x4, check_presence, cookie);
+	if (err < 0)
+		goto out_err;
+
+	return err;
+
+out_err:
+	return t4_cookie_release(err, cookie);
+}
+
 static struct near_tag_driver type4_driver = {
-	.type     = NFC_PROTO_ISO14443,
-	.priority = NEAR_TAG_PRIORITY_DEFAULT,
-	.read_tag = nfctype4_read_tag,
-	.add_ndef = nfctype4_write_tag,
+	.type           = NFC_PROTO_ISO14443,
+	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
+	.read_tag       = nfctype4_read_tag,
+	.add_ndef       = nfctype4_write_tag,
+	.check_presence = nfctype4_check_presence,
 };
 
 static int nfctype4_init(void)
