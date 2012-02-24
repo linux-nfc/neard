@@ -504,27 +504,29 @@ static DBusMessage *publish(DBusConnection *conn,
 		dbus_message_iter_recurse(&arr_iter, &ent_iter);
 		dbus_message_iter_get_basic(&ent_iter, &key);
 
-		if (g_strcmp0(key, "Type") == 0) {
-			dbus_message_iter_next(&ent_iter);
-			dbus_message_iter_recurse(&ent_iter, &var_iter);
+		if (g_strcmp0(key, "Type") != 0) {
+			dbus_message_iter_next(&arr_iter);
+			continue;
+		}
 
-			switch (dbus_message_iter_get_arg_type(&var_iter)) {
-			case DBUS_TYPE_STRING:
-				dbus_message_iter_get_basic(&var_iter, &value);
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
 
-				if (g_strcmp0(value, "Text") == 0) {
-					if (__publish_text_record(msg, adapter)
-							< 0)
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			dbus_message_iter_get_basic(&var_iter, &value);
+
+			if (g_strcmp0(value, "Text") == 0) {
+				if (__publish_text_record(msg, adapter)	< 0)
 						goto error;
 
-					goto reply;
-				} else {
-					DBG(" '%s' not supported", value);
-					goto error;
-				}
+				goto reply;
+			} else {
+				DBG(" '%s' not supported", value);
+				goto error;
+			}
 
 				break;
-			}
 		}
 
 		dbus_message_iter_next(&arr_iter);
