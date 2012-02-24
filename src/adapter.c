@@ -51,7 +51,7 @@ struct near_adapter {
 
 	near_bool_t powered;
 	near_bool_t polling;
-	near_bool_t periodic_poll;
+	near_bool_t constant_poll;
 
 	GHashTable *targets;
 	struct near_target *link;
@@ -433,7 +433,7 @@ static gboolean check_presence(gpointer user_data)
 		DBG("Could not check target presence");
 
 		near_adapter_disconnect(adapter->idx);
-		if (adapter->periodic_poll == TRUE)
+		if (adapter->constant_poll == TRUE)
 			adapter_start_poll(adapter);
 	}
 
@@ -456,7 +456,7 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 		DBG("Target is gone");
 
 		near_adapter_disconnect(adapter->idx);
-		if (adapter->periodic_poll == TRUE)
+		if (adapter->constant_poll == TRUE)
 			adapter_start_poll(adapter);
 
 		return;
@@ -697,7 +697,7 @@ struct near_adapter * __near_adapter_create(uint32_t idx,
 	adapter->idx = idx;
 	adapter->protocols = protocols;
 	adapter->powered = powered;
-	adapter->periodic_poll = FALSE;
+	adapter->constant_poll = near_setting_get_bool("ConstantPoll");
 	adapter->targets = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 							NULL, free_target);
 	adapter->sock = -1;
@@ -783,7 +783,7 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	if (status < 0) {
 		near_adapter_disconnect(adapter->idx);
-		if (adapter->periodic_poll == TRUE)
+		if (adapter->constant_poll == TRUE)
 			adapter_start_poll(adapter);
 
 		return;
