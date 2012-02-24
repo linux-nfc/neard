@@ -199,7 +199,6 @@ static void append_text_record(struct near_ndef_text_record *text,
 
 }
 
-#define NFC_MAX_URI_ID 0x23
 static const char *uri_prefix[NFC_MAX_URI_ID + 1] = {
 	"",
 	"http://www.",
@@ -238,6 +237,14 @@ static const char *uri_prefix[NFC_MAX_URI_ID + 1] = {
 	"urn:epc:",
 	"urn:nfc:",
 };
+
+const char *__near_ndef_get_uri_prefix(uint8_t id)
+{
+	if (id > NFC_MAX_URI_ID)
+		return NULL;
+
+	return uri_prefix[id];
+}
 
 static void append_uri_record(struct near_ndef_uri_record *uri,
 					DBusMessageIter *dict)
