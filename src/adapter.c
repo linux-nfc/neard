@@ -467,6 +467,79 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 					check_presence, adapter);
 }
 
+static char *get_uri_field(DBusMessage *msg)
+{
+	DBusMessageIter iter, arr_iter;
+	char *uri = NULL;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+					DBUS_TYPE_INVALID) {
+		const char *key;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			if (g_strcmp0(key, "URI") == 0)
+				dbus_message_iter_get_basic(&var_iter, &uri);
+
+			break;
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+	return uri;
+}
+
+static int publish_uri_record(DBusMessage *msg, void *data)
+{
+	struct near_ndef_message *ndef;
+	char *uri = NULL;
+	const char *uri_prefix = NULL;
+	uint8_t id_len, i;
+	uint32_t uri_len;
+
+	DBG("");
+
+	uri = get_uri_field(msg);
+	if (uri == NULL)
+		return -EINVAL;
+
+	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
+		uri_prefix = __near_ndef_get_uri_prefix(i);
+
+		if (uri_prefix != NULL &&
+				g_str_has_prefix(uri, uri_prefix) == TRUE)
+			break;
+	}
+
+	/* If uri_prefix is NULL then ID will be zero */
+	if (uri_prefix == NULL) {
+		i = 0;
+		id_len = 0;
+	} else
+		id_len = strlen(uri_prefix);
+
+	uri_len = strlen(uri) - id_len;
+	ndef = near_ndef_prepare_uri_record(i, uri_len,
+						(uint8_t *)(uri + id_len));
+	if (ndef == NULL)
+		return -EINVAL;
+
+	return __push_ndef_queue(data, ndef);
+}
+
 static void __add_ndef_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
@@ -521,6 +594,12 @@ static DBusMessage *publish(DBusConnection *conn,
 						goto error;
 
 				goto reply;
+			} else if (g_strcmp0(value, "URI") == 0) {
+				if (publish_uri_record(msg, adapter)	< 0)
+					goto error;
+
+				goto reply;
+
 			} else {
 				DBG(" '%s' not supported", value);
 				goto error;
