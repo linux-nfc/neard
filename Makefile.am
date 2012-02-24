@@ -5,7 +5,7 @@ includedir = @includedir@/near
 
 include_HEADERS = include/types.h include/log.h include/plugin.h \
 			include/tag.h include/adapter.h include/ndef.h \
-			include/target.h include/tlv.h
+			include/target.h include/tlv.h include/setting.h
 
 nodist_include_HEADERS = include/version.h
 
@@ -42,13 +42,16 @@ nodist_src_neard_SOURCES = src/builtin.h
 
 AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ @NETLINK_CFLAGS@ $(builtin_cflags) \
 					-DNEAR_PLUGIN_BUILTIN \
-					-DPLUGINDIR=\""$(plugindir)"\"
+					-DPLUGINDIR=\""$(plugindir)"\" \
+					-DCONFIGDIR=\""$(configdir)\""
 
 INCLUDES = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 
 CLEANFILES = src/builtin.h $(local_headers)
 
 plugindir = $(libdir)/near/plugins
+
+configdir = ${sysconfdir}/neard
 
 if MAINTAINER_MODE
 build_plugindir = $(abs_top_srcdir)/plugins/.libs

@@ -147,6 +147,8 @@ int __near_netlink_deactivate_target(uint32_t adapter_idx,
 int __near_netlink_init(void);
 void __near_netlink_cleanup(void);
 
+#include <near/setting.h>
+
 #include <near/plugin.h>
 
 int __near_plugin_init(const char *pattern, const char *exclude);
