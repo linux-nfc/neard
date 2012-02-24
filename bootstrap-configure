@@ -7,6 +7,7 @@ fi
 ./bootstrap && \
     ./configure --enable-maintainer-mode \
 		--enable-debug \
+		--sysconfdir=/etc \
 		--enable-nfctype1=builtin \
 		--enable-nfctype2=builtin \
 		--enable-nfctype3=builtin \
