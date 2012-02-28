@@ -47,6 +47,8 @@ static near_bool_t handover_read(int client_fd,
 {
 	DBG("");
 
+	cb(adapter_idx, target_idx, 0);
+
 	return FALSE;
 }
 

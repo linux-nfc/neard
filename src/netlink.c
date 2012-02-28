@@ -556,7 +556,7 @@ static int nfc_netlink_event_dep_up(struct genlmsghdr *gnlh)
 
 		DBG("%d %d", idx, target_idx);
 
-		return 0;
+		return near_adapter_set_dep_state(idx, TRUE);
 	} else {
 		return -EOPNOTSUPP;
 	}
@@ -578,7 +578,7 @@ static int nfc_netlink_event_dep_down(struct genlmsghdr *gnlh)
 
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 
-	near_adapter_disconnect(idx);
+	near_adapter_set_dep_state(idx, FALSE);
 
 	return 0;
 }

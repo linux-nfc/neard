@@ -36,6 +36,7 @@
 #include <near/log.h>
 #include <near/types.h>
 #include <near/target.h>
+#include <near/adapter.h>
 #include <near/tlv.h>
 
 #include "p2p.h"
@@ -176,10 +177,26 @@ static int p2p_read(uint32_t adapter_idx,
 	return err;
 }
 
+static int p2p_check_presence(uint32_t adapter_idx, uint32_t target_idx,
+							near_tag_io_cb cb)
+{
+	int present = -ENODEV;
+
+	DBG("Present %d", near_adapter_get_dep_state(adapter_idx));
+
+	if (near_adapter_get_dep_state(adapter_idx) == TRUE)
+		present = 0;
+
+	cb(adapter_idx, target_idx, present);
+
+	return 0;
+}
+
 static struct near_tag_driver p2p_driver = {
-	.type     = NFC_PROTO_NFC_DEP,
-	.priority = NEAR_TAG_PRIORITY_HIGH,
-	.read_tag = p2p_read,
+	.type           = NFC_PROTO_NFC_DEP,
+	.priority       = NEAR_TAG_PRIORITY_HIGH,
+	.read_tag       = p2p_read,
+	.check_presence = p2p_check_presence,
 };
 
 

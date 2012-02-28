@@ -52,6 +52,7 @@ struct near_adapter {
 	near_bool_t powered;
 	near_bool_t polling;
 	near_bool_t constant_poll;
+	near_bool_t dep_up;
 
 	GHashTable *targets;
 	struct near_target *link;
@@ -698,6 +699,7 @@ struct near_adapter * __near_adapter_create(uint32_t idx,
 	adapter->protocols = protocols;
 	adapter->powered = powered;
 	adapter->constant_poll = near_setting_get_bool("ConstantPoll");
+	adapter->dep_up = FALSE;
 	adapter->targets = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 							NULL, free_target);
 	adapter->sock = -1;
@@ -722,6 +724,34 @@ const char *__near_adapter_get_path(struct near_adapter *adapter)
 struct near_adapter *__near_adapter_get(uint32_t idx)
 {
 	return g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+}
+
+int near_adapter_get_dep_state(uint32_t idx)
+{
+	struct near_adapter *adapter;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	return adapter->dep_up;
+}
+
+int near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
+{
+	struct near_adapter *adapter;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	adapter->dep_up = dep;
+
+	return 0;
 }
 
 int __near_adapter_add(struct near_adapter *adapter)
