@@ -506,7 +506,9 @@ static int check_presence(uint8_t *resp, int length, void *data)
 		cookie->cb(cookie->adapter_idx,
 				cookie->target_idx, err);
 
-	return 0;
+	t1_cookie_release(cookie);
+
+	return err;
 }
 
 static int nfctype1_check_presence(uint32_t adapter_idx,
@@ -514,6 +516,7 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 {
 	struct type1_cmd t1_cmd;
 	struct t1_cookie *cookie;
+	int err;
 
 	DBG("");
 
@@ -521,13 +524,24 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 	t1_cmd.addr = 0;	       /* NA */
 
 	cookie = g_try_malloc0(sizeof(struct t1_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&t1_cmd, sizeof(t1_cmd),
+	err = near_adapter_send(adapter_idx, (uint8_t *)&t1_cmd, sizeof(t1_cmd),
 							check_presence, cookie);
+	if (err < 0)
+		goto out;
 
+	return 0;
+
+out:
+	t1_cookie_release(cookie);
+
+	return err;
 }
 
 static struct near_tag_driver type1_driver = {
