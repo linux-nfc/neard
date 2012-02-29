@@ -636,7 +636,9 @@ static int nfctype3_check_recv_UID(uint8_t *resp, int length, void *data)
 		rcv_cookie->cb(rcv_cookie->adapter_idx,
 				rcv_cookie->target_idx, err);
 
-	return 0;
+	t3_cookie_release(rcv_cookie);
+
+	return err;
 }
 
 static int nfctype3_check_presence(uint32_t adapter_idx,
@@ -644,6 +646,7 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 {
 	struct type3_cmd cmd;
 	struct t3_cookie *cookie;
+	int err;
 
 	DBG("");
 
@@ -658,12 +661,22 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 	cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd,
 			cmd.len , nfctype3_check_recv_UID, cookie);
+	if (err < 0)
+		goto out;
+
+out:
+	t3_cookie_release(cookie);
+
+	return err;
 }
 
 static struct near_tag_driver type1_driver = {
