@@ -302,11 +302,11 @@ static enum near_target_sub_type get_tag_type2_sub_type(uint8_t sel_res)
 	case 0x00 :
 		return NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT;
 	case 0x08:
-		return NEAR_TAG_NFC_T2_MIFARE_1K;
+		return NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K;
 	case 0x09:
 		return NEAR_TAG_NFC_T2_MIFARE_MINI;
 	case 0x18:
-		return NEAR_TAG_NFC_T2_MIFARE_STD_4K;
+		return NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K;
 	case 0x20:
 		return NEAR_TAG_NFC_T2_MIFARE_DESFIRE;
 	case 0x28 :
