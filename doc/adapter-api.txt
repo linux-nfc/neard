@@ -115,7 +115,7 @@ Properties:	string Mode [readwrite]
 			The adapter mode.
 
 			Valid types are "initiator" and "target".
-			The default value for the adapter mode is "target".
+			The default value for the adapter mode is "initiator".
 
 		boolean Powered [readwrite]
 
