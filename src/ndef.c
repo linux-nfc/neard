@@ -709,6 +709,8 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 	struct near_ndef_record_header *rec_header = NULL;
 	uint8_t type_len, *type = NULL;
 
+	DBG("length %d", length);
+
 	if (rec == NULL || offset >= length)
 		return NULL;
 
@@ -726,6 +728,10 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 	rec_header->il = RECORD_IL_BIT(rec[offset]);
 	rec_header->tnf = RECORD_TNF_BIT(rec[offset]);
 
+	DBG("mb %d me %d sr %d il %d tnf %d",
+		rec_header->mb, rec_header->me, rec_header->sr,
+		rec_header->il, rec_header->tnf);
+
 	offset++;
 	type_len = rec[offset++];
 
@@ -739,6 +745,8 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		if (offset >= length)
 			goto fail;
 	}
+
+	DBG("payload length %d", rec_header->payload_len);
 
 	if (rec_header->il == 1) {
 		rec_header->il_length = rec[offset++];
