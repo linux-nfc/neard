@@ -40,6 +40,9 @@
 #include <near/ndef.h>
 #include <near/tlv.h>
 
+extern int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
+		near_tag_io_cb cb, enum near_target_sub_type tgt_subtype);
+
 #define CMD_READ         0x30
 #define CMD_WRITE        0xA2
 
@@ -267,11 +270,22 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 
 	tgt_subtype = near_target_get_subtype(adapter_idx, target_idx);
 
-	if (tgt_subtype == NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT)
+	switch (tgt_subtype) {
+	case NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT:
 		err = nfctype2_read_meta(adapter_idx, target_idx, cb);
-	else {
+		break;
+
+	/* Specific Mifare read access */
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
+		err= mifare_read_tag( adapter_idx, target_idx,
+			cb, tgt_subtype);
+		break;
+
+	default:
 		DBG("Unknown TAG Type 2 subtype (%d)", tgt_subtype);
 		err = -1;
+		break;
 	}
 
 	return err;

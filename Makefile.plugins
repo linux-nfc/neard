@@ -18,10 +18,11 @@ endif
 if NFCTYPE2
 if NFCTYPE2_BUILTIN
 builtin_modules += nfctype2
-builtin_sources += plugins/nfctype2.c
+builtin_sources += plugins/nfctype2.c plugins/mifare.c
 else
 plugin_LTLIBRARIES += plugins/nfctype2.la
 plugin_objects += $(plugins_nfctype2_la_OBJECTS)
+plugins_nfctype2_la_SOURCES = plugins/nfctype2.c plugins/mifare.c
 plugins_nfctype2_la_CFLAGS = $(plugin_cflags)
 plugins_nfctype2_la_LDFLAGS = $(plugin_ldflags)
 endif
