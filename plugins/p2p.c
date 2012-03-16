@@ -90,24 +90,15 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 	return more;
 }
 
-static void p2p_free_clients(struct p2p_data *server_data)
+static void free_client_data(gpointer data)
 {
-	GList *list;
 	struct p2p_data *client_data;
 
-	list = server_data->client_list;
+	client_data = (struct p2p_data *)data;
 
-	while (list != NULL) {
-		client_data = (struct p2p_data *)list->data;
-
-		list = list->next;
-
-		server_data->client_list =
-			g_list_remove(server_data->client_list, client_data);
-		if (client_data->driver->close != NULL)
-			client_data->driver->close(client_data->fd, 0);
-		g_free(client_data);
-	}
+	if (client_data->driver->close != NULL)
+		client_data->driver->close(client_data->fd, 0);
+	g_free(client_data);
 }
 
 static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
@@ -126,7 +117,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 		if (server_data->watch > 0)
 			g_source_remove(server_data->watch);
 		server_data->watch = 0;
-		p2p_free_clients(server_data);
+		g_list_free_full(server_data->client_list, free_client_data);
 
 		near_error("Error with %s server channel", driver->name);
 
