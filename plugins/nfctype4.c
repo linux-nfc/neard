@@ -712,7 +712,7 @@ static int check_presence(uint8_t *resp, int length, void *data)
 		cookie->cb(cookie->adapter_idx,
 				cookie->target_idx, err);
 
-	return 0;
+	return t4_cookie_release(err, cookie);
 }
 
 static int nfctype4_check_presence(uint32_t adapter_idx,
