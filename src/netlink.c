@@ -193,7 +193,7 @@ int __near_netlink_get_adapters(void)
 
 	DBG("");
 
-	if (nfc_state->nlnfc == NULL)
+	if (nfc_state == NULL || nfc_state->nlnfc == NULL)
 		return -ENODEV;
 
 	msg = nlmsg_alloc();
@@ -796,6 +796,8 @@ handle_destroy:
 state_free:
 	g_free(nfc_state);
 
+	nfc_state = NULL;
+
 	near_error("netlink init failed");
 
 	return err;
@@ -809,6 +811,9 @@ void __near_netlink_cleanup(void)
 
 		netlink_channel = NULL;
 	}
+
+	if (nfc_state == NULL)
+		return;
 
 	genl_family_put(nfc_state->nlnfc);
 	nl_cache_free(nfc_state->nl_cache);
