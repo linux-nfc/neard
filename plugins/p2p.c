@@ -101,10 +101,16 @@ static void free_client_data(gpointer data)
 {
 	struct p2p_data *client_data;
 
+	DBG("");
+
 	client_data = (struct p2p_data *)data;
 
 	if (client_data->driver->close != NULL)
 		client_data->driver->close(client_data->fd, 0);
+
+	if (client_data->watch > 0)
+		g_source_remove(client_data->watch);
+
 	g_free(client_data);
 }
 
