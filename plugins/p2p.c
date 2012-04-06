@@ -63,14 +63,21 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 	DBG("condition 0x%x", condition);
 
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
+		int err;
+
 		if (client_data->watch > 0)
 			g_source_remove(client_data->watch);
 		client_data->watch = 0;
 
-		if (client_data->driver->close != NULL)
-			client_data->driver->close(client_data->fd, -EIO);
+		if (condition & (G_IO_NVAL | G_IO_ERR))
+			err = -EIO;
+		else
+			err = 0;
 
-		near_error("Error with %s client channel",
+		if (client_data->driver->close != NULL)
+			client_data->driver->close(client_data->fd, err);
+
+		near_error("%s client channel closed",
 					client_data->driver->name);
 
 		return FALSE;
