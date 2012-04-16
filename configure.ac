@@ -64,12 +64,8 @@ PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.28, dummy=yes,
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.0, dummy=yes,
-				AC_MSG_ERROR(D-Bus >= 1.0 is required))
-AC_CHECK_LIB(dbus-1, dbus_watch_get_unix_fd, dummy=yes,
-	AC_DEFINE(NEED_DBUS_WATCH_GET_UNIX_FD, 1,
-		[Define to 1 if you need the dbus_watch_get_unix_fd() function.]
-))
+PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.2, dummy=yes,
+				AC_MSG_ERROR(D-Bus >= 1.2 is required))
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
