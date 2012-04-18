@@ -47,7 +47,7 @@
 
 /* Prototype */
 int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb, enum near_target_sub_type tgt_subtype);
+		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
 /* MIFARE command set */
 #define MF_CMD_WRITE		0xA2
@@ -491,8 +491,6 @@ done_mad:
 		goto out_err;
 	}
 
-	near_tag_set_uid(mf_ck->tag, mf_ck->nfcid1, mf_ck->nfcid1_len);
-
 	/* Time to read the NFC data */
 	err = mifare_read_NFC(mf_ck);
 
@@ -611,7 +609,7 @@ out_err:
  * On reading, we ignore the CRC.
  */
 int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb, enum near_target_sub_type tgt_subtype)
+		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype)
 {
 	struct mifare_cookie *cookie;
 	int err;

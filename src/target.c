@@ -41,7 +41,7 @@ struct near_target {
 	uint32_t adapter_idx;
 	uint32_t protocols;
 	enum near_target_type type;
-	enum near_target_sub_type sub_type;
+	enum near_tag_sub_type sub_type;
 	uint8_t nfcid[NFC_MAX_NFCID1_LEN];
 	uint8_t nfcid_len;
 
@@ -296,7 +296,7 @@ static GDBusSignalTable target_signals[] = {
 #define NFC_TAG_A_SENS_RES_SSD(sens_res) ((sens_res) & 0x001f)
 #define NFC_TAG_A_SENS_RES_PLATCONF(sens_res) (((sens_res) & 0x0f00) >> 8)
 
-static enum near_target_sub_type get_tag_type2_sub_type(uint8_t sel_res)
+static enum near_tag_sub_type get_tag_type2_sub_type(uint8_t sel_res)
 {
 	switch(sel_res) {
 	case 0x00 :
@@ -425,7 +425,7 @@ void __near_target_remove(struct near_target *target)
 	g_hash_table_remove(target_hash, target->path);
 }
 
-enum near_target_sub_type near_target_get_subtype(uint32_t adapter_idx,
+enum near_tag_sub_type near_target_get_subtype(uint32_t adapter_idx,
 				uint32_t target_idx)
 
 {

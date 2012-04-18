@@ -334,7 +334,6 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	t3_tag->cb = cookie->cb;
 	t3_tag->tag = tag;
 
-	near_tag_set_uid(tag, cookie->IDm , LEN_ID);
 	err = nfctype3_data_read(t3_tag);
 
 out:

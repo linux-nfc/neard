@@ -41,7 +41,7 @@
 #include <near/tlv.h>
 
 extern int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb, enum near_target_sub_type tgt_subtype);
+		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
 #define CMD_READ         0x30
 #define CMD_WRITE        0xA2
@@ -213,8 +213,6 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	t2_tag->cb = cookie->cb;
 	t2_tag->tag = tag;
 
-	near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
-
 	/* Set the ReadWrite flag */
 	if (TAG_T2_WRITE_FLAG(cc) == TYPE2_NOWRITE_ACCESS)
 		near_tag_set_ro(tag, TRUE);
@@ -264,7 +262,7 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	int err;
-	enum near_target_sub_type tgt_subtype;
+	enum near_tag_sub_type tgt_subtype;
 
 	DBG("");
 
@@ -390,7 +388,7 @@ static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 				near_tag_io_cb cb)
 {
 	struct near_tag *tag;
-	enum near_target_sub_type tgt_subtype;
+	enum near_tag_sub_type tgt_subtype;
 
 	DBG("");
 

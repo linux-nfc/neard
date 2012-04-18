@@ -1,0 +1,45 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+
+bus = dbus.SystemBus()
+
+def extract_list(list):
+	val = "["
+	for i in list:
+		val += " " + str(i)
+	val += " ]"
+	
+	return val
+
+def extract_record(key, list):
+	for i in list:
+		record = dbus.Interface(bus.get_object("org.neard", i),
+						"org.neard.Record")
+
+		properties = record.GetProperties()
+		print "        Record = [ %s ]" % (str(i))
+
+		for key in properties.keys():
+			val = str(properties[key])
+			print "              %s = %s" % (key, val)
+
+tag = dbus.Interface(bus.get_object("org.neard", sys.argv[1]),
+						"org.neard.Tag")
+
+properties = tag.GetProperties()
+
+print "[ %s ]" % (sys.argv[1])
+
+for key in properties.keys():
+    if key in ["Type"]:
+        val = str(properties[key])
+	print "        %s = %s" % (key, val)
+    elif key in ["Protocol"]:
+	val = str(properties[key])
+	print "        %s = %s" % (key, val)
+
+    if key in ["Records"]:
+        extract_record(key, properties[key])
+

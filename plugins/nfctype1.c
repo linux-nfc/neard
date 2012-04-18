@@ -255,9 +255,6 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	t1_tag->cb = cookie->cb;
 	t1_tag->tag = tag;
 
-	/* Save the UID */
-	near_tag_set_uid(tag, resp + LEN_SPEC_BYTES, LEN_UID_BYTES);
-
 	/*s Set the ReadWrite flag */
 	if (TAG_T1_WRITE_FLAG(cc) == TYPE1_NOWRITE_ACCESS)
 		near_tag_set_ro(tag, TRUE);

@@ -34,18 +34,23 @@
 
 #include "near.h"
 
-#define TAG_UID_MAX_LEN 8
-
 #define TYPE3_IDM_LEN 8
 #define TYPE3_ATTR_BLOCK_SIZE 16
 
 struct near_tag {
+	char *path;
+
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 
-	uint8_t uid[TAG_UID_MAX_LEN];
-	near_bool_t readonly;
+	uint32_t protocol;
+	uint32_t type;
+	enum near_tag_sub_type sub_type;
 	enum near_tag_memory_layout layout;
+	near_bool_t readonly;
+
+	uint8_t nfcid[NFC_MAX_NFCID1_LEN];
+	uint8_t nfcid_len;
 
 	size_t data_length;
 	uint8_t *data;
@@ -53,6 +58,7 @@ struct near_tag {
 	uint32_t n_records;
 	GList *records;
 
+	/* Tag specific structures */
 	struct {
 		uint8_t IDm[TYPE3_IDM_LEN];
 		uint8_t attr[TYPE3_ATTR_BLOCK_SIZE];
@@ -64,7 +70,153 @@ struct near_tag {
 	} t4;
 };
 
+static DBusConnection *connection = NULL;
+
+static GHashTable *tag_hash;
+
 static GSList *driver_list = NULL;
+
+static void append_records(DBusMessageIter *iter, void *user_data)
+{
+	struct near_tag *tag = user_data;
+	GList *list;
+
+	DBG("");
+
+	for (list = tag->records; list; list = list->next) {
+		struct near_ndef_record *record = list->data;
+		char *path;
+
+		path = __near_ndef_record_get_path(record);
+		if (path == NULL)
+			continue;
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
+							&path);
+	}
+}
+
+static const char *type_string(struct near_tag *tag)
+{
+	const char *type;
+
+	DBG("type 0x%x", tag->type);
+
+	switch (tag->type) {
+	case NFC_PROTO_JEWEL:
+		type = "Type 1";
+		break;
+
+	case NFC_PROTO_MIFARE:
+		type = "Type 2";
+		break;
+
+	case NFC_PROTO_FELICA:
+		type = "Type 3";
+		break;
+
+	case NFC_PROTO_ISO14443:
+		type = "Type 4";
+		break;
+
+	default:
+		type = NULL;
+		near_error("Unknown tag type 0x%x", tag->type);
+		break;
+	}
+
+	return type;
+}
+
+static const char *protocol_string(struct near_tag *tag)
+{
+	const char *protocol;
+
+	DBG("protocol 0x%x", tag->protocol);
+
+	switch (tag->protocol) {
+	case NFC_PROTO_FELICA_MASK:
+		protocol = "Felica";
+		break;
+
+	case NFC_PROTO_MIFARE_MASK:
+		protocol = "MIFARE";
+		break;
+
+	case NFC_PROTO_JEWEL_MASK:
+		protocol = "Jewel";
+		break;
+
+	case NFC_PROTO_ISO14443_MASK:
+		protocol = "ISO-DEP";
+		break;
+
+	default:
+		near_error("Unknown tag protocol 0x%x", tag->protocol);
+		protocol = NULL;
+	}
+
+	return protocol;
+}
+
+static DBusMessage *get_properties(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	struct near_tag *tag = data;
+	const char *protocol, *type;
+	DBusMessage *reply;
+	DBusMessageIter array, dict;
+
+	DBG("conn %p", conn);
+
+	reply = dbus_message_new_method_return(msg);
+	if (reply == NULL)
+		return NULL;
+
+	dbus_message_iter_init_append(reply, &array);
+
+	near_dbus_dict_open(&array, &dict);
+
+	type = type_string(tag);
+	if (type != NULL)
+		near_dbus_dict_append_basic(&dict, "Type",
+					DBUS_TYPE_STRING, &type);
+
+	protocol = protocol_string(tag);
+	if (protocol != NULL)
+		near_dbus_dict_append_basic(&dict, "Protocol",
+					DBUS_TYPE_STRING, &protocol);
+
+	near_dbus_dict_append_basic(&dict, "ReadOnly",
+					DBUS_TYPE_BOOLEAN, &tag->readonly);
+
+	near_dbus_dict_append_array(&dict, "Records",
+				DBUS_TYPE_OBJECT_PATH, append_records, tag);
+
+	near_dbus_dict_close(&array, &dict);
+
+	return reply;
+}
+
+static DBusMessage *set_property(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBG("conn %p", conn);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static GDBusMethodTable tag_methods[] = {
+	{ "GetProperties",     "",      "a{sv}", get_properties     },
+	{ "SetProperty",       "sv",    "",      set_property       },
+	{ },
+};
+
+static GDBusSignalTable tag_signals[] = {
+	{ "PropertyChanged",		"sv"	},
+	{ }
+};
+
 
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
 {
@@ -83,12 +235,13 @@ void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
 	}
 }
 
-static int tag_initialize(struct near_tag *tag,
+static int tag_initialize(struct near_tag *tag, char *path,
 			uint32_t adapter_idx, uint32_t target_idx,
 			uint8_t * data, size_t data_length)
 {
 	DBG("data length %zu", data_length);
 
+	tag->path = path;
 	tag->adapter_idx = adapter_idx;
 	tag->target_idx = target_idx;
 	tag->n_records = 0;
@@ -111,16 +264,35 @@ struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
 				uint8_t *data, size_t data_length)
 {
 	struct near_tag *tag;
+	char *path;
+
+	path = g_strdup_printf("%s/nfc%d/tag%d", NFC_PATH,
+					adapter_idx, target_idx);
+
+	if (path == NULL)
+		return NULL;
+
+	if (g_hash_table_lookup(tag_hash, path) != NULL)
+		return NULL;
 
 	tag = g_try_malloc0(sizeof(struct near_tag));
 	if (tag == NULL)
 		return NULL;
 
-	if (tag_initialize(tag, adapter_idx, target_idx,
+	if (tag_initialize(tag, path, adapter_idx, target_idx,
 					data, data_length) < 0) {
 		g_free(tag);
 		return NULL;
 	}
+
+	g_hash_table_insert(tag_hash, path, tag);
+
+	DBG("connection %p", connection);
+
+	g_dbus_register_interface(connection, tag->path,
+					NFC_TAG_INTERFACE,
+					tag_methods, tag_signals,
+							NULL, tag, NULL);
 
 	return tag;
 }
@@ -129,6 +301,8 @@ void __near_tag_free(struct near_tag *tag)
 {
 	GList *list;
 
+	DBG("");
+
 	for (list = tag->records; list; list = list->next) {
 		struct near_ndef_record *record = list->data;
 
@@ -136,6 +310,7 @@ void __near_tag_free(struct near_tag *tag)
 	}
 
 	g_list_free(tag->records);
+	g_free(tag->path);
 	g_free(tag->data);
 	g_free(tag);
 }
@@ -152,17 +327,6 @@ int __near_tag_add_record(struct near_tag *tag,
 
 	tag->n_records++;
 	tag->records = g_list_append(tag->records, record);
-
-	return 0;
-}
-
-int near_tag_set_uid(struct near_tag *tag, uint8_t *uid, size_t uid_length)
-{
-	if (uid_length > TAG_UID_MAX_LEN)
-		return -EINVAL;
-
-	memset(tag->uid, 0, TAG_UID_MAX_LEN);
-	memcpy(tag->uid, uid, uid_length);
 
 	return 0;
 }
@@ -408,4 +572,33 @@ int __near_tag_check_presence(struct near_target *target, near_tag_io_cb cb)
 	}
 
 	return -EOPNOTSUPP;
+}
+
+static void free_tag(gpointer data)
+{
+	struct near_tag *tag = data;
+
+	DBG("");
+
+	__near_tag_free(tag);
+}
+
+int __near_tag_init(void)
+{
+	DBG("");
+
+	connection = near_dbus_get_connection();
+
+	tag_hash = g_hash_table_new_full(g_str_hash, g_str_equal,
+						g_free, free_tag);
+
+	return 0;
+}
+
+void __near_tag_cleanup(void)
+{
+	DBG("");
+
+	g_hash_table_destroy(tag_hash);
+	tag_hash = NULL;
 }

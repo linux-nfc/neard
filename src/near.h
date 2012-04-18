@@ -118,6 +118,8 @@ const char *__near_ndef_get_uri_prefix(uint8_t id);
 
 #include <near/tag.h>
 
+int __near_tag_init(void);
+void __near_tag_cleanup(void);
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter);
 uint32_t __near_tag_n_records(struct near_tag *tag);
 int __near_tag_add_record(struct near_tag *tag, struct near_ndef_record *record);
