@@ -26,4 +26,9 @@
 
 #include <glib.h>
 
+struct near_device;
+
+struct near_device *near_device_get_device(uint32_t adapter_idx,
+						uint32_t target_idx);
+
 #endif

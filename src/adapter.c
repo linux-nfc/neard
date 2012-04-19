@@ -102,6 +102,13 @@ static void free_tag(gpointer data)
 	__near_tag_remove(tag);
 }
 
+static void free_device(gpointer data)
+{
+	struct near_device *device = data;
+
+	__near_device_remove(device);
+}
+
 static void polling_changed(struct near_adapter *adapter)
 {
 
@@ -220,6 +227,31 @@ static void append_tags(DBusMessageIter *iter, void *user_data)
 	g_hash_table_foreach(adapter->tags, append_tag_path, iter);
 }
 
+static void append_device_path(gpointer key, gpointer value, gpointer user_data)
+{
+	struct near_device *device = value;
+	DBusMessageIter *iter = user_data;
+	const char *device_path;
+
+	device_path = __near_device_get_path(device);
+	if (device_path == NULL)
+		return;
+
+	DBG("%s", device_path);
+
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
+							&device_path);
+}
+
+static void append_devices(DBusMessageIter *iter, void *user_data)
+{
+	struct near_adapter *adapter = user_data;
+
+	DBG("");
+
+	g_hash_table_foreach(adapter->devices, append_device_path, iter);
+}
+
 void __near_adapter_tags_changed(uint32_t adapter_idx)
 {
 	struct near_adapter *adapter;
@@ -236,6 +268,24 @@ void __near_adapter_tags_changed(uint32_t adapter_idx)
 				DBUS_TYPE_OBJECT_PATH, append_tags,
 				adapter);
 }
+
+void __near_adapter_devices_changed(uint32_t adapter_idx)
+{
+	struct near_adapter *adapter;
+
+	DBG("");
+
+	adapter = g_hash_table_lookup(adapter_hash,
+				GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
+	near_dbus_property_changed_array(adapter->path,
+				NFC_ADAPTER_INTERFACE, "Devices",
+				DBUS_TYPE_OBJECT_PATH, append_devices,
+				adapter);
+}
+
 static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
@@ -264,6 +314,9 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 	near_dbus_dict_append_array(&dict, "Tags",
 				DBUS_TYPE_OBJECT_PATH, append_tags, adapter);
+
+	near_dbus_dict_append_array(&dict, "Devices",
+				DBUS_TYPE_OBJECT_PATH, append_devices, adapter);
 
 	near_dbus_dict_close(&array, &dict);
 
@@ -710,6 +763,10 @@ struct near_adapter * __near_adapter_create(uint32_t idx,
 							NULL, free_tag);
 	adapter->tag_sock = -1;
 
+	adapter->devices = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+							NULL, free_device);
+	adapter->device_sock = -1;
+
 	adapter->path = g_strdup_printf("%s/nfc%d", NFC_PATH, idx);
 
 	return adapter;
@@ -959,6 +1016,26 @@ static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 	return __near_tag_read(tag, tag_read_cb);
 }
 
+static int adapter_add_device(struct near_adapter *adapter,
+				uint32_t target_idx,
+				uint8_t *nfcid, uint8_t nfcid_len)
+{
+	struct near_device *device;
+
+	device = __near_device_add(adapter->idx, target_idx, nfcid, nfcid_len);
+	if (device == NULL)
+		return -ENODEV;
+
+	g_hash_table_insert(adapter->devices, GINT_TO_POINTER(target_idx),
+								device);
+
+	if (adapter->dep_up == TRUE)
+		return 0;
+
+	return __near_netlink_dep_link_up(adapter->idx, target_idx,
+					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
+}
+
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
 			uint8_t *nfcid, uint8_t nfcid_len)
@@ -975,7 +1052,8 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	polling_changed(adapter);
 
 	if (protocols & NFC_PROTO_NFC_DEP_MASK)
-		return -EOPNOTSUPP;
+		return adapter_add_device(adapter, target_idx,
+						nfcid, nfcid_len);
 	else
 		return adapter_add_tag(adapter, target_idx, protocols,
 					sens_res, sel_res, nfcid, nfcid_len);
@@ -985,7 +1063,6 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 {
 	struct near_adapter *adapter;
-	struct near_tag *tag;
 
 	DBG("idx %d", idx);
 
@@ -993,17 +1070,21 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	tag = g_hash_table_lookup(adapter->tags, GINT_TO_POINTER(target_idx));
-	if (tag != NULL) {
-		g_hash_table_remove(adapter->tags, GINT_TO_POINTER(target_idx));
-
+	if (g_hash_table_remove(adapter->tags,
+			GINT_TO_POINTER(target_idx)) == TRUE) {      	
 		__near_adapter_tags_changed(idx);
 
 		return 0;
-	} else {
-		/* TODO search for devices */
-		return -ENODEV;
 	}
+
+	if (g_hash_table_remove(adapter->devices,
+			GINT_TO_POINTER(target_idx)) == TRUE) {      	
+		__near_adapter_devices_changed(idx);
+
+		return 0;
+	}
+
+	return 0;
 }
 
 static void adapter_flush_rx(struct near_adapter *adapter, int error)

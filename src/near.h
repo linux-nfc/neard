@@ -82,6 +82,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint8_t *nfcid, uint8_t nfcid_len);
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx);
 void __near_adapter_tags_changed(uint32_t adapter_idx);
+void __near_adapter_devices_changed(uint32_t adapter_idx);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
@@ -124,6 +125,10 @@ int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb);
 
 int __near_device_init(void);
 void __near_device_cleanup(void);
+const char *__near_device_get_path(struct near_device *device);
+struct near_device *__near_device_add(uint32_t idx, uint32_t target_idx,
+					uint8_t *nfcid, uint8_t nfcid_len);
+void __near_device_remove(struct near_device *device);
 
 #include <near/tlv.h>
 
