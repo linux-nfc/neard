@@ -60,14 +60,14 @@ class Neard:
         print("Prop changed: %s") % prop
         adapt_properties = {}
         adapt_properties[prop] = value
-        if prop == "Targets":
-            self.target_updateDetails(adapt_properties)
+        if prop == "Tags":
+            self.tag_updateDetails(adapt_properties)
         else:
             self.adapter_update(adapt_path, adapt_properties)
 
         #Update the records UI
-    def record_updateDetails(self, target_properties):
-         for record_path in target_properties["Records"]:
+    def record_updateDetails(self, tag_properties):
+         for record_path in tag_properties["Records"]:
             print ("REC %s ") % record_path
             record_obj = self.systemBus.get_object('org.neard',
                                                      record_path)
@@ -79,24 +79,24 @@ class Neard:
             # call UI update
             self.records_update(record_path, record_properties)
 
-    #Update the targets UI
-    def target_updateDetails(self, adapt_properties):
-        if adapt_properties["Targets"]:
-            for target_path in adapt_properties["Targets"]:
-                print ("TGT %s ") % target_path
-                target_obj = self.systemBus.get_object('org.neard', target_path)
+    #Update the tags UI
+    def tag_updateDetails(self, adapt_properties):
+        if adapt_properties["Tags"]:
+            for tag_path in adapt_properties["Tags"]:
+                print ("TAG %s ") % tag_path
+                tag_obj = self.systemBus.get_object('org.neard', tag_path)
 
-                target_iface = dbus.Interface(target_obj,'org.neard.Target')
-                target_properties = target_iface.GetProperties()
+                tag_iface = dbus.Interface(tag_obj,'org.neard.Tag')
+                tag_properties = tag_iface.GetProperties()
 
-                self.targetregistered[target_path] = True
+                self.tagregistered[tag_path] = True
                 # call UI update
-                self.targets_update(target_path, target_properties)
+                self.tags_update(tag_path, tag_properties)
                 #Process the records
-                self.record_updateDetails(target_properties)
+                self.record_updateDetails(tag_properties)
         else:
-            print ("remove targets and records")
-            self.targets_update()
+            print ("remove tags and records")
+            self.tags_update()
             self.records_update()
 
 
@@ -123,8 +123,8 @@ class Neard:
                     #Update display info
                     self.adapter_update(adapt_path, adapt_properties)
 
-                    #udpate UI for targets
-                    self.target_updateDetails(adapt_properties)
+                    #udpate UI for tags
+                    self.tag_updateDetails(adapt_properties)
 
 
     #Search DBUS to find any neard instance
@@ -140,15 +140,15 @@ class Neard:
 
     #Main init function
     def __init__(self, adapter_update = None, adapters_remove = None,
-                  targets_update = None, records_update = None):
+                  tags_update = None, records_update = None):
         self.test = False
         self.adapter_update = adapter_update
         self.adapters_remove = adapters_remove
-        self.targets_update = targets_update
+        self.tags_update = tags_update
         self.records_update = records_update
 
         self.adaptregistered = {}
-        self.targetregistered = {}
+        self.tagregistered = {}
         self.recordregistered = {}
 
         self.systemBus = dbus.SystemBus()
@@ -188,10 +188,10 @@ class NeardUI(Neard):
         if name in adapt_properties:
             value = adapt_properties[name]
 
-            if name == "Targets":
+            if name == "Tags":
                 value = "{"
                 for tgts in adapt_properties[name]:
-                    #For each target, add it to the target lbox:
+                    #For each tag, add it to the tag lbox:
                     #Trim path....
                     short_tgt = tgts[len(path)+1:]
 
@@ -244,67 +244,66 @@ class NeardUI(Neard):
         self.adapters_setUIList(adapt_properties, i, 2, "Powered")
         self.adapters_setUIList(adapt_properties, i, 3, "Polling")
         self.adapters_setUIList(adapt_properties, i, 4, "Protocols")
-        self.adapters_setUIList(adapt_properties, i, 5, "Targets", path)
+        self.adapters_setUIList(adapt_properties, i, 5, "Tags", path)
 
     #--------------------------------------------------
-    def targets_setUIList(self, target_properties, i, col, name):
-        if name in target_properties:
-            value = target_properties[name]
+    def tags_setUIList(self, tag_properties, i, col, name):
+        if name in tag_properties:
+            value = tag_properties[name]
 
             if name == "Records":
                 value = None
-                for tgts in target_properties[name]:
-                    #For each target, add it to the target lbox:
+                for tags in tag_properties[name]:
+                    #For each tag, add it to the tag lbox:
                     if value is None:
-                        value = tgts
+                        value = tags
                     else:
-                        value = value + "-" + tgts
+                        value = value + "-" + tags
 
-            if name == "TagType":
+            if name == "Type":
                 value = None
-                for tgts in target_properties[name]:
-                    #For each target, add it to the target lbox:
+                for tags in tag_properties[name]:
+                    #For each tag, add it to the tag lbox:
                     if value is None:
-                        value = tgts
+                        value = tags
                     else:
-                        value = value + "-" + tgts
+                        value = value + "-" + tags
 
             if value is not None:
-                self.targets_list.set_value(i, col, value)
+                self.tags_list.set_value(i, col, value)
             print ("  property %s, value %s") % (name, value)
 
     #Add, Update or delete a list entry
-    def target_UpdateUI(self, path = None, target_properties = None):
-        print("Target Update %s") % path
-        i = self.targets_list.get_iter_first()
+    def tag_UpdateUI(self, path = None, tag_properties = None):
+        print("Tag Update %s") % path
+        i = self.tags_list.get_iter_first()
         while i is not None:
-            if self.targets_list.get_value(i, 0) == path:
+            if self.tags_list.get_value(i, 0) == path:
                 break
-            i = self.targets_list.iter_next(i)
+            i = self.tags_list.iter_next(i)
 
         #Delete mode: Remove all
-        if target_properties is None:
-            i = self.targets_list.get_iter_first()
+        if tag_properties is None:
+            i = self.tags_list.get_iter_first()
             while i is not None:
-                path_name = self.targets_list.get_value(i, 0)
-                print ("Deleted target %s") % path_name
-                self.targets_list.remove(i)
-                if self.targets_list.iter_is_valid(i):
-                    i = self.targets_list.iter_next(i)
+                path_name = self.tags_list.get_value(i, 0)
+                print ("Deleted tag %s") % path_name
+                self.tags_list.remove(i)
+                if self.tags_list.iter_is_valid(i):
+                    i = self.tags_list.iter_next(i)
                 else:
                     i = None
             return
 
         if i is None:
-            i = self.targets_list.append()
-            self.targets_list.set_value(i, 0, path)
-            print ("Add target %s") % (path)
+            i = self.tags_list.append()
+            self.tags_list.set_value(i, 0, path)
+            print ("Add tag %s") % (path)
         else:
-            print ("Update target %s") % (path)
-        self.targets_setUIList(target_properties, i, 2, "ReadOnly")
-        self.targets_setUIList(target_properties, i, 3, "Type")
-        self.targets_setUIList(target_properties, i, 4, "TagType")
-        self.targets_setUIList(target_properties, i, 5, "Records")
+            print ("Update tag %s") % (path)
+        self.tags_setUIList(tag_properties, i, 2, "ReadOnly")
+        self.tags_setUIList(tag_properties, i, 3, "Type")
+        self.tags_setUIList(tag_properties, i, 4, "Records")
 
     #--------------------------------------------------
     def records_setUIList(self, record_properties, i, col, name):
@@ -355,8 +354,8 @@ class NeardUI(Neard):
         self.records_setUIList(record_properties, i, 3, "Data")
 
 
-    def target_RemoveUI(self):
-        printf("Target Remove")
+    def tag_RemoveUI(self):
+        printf("Tag Remove")
 
     #Adapter selected on lbox
     def on_adapter_sel_changed(self, selection = None):
@@ -365,7 +364,7 @@ class NeardUI(Neard):
              value = self.adapters_list.get_value(iter, 0)
              print ("value %s") % value
              value = self.adapters_list.get_value(iter, 5)
-             print ("target: %s") % value
+             print ("tag: %s") % value
 
 
     #-----------------------------------------------------
@@ -390,7 +389,7 @@ class NeardUI(Neard):
         column = gtk.TreeViewColumn("Protocols",gtk.CellRendererText(), text=4)
         tv_adapters.append_column(column)
 
-        column = gtk.TreeViewColumn("Targets", gtk.CellRendererText(), text=5)
+        column = gtk.TreeViewColumn("Tags", gtk.CellRendererText(), text=5)
         tv_adapters.append_column(column)
 
         tv_adapters.get_selection().connect("changed",
@@ -398,28 +397,25 @@ class NeardUI(Neard):
 
         return tv_adapters;
 
-    # Prepare TreeView  for Targets
-    def createTargetsWidgets(self, targets_list):
+    # Prepare TreeView  for Tags
+    def createTagsWidgets(self, tags_list):
 
 
-        tv_targets = gtk.TreeView(targets_list)
+        tv_tags = gtk.TreeView(tags_list)
 
         column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
-        tv_targets.append_column(column)
+        tv_tags.append_column(column)
         toggle = gtk.CellRendererToggle()
         column = gtk.TreeViewColumn("ReadOnly", toggle, active=2)
-        tv_targets.append_column(column)
+        tv_tags.append_column(column)
 
         column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=3)
-        tv_targets.append_column(column)
+        tv_tags.append_column(column)
 
-        column = gtk.TreeViewColumn("NFC Type ", gtk.CellRendererText(), text=4)
-        tv_targets.append_column(column)
+        column = gtk.TreeViewColumn("Record", gtk.CellRendererText(), text=4)
+        tv_tags.append_column(column)
 
-        column = gtk.TreeViewColumn("Record", gtk.CellRendererText(), text=5)
-        tv_targets.append_column(column)
-
-        return tv_targets;#
+        return tv_tags;#
 
     # Prepare TreeView  for Records
     def createRecordsWidgets(self, records_list):
@@ -465,10 +461,10 @@ class NeardUI(Neard):
         notebook.append_page(scrolledwindow, gtk.Label("Adapters"))
 
         scrolledwindow = gtk.ScrolledWindow()
-        widget = self.createTargetsWidgets(self.targets_list)
+        widget = self.createTagsWidgets(self.tags_list)
         scrolledwindow.add(widget)
-        #notebook.append_page(widget, gtk.Label("Targets"))
-        notebook.append_page(scrolledwindow, gtk.Label("Targets"))
+
+        notebook.append_page(scrolledwindow, gtk.Label("Tags"))
 
         scrolledwindow = gtk.ScrolledWindow()
         widget = self.createRecordsWidgets(self.records_list)
@@ -494,14 +490,13 @@ class NeardUI(Neard):
                                       gobject.TYPE_BOOLEAN, # powered = 2
                                       gobject.TYPE_BOOLEAN, # polling = 3
                                       gobject.TYPE_STRING,  # protocols = 4
-                                      gobject.TYPE_STRING)  # targets = 5
+                                      gobject.TYPE_STRING)  # tags = 5
 
-        self.targets_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
+        self.tags_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
                                       gobject.TYPE_STRING,      # Name = 1
                                       gobject.TYPE_BOOLEAN,     # Read Only 2
-                                      gobject.TYPE_STRING,      # tag Type = 3
-                                      gobject.TYPE_STRING,      # Type = 4
-                                      gobject.TYPE_STRING)     # Record = 5
+                                      gobject.TYPE_STRING,      # Type = 3
+                                      gobject.TYPE_STRING)     # Record = 4
 
         self.records_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
                                       gobject.TYPE_STRING,      # Name = 1
@@ -509,7 +504,7 @@ class NeardUI(Neard):
                                       gobject.TYPE_STRING)        # content = 3
 
         Neard.__init__(self, self.adapter_UpdateUI, self.adapter_RemoveUI
-                       , self.target_UpdateUI, self.record_UpdateUI)
+                       , self.tag_UpdateUI, self.record_UpdateUI)
 
 ##=================================================================
 if __name__ == "__main__":
