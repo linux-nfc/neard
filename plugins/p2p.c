@@ -254,7 +254,6 @@ static int p2p_listen(uint32_t adapter_idx,
 }
 
 static struct near_device_driver p2p_driver = {
-	.type           = NFC_PROTO_NFC_DEP,
 	.priority       = NEAR_DEVICE_PRIORITY_HIGH,
 	.listen         = p2p_listen,
 };

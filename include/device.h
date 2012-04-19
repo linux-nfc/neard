@@ -38,7 +38,6 @@ struct near_ndef_message;
 #define NEAR_DEVICE_PRIORITY_HIGH      100
 
 struct near_device_driver {
-	uint16_t type;
 	int priority;
 
 	int (*listen)(uint32_t adapter_idx, uint32_t target_idx,

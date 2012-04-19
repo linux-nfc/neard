@@ -59,7 +59,7 @@ struct near_adapter {
 	int tag_sock;
 
 	GHashTable *devices;
-	struct near_tag *device_link;
+	struct near_device *device_link;
 	int device_sock;
 
 	GIOChannel *channel;
@@ -848,19 +848,6 @@ void __near_adapter_remove(struct near_adapter *adapter)
 	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(adapter->idx));
 }
 
-#if 0
-static int dep_link_up(uint32_t idx, uint32_t target_idx)
-{
-	return __near_netlink_dep_link_up(idx, target_idx,
-					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
-}
-
-static int dep_link_down(uint32_t idx)
-{
-	return __near_netlink_dep_link_down(idx);
-}
-#endif
-
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
@@ -987,6 +974,34 @@ out:
 						check_presence, adapter);
 }
 
+static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
+								int status)
+{
+	struct near_adapter *adapter;
+
+	DBG("status %d", status);
+
+	adapter = g_hash_table_lookup(adapter_hash,
+					GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
+	if (status < 0) {
+		if (adapter->device_link != NULL) {
+			__near_netlink_dep_link_down(adapter->idx);
+			adapter->device_link = NULL;
+		}
+
+		if (adapter->constant_poll == TRUE)
+			adapter_start_poll(adapter);
+
+		return;
+	}
+
+	__near_adapter_tags_changed(adapter_idx);
+}
+
+
 static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 			uint32_t protocols,
 			uint16_t sens_res, uint8_t sel_res,
@@ -1021,6 +1036,7 @@ static int adapter_add_device(struct near_adapter *adapter,
 				uint8_t *nfcid, uint8_t nfcid_len)
 {
 	struct near_device *device;
+	int err;
 
 	device = __near_device_add(adapter->idx, target_idx, nfcid, nfcid_len);
 	if (device == NULL)
@@ -1029,11 +1045,25 @@ static int adapter_add_device(struct near_adapter *adapter,
 	g_hash_table_insert(adapter->devices, GINT_TO_POINTER(target_idx),
 								device);
 
+	/* For p2p, reading is listening for an incoming connection */
+	err = __near_device_listen(device, device_read_cb);
+	if (err < 0) {
+		near_error("Could not read device");
+		return err;
+	}
+
+	adapter->device_link = device;
+
 	if (adapter->dep_up == TRUE)
 		return 0;
 
-	return __near_netlink_dep_link_up(adapter->idx, target_idx,
+	err = __near_netlink_dep_link_up(adapter->idx, target_idx,
 					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
+
+	if (err < 0)
+		adapter->device_link = NULL;
+
+	return err;
 }
 
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,

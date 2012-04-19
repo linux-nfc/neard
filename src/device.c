@@ -226,6 +226,22 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 	return device;
 }
 
+int __near_device_listen(struct near_device *device, near_device_io_cb cb)
+{
+	GSList *list;
+
+	DBG("");
+
+	for (list = driver_list; list; list = list->next) {
+		struct near_device_driver *driver = list->data;
+
+		return driver->listen(device->adapter_idx,
+						device->target_idx, cb);
+	}
+
+	return 0;
+}
+
 static gint cmp_prio(gconstpointer a, gconstpointer b)
 {
 	const struct near_tag_driver *driver1 = a;
