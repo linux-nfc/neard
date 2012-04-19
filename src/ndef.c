@@ -1320,7 +1320,7 @@ int near_ndef_parse(struct near_tag *tag,
 		target_idx  = near_tag_get_target_idx(tag);
 		adapter_idx = near_tag_get_adapter_idx(tag);
 
-		record->path = g_strdup_printf("%s/nfc%d/target%d/record%d",
+		record->path = g_strdup_printf("%s/nfc%d/tag%d/record%d",
 							NFC_PATH, adapter_idx,
 							target_idx, n_records);
 		DBG("Record path '%s'", record->path);
