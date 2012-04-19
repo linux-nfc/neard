@@ -76,6 +76,23 @@ static GHashTable *tag_hash;
 
 static GSList *driver_list = NULL;
 
+struct near_tag *near_tag_get_tag(uint32_t adapter_idx, uint32_t target_idx)
+{
+	struct near_tag *tag;
+	char *path;
+
+	path = g_strdup_printf("%s/nfc%d/tag%d", NFC_PATH,
+					adapter_idx, target_idx);
+	if (path == NULL)
+		return NULL;
+
+	tag = g_hash_table_lookup(tag_hash, path);
+	g_free(path);
+
+	/* TODO refcount */
+	return tag;
+}
+
 static void append_records(DBusMessageIter *iter, void *user_data)
 {
 	struct near_tag *tag = user_data;
@@ -235,27 +252,253 @@ void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
 	}
 }
 
-static int tag_initialize(struct near_tag *tag, char *path,
-			uint32_t adapter_idx, uint32_t target_idx,
-			uint8_t * data, size_t data_length)
-{
-	DBG("data length %zu", data_length);
+#define NFC_TAG_A (NFC_PROTO_ISO14443_MASK | NFC_PROTO_NFC_DEP_MASK | \
+				NFC_PROTO_JEWEL_MASK | NFC_PROTO_MIFARE_MASK)
+#define NFC_TAG_A_TYPE2      0x00
+#define NFC_TAG_A_TYPE4      0x01
+#define NFC_TAG_A_NFC_DEP    0x02
+#define NFC_TAG_A_TYPE4_DEP  0x03
 
-	tag->path = path;
+#define NFC_TAG_A_SENS_RES_SSD_JEWEL      0x00
+#define NFC_TAG_A_SENS_RES_PLATCONF_JEWEL 0x0c
+
+#define NFC_TAG_A_SEL_PROT(sel_res) (((sel_res) & 0x60) >> 5)
+#define NFC_TAG_A_SEL_CASCADE(sel_res) (((sel_res) & 0x04) >> 2)
+#define NFC_TAG_A_SENS_RES_SSD(sens_res) ((sens_res) & 0x001f)
+#define NFC_TAG_A_SENS_RES_PLATCONF(sens_res) (((sens_res) & 0x0f00) >> 8)
+
+static enum near_tag_sub_type get_tag_type2_sub_type(uint8_t sel_res)
+{
+	switch(sel_res) {
+	case 0x00 :
+		return NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT;
+	case 0x08:
+		return NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K;
+	case 0x09:
+		return NEAR_TAG_NFC_T2_MIFARE_MINI;
+	case 0x18:
+		return NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K;
+	case 0x20:
+		return NEAR_TAG_NFC_T2_MIFARE_DESFIRE;
+	case 0x28 :
+		return NEAR_TAG_NFC_T2_JCOP30;
+	case 0x38:
+		return NEAR_TAG_NFC_T2_MIFARE_4K_EMUL;
+	case 0x88:
+		return NEAR_TAG_NFC_T2_MIFARE_1K_INFINEON;
+	case 0x98:
+		return NEAR_TAG_NFC_T2_MPCOS;
+	}
+
+	return NEAR_TAG_NFC_SUBTYPE_UNKNOWN;
+}
+
+static void set_tag_type(struct near_tag *tag,
+				uint16_t sens_res, uint8_t sel_res)
+{
+	uint8_t platconf, ssd, proto;
+
+	DBG("protocol 0x%x sens_res 0x%x sel_res 0x%x", tag->protocol,
+							sens_res, sel_res);
+
+	switch (tag->protocol) {
+	case NFC_PROTO_JEWEL_MASK:
+		platconf = NFC_TAG_A_SENS_RES_PLATCONF(sens_res);
+		ssd = NFC_TAG_A_SENS_RES_SSD(sens_res);
+
+		DBG("Jewel");
+
+		if ((ssd == NFC_TAG_A_SENS_RES_SSD_JEWEL) &&
+				(platconf == NFC_TAG_A_SENS_RES_PLATCONF_JEWEL))
+			tag->type = NFC_PROTO_JEWEL;
+		break;
+
+	case NFC_PROTO_MIFARE_MASK:
+	case NFC_PROTO_ISO14443_MASK:
+		proto = NFC_TAG_A_SEL_PROT(sel_res);
+
+		DBG("proto 0x%x", proto);
+
+		switch(proto) {
+		case NFC_TAG_A_TYPE2:
+			tag->type = NFC_PROTO_MIFARE;
+			tag->sub_type = get_tag_type2_sub_type(sel_res);
+			break;
+		case NFC_TAG_A_TYPE4:
+			tag->type = NFC_PROTO_ISO14443;
+			break;
+		case NFC_TAG_A_TYPE4_DEP:
+			tag->type = NFC_PROTO_NFC_DEP;
+			break;
+		}
+		break;
+
+	case NFC_PROTO_FELICA_MASK:
+		tag->type = NFC_PROTO_FELICA;
+		break;
+
+	default:
+		tag->type = NFC_PROTO_MAX;
+		break;
+	}
+
+	DBG("tag type 0x%x", tag->type);
+}
+
+static int tag_initialize(struct near_tag *tag,
+			uint32_t adapter_idx, uint32_t target_idx,
+			uint32_t protocols,
+			uint16_t sens_res, uint8_t sel_res,
+			uint8_t *nfcid, uint8_t nfcid_len)
+{
+	DBG("");
+
+	tag->path = g_strdup_printf("%s/nfc%d/tag%d", NFC_PATH,
+					adapter_idx, target_idx);
+	if (tag->path == NULL)
+		return -ENOMEM;
 	tag->adapter_idx = adapter_idx;
 	tag->target_idx = target_idx;
+	tag->protocol = protocols;
 	tag->n_records = 0;
 	tag->readonly = 0;
 
-	if (data_length > 0) {
-		tag->data_length = data_length;
-		tag->data = g_try_malloc0(data_length);
-		if (tag->data == NULL)
-			return -ENOMEM;
-
-		if (data != NULL)
-			memcpy(tag->data, data, data_length);
+	if (nfcid_len <= NFC_MAX_NFCID1_LEN) {
+		tag->nfcid_len = nfcid_len;
+		memcpy(tag->nfcid, nfcid, nfcid_len);
 	}
+
+	set_tag_type(tag, sens_res, sel_res);
+
+	return 0;
+}
+
+struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
+				uint32_t protocols,
+				uint16_t sens_res, uint8_t sel_res,
+				uint8_t *nfcid, uint8_t nfcid_len)
+{
+	struct near_tag *tag;
+	char *path;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag != NULL)
+		return NULL;
+
+	tag = g_try_malloc0(sizeof(struct near_tag));
+	if (tag == NULL)
+		return NULL;
+
+	if (tag_initialize(tag, adapter_idx, target_idx,
+				protocols,
+				sens_res, sel_res,
+				nfcid, nfcid_len) < 0) {
+		g_free(tag);
+		return NULL;
+	}
+
+	path = g_strdup(tag->path);
+	if (path == NULL) {
+		g_free(tag);
+		return NULL;
+	}
+
+	g_hash_table_insert(tag_hash, path, tag);
+
+	DBG("connection %p", connection);
+
+	g_dbus_register_interface(connection, tag->path,
+					NFC_TAG_INTERFACE,
+					tag_methods, tag_signals,
+							NULL, tag, NULL);
+
+	return tag;
+}
+
+void __near_tag_remove(struct near_tag *tag)
+{
+	char *path = tag->path;
+
+	DBG("path %s", tag->path);
+
+	if (g_hash_table_lookup(tag_hash, tag->path) == NULL)
+		return;
+
+	g_dbus_unregister_interface(connection, tag->path,
+						NFC_TAG_INTERFACE);
+
+	g_hash_table_remove(tag_hash, path);
+}
+
+const char *__near_tag_get_path(struct near_tag *tag)
+{
+	return tag->path;
+}
+
+
+uint32_t __near_tag_get_idx(struct near_tag *tag)
+{
+	return tag->target_idx;
+}
+
+uint32_t __near_tag_get_type(struct near_tag *tag)
+{
+	return tag->type;
+}
+
+enum near_tag_sub_type near_tag_get_subtype(uint32_t adapter_idx,
+				uint32_t target_idx)
+
+{
+	struct near_tag *tag;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return NEAR_TAG_NFC_SUBTYPE_UNKNOWN;
+
+	return tag->sub_type;
+}
+
+uint8_t *near_tag_get_nfcid(uint32_t adapter_idx, uint32_t target_idx,
+				uint8_t *nfcid_len)
+{
+	struct near_tag *tag;
+	uint8_t *nfcid;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		goto fail;
+
+	nfcid = g_try_malloc0(tag->nfcid_len);
+	if (nfcid == NULL)
+		goto fail;
+
+	memcpy(nfcid, tag->nfcid, tag->nfcid_len);
+	*nfcid_len = tag->nfcid_len;
+
+	return nfcid;
+
+fail:
+	*nfcid_len = 0;
+	return NULL;
+}
+
+int near_tag_add_data(uint32_t adapter_idx, uint32_t target_idx,
+			uint8_t *data, size_t data_length)
+{
+	struct near_tag *tag;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -ENODEV;
+
+	tag->data_length = data_length;
+	tag->data = g_try_malloc0(data_length);
+	if (tag->data == NULL)
+		return -ENOMEM;
+
+	if (data != NULL)
+		memcpy(tag->data, data, data_length);
 
 	return 0;
 }
@@ -274,16 +517,11 @@ struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
 
 	if (g_hash_table_lookup(tag_hash, path) != NULL)
 		return NULL;
+	g_free(path);
 
 	tag = g_try_malloc0(sizeof(struct near_tag));
 	if (tag == NULL)
 		return NULL;
-
-	if (tag_initialize(tag, path, adapter_idx, target_idx,
-					data, data_length) < 0) {
-		g_free(tag);
-		return NULL;
-	}
 
 	g_hash_table_insert(tag_hash, path, tag);
 
@@ -475,99 +713,61 @@ void near_tag_driver_unregister(struct near_tag_driver *driver)
 	driver_list = g_slist_remove(driver_list, driver);
 }
 
-int __near_tag_read(struct near_target *target, near_tag_io_cb cb)
+int __near_tag_read(struct near_tag *tag, near_tag_io_cb cb)
 {
 	GSList *list;
-	uint16_t type;
 
-	DBG("");
-
-	type = __near_target_get_tag_type(target);
-	if (type == NFC_PROTO_MAX)
-		return -ENODEV;
-
-	DBG("type 0x%x", type);
+	DBG("type 0x%x", tag->type);
 
 	for (list = driver_list; list; list = list->next) {
 		struct near_tag_driver *driver = list->data;
 
 		DBG("driver type 0x%x", driver->type);
 
-		if (driver->type == type) {
-			uint32_t adapter_idx, target_idx;		
-
-			target_idx = __near_target_get_idx(target);
-			adapter_idx = __near_target_get_adapter_idx(target);
-
-			return driver->read_tag(adapter_idx, target_idx, cb);
-		}
+		if (driver->type == tag->type)
+			return driver->read_tag(tag->adapter_idx, tag->target_idx, cb);
 	}
 
 	return 0;
 }
 
-int __near_tag_add_ndef(struct near_target *target,
+int __near_tag_add_ndef(struct near_tag *tag,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
 	GSList *list;
-	uint16_t type;
 
-	DBG("");
-
-	type = __near_target_get_tag_type(target);
-	if (type == NFC_PROTO_MAX)
-		return -ENODEV;
-
-	DBG("type 0x%x", type);
+	DBG("type 0x%x", tag->type);
 
 	for (list = driver_list; list; list = list->next) {
 		struct near_tag_driver *driver = list->data;
 
 		DBG("driver type 0x%x", driver->type);
 
-		if (driver->type == type) {
-			uint32_t adapter_idx, target_idx;
-
-			target_idx = __near_target_get_idx(target);
-			adapter_idx = __near_target_get_adapter_idx(target);
-
-			return driver->add_ndef(adapter_idx, target_idx,
+		if (driver->type == tag->type)
+			return driver->add_ndef(tag->adapter_idx, tag->target_idx,
 								ndef, cb);
-		}
 	}
 
 	return 0;
 }
 
-int __near_tag_check_presence(struct near_target *target, near_tag_io_cb cb)
+int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb)
 {
 	GSList *list;
-	uint16_t type;
 
-	DBG("");
-
-	type = __near_target_get_tag_type(target);
-	if (type == NFC_PROTO_MAX)
-		return -ENODEV;
-
-	DBG("type 0x%x", type);
+	DBG("type 0x%x", tag->type);
 
 	for (list = driver_list; list; list = list->next) {
 		struct near_tag_driver *driver = list->data;
 
 		DBG("driver type 0x%x", driver->type);
 
-		if (driver->type == type) {
-			uint32_t adapter_idx, target_idx;
-
-			target_idx = __near_target_get_idx(target);
-			adapter_idx = __near_target_get_adapter_idx(target);
-
+		if (driver->type == tag->type) {
 			if (driver->check_presence == NULL)
 				continue;
 
-			return driver->check_presence(adapter_idx, target_idx, cb);
+			return driver->check_presence(tag->adapter_idx, tag->target_idx, cb);
 		}
 	}
 
@@ -577,10 +777,24 @@ int __near_tag_check_presence(struct near_target *target, near_tag_io_cb cb)
 static void free_tag(gpointer data)
 {
 	struct near_tag *tag = data;
+	GList *list;
 
-	DBG("");
+	DBG("tag %p", tag);
 
-	__near_tag_free(tag);
+	for (list = tag->records; list; list = list->next) {
+		struct near_ndef_record *record = list->data;
+
+		__near_ndef_record_free(record);
+	}
+
+	DBG("record freed");
+
+	g_list_free(tag->records);
+	g_free(tag->path);
+	g_free(tag->data);
+	g_free(tag);
+
+	DBG("Done");
 }
 
 int __near_tag_init(void)

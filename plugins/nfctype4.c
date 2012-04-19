@@ -305,11 +305,14 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 		goto out_err;
 	}
 
-	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx, NULL,
-			g_ntohs(*((uint16_t *)(resp + NFC_STATUS_BYTE_LEN))));
+	/* Add data to the tag */
+	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx, NULL,
+				g_ntohs(*((uint16_t *)(resp + NFC_STATUS_BYTE_LEN))));
+	if (err < 0)
+		goto out_err;
 
+	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 	if (tag == NULL) {
-		DBG("near_target_add_tag is null") ;
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -686,7 +689,7 @@ static int nfctype4_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 	if (ndef == NULL || cb == NULL)
 		return -EINVAL;
 
-	tag = near_target_get_tag(adapter_idx, target_idx);
+	tag = near_tag_get_tag(adapter_idx, target_idx);
 	if (tag == NULL)
 		return -EINVAL;
 

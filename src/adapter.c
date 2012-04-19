@@ -54,9 +54,13 @@ struct near_adapter {
 	near_bool_t constant_poll;
 	near_bool_t dep_up;
 
-	GHashTable *targets;
-	struct near_target *link;
-	int sock;
+	GHashTable *tags;
+	struct near_tag *tag_link;
+	int tag_sock;
+
+	GHashTable *devices;
+	struct near_tag *device_link;
+	int device_sock;
 
 	GIOChannel *channel;
 	guint watch;
@@ -91,11 +95,11 @@ static void free_adapter(gpointer data)
 	g_free(adapter);
 }
 
-static void free_target(gpointer data)
+static void free_tag(gpointer data)
 {
-	struct near_target *target = data;
+	struct near_tag *tag = data;
 
-	__near_target_remove(target);
+	__near_tag_remove(tag);
 }
 
 static void polling_changed(struct near_adapter *adapter)
@@ -110,11 +114,11 @@ static int adapter_start_poll(struct near_adapter *adapter)
 {
 	int err;
 
-	if (g_hash_table_size(adapter->targets) > 0) {
-		DBG("Clearing targets");
+	if (g_hash_table_size(adapter->tags) > 0) {
+		DBG("Clearing tags");
 
-		g_hash_table_remove_all(adapter->targets);
-		__near_adapter_target_changed(adapter->idx);
+		g_hash_table_remove_all(adapter->tags);
+		__near_adapter_tags_changed(adapter->idx);
 	}
 
 	err = __near_netlink_start_poll(adapter->idx, adapter->protocols);
@@ -191,34 +195,36 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 	}
 }
 
-static void append_target_path(gpointer key, gpointer value, gpointer user_data)
+static void append_tag_path(gpointer key, gpointer value, gpointer user_data)
 {
-	struct near_target *target = value;
+	struct near_tag *tag = value;
 	DBusMessageIter *iter = user_data;
-	const char *target_path;
+	const char *tag_path;
 
-	target_path = __near_target_get_path(target);
-	if (target_path == NULL)
+	tag_path = __near_tag_get_path(tag);
+	if (tag_path == NULL)
 		return;
 
-	DBG("%s", target_path);
+	DBG("%s", tag_path);
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
-							&target_path);
+							&tag_path);
 }
 
-static void append_targets(DBusMessageIter *iter, void *user_data)
+static void append_tags(DBusMessageIter *iter, void *user_data)
 {
 	struct near_adapter *adapter = user_data;
 
 	DBG("");
 
-	g_hash_table_foreach(adapter->targets, append_target_path, iter);
+	g_hash_table_foreach(adapter->tags, append_tag_path, iter);
 }
 
-void __near_adapter_target_changed(uint32_t adapter_idx)
+void __near_adapter_tags_changed(uint32_t adapter_idx)
 {
 	struct near_adapter *adapter;
+
+	DBG("");
 
 	adapter = g_hash_table_lookup(adapter_hash,
 				GINT_TO_POINTER(adapter_idx));
@@ -226,8 +232,8 @@ void __near_adapter_target_changed(uint32_t adapter_idx)
 		return;
 
 	near_dbus_property_changed_array(adapter->path,
-				NFC_ADAPTER_INTERFACE, "Targets",
-				DBUS_TYPE_OBJECT_PATH, append_targets,
+				NFC_ADAPTER_INTERFACE, "Tags",
+				DBUS_TYPE_OBJECT_PATH, append_tags,
 				adapter);
 }
 static DBusMessage *get_properties(DBusConnection *conn,
@@ -256,8 +262,8 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, adapter);
 
-	near_dbus_dict_append_array(&dict, "Targets",
-				DBUS_TYPE_OBJECT_PATH, append_targets, adapter);
+	near_dbus_dict_append_array(&dict, "Tags",
+				DBUS_TYPE_OBJECT_PATH, append_tags, adapter);
 
 	near_dbus_dict_close(&array, &dict);
 
@@ -417,7 +423,7 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 static gboolean check_presence(gpointer user_data)
 {
 	struct near_adapter *adapter = user_data;
-	struct near_target *target;
+	struct near_tag *tag;
 	int err;
 
 	DBG("");
@@ -425,11 +431,11 @@ static gboolean check_presence(gpointer user_data)
 	if (adapter == NULL)
 		return FALSE;
 
-	target = adapter->link;
-	if (target == NULL)
+	tag = adapter->tag_link;
+	if (tag == NULL)
 		return FALSE;
 
-	err = __near_tag_check_presence(target, tag_present_cb);
+	err = __near_tag_check_presence(tag, tag_present_cb);
 	if (err < 0) {
 		DBG("Could not check target presence");
 
@@ -454,7 +460,7 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 		return;
 
 	if (status < 0) {
-		DBG("Target is gone");
+		DBG("Tag is gone");
 
 		near_adapter_disconnect(adapter->idx);
 		if (adapter->constant_poll == TRUE)
@@ -676,8 +682,8 @@ static GDBusMethodTable adapter_methods[] = {
 
 static GDBusSignalTable adapter_signals[] = {
 	{ "PropertyChanged",		"sv"	},
-	{ "TargetFound",		"o"	},
-	{ "TargetLost",			"o"	},
+	{ "TagFound",		        "o"	},
+	{ "TagLost",			"o"	},
 	{ }
 };
 
@@ -700,9 +706,9 @@ struct near_adapter * __near_adapter_create(uint32_t idx,
 	adapter->powered = powered;
 	adapter->constant_poll = near_setting_get_bool("ConstantPoll");
 	adapter->dep_up = FALSE;
-	adapter->targets = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-							NULL, free_target);
-	adapter->sock = -1;
+	adapter->tags = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+							NULL, free_tag);
+	adapter->tag_sock = -1;
 
 	adapter->path = g_strdup_printf("%s/nfc%d", NFC_PATH, idx);
 
@@ -785,6 +791,7 @@ void __near_adapter_remove(struct near_adapter *adapter)
 	g_hash_table_remove(adapter_hash, GINT_TO_POINTER(adapter->idx));
 }
 
+#if 0
 static int dep_link_up(uint32_t idx, uint32_t target_idx)
 {
 	return __near_netlink_dep_link_up(idx, target_idx,
@@ -795,16 +802,17 @@ static int dep_link_down(uint32_t idx)
 {
 	return __near_netlink_dep_link_down(idx);
 }
+#endif
 
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
-	struct near_target *target;
+	struct near_tag *tag;
 	struct near_ndef_message *ndef, *ndef_with_header = NULL;
 	uint16_t tag_type;
 	int err;
 
-	DBG("");
+	DBG("status %d", status);
 
 	adapter = g_hash_table_lookup(adapter_hash,
 					GINT_TO_POINTER(adapter_idx));
@@ -819,23 +827,23 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 		return;
 	}
 
-	__near_adapter_target_changed(adapter_idx);
+	__near_adapter_tags_changed(adapter_idx);
 
 	/* Check if adapter ndef queue has any ndef messages,
 	 * then write the ndef data on tag. */
 	if (g_list_length(adapter->ndef_q) == 0)
 		goto out;
 
-	target = g_hash_table_lookup(adapter->targets,
+	tag = g_hash_table_lookup(adapter->tags,
 					GINT_TO_POINTER(target_idx));
-	if (target == NULL)
+	if (tag == NULL)
 		goto out;
 
 	ndef = __pop_ndef_queue(adapter);
 	if (ndef == NULL)
 		goto out;
 
-	tag_type = __near_target_get_tag_type(target);
+	tag_type = __near_tag_get_type(tag);
 
 	/* Add NDEF header information depends upon tag type */
 	switch (tag_type) {
@@ -901,7 +909,7 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	g_free(ndef->data);
 	g_free(ndef);
 
-	err = __near_tag_add_ndef(target, ndef_with_header, __add_ndef_cb);
+	err = __near_tag_add_ndef(tag, ndef_with_header, __add_ndef_cb);
 	if (err < 0) {
 		g_free(ndef_with_header->data);
 		g_free(ndef_with_header);
@@ -922,14 +930,40 @@ out:
 						check_presence, adapter);
 }
 
+static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
+			uint32_t protocols,
+			uint16_t sens_res, uint8_t sel_res,
+			uint8_t *nfcid, uint8_t nfcid_len)
+{
+	struct near_tag *tag;
+	uint32_t tag_type;
+	int err;
+
+	tag = __near_tag_add(adapter->idx, target_idx, protocols,
+				sens_res, sel_res,
+				nfcid, nfcid_len);
+	if (tag == NULL)
+		return -ENODEV;
+
+	g_hash_table_insert(adapter->tags, GINT_TO_POINTER(target_idx),
+								tag);
+
+	tag_type = __near_tag_get_type(tag);
+
+	err = near_adapter_connect(adapter->idx, target_idx, tag_type);
+	if (err < 0) {
+		near_error("Could not connect");
+		return err;
+	}
+
+	return __near_tag_read(tag, tag_read_cb);
+}
+
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
 			uint8_t *nfcid, uint8_t nfcid_len)
 {
 	struct near_adapter *adapter;
-	struct near_target *target;
-	uint16_t tag_type;
-	int err;
 
 	DBG("idx %d", idx);
 
@@ -940,42 +974,18 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	adapter->polling = FALSE;
 	polling_changed(adapter);
 
-	/* TODO target reference */
-	target = __near_target_add(idx, target_idx, protocols,
+	if (protocols & NFC_PROTO_NFC_DEP_MASK)
+		return -EOPNOTSUPP;
+	else
+		return adapter_add_tag(adapter, target_idx, protocols,
 					sens_res, sel_res, nfcid, nfcid_len);
-	if (target == NULL)
-		return -ENODEV;
 
-	g_hash_table_insert(adapter->targets,
-			GINT_TO_POINTER(target_idx), target);	
-
-	tag_type = __near_target_get_tag_type(target);
-
-	if (tag_type != NFC_PROTO_NFC_DEP) {
-		err = near_adapter_connect(idx, target_idx, tag_type);
-		if (err < 0) {
-			near_error("Could not connect");
-			return err;
-		}
-
-		err = __near_tag_read(target, tag_read_cb);
-	} else {
-		/* For p2p, reading is service binding */
-		err = __near_tag_read(target, tag_read_cb);
-		if (err < 0) {
-			near_error("Could not read tag");
-			return err;
-		}
-
-		err = near_adapter_connect(idx, target_idx, tag_type);
-	}
-
-	return err;
 }
 
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 {
 	struct near_adapter *adapter;
+	struct near_tag *tag;
 
 	DBG("idx %d", idx);
 
@@ -983,11 +993,17 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	g_hash_table_remove(adapter->targets, GINT_TO_POINTER(target_idx));
+	tag = g_hash_table_lookup(adapter->tags, GINT_TO_POINTER(target_idx));
+	if (tag != NULL) {
+		g_hash_table_remove(adapter->tags, GINT_TO_POINTER(target_idx));
 
-	__near_adapter_target_changed(idx);
+		__near_adapter_tags_changed(idx);
 
-	return 0;
+		return 0;
+	} else {
+		/* TODO search for devices */
+		return -ENODEV;
+	}
 }
 
 static void adapter_flush_rx(struct near_adapter *adapter, int error)
@@ -1056,7 +1072,7 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 {
 	struct near_adapter *adapter;
-	struct near_target *target;
+	struct near_tag *tag;
 	struct sockaddr_nfc addr;
 	int err, sock;
 
@@ -1066,25 +1082,13 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	if (adapter->sock != -1)
+	if (adapter->tag_sock != -1)
 		return -EALREADY;
 
-	target = g_hash_table_lookup(adapter->targets,
+	tag = g_hash_table_lookup(adapter->tags,
 				GINT_TO_POINTER(target_idx));
-	if (target == NULL)
+	if (tag == NULL)
 		return -ENOLINK;
-
-	if (protocol == NFC_PROTO_NFC_DEP) {
-		err = dep_link_up(idx, target_idx);
-		if (err < 0)
-			return err;
-
-		adapter->link = target;
-
-		DBG("link %p", adapter->link);
-
-		return 0;
-	}
 
 	sock = socket(AF_NFC, SOCK_SEQPACKET, NFC_SOCKPROTO_RAW);
 	if (sock == -1)
@@ -1101,11 +1105,11 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 		return err;
 	}
 
-	adapter->sock = sock;
-	adapter->link = target;
+	adapter->tag_sock = sock;
+	adapter->tag_link = tag;
 
 	if (adapter->channel == NULL)
-		adapter->channel = g_io_channel_unix_new(adapter->sock);
+		adapter->channel = g_io_channel_unix_new(adapter->tag_sock);
 
 	g_io_channel_set_flags(adapter->channel, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_channel_set_close_on_unref(adapter->channel, TRUE);
@@ -1130,24 +1134,19 @@ int near_adapter_disconnect(uint32_t idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	DBG("link %p", adapter->link);
+	DBG("link %p", adapter->tag_link);
 
-	if (adapter->link == NULL)
+	if (adapter->tag_link == NULL)
 		return -ENOLINK;
 
-	tag_type = __near_target_get_tag_type(adapter->link);
-	target_idx = __near_target_get_idx(adapter->link);
+	tag_type = __near_tag_get_type(adapter->tag_link);
+	target_idx = __near_tag_get_idx(adapter->tag_link);
 
 	DBG("tag type %d", tag_type);
 
 	__near_adapter_remove_target(adapter->idx, target_idx);
 
-	if (tag_type == NFC_PROTO_NFC_DEP) {
-		adapter->link = NULL;
-		return dep_link_down(idx);
-	}
-
-	if (adapter->sock == -1)
+	if (adapter->tag_sock == -1)
 		return -ENOLINK;
 
 	if (adapter->watch > 0) {
@@ -1156,9 +1155,9 @@ int near_adapter_disconnect(uint32_t idx)
 	}
 
 	adapter->channel = NULL;
-	close(adapter->sock);
-	adapter->sock = -1;
-	adapter->link = NULL;
+	close(adapter->tag_sock);
+	adapter->tag_sock = -1;
+	adapter->tag_link = NULL;
 
 	return 0;
 }
@@ -1176,7 +1175,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 	if (adapter == NULL)
 		return -ENODEV;
 
-	if (adapter->sock == -1 || adapter->link == NULL)
+	if (adapter->tag_sock == -1 || adapter->tag_link == NULL)
 		return -ENOLINK;
 
 	if (cb != NULL && adapter->watch != 0) {
@@ -1186,7 +1185,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 
 		DBG("req %p cb %p data %p", req, cb, data);
 
-		req->target_idx = __near_target_get_idx(adapter->link);
+		req->target_idx = __near_tag_get_idx(adapter->tag_link);
 		req->cb = cb;
 		req->data = data;
 
@@ -1194,7 +1193,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 			g_list_append(adapter->ioreq_list, req);
 	}
 
-	err = send(adapter->sock, buf, length, 0);
+	err = send(adapter->tag_sock, buf, length, 0);
 	if (err < 0)
 		goto out_err;
 

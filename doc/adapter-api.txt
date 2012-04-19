@@ -27,7 +27,7 @@ Methods:	dict GetProperties()
 			this method. It is only valid when the adapter is in
 			initiator mode.
 
-			This process will start emitting TargetFound and
+			This process will start emitting TagFound and
 			PropertyChanged "Polling" signals.
 
 			Possible errors: org.neard.Error.NotReady
@@ -95,18 +95,18 @@ Signals		PropertyChanged(string name, variant value)
 			This signal indicates a changed value of the given
 			property.
 
-		TargetFound(string address, dict values)
+		TagFound(string address, dict values)
 
-			This signal is sent whenever an NFC target is found,
+			This signal is sent whenever an NFC tag is found,
 			as a result of a probe response reception.
  
 			The dictionary contains basically the same values
 			that are returned by the GetProperties method
-			from the org.neard.Target interface.
+			from the org.neard.Tag interface.
 
-		TargetLost(string address)
+		TagLost(string address)
 
-			This signal is sent whenever the NFC target is no longer
+			This signal is sent whenever the NFC tag is no longer
 			in sight, or when it's been de-activated.
 
 
@@ -132,6 +132,6 @@ Properties:	string Mode [readwrite]
 			Possible values are "Felica", "MIFARE", "Jewel",
 			"ISO-DEP" and "NFC-DEP".
 
-		array{object} Targets [readonly]
+		array{object} Tags [readonly]
 
-			The targets object paths.
+			The tags object paths.

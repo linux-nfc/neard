@@ -305,9 +305,13 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	ndef_data_length *= 0x100;
 	ndef_data_length += resp[OFS_READ_DATA + 13];
 
-	/* Associate the DATA length to the tag */
-	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx,
+	/* Add data to the tag */
+	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
 					NULL, ndef_data_length);
+	if (err < 0)
+		goto out;
+
+	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 	if (tag == NULL) {
 		err = -ENOMEM;
 		goto out;
@@ -609,7 +613,7 @@ static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 	if (ndef == NULL || cb == NULL)
 		return -EINVAL;
 
-	tag = near_target_get_tag(adapter_idx, target_idx);
+	tag = near_tag_get_tag(adapter_idx, target_idx);
 	if (tag == NULL)
 		return -EINVAL;
 
@@ -671,6 +675,8 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 			cmd.len , nfctype3_check_recv_UID, cookie);
 	if (err < 0)
 		goto out;
+
+	return 0;
 
 out:
 	t3_cookie_release(cookie);

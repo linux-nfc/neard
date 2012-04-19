@@ -196,8 +196,12 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		goto out;
 	}
 
-	tag = near_target_add_tag(cookie->adapter_idx, cookie->target_idx,
-				  NULL, TAG_DATA_LENGTH(cc));
+	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
+					NULL, TAG_DATA_LENGTH(cc));
+	if (err < 0)
+		goto out;
+
+	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 	if (tag == NULL) {
 		err = -ENOMEM;
 		goto out;
@@ -266,7 +270,7 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 
 	DBG("");
 
-	tgt_subtype = near_target_get_subtype(adapter_idx, target_idx);
+	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
 	switch (tgt_subtype) {
 	case NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT:
@@ -395,7 +399,7 @@ static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 	if (ndef == NULL || cb == NULL)
 		return -EINVAL;
 
-	tag = near_target_get_tag(adapter_idx, target_idx);
+	tag = near_tag_get_tag(adapter_idx, target_idx);
 	if (tag == NULL)
 		return -EINVAL;
 
@@ -404,7 +408,7 @@ static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
 		return -EPERM;
 	}
 
-	tgt_subtype = near_target_get_subtype(adapter_idx, target_idx);
+	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
 	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
 		DBG("Unknown Tag Type 2 subtype (%d)", tgt_subtype);

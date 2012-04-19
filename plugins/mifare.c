@@ -448,8 +448,10 @@ static int mifare_process_MADs(void *data)
 	DBG("");
 
 	/* Parse MAD entries to get the global size and fill the array */
-	if (mf_ck->mad_1 == NULL)
+	if (mf_ck->mad_1 == NULL) {
+		err = -EINVAL;
 		goto out_err;
+	}
 
 	for (i = 0; i < MAD_V1_AIDS_LEN; i++) {
 		if (mf_ck->mad_1->aids[i] != NFC_AID_TAG)
@@ -482,10 +484,14 @@ done_mad:
 	/* n sectors, each sector is 3 blocks, each block is 16 bytes */
 	DBG("TAG Global size: [%d]", global_tag_size);
 
-	mf_ck->tag = near_target_add_tag(mf_ck->adapter_idx,
+	err = near_tag_add_data(mf_ck->adapter_idx,
 						mf_ck->target_idx,
 						NULL, /* Empty */
 						global_tag_size);
+	if (err < 0)
+		goto out_err;
+
+	mf_ck->tag = near_tag_get_tag(mf_ck->adapter_idx, mf_ck->target_idx);
 	if (mf_ck->tag == NULL) {
 		err = -ENOMEM;
 		goto out_err;
@@ -630,7 +636,7 @@ int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
 	cookie = g_try_malloc0(sizeof(struct mifare_cookie));
 
 	/* Get the nfcid1 */
-	cookie->nfcid1 = near_target_get_nfcid(adapter_idx, target_idx,
+	cookie->nfcid1 = near_tag_get_nfcid(adapter_idx, target_idx,
 				&cookie->nfcid1_len);
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;

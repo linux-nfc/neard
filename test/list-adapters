@@ -32,7 +32,7 @@ for path in properties["Adapters"]:
                 val = "true"
             else:
                 val = "false"
-        elif key in ["Protocols", "Targets"]:
+        elif key in ["Protocols", "Tags"]:
             val = extract_list(properties[key])
         else:
             val = str(properties[key])

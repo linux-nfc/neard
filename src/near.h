@@ -101,7 +101,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
 			uint8_t *nfcid, uint8_t nfcid_len);
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx);
-void __near_adapter_target_changed(uint32_t adapter_idx);
+void __near_adapter_tags_changed(uint32_t adapter_idx);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
@@ -120,17 +120,25 @@ const char *__near_ndef_get_uri_prefix(uint8_t id);
 
 int __near_tag_init(void);
 void __near_tag_cleanup(void);
+struct near_tag *__near_tag_add(uint32_t idx, uint32_t target_idx,
+				uint32_t protocols,
+				uint16_t sens_res, uint8_t sel_res,
+				uint8_t *nfcid, uint8_t nfcid_len);
+void __near_tag_remove(struct near_tag *tag);
+const char *__near_tag_get_path(struct near_tag *tag);
+uint32_t __near_tag_get_idx(struct near_tag *tag);
+uint32_t __near_tag_get_type(struct near_tag *tag);
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter);
 uint32_t __near_tag_n_records(struct near_tag *tag);
 int __near_tag_add_record(struct near_tag *tag, struct near_ndef_record *record);
 struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
 				uint8_t *data, size_t data_length);
 void __near_tag_free(struct near_tag *tag);
-int __near_tag_read(struct near_target *target, near_tag_io_cb cb);
-int __near_tag_add_ndef(struct near_target *target,
+int __near_tag_read(struct near_tag *tag, near_tag_io_cb cb);
+int __near_tag_add_ndef(struct near_tag *tag,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb);
-int __near_tag_check_presence(struct near_target *target, near_tag_io_cb cb);
+int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb);
 
 #include <near/tlv.h>
 
