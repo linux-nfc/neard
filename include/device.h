@@ -28,7 +28,29 @@
 
 struct near_device;
 
+typedef void (*near_device_io_cb) (uint32_t adapter_idx, uint32_t target_idx,
+								int status);
+
+struct near_ndef_message;
+
+#define NEAR_DEVICE_PRIORITY_LOW      -100
+#define NEAR_DEVICE_PRIORITY_DEFAULT     0
+#define NEAR_DEVICE_PRIORITY_HIGH      100
+
+struct near_device_driver {
+	uint16_t type;
+	int priority;
+
+	int (*listen)(uint32_t adapter_idx, uint32_t target_idx,
+						near_device_io_cb cb);
+	int (*push)(uint32_t adapter_idx, uint32_t target_idx,
+					struct near_ndef_message *ndef,
+					near_device_io_cb cb);
+};
+
 struct near_device *near_device_get_device(uint32_t adapter_idx,
 						uint32_t target_idx);
+int near_device_driver_register(struct near_device_driver *driver);
+void near_device_driver_unregister(struct near_device_driver *driver);
 
 #endif

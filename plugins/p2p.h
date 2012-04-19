@@ -28,7 +28,7 @@ struct near_p2p_driver {
 	const char *service_name;
 	near_bool_t (*read)(int client_fd,
 				uint32_t adapter_idx, uint32_t target_idx,
-				near_tag_io_cb cb);
+				near_device_io_cb cb);
 	void (*close)(int client_fd, int err);
 };
 

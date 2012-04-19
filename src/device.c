@@ -54,6 +54,8 @@ static DBusConnection *connection = NULL;
 
 static GHashTable *device_hash;
 
+static GSList *driver_list = NULL;
+
 static void free_device(gpointer data)
 {
 	struct near_device *device = data;
@@ -222,6 +224,33 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 							NULL, device, NULL);
 
 	return device;
+}
+
+static gint cmp_prio(gconstpointer a, gconstpointer b)
+{
+	const struct near_tag_driver *driver1 = a;
+	const struct near_tag_driver *driver2 = b;
+
+	return driver2->priority - driver1->priority;
+}
+
+int near_device_driver_register(struct near_device_driver *driver)
+{
+	DBG("");
+
+	if (driver->listen == NULL)
+		return -EINVAL;
+
+	driver_list = g_slist_insert_sorted(driver_list, driver, cmp_prio);
+
+	return 0;
+}
+
+void near_device_driver_unregister(struct near_device_driver *driver)
+{
+	DBG("");
+
+	driver_list = g_slist_remove(driver_list, driver);
 }
 
 int __near_device_init(void)
