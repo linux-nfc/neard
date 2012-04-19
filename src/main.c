@@ -204,6 +204,7 @@ int main(int argc, char *argv[])
 
 	__near_netlink_init();
 	__near_tag_init();
+	__near_device_init();
 	__near_adapter_init();
 	__near_ndef_init();
 	__near_manager_init(conn);
@@ -224,6 +225,7 @@ int main(int argc, char *argv[])
 	__near_manager_cleanup();
 	__near_ndef_cleanup();
 	__near_adapter_cleanup();
+	__near_device_cleanup();
 	__near_tag_cleanup();
 	__near_netlink_cleanup();
 

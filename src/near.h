@@ -120,6 +120,11 @@ int __near_tag_add_ndef(struct near_tag *tag,
 				near_tag_io_cb cb);
 int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb);
 
+#include <near/device.h>
+
+int __near_device_init(void);
+void __near_device_cleanup(void);
+
 #include <near/tlv.h>
 
 int __near_netlink_get_adapters(void);

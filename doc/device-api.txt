@@ -1,0 +1,33 @@
+Device hierarchy
+================
+
+Service		org.neard
+Interface	org.neard.Device
+Object path	[variable prefix]/{nfc0}/{device0, device1...}
+
+Method		dict GetProperties()
+
+			Returns all properties for the device. See the
+			properties section for available properties.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+
+		void SetProperty(string name, variant value)
+
+			Changes the value of the specified property. Only
+			properties that are listed a read-write are changeable.
+			On success this will emit a PropertyChanged signal.
+
+			Possible Errors: org.neard.Error.DoesNotExist
+					 org.neard.Error.InvalidArguments
+
+
+Signals		PropertyChanged(string name, variant value)
+
+			This signal indicates a changed value of the given
+			property.
+
+
+Properties	array{object} Records [readonly]
+
+			List of NDEF records object paths.
