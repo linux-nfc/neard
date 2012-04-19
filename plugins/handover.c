@@ -34,7 +34,6 @@
 #include <near/log.h>
 #include <near/types.h>
 #include <near/adapter.h>
-#include <near/target.h>
 #include <near/tag.h>
 #include <near/ndef.h>
 #include <near/tlv.h>

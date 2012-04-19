@@ -28,6 +28,8 @@
 
 #define NFC_HEADER_SIZE 1
 
+#define NFC_MAX_NFCID1_LEN 10
+
 enum near_tag_sub_type {
 	NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT = 0,	// SAK 0x00
 	NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K,	// SAK:0x08

@@ -30,7 +30,6 @@
 #include <near/types.h>
 
 struct near_adapter;
-struct near_target;
 
 #include <near/log.h>
 
@@ -68,25 +67,6 @@ int __near_manager_adapter_add(uint32_t idx, const char *name,
 void __near_manager_adapter_remove(uint32_t idx);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
-
-#include <near/target.h>
-
-enum near_target_type {
-	NEAR_TARGET_TYPE_TAG = 0,
-	NEAR_TARGET_TYPE_DEVICE = 1,
-};
-
-const char *__near_target_get_path(struct near_target *target);
-uint16_t __near_target_get_tag_type(struct near_target *target);
-uint32_t __near_target_get_idx(struct near_target *target);
-uint32_t __near_target_get_adapter_idx(struct near_target *target);
-uint32_t __near_target_get_protocols(struct near_target *target);
-struct near_target * __near_target_add(uint32_t adapter_idx, uint32_t target_idx,
-			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
-			uint8_t *nfcid, uint8_t nfcid_len);
-void __near_target_remove(struct near_target *target);
-int __near_target_init(void);
-void __near_target_cleanup(void);
 
 #include <near/adapter.h>
 

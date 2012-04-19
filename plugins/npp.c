@@ -35,7 +35,6 @@
 #include <near/log.h>
 #include <near/types.h>
 #include <near/adapter.h>
-#include <near/target.h>
 #include <near/tag.h>
 #include <near/ndef.h>
 #include <near/tlv.h>
@@ -119,8 +118,12 @@ static near_bool_t npp_read(int client_fd,
 
 	DBG("Total NDEF length %d", total_ndef_length);
 
-	tag = near_target_add_tag(adapter_idx, target_idx,
+	err = near_tag_add_data(adapter_idx, target_idx,
 					ndefs, total_ndef_length);
+	if (err < 0)
+		return FALSE;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
 	if (tag == NULL) {
 		g_free(ndefs);
 		return -ENOMEM;

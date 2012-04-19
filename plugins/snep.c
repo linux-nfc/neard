@@ -35,7 +35,6 @@
 #include <near/log.h>
 #include <near/types.h>
 #include <near/adapter.h>
-#include <near/target.h>
 #include <near/tag.h>
 #include <near/ndef.h>
 #include <near/tlv.h>
@@ -157,9 +156,12 @@ static near_bool_t snep_read_ndef(int client_fd,
 	}
 
 	snep_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
-	tag = near_target_add_tag(snep_data->adapter_idx, snep_data->target_idx,
+	if (near_tag_add_data(snep_data->adapter_idx, snep_data->target_idx,
 					snep_data->nfc_data,
-					snep_data->nfc_data_length);
+					snep_data->nfc_data_length) < 0)
+		goto out;
+
+	tag = near_tag_get_tag(snep_data->adapter_idx, snep_data->target_idx);
 	if (tag == NULL)
 		goto out;
 
