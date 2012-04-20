@@ -731,7 +731,7 @@ int near_tag_driver_register(struct near_tag_driver *driver)
 {
 	DBG("");
 
-	if (driver->read_tag == NULL)
+	if (driver->read == NULL)
 		return -EINVAL;
 
 	driver_list = g_slist_insert_sorted(driver_list, driver, cmp_prio);
@@ -758,13 +758,14 @@ int __near_tag_read(struct near_tag *tag, near_tag_io_cb cb)
 		DBG("driver type 0x%x", driver->type);
 
 		if (driver->type == tag->type)
-			return driver->read_tag(tag->adapter_idx, tag->target_idx, cb);
+			return driver->read(tag->adapter_idx, tag->target_idx,
+									cb);
 	}
 
 	return 0;
 }
 
-int __near_tag_add_ndef(struct near_tag *tag,
+int __near_tag_write(struct near_tag *tag,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
@@ -778,7 +779,7 @@ int __near_tag_add_ndef(struct near_tag *tag,
 		DBG("driver type 0x%x", driver->type);
 
 		if (driver->type == tag->type)
-			return driver->add_ndef(tag->adapter_idx, tag->target_idx,
+			return driver->write(tag->adapter_idx, tag->target_idx,
 								ndef, cb);
 	}
 

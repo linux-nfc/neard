@@ -390,7 +390,7 @@ out:
 	return err;
 }
 
-static int nfctype3_read_tag(uint32_t adapter_idx,
+static int nfctype3_read(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type3_cmd cmd;
@@ -601,7 +601,7 @@ out:
 	return err;
 }
 
-static int nfctype3_write_tag(uint32_t adapter_idx, uint32_t target_idx,
+static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
@@ -686,8 +686,8 @@ out:
 static struct near_tag_driver type1_driver = {
 	.type           = NFC_PROTO_FELICA,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
-	.read_tag       = nfctype3_read_tag,
-	.add_ndef       = nfctype3_write_tag,
+	.read           = nfctype3_read,
+	.write          = nfctype3_write,
 	.check_presence = nfctype3_check_presence,
 };
 

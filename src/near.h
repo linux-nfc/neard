@@ -117,7 +117,7 @@ struct near_tag *__near_tag_new(uint32_t adapter_idx, uint32_t target_idx,
 				uint8_t *data, size_t data_length);
 void __near_tag_free(struct near_tag *tag);
 int __near_tag_read(struct near_tag *tag, near_tag_io_cb cb);
-int __near_tag_add_ndef(struct near_tag *tag,
+int __near_tag_write(struct near_tag *tag,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb);
 int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb);

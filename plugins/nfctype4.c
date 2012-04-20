@@ -547,7 +547,7 @@ out_err:
 	return t4_cookie_release(err, cookie);
 }
 
-static int nfctype4_read_tag(uint32_t adapter_idx,
+static int nfctype4_read(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct t4_cookie *cookie;
@@ -679,7 +679,7 @@ out:
 	return err;
 }
 
-static int nfctype4_write_tag(uint32_t adapter_idx, uint32_t target_idx,
+static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,
 			struct near_ndef_message *ndef, near_tag_io_cb cb)
 {
 	struct near_tag *tag;
@@ -753,8 +753,8 @@ out_err:
 static struct near_tag_driver type4_driver = {
 	.type           = NFC_PROTO_ISO14443,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
-	.read_tag       = nfctype4_read_tag,
-	.add_ndef       = nfctype4_write_tag,
+	.read           = nfctype4_read,
+	.write          = nfctype4_write,
 	.check_presence = nfctype4_check_presence,
 };
 

@@ -45,7 +45,7 @@
  * */
 
 /* Prototype */
-int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
+int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
 /* MIFARE command set */
@@ -620,7 +620,7 @@ out_err:
  * On sector 0x10, App. directory is on block 0x40, 0x41 & 0x42
  * On reading, we ignore the CRC.
  */
-int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
+int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype)
 {
 	struct mifare_cookie *cookie;

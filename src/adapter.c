@@ -639,7 +639,7 @@ static int publish_sp_record(DBusMessage *msg, void *data)
 	return __push_ndef_queue(data, ndef);
 }
 
-static void __add_ndef_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
+static void __write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
 
@@ -953,7 +953,7 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	g_free(ndef->data);
 	g_free(ndef);
 
-	err = __near_tag_add_ndef(tag, ndef_with_header, __add_ndef_cb);
+	err = __near_tag_write(tag, ndef_with_header, __write_cb);
 	if (err < 0) {
 		g_free(ndef_with_header->data);
 		g_free(ndef_with_header);

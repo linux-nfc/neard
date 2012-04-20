@@ -39,7 +39,7 @@
 #include <near/ndef.h>
 #include <near/tlv.h>
 
-extern int mifare_read_tag(uint32_t adapter_idx, uint32_t target_idx,
+extern int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
 #define CMD_READ         0x30
@@ -264,7 +264,7 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 							meta_recv, cookie);
 }
 
-static int nfctype2_read_tag(uint32_t adapter_idx,
+static int nfctype2_read(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	int err;
@@ -282,7 +282,7 @@ static int nfctype2_read_tag(uint32_t adapter_idx,
 	/* Specific Mifare read access */
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
-		err= mifare_read_tag( adapter_idx, target_idx,
+		err= mifare_read( adapter_idx, target_idx,
 			cb, tgt_subtype);
 		break;
 
@@ -389,7 +389,7 @@ out:
 	return err;
 }
 
-static int nfctype2_write_tag(uint32_t adapter_idx, uint32_t target_idx,
+static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
@@ -484,8 +484,8 @@ out:
 static struct near_tag_driver type2_driver = {
 	.type           = NFC_PROTO_MIFARE,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
-	.read_tag       = nfctype2_read_tag,
-	.add_ndef       = nfctype2_write_tag,
+	.read           = nfctype2_read,
+	.write          = nfctype2_write,
 	.check_presence = nfctype2_check_presence,
 };
 

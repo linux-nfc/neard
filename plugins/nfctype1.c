@@ -314,7 +314,7 @@ out_err:
  * This cmd is common to static and dynamic targets
  * This should allow to get the HR0 byte
  */
-static int nfctype1_read_tag(uint32_t adapter_idx,
+static int nfctype1_read(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct type1_cmd t1_cmd;
@@ -470,7 +470,7 @@ out:
  * Write NDEF Message data
  * Write NMN = E1h as the last byte to be written
  */
-static int nfctype1_write_tag(uint32_t adapter_idx, uint32_t target_idx,
+static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb)
 {
@@ -558,8 +558,8 @@ out:
 static struct near_tag_driver type1_driver = {
 	.type           = NFC_PROTO_JEWEL,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
-	.read_tag       = nfctype1_read_tag,
-	.add_ndef       = nfctype1_write_tag,
+	.read           = nfctype1_read,
+	.write          = nfctype1_write,
 	.check_presence = nfctype1_check_presence,
 };
 
