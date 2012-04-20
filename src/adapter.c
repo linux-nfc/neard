@@ -65,7 +65,6 @@ struct near_adapter {
 	GIOChannel *channel;
 	guint watch;
 	GList *ioreq_list;
-	GList *ndef_q;
 
 	guint presence_timeout;
 };
@@ -395,81 +394,6 @@ static DBusMessage *stop_poll(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
-static int __push_ndef_queue(struct near_adapter *adapter,
-					struct near_ndef_message *ndef)
-{
-	if (adapter == NULL || ndef == NULL)
-		return -EINVAL;
-
-	adapter->ndef_q = g_list_append(adapter->ndef_q, ndef);
-
-	return 0;
-}
-
-static struct near_ndef_message *
-__pop_ndef_queue(struct near_adapter *adapter)
-{
-	GList *list;
-	struct near_ndef_message *ndef;
-
-	if (adapter == NULL)
-		return NULL;
-
-	list = g_list_first(adapter->ndef_q);
-	if (list == NULL)
-		return NULL;
-
-	ndef = list->data;
-	if (ndef != NULL)
-		adapter->ndef_q = g_list_remove(adapter->ndef_q, ndef);
-
-	return ndef;
-}
-
-static int __publish_text_record(DBusMessage *msg, void *data)
-{
-	DBusMessageIter iter, arr_iter;
-	struct near_ndef_message *ndef;
-	char *cod = NULL, *lang = NULL, *rep = NULL;
-
-	DBG("");
-
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &arr_iter);
-
-	while (dbus_message_iter_get_arg_type(&arr_iter) !=
-					DBUS_TYPE_INVALID) {
-		const char *key;
-		DBusMessageIter ent_iter;
-		DBusMessageIter var_iter;
-
-		dbus_message_iter_recurse(&arr_iter, &ent_iter);
-		dbus_message_iter_get_basic(&ent_iter, &key);
-		dbus_message_iter_next(&ent_iter);
-		dbus_message_iter_recurse(&ent_iter, &var_iter);
-
-		switch (dbus_message_iter_get_arg_type(&var_iter)) {
-		case DBUS_TYPE_STRING:
-			if (g_strcmp0(key, "Encoding") == 0)
-				dbus_message_iter_get_basic(&var_iter, &cod);
-			else if (g_strcmp0(key, "Language") == 0)
-				dbus_message_iter_get_basic(&var_iter, &lang);
-			else if (g_strcmp0(key, "Representation") == 0)
-				dbus_message_iter_get_basic(&var_iter, &rep);
-
-			break;
-		}
-
-		dbus_message_iter_next(&arr_iter);
-	}
-
-	ndef = near_ndef_prepare_text_record(cod, lang, rep);
-	if (ndef == NULL)
-		return -EINVAL;
-
-	return __push_ndef_queue(data, ndef);
-}
-
 static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 								int status);
 
@@ -527,209 +451,11 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 					check_presence, adapter);
 }
 
-static char *get_uri_field(DBusMessage *msg)
-{
-	DBusMessageIter iter, arr_iter;
-	char *uri = NULL;
-
-	DBG("");
-
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &arr_iter);
-
-	while (dbus_message_iter_get_arg_type(&arr_iter) !=
-					DBUS_TYPE_INVALID) {
-		const char *key;
-		DBusMessageIter ent_iter;
-		DBusMessageIter var_iter;
-
-		dbus_message_iter_recurse(&arr_iter, &ent_iter);
-		dbus_message_iter_get_basic(&ent_iter, &key);
-		dbus_message_iter_next(&ent_iter);
-		dbus_message_iter_recurse(&ent_iter, &var_iter);
-
-		switch (dbus_message_iter_get_arg_type(&var_iter)) {
-		case DBUS_TYPE_STRING:
-			if (g_strcmp0(key, "URI") == 0)
-				dbus_message_iter_get_basic(&var_iter, &uri);
-
-			break;
-		}
-
-		dbus_message_iter_next(&arr_iter);
-	}
-
-	return uri;
-}
-
-static int publish_uri_record(DBusMessage *msg, void *data)
-{
-	struct near_ndef_message *ndef;
-	char *uri = NULL;
-	const char *uri_prefix = NULL;
-	uint8_t id_len, i;
-	uint32_t uri_len;
-
-	DBG("");
-
-	uri = get_uri_field(msg);
-	if (uri == NULL)
-		return -EINVAL;
-
-	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
-		uri_prefix = __near_ndef_get_uri_prefix(i);
-
-		if (uri_prefix != NULL &&
-				g_str_has_prefix(uri, uri_prefix) == TRUE)
-			break;
-	}
-
-	/* If uri_prefix is NULL then ID will be zero */
-	if (uri_prefix == NULL) {
-		i = 0;
-		id_len = 0;
-	} else
-		id_len = strlen(uri_prefix);
-
-	uri_len = strlen(uri) - id_len;
-	ndef = near_ndef_prepare_uri_record(i, uri_len,
-						(uint8_t *)(uri + id_len));
-	if (ndef == NULL)
-		return -EINVAL;
-
-	return __push_ndef_queue(data, ndef);
-}
-
-static int publish_sp_record(DBusMessage *msg, void *data)
-{
-	struct near_ndef_message *ndef;
-	char *uri = NULL;
-	const char *uri_prefix;
-	uint8_t id_len, i;
-	uint32_t uri_len;
-
-	DBG("");
-
-	/* Currently this funtion supports only mandatory URI record,
-	 * TODO: Other records support */
-	uri = get_uri_field(msg);
-	if (uri == NULL)
-		return -EINVAL;
-
-	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
-		uri_prefix = __near_ndef_get_uri_prefix(i);
-
-		if (uri_prefix != NULL &&
-				g_str_has_prefix(uri, uri_prefix) == TRUE)
-			break;
-	}
-
-	if (uri_prefix == NULL) {
-		i = 0;
-		id_len = 0;
-	} else
-		id_len = strlen(uri_prefix);
-
-	uri_len = strlen(uri) - id_len;
-	ndef = near_ndef_prepare_smartposter_record(i, uri_len,
-						(uint8_t *)(uri + id_len));
-	if (ndef == NULL)
-		return -EINVAL;
-
-	return __push_ndef_queue(data, ndef);
-}
-
-static void __write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
-{
-	struct near_adapter *adapter;
-
-	DBG("%d", status);
-
-	adapter = g_hash_table_lookup(adapter_hash,
-					GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
-		return;
-
-	adapter->presence_timeout =
-		g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
-					check_presence, adapter);
-}
-
-static DBusMessage *publish(DBusConnection *conn,
-				DBusMessage *msg, void *data)
-{
-	DBusMessageIter iter;
-	DBusMessageIter arr_iter;
-	struct near_adapter *adapter = data;
-
-	DBG("conn %p", conn);
-
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &arr_iter);
-
-	while (dbus_message_iter_get_arg_type(&arr_iter) !=
-						DBUS_TYPE_INVALID) {
-		const char *key, *value;
-		DBusMessageIter ent_iter;
-		DBusMessageIter var_iter;
-
-		dbus_message_iter_recurse(&arr_iter, &ent_iter);
-		dbus_message_iter_get_basic(&ent_iter, &key);
-
-		if (g_strcmp0(key, "Type") != 0) {
-			dbus_message_iter_next(&arr_iter);
-			continue;
-		}
-
-		dbus_message_iter_next(&ent_iter);
-		dbus_message_iter_recurse(&ent_iter, &var_iter);
-
-		switch (dbus_message_iter_get_arg_type(&var_iter)) {
-		case DBUS_TYPE_STRING:
-			dbus_message_iter_get_basic(&var_iter, &value);
-
-			if (g_strcmp0(value, "Text") == 0) {
-				if (__publish_text_record(msg, adapter)	< 0)
-						goto error;
-
-				goto reply;
-			} else if (g_strcmp0(value, "URI") == 0) {
-				if (publish_uri_record(msg, adapter)	< 0)
-					goto error;
-
-				goto reply;
-
-			} else if (g_strcmp0(value, "SmartPoster") == 0) {
-				if (publish_sp_record(msg, adapter) < 0)
-					goto error;
-
-				goto reply;
-
-			} else {
-				DBG(" '%s' not supported", value);
-				goto error;
-			}
-
-				break;
-		}
-
-		dbus_message_iter_next(&arr_iter);
-	}
-
-error:
-	return g_dbus_create_error(msg, "org.neard.Error.InvalidArguments",
-							"Invalid arguments");
-
-reply:
-	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
-}
-
 static GDBusMethodTable adapter_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
 	{ "StartPoll",         "",      "",      start_poll         },
 	{ "StopPoll",          "",      "",      stop_poll          },
-	{ "Publish",         "a{sv}",   "",      publish            },
 	{ },
 };
 
@@ -838,17 +564,13 @@ void __near_adapter_remove(struct near_adapter *adapter)
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
-	struct near_tag *tag;
-	struct near_ndef_message *ndef, *ndef_with_header = NULL;
-	uint16_t tag_type;
-	int err;
 
 	DBG("status %d", status);
 
 	adapter = g_hash_table_lookup(adapter_hash,
 					GINT_TO_POINTER(adapter_idx));
 	if (adapter == NULL)
-		goto out;
+		return;
 
 	if (status < 0) {
 		near_adapter_disconnect(adapter->idx);
@@ -860,105 +582,9 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	__near_adapter_tags_changed(adapter_idx);
 
-	/* Check if adapter ndef queue has any ndef messages,
-	 * then write the ndef data on tag. */
-	if (g_list_length(adapter->ndef_q) == 0)
-		goto out;
-
-	tag = g_hash_table_lookup(adapter->tags,
-					GINT_TO_POINTER(target_idx));
-	if (tag == NULL)
-		goto out;
-
-	ndef = __pop_ndef_queue(adapter);
-	if (ndef == NULL)
-		goto out;
-
-	tag_type = __near_tag_get_type(tag);
-
-	/* Add NDEF header information depends upon tag type */
-	switch (tag_type) {
-	case NFC_PROTO_JEWEL:
-	case NFC_PROTO_MIFARE:
-		ndef_with_header = g_try_malloc0(sizeof(
-					struct near_ndef_message));
-		if (ndef_with_header == NULL)
-			goto out;
-
-		ndef_with_header->offset = 0;
-		ndef_with_header->length = ndef->length + 3;
-		ndef_with_header->data = g_try_malloc0(ndef->length + 3);
-		if (ndef_with_header->data == NULL)
-			goto out;
-
-		ndef_with_header->data[0] = TLV_NDEF;
-		ndef_with_header->data[1] = ndef->length;
-		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
-		ndef_with_header->data[ndef->length + 2] = TLV_END;
-
-		break;
-
-	case NFC_PROTO_FELICA:
-		ndef_with_header = g_try_malloc0(sizeof(
-					struct near_ndef_message));
-		if (ndef_with_header == NULL)
-			goto out;
-
-		ndef_with_header->offset = 0;
-		ndef_with_header->length = ndef->length;
-		ndef_with_header->data = g_try_malloc0(
-						ndef_with_header->length);
-		if (ndef_with_header->data == NULL)
-			goto out;
-
-		memcpy(ndef_with_header->data, ndef->data, ndef->length);
-
-		break;
-
-	case NFC_PROTO_ISO14443:
-		ndef_with_header = g_try_malloc0(sizeof(
-					struct near_ndef_message));
-		if (ndef_with_header == NULL)
-			goto out;
-
-		ndef_with_header->offset = 0;
-		ndef_with_header->length = ndef->length + 2;
-		ndef_with_header->data = g_try_malloc0(ndef->length + 2);
-		if (ndef_with_header->data == NULL)
-			goto out;
-
-		ndef_with_header->data[0] = (uint8_t)(ndef->length >> 8);
-		ndef_with_header->data[1] = (uint8_t)(ndef->length);
-		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
-
-		break;
-
-	default:
-		goto out;
-	}
-
-	g_free(ndef->data);
-	g_free(ndef);
-
-	err = __near_tag_write(tag, ndef_with_header, __write_cb);
-	if (err < 0) {
-		g_free(ndef_with_header->data);
-		g_free(ndef_with_header);
-		goto out;
-	}
-
-	return;
-
-out:
-	if (ndef_with_header != NULL) {
-		g_free(ndef_with_header->data);
-		g_free(ndef_with_header);
-	}
-
-	if (adapter != NULL)
-		adapter->presence_timeout =
-			g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
-						check_presence, adapter);
+	adapter->presence_timeout =
+		g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
+					check_presence, adapter);
 }
 
 static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
