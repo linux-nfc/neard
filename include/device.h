@@ -49,6 +49,10 @@ struct near_device_driver {
 
 struct near_device *near_device_get_device(uint32_t adapter_idx,
 						uint32_t target_idx);
+int near_device_add_data(uint32_t adapter_idx, uint32_t target_idx,
+			uint8_t *data, size_t data_length);
+int near_device_add_records(struct near_device *device, GList *records,
+				near_device_io_cb cb, int status);
 int near_device_driver_register(struct near_device_driver *driver);
 void near_device_driver_unregister(struct near_device_driver *driver);
 

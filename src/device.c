@@ -179,6 +179,59 @@ static GDBusSignalTable device_signals[] = {
 	{ }
 };
 
+int near_device_add_data(uint32_t adapter_idx, uint32_t target_idx,
+			uint8_t *data, size_t data_length)
+{
+	struct near_device *device;
+
+	device = near_device_get_device(adapter_idx, target_idx);
+	if (device == NULL)
+		return -ENODEV;
+
+	device->data_length = data_length;
+	device->data = g_try_malloc0(data_length);
+	if (device->data == NULL)
+		return -ENOMEM;
+
+	if (data != NULL)
+		memcpy(device->data, data, data_length);
+
+	return 0;
+}
+
+int near_device_add_records(struct near_device *device, GList *records,
+				near_device_io_cb cb, int status)
+{
+	GList *list;
+	struct near_ndef_record *record;
+	char *path;
+
+	DBG("records %p", records);
+
+	for (list = records; list; list = list->next) {
+		record = list->data;
+
+		path = g_strdup_printf("%s/nfc%d/device%d/record%d",
+					NFC_PATH, device->adapter_idx,
+					device->target_idx, device->n_records);
+
+		if (path == NULL)
+			continue;
+
+		__near_ndef_record_register(record, path);
+
+		device->n_records++;
+		device->records = g_list_append(device->records, record);
+	}
+
+	if (cb != NULL)
+		cb(device->adapter_idx, device->target_idx, status);
+
+	g_list_free(records);
+
+	return 0;
+}
+
 struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 					uint8_t *nfcid, uint8_t nfcid_len)
 {
