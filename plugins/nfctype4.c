@@ -256,11 +256,12 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 
 	memcpy(nfc_data + current_length, resp + NFC_HEADER_SIZE, length_read);
 	if (current_length + length_read == data_length) {
+		GList *records;
+
 		DBG("Done reading");
 
-		near_ndef_parse(cookie->tag, nfc_data, data_length);
-		/* Notify the change */
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+		records = near_ndef_parse(nfc_data, data_length);
+		near_tag_add_records(cookie->tag, records, cookie->cb, 0);
 
 		err = 0;
 		goto out_err;

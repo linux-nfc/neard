@@ -1211,44 +1211,51 @@ parse_mime_type(struct near_ndef_record *record,
 	return mime;
 }
 
-int near_ndef_parse(struct near_tag *tag,
-			uint8_t *ndef_data, size_t ndef_length)
+int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 {
-	uint8_t p_mb = 0, p_me = 0, err = EINVAL;
-	uint32_t n_records, adapter_idx, target_idx;
+	record->path = path;
+
+	g_dbus_register_interface(connection, record->path,
+						NFC_RECORD_INTERFACE,
+						record_methods,
+						NULL, NULL,
+						record, NULL);
+
+	return 0;
+}
+
+GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
+{
+	GList *records;
+	uint8_t p_mb = 0, p_me = 0;
 	size_t offset = 0;
 	struct near_ndef_record *record = NULL;
 
 	DBG("");
 
-	if (tag == NULL || ndef_data == NULL ||
-		ndef_length < NDEF_MSG_MIN_LENGTH) {
-			err = EINVAL;
+	records = NULL;
+
+	if (ndef_data == NULL ||
+		ndef_length < NDEF_MSG_MIN_LENGTH)
 			goto fail;
-	}
 
 	while (offset < ndef_length) {
 
 		DBG("Record Header : 0x%X", ndef_data[offset]);
 
 		record = g_try_malloc0(sizeof(struct near_ndef_record));
-		if (record == NULL) {
-			err = ENOMEM;
+		if (record == NULL)
 			goto fail;
-		}
 
 		record->header = parse_record_header(ndef_data, offset,
 							ndef_length);
-		if (record->header == NULL) {
-			err = EINVAL;
+		if (record->header == NULL)
 			goto fail;
-		}
 
 		if (validate_record_begin_and_end_bits(&p_mb, &p_me,
 					record->header->mb,
 					record->header->me) != 0) {
 			DBG("validate mb me failed");
-			err = EINVAL;
 			goto fail;
 		}
 
@@ -1272,10 +1279,8 @@ int near_ndef_parse(struct near_tag *tag,
 			record->text = parse_text_record(ndef_data + offset,
 						record->header->payload_len);
 
-			if (record->text == NULL) {
-				err = EINVAL;
+			if (record->text == NULL)
 				goto fail;
-			}
 
 			break;
 
@@ -1283,10 +1288,8 @@ int near_ndef_parse(struct near_tag *tag,
 			record->uri = parse_uri_record(ndef_data + offset,
 						record->header->payload_len);
 
-			if (record->uri == NULL) {
-				err = EINVAL;
+			if (record->uri == NULL)
 				goto fail;
-			}
 
 			break;
 
@@ -1295,10 +1298,8 @@ int near_ndef_parse(struct near_tag *tag,
 						ndef_data + offset,
 						record->header->payload_len);
 
-			if (record->sp == NULL) {
-				err = EINVAL;
+			if (record->sp == NULL)
 				goto fail;
-			}
 
 			break;
 
@@ -1308,40 +1309,24 @@ int near_ndef_parse(struct near_tag *tag,
 						record->header->payload_len);
 
 
-			if (record->mime == NULL) {
-				err = EINVAL;
+			if (record->mime == NULL)
 				goto fail;
-			}
 
 			break;
 		}
 
-		n_records   = __near_tag_n_records(tag);
-		target_idx  = near_tag_get_target_idx(tag);
-		adapter_idx = near_tag_get_adapter_idx(tag);
+		records = g_list_append(records, record);
 
-		record->path = g_strdup_printf("%s/nfc%d/tag%d/record%d",
-							NFC_PATH, adapter_idx,
-							target_idx, n_records);
-		DBG("Record path '%s'", record->path);
-
-		__near_tag_add_record(tag, record);
-
-		g_dbus_register_interface(connection, record->path,
-							NFC_RECORD_INTERFACE,
-							record_methods,
-							NULL, NULL,
-							record, NULL);
 		offset += record->header->payload_len;
 	}
 
-	return 0;
+	return records;
 
 fail:
 	near_error("ndef parsing failed");
 	free_ndef_record(record);
 
-	return -err;
+	return records;
 }
 
 /**

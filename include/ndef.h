@@ -32,7 +32,7 @@ struct near_ndef_message {
 	uint8_t *data;
 };
 
-int near_ndef_parse(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length);
+GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length);
 
 struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 					char *language_code, char *text);

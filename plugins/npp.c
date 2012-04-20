@@ -132,7 +132,7 @@ static near_bool_t npp_read(int client_fd,
 	for (i = 0; i < total_ndef_length; i++)
 		DBG("NDEF[%d] 0x%x", i, ndefs[i]);
 
-	near_tlv_parse(tag, cb);
+//	near_tlv_parse(tag, cb);
 
 	g_free(ndefs);
 

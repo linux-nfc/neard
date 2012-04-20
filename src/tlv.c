@@ -73,16 +73,14 @@ uint8_t *near_tlv_data(uint8_t *tlv)
 	return tlv + 1 + l_length;
 }
 
-int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb)
+GList *near_tlv_parse(uint8_t *tlv, size_t tlv_length)
 {
-	uint8_t *tlv, *data, t;
-	size_t tlv_length;
-	uint32_t adapter_idx = near_tag_get_adapter_idx(tag);
-	uint32_t target_idx = near_tag_get_target_idx(tag);
+	GList *records;
+	uint8_t *data, t;
 
 	DBG("");
 
-	tlv = near_tag_get_data(tag, &tlv_length);
+	records = NULL;
 	data = tlv;
 
 	while(1) {
@@ -94,7 +92,7 @@ int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb)
 		case TLV_NDEF:
 			DBG("NDEF found %d bytes long", near_tlv_length(tlv));
 
-			near_ndef_parse(tag, near_tlv_data(tlv),
+			records = near_ndef_parse(near_tlv_data(tlv),
 						near_tlv_length(tlv));
 
 			break;
@@ -113,8 +111,5 @@ int near_tlv_parse(struct near_tag *tag, near_tag_io_cb cb)
 
 	DBG("Done");
 
-	if (cb)
-		cb(adapter_idx, target_idx, 0);
-
-	return 0;
+	return records;
 }

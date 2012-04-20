@@ -80,6 +80,8 @@ int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly);
 near_bool_t near_tag_get_ro(struct near_tag *tag);
 int near_tag_add_data(uint32_t adapter_idx, uint32_t target_idx,
 			uint8_t *data, size_t data_length);
+int near_tag_add_records(struct near_tag *tag, GList *records,
+				near_tag_io_cb cb, int status);
 enum near_tag_sub_type near_tag_get_subtype(uint32_t adapter_idx,
 					uint32_t target_idx);
 uint8_t *near_tag_get_nfcid(uint32_t adapter_idx, uint32_t target_idx,

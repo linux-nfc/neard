@@ -399,8 +399,15 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 			goto out_err;
 		return err;
 	} else {
+		GList *records;
+
 		DBG("READ DONE");
-		err = near_tlv_parse(mf_ck->tag, mf_ck->cb);
+
+		records = near_tlv_parse(mf_ck->nfc_data,
+					mf_ck->nfc_data_length);
+		near_tag_add_records(mf_ck->tag, records, mf_ck->cb, 0);
+
+		err = 0;
 	}
 
 out_err:

@@ -149,9 +149,14 @@ static int segment_read_recv(uint8_t *resp, int length, void *data)
 		if (err < 0)
 			goto out_err;
 	} else { /* This is the end */
+		GList *records;
+
 		DBG("READ complete");
 
-		err = near_tlv_parse(t1_tag->tag, t1_tag->cb);
+		records = near_tlv_parse(tagdata, data_length);
+		near_tag_add_records(t1_tag->tag, records, t1_tag->cb, 0);
+
+		err = 0;
 
 		/* free memory */
 		g_free(t1_tag);
@@ -270,6 +275,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	if (resp[OFFSET_HEADER_ROM] == HR0_TYPE1_STATIC) {
 		uint8_t *tagdata;
 		size_t data_length;
+		GList *records;
 
 		DBG("READ Static complete");
 
@@ -278,9 +284,8 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 		near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
 
-		err = near_tlv_parse(t1_tag->tag, t1_tag->cb);
-		if (err < 0)
-			goto out_err;
+		records = near_tlv_parse(tagdata, data_length);
+		near_tag_add_records(t1_tag->tag, records, t1_tag->cb, 0);
 
 		g_free(t1_tag);
 

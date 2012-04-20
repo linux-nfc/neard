@@ -217,13 +217,13 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	memcpy(nfc_data + current_length, resp + OFS_READ_DATA, length_read);
 
 	if (current_length + length_read >= data_length) {
+		GList *records;
+
 		tag->current_block = 0;
 
 		DBG("Done reading %d bytes at %p", data_length, nfc_data);
-		near_ndef_parse(tag->tag, nfc_data, data_length);
-
-		if (tag->cb)
-			tag->cb(adapter_idx, target_idx, 0);
+		records = near_ndef_parse(nfc_data, data_length);
+		near_tag_add_records(tag->tag, records, tag->cb, 0);
 
 		g_free(tag);
 

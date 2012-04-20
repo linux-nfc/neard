@@ -569,6 +569,39 @@ int __near_tag_add_record(struct near_tag *tag,
 	return 0;
 }
 
+int near_tag_add_records(struct near_tag *tag, GList *records,
+				near_tag_io_cb cb, int status)
+{
+	GList *list;
+	struct near_ndef_record *record;
+	char *path;
+
+	DBG("records %p", records);
+
+	for (list = records; list; list = list->next) {
+		record = list->data;
+
+		path = g_strdup_printf("%s/nfc%d/tag%d/record%d",
+					NFC_PATH, tag->adapter_idx,
+					tag->target_idx, tag->n_records);
+
+		if (path == NULL)
+			continue;
+
+		__near_ndef_record_register(record, path);
+
+		tag->n_records++;
+		tag->records = g_list_append(tag->records, record);
+	}
+
+	if (cb != NULL)
+		cb(tag->adapter_idx, tag->target_idx, status);
+
+	g_list_free(records);
+
+	return 0;
+}
+
 int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
 {
 	tag->readonly = readonly;

@@ -124,12 +124,15 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	memcpy(nfc_data + current_length, resp + NFC_HEADER_SIZE, length_read);
 
 	if (current_length + length_read == data_length) {
+		GList *records;
+
 		/* TODO parse tag->data for NDEFS, and notify target.c */
 		tag->current_block = 0;
 
 		DBG("Done reading");
 
-		near_tlv_parse(tag->tag, tag->cb);
+		records = near_tlv_parse(nfc_data, data_length);
+		near_tag_add_records(tag->tag, records, tag->cb, 0);
 
 		g_free(tag);
 

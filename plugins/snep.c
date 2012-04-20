@@ -165,7 +165,7 @@ static near_bool_t snep_read_ndef(int client_fd,
 	if (tag == NULL)
 		goto out;
 
-	near_tlv_parse(tag, snep_data->cb);
+//	near_tlv_parse(tag, snep_data->cb);
 
 out:
 	g_hash_table_remove(snep_client_hash, GINT_TO_POINTER(client_fd));

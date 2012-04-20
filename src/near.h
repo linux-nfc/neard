@@ -93,6 +93,7 @@ void __near_adapter_cleanup(void);
 
 int __near_ndef_init(void);
 void __near_ndef_cleanup(void);
+int __near_ndef_record_register(struct near_ndef_record *record, char *path);
 void __near_ndef_record_free(struct near_ndef_record *record);
 char *__near_ndef_record_get_path(struct near_ndef_record *record);
 const char *__near_ndef_get_uri_prefix(uint8_t id);
