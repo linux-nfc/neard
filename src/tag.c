@@ -223,9 +223,109 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
+static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
+{
+	DBG("Write status %d", status);
+}
+
+static DBusMessage *write_ndef(DBusConnection *conn,
+				DBusMessage *msg, void *data)
+{
+	struct near_tag *tag = data;
+	struct near_ndef_message *ndef, *ndef_with_header = NULL;
+	int err;
+
+	DBG("conn %p", conn);
+
+	ndef = __ndef_build_from_message(msg);
+	if (ndef == NULL)
+		return __near_error_failed(msg, EINVAL);
+
+	/* Add NDEF header information depends upon tag type */
+	switch (tag->type) {
+	case NFC_PROTO_JEWEL:
+	case NFC_PROTO_MIFARE:
+		ndef_with_header = g_try_malloc0(sizeof(
+					struct near_ndef_message));
+		if (ndef_with_header == NULL)
+			goto fail;
+
+		ndef_with_header->offset = 0;
+		ndef_with_header->length = ndef->length + 3;
+		ndef_with_header->data = g_try_malloc0(ndef->length + 3);
+		if (ndef_with_header->data == NULL)
+			goto fail;
+
+		ndef_with_header->data[0] = TLV_NDEF;
+		ndef_with_header->data[1] = ndef->length;
+		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
+		ndef_with_header->data[ndef->length + 2] = TLV_END;
+
+		break;
+
+	case NFC_PROTO_FELICA:
+		ndef_with_header = g_try_malloc0(sizeof(
+					struct near_ndef_message));
+		if (ndef_with_header == NULL)
+			goto fail;
+
+		ndef_with_header->offset = 0;
+		ndef_with_header->length = ndef->length;
+		ndef_with_header->data = g_try_malloc0(
+						ndef_with_header->length);
+		if (ndef_with_header->data == NULL)
+			goto fail;
+
+		memcpy(ndef_with_header->data, ndef->data, ndef->length);
+
+		break;
+
+	case NFC_PROTO_ISO14443:
+		ndef_with_header = g_try_malloc0(sizeof(
+					struct near_ndef_message));
+		if (ndef_with_header == NULL)
+			goto fail;
+
+		ndef_with_header->offset = 0;
+		ndef_with_header->length = ndef->length + 2;
+		ndef_with_header->data = g_try_malloc0(ndef->length + 2);
+		if (ndef_with_header->data == NULL)
+			goto fail;
+
+		ndef_with_header->data[0] = (uint8_t)(ndef->length >> 8);
+		ndef_with_header->data[1] = (uint8_t)(ndef->length);
+		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
+
+		break;
+
+	default:
+		g_free(ndef->data);
+		g_free(ndef);
+
+		return __near_error_failed(msg, EOPNOTSUPP);
+	}
+
+	g_free(ndef->data);
+	g_free(ndef);
+
+	err = __near_tag_write(tag, ndef_with_header, write_cb);
+	if (err < 0) {
+		g_free(ndef_with_header->data);
+		g_free(ndef_with_header);
+
+		return __near_error_failed(msg, -err);
+	}
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+
+fail:
+	return __near_error_failed(msg, ENOMEM);
+}
+
 static GDBusMethodTable tag_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
+	{ "Write",             "a{sv}", "",      write_ndef         },
 	{ },
 };
 

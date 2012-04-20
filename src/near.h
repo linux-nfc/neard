@@ -98,6 +98,7 @@ int __near_ndef_record_register(struct near_ndef_record *record, char *path);
 void __near_ndef_record_free(struct near_ndef_record *record);
 char *__near_ndef_record_get_path(struct near_ndef_record *record);
 const char *__near_ndef_get_uri_prefix(uint8_t id);
+struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg);
 
 #include <near/tag.h>
 

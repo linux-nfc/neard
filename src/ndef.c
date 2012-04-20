@@ -1598,6 +1598,207 @@ fail:
 	return NULL;
 }
 
+static char *get_uri_field(DBusMessage *msg)
+{
+	DBusMessageIter iter, arr_iter;
+	char *uri = NULL;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+					DBUS_TYPE_INVALID) {
+		const char *key;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			if (g_strcmp0(key, "URI") == 0)
+				dbus_message_iter_get_basic(&var_iter, &uri);
+
+			break;
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+	return uri;
+}
+
+static struct near_ndef_message *build_text_record(DBusMessage *msg)
+{
+	DBusMessageIter iter, arr_iter;
+	char *cod = NULL, *lang = NULL, *rep = NULL;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+					DBUS_TYPE_INVALID) {
+		const char *key;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			if (g_strcmp0(key, "Encoding") == 0)
+				dbus_message_iter_get_basic(&var_iter, &cod);
+			else if (g_strcmp0(key, "Language") == 0)
+				dbus_message_iter_get_basic(&var_iter, &lang);
+			else if (g_strcmp0(key, "Representation") == 0)
+				dbus_message_iter_get_basic(&var_iter, &rep);
+
+			break;
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+	return near_ndef_prepare_text_record(cod, lang, rep);
+}
+
+static struct near_ndef_message *build_uri_record(DBusMessage *msg)
+{
+	char *uri = NULL;
+	const char *uri_prefix = NULL;
+	uint8_t id_len, i;
+	uint32_t uri_len;
+
+	DBG("");
+
+	uri = get_uri_field(msg);
+	if (uri == NULL)
+		return NULL;
+
+	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
+		uri_prefix = __near_ndef_get_uri_prefix(i);
+
+		if (uri_prefix != NULL &&
+				g_str_has_prefix(uri, uri_prefix) == TRUE)
+			break;
+	}
+
+	/* If uri_prefix is NULL then ID will be zero */
+	if (uri_prefix == NULL) {
+		i = 0;
+		id_len = 0;
+	} else
+		id_len = strlen(uri_prefix);
+
+	uri_len = strlen(uri) - id_len;
+	return near_ndef_prepare_uri_record(i, uri_len,
+						(uint8_t *)(uri + id_len));
+}
+
+static struct near_ndef_message *build_sp_record(DBusMessage *msg)
+{
+	char *uri = NULL;
+	const char *uri_prefix;
+	uint8_t id_len, i;
+	uint32_t uri_len;
+
+	DBG("");
+
+	/*
+	 * Currently this funtion supports only mandatory URI record,
+	 * TODO: Other records support.
+	 */
+	uri = get_uri_field(msg);
+	if (uri == NULL)
+		return NULL;
+
+	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
+		uri_prefix = __near_ndef_get_uri_prefix(i);
+
+		if (uri_prefix != NULL &&
+				g_str_has_prefix(uri, uri_prefix) == TRUE)
+			break;
+	}
+
+	if (uri_prefix == NULL) {
+		i = 0;
+		id_len = 0;
+	} else
+		id_len = strlen(uri_prefix);
+
+	uri_len = strlen(uri) - id_len;
+	return near_ndef_prepare_smartposter_record(i, uri_len,
+						(uint8_t *)(uri + id_len));
+}
+
+struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
+{
+	DBusMessageIter iter;
+	DBusMessageIter arr_iter;
+	struct near_ndef_message *ndef;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	ndef = NULL;
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+						DBUS_TYPE_INVALID) {
+		const char *key, *value;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+
+		if (g_strcmp0(key, "Type") != 0) {
+			dbus_message_iter_next(&arr_iter);
+			continue;
+		}
+
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			dbus_message_iter_get_basic(&var_iter, &value);
+
+			if (g_strcmp0(value, "Text") == 0) {
+				ndef = build_text_record(msg);
+				break;
+			} else if (g_strcmp0(value, "URI") == 0) {
+				ndef = build_uri_record(msg);
+				break;
+			} else if (g_strcmp0(value, "SmartPoster") == 0) {
+				ndef = build_sp_record(msg);
+				break;
+			} else {
+				near_error("%s not supported", value);
+				ndef = NULL;
+				break;
+			}
+
+			break;
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+	return ndef;
+}
+
 int __near_ndef_init(void)
 {
 	DBG("");
