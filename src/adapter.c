@@ -789,20 +789,7 @@ struct near_adapter *__near_adapter_get(uint32_t idx)
 	return g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 }
 
-int near_adapter_get_dep_state(uint32_t idx)
-{
-	struct near_adapter *adapter;
-
-	DBG("idx %d", idx);
-
-	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
-		return -ENODEV;
-
-	return adapter->dep_up;
-}
-
-int near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
+int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 {
 	struct near_adapter *adapter;
 
