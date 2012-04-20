@@ -57,11 +57,12 @@ static near_bool_t npp_read(int client_fd,
 			uint32_t adapter_idx, uint32_t target_idx,
 			near_tag_io_cb cb)
 {
-	struct near_tag *tag;
+	struct near_device *device;
 	struct p2p_npp_frame frame;
 	struct p2p_npp_ndef_entry entry;
 	int bytes_recv, n_ndef, i, ndef_length, total_ndef_length, err;
 	uint8_t *ndefs, *current_ndef;
+	GList *records;
 
 	ndefs = NULL;
 	total_ndef_length = 0;
@@ -123,8 +124,8 @@ static near_bool_t npp_read(int client_fd,
 	if (err < 0)
 		return FALSE;
 
-	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL) {
+	device = near_device_get_device(adapter_idx, target_idx);
+	if (device == NULL) {
 		g_free(ndefs);
 		return -ENOMEM;
 	}
@@ -132,7 +133,8 @@ static near_bool_t npp_read(int client_fd,
 	for (i = 0; i < total_ndef_length; i++)
 		DBG("NDEF[%d] 0x%x", i, ndefs[i]);
 
-//	near_tlv_parse(tag, cb);
+	records = near_tlv_parse(ndefs, total_ndef_length);
+	near_device_add_records(device, records, cb, 0);
 
 	g_free(ndefs);
 
