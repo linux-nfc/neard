@@ -123,7 +123,8 @@ static near_bool_t snep_read_ndef(int client_fd,
 					struct p2p_snep_data *snep_data)
 {
 	int bytes_recv, remaining_bytes;
-	struct near_tag *tag;
+	struct near_device *device;
+	GList *records;
 
 	DBG("");
 
@@ -152,20 +153,25 @@ static near_bool_t snep_read_ndef(int client_fd,
 	if (snep_data->nfc_data_length != snep_data->nfc_data_current_length) {
 		snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
 
+		DBG("Continue");
+
 		return TRUE;
 	}
 
 	snep_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
-	if (near_tag_add_data(snep_data->adapter_idx, snep_data->target_idx,
+	if (near_device_add_data(snep_data->adapter_idx, snep_data->target_idx,
 					snep_data->nfc_data,
 					snep_data->nfc_data_length) < 0)
 		goto out;
 
-	tag = near_tag_get_tag(snep_data->adapter_idx, snep_data->target_idx);
-	if (tag == NULL)
+	device = near_device_get_device(snep_data->adapter_idx,
+						snep_data->target_idx);
+	if (device == NULL)
 		goto out;
 
-//	near_tlv_parse(tag, snep_data->cb);
+	records = near_tlv_parse(snep_data->nfc_data,
+				snep_data->nfc_data_length);
+	near_device_add_records(device, records, snep_data->cb, 0);
 
 out:
 	g_hash_table_remove(snep_client_hash, GINT_TO_POINTER(client_fd));
