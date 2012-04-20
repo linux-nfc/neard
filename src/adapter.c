@@ -985,7 +985,7 @@ static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
 		return;
 	}
 
-	__near_adapter_tags_changed(adapter_idx);
+	__near_adapter_devices_changed(adapter_idx);
 }
 
 
