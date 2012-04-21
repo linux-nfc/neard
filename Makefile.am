@@ -63,7 +63,9 @@ doc_files = doc/manager-api.txt doc/tag-api.txt doc/device-api.txt doc/adapter-a
 
 EXTRA_DIST = src/genbuiltin $(doc_files)
 
-test_scripts = test/list-adapters
+test_scripts = test/disable-adapter test/enable-adapter test/list-adapters \
+		test/dump-device test/dump-tag test/dump-record \
+		test/monitor-near test/start-poll test/stop-poll test/write-tag
 
 if TEST
 testdir = $(pkglibdir)/test
