@@ -24,6 +24,7 @@ missing
 stamp-h1
 autom4te.cache
 
+neard.pc
 include/near
 include/version.h
 src/builtin.h
