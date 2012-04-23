@@ -272,7 +272,7 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("connection %p", connection);
 
 	g_dbus_register_interface(connection, device->path,
-					NFC_TAG_INTERFACE,
+					NFC_DEVICE_INTERFACE,
 					device_methods, device_signals,
 							NULL, device, NULL);
 
