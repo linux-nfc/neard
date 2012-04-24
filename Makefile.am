@@ -72,6 +72,15 @@ testdir = $(pkglibdir)/test
 test_SCRIPTS = $(test_scripts)
 endif
 
+if TOOLS
+noinst_PROGRAMS = tools/snep-send
+
+tools_snep_send_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
+			src/bluetooth.c src/ndef.c tools/snep-send.c
+tools_snep_send_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+
+endif
+
 include Makefile.plugins
 
 EXTRA_DIST += $(test_scripts)

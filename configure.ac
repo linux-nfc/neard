@@ -87,6 +87,10 @@ AC_ARG_ENABLE(test, AC_HELP_STRING([--enable-test],
 		[enable test/example scripts]), [enable_test=${enableval}])
 AM_CONDITIONAL(TEST, test "${enable_test}" = "yes")
 
+AC_ARG_ENABLE(tools, AC_HELP_STRING([--enable-tools],
+		[enable testing tools]), [enable_tools=${enableval}])
+AM_CONDITIONAL(TOOLS, test "${enable_tools}" = "yes")
+
 AC_ARG_ENABLE(nfctype1,
 	AC_HELP_STRING([--enable-nfctype1], [enable NFC forum type 1 tags support]),
 			[enable_nfctype1=${enableval}], [enable_nfctype1="no"])

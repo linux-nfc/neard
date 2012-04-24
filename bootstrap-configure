@@ -8,6 +8,7 @@ fi
     ./configure --enable-maintainer-mode \
 		--enable-debug \
 		--sysconfdir=/etc \
+		--enable-tools \
 		--enable-nfctype1=builtin \
 		--enable-nfctype2=builtin \
 		--enable-nfctype3=builtin \
