@@ -1,0 +1,43 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+
+def help_text():
+	print "Usage: %s <tag-path> <record-type> <...>" % (sys.argv[0])
+	print "		If type is Text, parameters are <encoding> <language> <representation>"
+	print "		If type is URI, parameters are <uri>"
+	print "		If type is SmartPoster, parameters are <uri>"
+	print "e.g. < %s /org/neard/nfc0/tag0 Text UTF-8 en-US hello,Type2! >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 URI http://www.nfc-forum.com >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 SmartPoster http://www.nfc-forum.com >" % (sys.argv[0])
+	sys.exit(1)
+
+if len(sys.argv) < 2:
+	help_text()
+
+bus = dbus.SystemBus()
+
+tag = dbus.Interface(bus.get_object("org.neard", sys.argv[1]),
+						"org.neard.Tag")
+
+if len(sys.argv) == 6:
+	if sys.argv[2] in ["Text"]:
+		tag.Write(({ "Type" : "Text",
+				"Encoding" : sys.argv[3],
+				"Language" : sys.argv[4],
+				"Representation" : sys.argv[5] }))
+	else:
+		help_text()
+
+elif len(sys.argv) == 4:
+	if sys.argv[2] in ["URI"]:
+		tag.Write(({ "Type" : "URI",
+				"URI" : sys.argv[3] }))
+	elif sys.argv[2] in ["SmartPoster"]:
+		tag.Write(({ "Type" : "SmartPoster",
+				"URI" : sys.argv[3] }))
+	else:
+		help_text()
+else:
+	help_text()
