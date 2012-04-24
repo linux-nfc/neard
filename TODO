@@ -11,15 +11,28 @@ Background
 Core
 ====
 
-- Writer Mode
+- LLCP Target Mode
+
+  Priority: High
+  Complexity: C8
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  In LLCP target mode, neard plays the target mode and gets activated by a
+  remote device. It should be added to the adapter's device list.
+  In order to do so, the underlying NFC hardware must be able to run in target
+  mode which means the StartPoll API should be modified to support both
+  initiator and target modes.
+
+
+- Agent API
 
   Priority: Medium
   Complexity: C4
-  Dependencies: Core:NDEF building library
-  Owner: Ravi kumar Veeramally <ravikumar.veeramally@linux.intel.com>
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
 
-  In writer mode, neard allows application to write to an NFC tag, or to push
-  data to a p2p device.
+  neard's agent API will allow external applications to register against neard
+  and provide it with context specific input. For now, MIFARE keys and
+  Bluetooth OOB data will be supported.
 
 
 - Card Emulation Mode
@@ -43,12 +56,6 @@ Core
 Reader mode
 ===========
 
-- MIFARE tag support
-
-  Priority: Medium
-  Complexity: C4
-  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
-
 - Bluetooth Handover integration
 
   Priority: Medium
@@ -64,25 +71,25 @@ Reader mode
   done, obexd should be able to handle the OBEX transfer.
 
 
+Writer mode
+===========
+
+- MIFARE writer mode support
+
+  Priority: Low
+  Complexity: C2
+  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
+
+
 p2p mode
 ========
 
-- NPP client support
-
-  Priority: Low
-  Conplexity: C2
-  Dependencies: Core:Writer mode
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-
-  For pushing NDEFs through NPP over LLCP, neard has to behave
-  as an NPP client.
-
-- SNEP support
+- SNEP writer mode support
 
   Priority: High
   Conplexity: C4
   Dependencies: Core:Writer mode
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
+  Owner: Ravi kumar Veeramally <ravikumar.veeramally@linux.intel.com>
 
   SNEP is the NFC Forum defined standard for exchanging NDEFs over
   an LLCP link. SNEP can be run as a client or a server, respectively
