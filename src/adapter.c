@@ -127,6 +127,13 @@ static int adapter_start_poll(struct near_adapter *adapter)
 		__near_adapter_tags_changed(adapter->idx);
 	}
 
+	if (g_hash_table_size(adapter->devices) > 0) {
+		DBG("Clearing devices");
+
+		g_hash_table_remove_all(adapter->devices);
+		__near_adapter_devices_changed(adapter->idx);
+	}
+
 	err = __near_netlink_start_poll(adapter->idx, adapter->protocols);
 	if (err < 0)
 		return err;
@@ -526,6 +533,9 @@ int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 		return -ENODEV;
 
 	adapter->dep_up = dep;
+
+	if (dep == FALSE && adapter->constant_poll == TRUE)
+		adapter_start_poll(adapter);
 
 	return 0;
 }
