@@ -479,7 +479,7 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 	return 0;
 }
 
-static int nfc_netlink_event_targets(struct genlmsghdr *gnlh)
+static int nfc_netlink_event_targets_found(struct genlmsghdr *gnlh)
 {
 	struct nlattr *attr[NFC_ATTR_MAX + 1];
 	struct nl_msg *msg;
@@ -520,6 +520,30 @@ nla_put_failure:
 	nlmsg_free(msg);
 
 	return err;
+}
+
+static int nfc_netlink_event_target_lost(struct genlmsghdr *gnlh)
+{
+	struct nlattr *attr[NFC_ATTR_MAX + 1];
+	uint32_t adapter_idx, target_idx;
+
+	DBG("");
+
+	nla_parse(attr, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+			genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (attr[NFC_ATTR_DEVICE_INDEX] == NULL)
+		return -ENODEV;
+
+	if (attr[NFC_ATTR_TARGET_INDEX] == NULL)
+		return -ENODEV;
+
+	adapter_idx = nla_get_u32(attr[NFC_ATTR_DEVICE_INDEX]);
+	target_idx = nla_get_u32(attr[NFC_ATTR_TARGET_INDEX]);
+
+	DBG("adapter %d target %d", adapter_idx, target_idx);
+
+	return __near_adapter_remove_target(adapter_idx, target_idx);
 }
 
 static int nfc_netlink_event_dep_up(struct genlmsghdr *gnlh)
@@ -592,7 +616,11 @@ static int nfc_netlink_event(struct nl_msg *n, void *arg)
 	switch (gnlh->cmd) {
 	case NFC_EVENT_TARGETS_FOUND:
 		DBG("Targets found");
-		nfc_netlink_event_targets(gnlh);
+		nfc_netlink_event_targets_found(gnlh);
+		break;
+	case NFC_EVENT_TARGET_LOST:
+		DBG("Target lost");
+		nfc_netlink_event_target_lost(gnlh);
 		break;
 	case NFC_EVENT_DEVICE_ADDED:
 		DBG("Adapter added");
