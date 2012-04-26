@@ -400,11 +400,18 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 		return err;
 	} else {
 		GList *records;
+		uint8_t *nfc_data;
+		size_t nfc_data_length;
 
 		DBG("READ DONE");
 
-		records = near_tlv_parse(mf_ck->nfc_data,
-					mf_ck->nfc_data_length);
+		nfc_data = near_tag_get_data(mf_ck->tag, &nfc_data_length);
+		if (nfc_data == NULL) {
+			err = -ENOMEM;
+			goto out_err;
+		}
+
+		records = near_tlv_parse(nfc_data, nfc_data_length);
 		near_tag_add_records(mf_ck->tag, records, mf_ck->cb, 0);
 
 		err = 0;
