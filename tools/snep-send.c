@@ -100,6 +100,8 @@ int main(int argc, char *argv[])
 
 	len = send(fd, (uint8_t *)frame, frame_length, 0);
 	if (len < 0) {
+		near_error("Could not send text NDEF %s\n", strerror(errno));
+
 		g_free(frame);
 		close(fd);
 
