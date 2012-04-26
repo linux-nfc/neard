@@ -86,6 +86,8 @@ enum near_tag_sub_type near_tag_get_subtype(uint32_t adapter_idx,
 					uint32_t target_idx);
 uint8_t *near_tag_get_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 					uint8_t *nfcid_len);
+int near_tag_set_nfcid(uint32_t adapter_idx, uint32_t target_idx,
+					uint8_t *nfcid, size_t nfcid_len);
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length);
 uint32_t near_tag_get_adapter_idx(struct near_tag *tag);
 uint32_t near_tag_get_target_idx(struct near_tag *tag);

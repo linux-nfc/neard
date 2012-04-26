@@ -583,6 +583,29 @@ fail:
 	return NULL;
 }
 
+int near_tag_set_nfcid(uint32_t adapter_idx, uint32_t target_idx,
+					uint8_t *nfcid, size_t nfcid_len)
+{
+	struct near_tag *tag;
+
+	DBG("NFCID len %zd", nfcid_len);
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -ENODEV;
+
+	if (tag->nfcid_len > 0)
+		return -EALREADY;
+
+	if (nfcid_len > NFC_MAX_NFCID1_LEN)
+		return -EINVAL;
+
+	memcpy(tag->nfcid, nfcid, nfcid_len);
+	tag->nfcid_len = nfcid_len;
+
+	return 0;
+}
+
 int near_tag_add_data(uint32_t adapter_idx, uint32_t target_idx,
 			uint8_t *data, size_t data_length)
 {
