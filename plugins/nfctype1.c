@@ -41,6 +41,7 @@
 
 #define CMD_READ_ALL		0x00	/* Read seg 0 (incl: HR) */
 #define CMD_READ_SEGS		0x10	/* Read 16 blocks (128 bytes) */
+#define CMD_RID			0x78	/* Read tag UID */
 
 #define CMD_WRITE_E		0x53	/* Write with erase */
 #define CMD_WRITE_NE		0x1A	/* Write no erase */
@@ -61,6 +62,7 @@
 
 #define TYPE1_MAGIC 0xe1
 
+#define TAG_T1_DATA_UID(data) ((data) + LEN_SPEC_BYTES)
 #define TAG_T1_DATA_CC(data) ((data) + LEN_SPEC_BYTES + LEN_UID_BYTES)
 #define TAG_T1_DATA_LENGTH(cc) ((cc[2] + 1) * 8 - LEN_CC_BYTES)
 
@@ -324,10 +326,57 @@ out_err:
 	return err;
 }
 
-/* First step: READALL to read a maximum of 124 bytes
+/*
+ * READALL to read a maximum of 124 bytes.
  * This cmd is common to static and dynamic targets
- * This should allow to get the HR0 byte
+ * This should allow to get the HR0 byte.
  */
+static int rid_resp(uint8_t *resp, int length, void *data)
+{
+	struct t1_cookie *cookie = data;
+	struct type1_cmd t1_cmd;
+	uint8_t *uid;
+	int err;
+
+	DBG("");
+
+	/* First byte is cmd status */
+	if (resp[OFFSET_STATUS_CMD] != 0) {
+		DBG("Command failed: 0x%x",resp[OFFSET_STATUS_CMD]);
+		err = -EIO;
+		goto out_err;
+	}
+
+	uid = TAG_T1_DATA_UID(resp);
+
+	DBG("UID 0x%x 0x%x 0x%x 0x%x", uid[0], uid[1], uid[2], uid[3]);
+
+	near_tag_set_nfcid(cookie->adapter_idx, cookie->target_idx,
+							uid, UID_LENGTH);
+
+	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
+	t1_cmd.addr = 0;	       /* NA */
+	t1_cmd.data[0] = 0;
+	memcpy(t1_cmd.uid, uid, UID_LENGTH);
+
+	memcpy(cookie->uid, uid, UID_LENGTH);
+
+	return near_adapter_send(cookie->adapter_idx,
+				(uint8_t *)&t1_cmd, sizeof(t1_cmd),
+				meta_recv, cookie);
+
+out_err:
+	DBG("err %d", err);
+
+	if (err < 0 && cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	t1_cookie_release(cookie);
+
+	return err;
+}
+
+/* First step: RID to get the tag UID */
 static int nfctype1_read(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
@@ -339,10 +388,26 @@ static int nfctype1_read(uint32_t adapter_idx,
 
 	uid = near_tag_get_nfcid(adapter_idx, target_idx, &uid_length);
 	if (uid == NULL || uid_length != UID_LENGTH) {
-		near_error("Invalid type 1 UID");
-		g_free(uid);
-		/* TODO call READ_ID */
-		return -EINVAL;
+		if (uid != NULL && uid_length != UID_LENGTH) {
+			near_error("Invalid UID");
+
+			g_free(uid);
+			return -EINVAL;
+		}
+
+		t1_cmd.cmd = CMD_RID;
+		t1_cmd.addr = 0;
+		t1_cmd.data[0] = 0;
+		memset(t1_cmd.uid, 0, UID_LENGTH);
+
+		cookie = g_try_malloc0(sizeof(struct t1_cookie));
+		cookie->adapter_idx = adapter_idx;
+		cookie->target_idx = target_idx;
+		cookie->cb = cb;
+
+		return near_adapter_send(adapter_idx,
+					(uint8_t *)&t1_cmd, sizeof(t1_cmd),
+					rid_resp, cookie);
 	}
 
 	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
