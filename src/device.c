@@ -168,9 +168,39 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
+static void push_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
+{
+	DBG("Push status %d", status);
+}
+
+static DBusMessage *push_ndef(DBusConnection *conn,
+				DBusMessage *msg, void *data)
+{
+	struct near_device *device = data;
+	struct near_ndef_message *ndef;
+	int err;
+
+	DBG("conn %p", conn);
+
+	ndef = __ndef_build_from_message(msg);
+	if (ndef == NULL)
+		return __near_error_failed(msg, EINVAL);
+
+	err = __near_device_push(device, ndef, push_cb);
+	if (err < 0) {
+		g_free(ndef->data);
+		g_free(ndef);
+
+		return __near_error_failed(msg, -err);
+	}
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
 static GDBusMethodTable device_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
+	{ "Push",             "a{sv}",  "",      push_ndef          },
 	{ },
 };
 
@@ -290,6 +320,23 @@ int __near_device_listen(struct near_device *device, near_device_io_cb cb)
 
 		return driver->listen(device->adapter_idx,
 						device->target_idx, cb);
+	}
+
+	return 0;
+}
+
+int __near_device_push(struct near_device *device,
+			struct near_ndef_message *ndef, near_device_io_cb cb)
+{
+	GSList *list;
+
+	DBG("");
+
+	for (list = driver_list; list; list = list->next) {
+		struct near_device_driver *driver = list->data;
+
+		return driver->push(device->adapter_idx, device->target_idx,
+					ndef, cb);
 	}
 
 	return 0;

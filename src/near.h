@@ -128,6 +128,8 @@ struct near_device *__near_device_add(uint32_t idx, uint32_t target_idx,
 					uint8_t *nfcid, uint8_t nfcid_len);
 void __near_device_remove(struct near_device *device);
 int __near_device_listen(struct near_device *device, near_device_io_cb cb);
+int __near_device_push(struct near_device *device,
+			struct near_ndef_message *ndef, near_device_io_cb cb);
 
 #include <near/tlv.h>
 

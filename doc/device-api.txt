@@ -21,6 +21,19 @@ Method		dict GetProperties()
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
 
+		void Push(dict attributes)
+
+			Creates an NDEF record from the attributes dictionary.
+
+			The attribute argument should at least contain a
+			record type and is described by the Record properties.
+			For example, one would add a type, a Language, an
+			Encoding and a Representation for a text record.
+
+			Possible Errors: org.neard.Error.PermissionDenied
+					 org.neard.Error.InvalidArguments
+					 org.neard.Error.InProgress
+
 
 Signals		PropertyChanged(string name, variant value)
 
