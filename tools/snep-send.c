@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	size_t frame_length;
 
 	if (argc < 3) {
-		printf("Usage: llcp-connect <adapter index> <target index>\n");
+		printf("Usage: %s <adapter index> <target index>\n", argv[0]);
 		exit(0);
 	}
 
