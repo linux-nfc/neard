@@ -41,6 +41,8 @@
 
 #include "p2p.h"
 
+#define SNEP_VERSION     0x10
+
 /* Request codes */
 #define SNEP_REQ_CONTINUE 0x00
 #define SNEP_REQ_GET      0x01
@@ -247,10 +249,45 @@ static near_bool_t snep_read(int client_fd,
 	return FALSE;
 }
 
+static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_device_io_cb cb)
+{
+	struct p2p_snep_req_frame *req;
+	size_t req_length;
+	int err;
+
+	DBG("");
+
+	req_length = sizeof(struct p2p_snep_req_frame) + ndef->length;
+	req = g_try_malloc0(req_length);
+	if (req == NULL)
+		return -ENOMEM;
+
+	req->version = SNEP_VERSION;
+	req->request = SNEP_REQ_PUT;
+	req->length = GUINT32_TO_BE(ndef->length);
+	memcpy(req->ndef, ndef->data, ndef->length);
+
+	err = send(fd, (uint8_t *)req, req_length, 0);
+	if (err < 0)
+		near_error("Sending failed %d", err);
+
+	close(fd);
+	cb(adapter_idx, target_idx, err);
+
+	g_free(req);
+	g_free(ndef->data);
+	g_free(ndef);
+
+	return 0;
+}
+
 struct near_p2p_driver snep_driver = {
 	.name = "SNEP",
 	.service_name = "urn:nfc:sn:snep",
 	.read = snep_read,
+	.push = snep_push,
 	.close = snep_close,
 };
 

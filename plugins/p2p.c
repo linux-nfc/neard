@@ -39,6 +39,7 @@
 #include <near/device.h>
 #include <near/adapter.h>
 #include <near/tlv.h>
+#include <near/ndef.h>
 
 #include "p2p.h"
 
@@ -253,9 +254,68 @@ static int p2p_listen(uint32_t adapter_idx,
 	return err;
 }
 
+static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_device_io_cb cb,  struct near_p2p_driver *driver)
+{
+	int fd, err = 0;
+	struct sockaddr_nfc_llcp addr;
+
+	DBG("");
+
+	fd = socket(AF_NFC, SOCK_STREAM, NFC_SOCKPROTO_LLCP);
+	if (fd < 0)
+		return -errno;
+
+	memset(&addr, 0, sizeof(struct sockaddr_nfc_llcp));
+	addr.sa_family = AF_NFC;
+	addr.dev_idx = adapter_idx;
+	addr.target_idx = target_idx;
+	addr.nfc_protocol = NFC_PROTO_NFC_DEP;
+	addr.service_name_len = strlen(driver->service_name);
+	strcpy(addr.service_name, driver->service_name);
+
+	err = connect(fd, (struct sockaddr *)&addr,
+			sizeof(struct sockaddr_nfc_llcp));
+	if (err < 0) {
+		near_error("Connect failed  %d", err);
+		close(fd);
+
+		return err;
+	}
+
+	return fd;
+}
+
+static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_device_io_cb cb)
+{
+	int fd;
+	GSList *list;
+
+	DBG("");
+
+	for (list = driver_list; list != NULL; list = list->next) {
+		struct near_p2p_driver *driver = list->data;
+
+		if (strcmp(driver->name, "SNEP") != 0)
+			continue;
+
+		fd = p2p_connect(adapter_idx, target_idx, ndef, cb, driver);
+		if (fd < 0)
+			return fd;
+
+		return driver->push(fd, adapter_idx, target_idx, ndef, cb);
+	}
+
+	return -1;
+}
+
 static struct near_device_driver p2p_driver = {
 	.priority       = NEAR_DEVICE_PRIORITY_HIGH,
 	.listen         = p2p_listen,
+	.push		= p2p_push,
 };
 
 
