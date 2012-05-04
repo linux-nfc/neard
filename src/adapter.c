@@ -417,16 +417,20 @@ static gboolean check_presence(gpointer user_data)
 
 	tag = adapter->tag_link;
 	if (tag == NULL)
-		return FALSE;
+		goto out_err;
 
 	err = __near_tag_check_presence(tag, tag_present_cb);
 	if (err < 0) {
 		DBG("Could not check target presence");
-
-		near_adapter_disconnect(adapter->idx);
-		if (adapter->constant_poll == TRUE)
-			adapter_start_poll(adapter);
+		goto out_err;
 	}
+
+	return FALSE;
+
+out_err:
+	near_adapter_disconnect(adapter->idx);
+	if (adapter->constant_poll == TRUE)
+		adapter_start_poll(adapter);
 
 	return FALSE;
 }
@@ -785,6 +789,12 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 		near_error("Error while reading NFC bytes");
 
 		adapter_flush_rx(adapter, -EIO);
+
+		near_adapter_disconnect(adapter->idx);
+
+		adapter->presence_timeout =
+			g_timeout_add_seconds(2 * CHECK_PRESENCE_PERIOD,
+					      check_presence, adapter);
 		return FALSE;
 	}
 
