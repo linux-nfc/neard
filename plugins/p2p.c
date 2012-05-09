@@ -128,18 +128,20 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 
 	DBG("condition 0x%x", condition);
 
+	server_fd = g_io_channel_unix_get_fd(channel);
+
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
 		if (server_data->watch > 0)
 			g_source_remove(server_data->watch);
 		server_data->watch = 0;
 		g_list_free_full(server_data->client_list, free_client_data);
 
+		close(server_fd);
+
 		near_error("Error with %s server channel", driver->name);
 
-		return TRUE;
+		return FALSE;
 	}
-
-	server_fd = g_io_channel_unix_get_fd(channel);
 
 	client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
 							&client_addr_len);
