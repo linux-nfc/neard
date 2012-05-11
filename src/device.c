@@ -48,6 +48,8 @@ struct near_device {
 
 	uint32_t n_records;
 	GList *records;
+
+	DBusMessage *push_msg; /* Push pending message */
 };
 
 static DBusConnection *connection = NULL;
@@ -170,7 +172,28 @@ static DBusMessage *set_property(DBusConnection *conn,
 
 static void push_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
+	struct near_device *device;
+	DBusConnection *conn;
+	DBusMessage *reply;
+
 	DBG("Push status %d", status);
+
+	conn = near_dbus_get_connection();
+	device = near_device_get_device(adapter_idx, target_idx);
+
+	if (conn == NULL || device == NULL)
+		return;
+
+	if (status != 0) {
+		reply = __near_error_failed(device->push_msg, EINVAL);
+		if (reply != NULL)
+			g_dbus_send_message(conn, reply);
+	} else {
+		g_dbus_send_reply(conn, device->push_msg, DBUS_TYPE_INVALID);
+	}
+
+	dbus_message_unref(device->push_msg);
+	device->push_msg = NULL;
 }
 
 static DBusMessage *push_ndef(DBusConnection *conn,
@@ -182,19 +205,32 @@ static DBusMessage *push_ndef(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
+	if (device->push_msg)
+		return __near_error_in_progress(msg);
+
+	device->push_msg = dbus_message_ref(msg);
+
 	ndef = __ndef_build_from_message(msg);
-	if (ndef == NULL)
-		return __near_error_failed(msg, EINVAL);
+	if (ndef == NULL) {
+		err = -EINVAL;
+		goto error;
+	}
 
 	err = __near_device_push(device, ndef, push_cb);
 	if (err < 0) {
 		g_free(ndef->data);
 		g_free(ndef);
 
-		return __near_error_failed(msg, -err);
+		goto error;
 	}
 
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+
+error:
+	dbus_message_unref(device->push_msg);
+	device->push_msg = NULL;
+
+	return __near_error_failed(msg, -err);
 }
 
 static GDBusMethodTable device_methods[] = {
