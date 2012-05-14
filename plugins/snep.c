@@ -59,6 +59,11 @@
 #define SNEP_RESP_VERSION   0xe1
 #define SNEP_RESP_REJECT    0xff
 
+#define SNEP_REQ_PUT_HEADER_LENGTH 6
+/* TODO: Right now it is dummy, need to get correct value
+ * from lower layers */
+#define SNEP_REQ_MAX_FRAGMENT_LENGTH 8
+
 struct p2p_snep_data {
 	uint8_t *nfc_data;
 	uint32_t nfc_data_length;
@@ -67,6 +72,21 @@ struct p2p_snep_data {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 	near_tag_io_cb cb;
+};
+
+struct snep_fragment {
+	uint32_t len;
+	uint8_t *data;
+};
+
+struct p2p_snep_put_req_data {
+	uint8_t fd;
+	uint32_t adapter_idx;
+	uint32_t target_idx;
+	near_device_io_cb cb;
+	guint watch;
+
+	GSList *fragments;
 };
 
 struct p2p_snep_req_frame {
@@ -249,38 +269,255 @@ static near_bool_t snep_read(int client_fd,
 	return FALSE;
 }
 
-static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
-			struct near_ndef_message *ndef,
-			near_device_io_cb cb)
+static void free_snep_fragment(gpointer data)
 {
-	struct p2p_snep_req_frame *req;
-	size_t req_length;
+	struct snep_fragment *fragment = data;
+
+	if (fragment != NULL)
+		g_free(fragment->data);
+
+	g_free(fragment);
+	fragment = NULL;
+}
+
+static void free_snep_push_data(gpointer userdata, int status)
+{
+	struct p2p_snep_put_req_data *data;
+
+	DBG("");
+
+	data = (struct p2p_snep_put_req_data *)userdata;
+
+	close(data->fd);
+
+	if (data->cb)
+		data->cb(data->adapter_idx, data->target_idx, status);
+
+	if (data->watch > 0)
+		g_source_remove(data->watch);
+
+	g_slist_free_full(data->fragments, free_snep_fragment);
+	g_free(data);
+}
+
+static int snep_send_fragment(struct p2p_snep_put_req_data *req)
+{
+	struct snep_fragment *fragment;
 	int err;
 
 	DBG("");
 
-	req_length = sizeof(struct p2p_snep_req_frame) + ndef->length;
-	req = g_try_malloc0(req_length);
-	if (req == NULL)
-		return -ENOMEM;
+	if (req == NULL || req->fragments == NULL ||
+		g_slist_length(req->fragments) == 0)
+		return -EINVAL;
 
-	req->version = SNEP_VERSION;
-	req->request = SNEP_REQ_PUT;
-	req->length = GUINT32_TO_BE(ndef->length);
-	memcpy(req->ndef, ndef->data, ndef->length);
+	fragment = req->fragments->data;
 
-	err = send(fd, (uint8_t *)req, req_length, 0);
-	if (err < 0)
+	err = send(req->fd, fragment->data, fragment->len, 0);
+
+	req->fragments = g_slist_remove(req->fragments, fragment);
+	g_free(fragment->data);
+	g_free(fragment);
+
+	return err;
+}
+
+static int snep_push_response(struct p2p_snep_put_req_data *req)
+{
+	struct p2p_snep_resp_frame frame;
+	int bytes_recv, err;
+
+	DBG("");
+
+	bytes_recv = recv(req->fd, &frame, sizeof(frame), 0);
+	if (bytes_recv < 0) {
+		near_error("Could not read SNEP frame %d", bytes_recv);
+		return bytes_recv;
+	}
+
+	DBG("Response 0x%x", frame.response);
+
+	switch (frame.response) {
+	case SNEP_RESP_CONTINUE:
+		while (g_slist_length(req->fragments) != 0) {
+			err = snep_send_fragment(req);
+			if (err < 0)
+				return err;
+		}
+
+		return frame.response;
+
+	case SNEP_RESP_SUCCESS:
+		return 0;
+	}
+
+	return -1;
+}
+
+static gboolean snep_push_event(GIOChannel *channel,
+				GIOCondition condition,	gpointer data)
+{
+	int err;
+
+	DBG("condition 0x%x", condition);
+
+	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
+
+		near_error("Error with SNEP channel");
+
+		free_snep_push_data(data, -1);
+
+		return FALSE;
+	}
+
+	err = snep_push_response(data);
+	if (err <= 0) {
+		free_snep_push_data(data, err);
+
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+static int snep_push_prepare_fragments(struct p2p_snep_put_req_data *req,
+						struct near_ndef_message *ndef)
+{
+	struct snep_fragment *fragment;
+	uint32_t max_fragment_len;
+
+	DBG("");
+
+	max_fragment_len = SNEP_REQ_MAX_FRAGMENT_LENGTH;
+
+	while (ndef->offset < ndef->length) {
+
+		fragment = g_try_malloc0(sizeof(struct snep_fragment));
+		if (fragment == NULL)
+			return -ENOMEM;
+
+		if (max_fragment_len <= (ndef->length - ndef->offset))
+			fragment->len = max_fragment_len;
+		else
+			fragment->len = ndef->length - ndef->offset;
+
+		fragment->data = g_try_malloc0(fragment->len);
+		if (fragment->data == NULL) {
+			g_free(fragment);
+			return -ENOMEM;
+		}
+
+		memcpy(fragment->data, ndef->data + ndef->offset,
+					fragment->len);
+		ndef->offset += fragment->len;
+		req->fragments = g_slist_append(req->fragments, fragment);
+	}
+
+	return 0;
+}
+
+static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_device_io_cb cb)
+{
+	struct p2p_snep_put_req_data *req;
+	struct p2p_snep_req_frame header;
+	struct snep_fragment *fragment;
+	uint32_t max_fragment_len;
+	GIOChannel *channel;
+	gboolean fragmenting;
+	int err;
+
+	DBG("");
+
+	req = g_try_malloc0(sizeof(struct p2p_snep_put_req_data));
+	if (req == NULL) {
+		err = -ENOMEM;
+		goto error;
+	}
+
+	channel = g_io_channel_unix_new(fd);
+	g_io_channel_set_close_on_unref(channel, TRUE);
+
+	req->fd = fd;
+	req->adapter_idx = adapter_idx;
+	req->target_idx = target_idx;
+	req->cb = cb;
+	ndef->offset = 0;
+	req->watch = g_io_add_watch(channel, G_IO_IN | G_IO_HUP | G_IO_NVAL |
+					G_IO_ERR, snep_push_event,
+					(gpointer) req);
+
+	max_fragment_len = SNEP_REQ_MAX_FRAGMENT_LENGTH;
+	header.version = SNEP_VERSION;
+	header.request = SNEP_REQ_PUT;
+	header.length = GUINT32_TO_BE(ndef->length);
+
+	fragment = g_try_malloc0(sizeof(struct snep_fragment));
+	if (fragment == NULL) {
+		err = -ENOMEM;
+		goto error;
+	}
+
+	if (max_fragment_len >= (ndef->length + SNEP_REQ_PUT_HEADER_LENGTH)) {
+		fragment->len = ndef->length + SNEP_REQ_PUT_HEADER_LENGTH;
+		fragmenting = FALSE;
+	} else {
+		fragment->len = max_fragment_len;
+		fragmenting = TRUE;
+	}
+
+	fragment->data = g_try_malloc0(fragment->len);
+	if (fragment->data == NULL) {
+		g_free(fragment);
+		err = ENOMEM;
+		goto error;
+	}
+
+	memcpy(fragment->data, (uint8_t *)&header,
+				SNEP_REQ_PUT_HEADER_LENGTH);
+
+	if (fragmenting == TRUE) {
+		memcpy(fragment->data + SNEP_REQ_PUT_HEADER_LENGTH,
+			ndef->data,
+			max_fragment_len - SNEP_REQ_PUT_HEADER_LENGTH);
+		ndef->offset = max_fragment_len - SNEP_REQ_PUT_HEADER_LENGTH;
+
+		err = snep_push_prepare_fragments(req, ndef);
+		if (err < 0) {
+			g_free(fragment->data);
+			g_free(fragment);
+			goto error;
+		}
+
+	} else {
+		memcpy(fragment->data + SNEP_REQ_PUT_HEADER_LENGTH,
+					ndef->data, ndef->length);
+	}
+
+	err = send(fd, fragment->data, fragment->len, 0);
+	if (err < 0) {
 		near_error("Sending failed %d", err);
+		g_free(fragment->data);
+		g_free(fragment);
 
-	close(fd);
-	cb(adapter_idx, target_idx, err);
+		goto error;
+	}
 
-	g_free(req);
+	g_free(fragment->data);
+	g_free(fragment);
 	g_free(ndef->data);
 	g_free(ndef);
 
 	return 0;
+
+error:
+	g_free(ndef->data);
+	g_free(ndef);
+
+	free_snep_push_data(req, err);
+
+	return err;
 }
 
 struct near_p2p_driver snep_driver = {
