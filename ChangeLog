@@ -1,3 +1,13 @@
+ver 0.3:
+	Added a Tag D-Bus API.
+	Added an SNEP testing tool.
+	Added SNEP fragmentation support.
+	Added BlueZ signal handlers for adapter tracking.
+	Added BlueZ adapter properties handling.
+	Added a main.conf template.
+	Removed the Target D-Bus API.
+	Fixed Type 1 commands handling.
+
 ver 0.2:
 	Added SNEP support.
 	Added tag presence check implementation.
