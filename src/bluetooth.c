@@ -288,12 +288,159 @@ static int bt_do_pairing(struct near_oob_data *oob)
 	return err;
 }
 
+/*
+ */
+static int extract_properties(DBusMessage *reply,
+		struct near_oob_data *oob)
+{
+	char *data = NULL;
+	int idata;
+	int i, j;
+
+	DBusMessageIter array, dict;
+
+	if (dbus_message_iter_init(reply, &array) == FALSE)
+		return -1;
+
+	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_ARRAY)
+		return -1;
+
+	dbus_message_iter_recurse(&array, &dict);
+
+	while (dbus_message_iter_get_arg_type(&dict) == DBUS_TYPE_DICT_ENTRY) {
+		DBusMessageIter entry, value;
+		const char *key;
+
+		dbus_message_iter_recurse(&dict, &entry);
+		dbus_message_iter_get_basic(&entry, &key);
+
+		dbus_message_iter_next(&entry);
+		dbus_message_iter_recurse(&entry, &value);
+
+		if (g_str_equal(key, "Address") == TRUE) {
+			dbus_message_iter_get_basic(&value, &data);
+
+			/* Now, fill the local struct */
+			oob->bd_addr = g_try_malloc0(BT_ADDRESS_SIZE);
+			if (oob->bd_addr == NULL)
+				return -ENOMEM;
+
+			/* Address is like: "ff:ee:dd:cc:bb:aa" */
+			for (i = 5, j = 0 ; i >= 0; i--, j += 3)
+				oob->bd_addr[i] = strtol(data + j, NULL, 16);
+			DBG("local address: %s", data);
+
+		} else if (g_str_equal(key, "Name") == TRUE) {
+			dbus_message_iter_get_basic(&value, &data);
+			oob->bt_name = g_strdup(data);
+			if (oob->bt_name != NULL) {
+				oob->bt_name_len = strlen(oob->bt_name);
+				DBG("local name: %s", oob->bt_name);
+			}
+
+		} else if (g_str_equal(key, "Class") == TRUE) {
+			dbus_message_iter_get_basic(&value, &idata);
+			oob->class_of_device = idata;
+
+		} else if (g_str_equal(key, "Powered") == TRUE) {
+			dbus_message_iter_get_basic(&value, &idata);
+			oob->powered = idata;
+
+		} else if (g_str_equal(key, "Discoverable") == TRUE) {
+			dbus_message_iter_get_basic(&value, &idata);
+			oob->discoverable = idata;
+
+		} else if (g_str_equal(key, "Pairable") == TRUE) {
+			dbus_message_iter_get_basic(&value, &idata);
+			oob->pairable = idata;
+
+		} else if (g_str_equal(key, "UUIDs") == TRUE) {
+			oob->uuids_len = sizeof(value);
+			oob->uuids = g_try_malloc0(oob->uuids_len);
+			if (oob->uuids == NULL)
+				return -ENOMEM;
+			memcpy(oob->uuids, &value, oob->uuids_len);
+		}
+
+		dbus_message_iter_next(&dict);
+	}
+
+	return 0;
+}
+
+static int bt_parse_properties(DBusMessage *reply, void *user_data)
+{
+	struct near_oob_data *bt_props = user_data;
+
+	DBG("");
+
+	/* Free datas */
+	g_free(bt_props->bd_addr);
+	g_free(bt_props->bt_name);
+
+	/* Grab properties from dbus */
+	if (extract_properties(reply, bt_props) < 0)
+		goto fail;
+
+	return 0;
+
+fail:
+	g_free(bt_props->bd_addr);
+	bt_props->bd_addr = NULL;
+
+	g_free(bt_props->bt_name);
+	bt_props->bt_name = NULL;
+
+	return -ENOMEM;
+}
+
+
+/* Get default local adapter properties */
+static void bt_get_properties_cb(DBusPendingCall *pending, void *user_data)
+{
+	struct near_oob_data *bt_props = user_data;
+	DBusMessage *reply;
+	DBusError   error;
+	int err;
+
+	DBG("");
+
+	reply = dbus_pending_call_steal_reply(pending);
+	if (reply == NULL)
+		return;
+
+	dbus_error_init(&error);
+
+	if (dbus_set_error_from_message(&error, reply))
+		goto cb_fail;
+
+	err = bt_parse_properties(reply, bt_props);
+	if (err < 0)
+		near_error("Problem parsing local properties %d", err);
+	else
+		DBG("Get Properties complete: %s", bt_props->def_adapter);
+
+	/* clean */
+	dbus_message_unref(reply);
+	dbus_pending_call_unref(pending);
+	return;
+
+cb_fail:
+	near_error("%s", error.message);
+	dbus_error_free(&error);
+
+	dbus_message_unref(reply);
+	dbus_pending_call_unref(pending);
+
+	return;
+}
+
 static void bt_get_default_adapter_cb(DBusPendingCall *pending, void *user_data)
 {
+	struct near_oob_data *bt_props = user_data;
 	DBusMessage *reply;
 	DBusError   error;
 	gchar *path;
-	struct near_oob_data *oob = user_data;
 
 	DBG("");
 
@@ -311,23 +458,26 @@ static void bt_get_default_adapter_cb(DBusPendingCall *pending, void *user_data)
 		goto cb_fail;
 
 	/* Save the default adapter */
-	oob->def_adapter = g_strdup(path);
-	DBG("Using default adapter %s", oob->def_adapter);
+	bt_props->def_adapter = g_strdup(path);
+	DBG("Using default adapter %s", bt_props->def_adapter);
 
 	/* clean */
 	dbus_message_unref(reply);
 	dbus_pending_call_unref(pending);
 
-	/* check if device is already registered */
-	bt_do_pairing(oob);
-
+	/* Jump on getAdapterProperties */
+	bt_generic_call(bt_conn, bt_props,
+			BLUEZ_SERVICE,
+			bt_props->def_adapter,
+			ADAPTER_INTF, "GetProperties",
+			bt_get_properties_cb,
+			DBUS_TYPE_INVALID);
 	return;
 
 cb_fail:
 	near_error("%s", error.message);
 	dbus_error_free(&error);
 
-	bt_eir_free(oob);
 	dbus_message_unref(reply);
 	dbus_pending_call_unref(pending);
 
