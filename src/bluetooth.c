@@ -45,6 +45,7 @@
 #define BT_DISPLAY_YESNO		"DisplayYesNo"
 
 /* BT EIR list */
+#define EIR_UUID128_ALL		0x07 /* 128-bit UUID, all listed */
 #define EIR_NAME_SHORT		0x08 /* shortened local name */
 #define EIR_NAME_COMPLETE	0x09 /* complete local name */
 
@@ -57,7 +58,9 @@
 #define EIR_SECURITY_MGR_FLAGS	0x11  /* security manager flags */
 
 #define EIR_SIZE_LEN		1
+#define EIR_HEADER_LEN		(EIR_SIZE_LEN + 1)
 #define BT_ADDRESS_SIZE		6
+#define COD_SIZE		3
 #define OOB_SP_SIZE		16
 
 struct near_oob_data {
@@ -496,6 +499,77 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 	}
 
 	return 0;
+}
+
+/*
+ * External API to get bt properties
+ * Prepare a "real" oob datas block
+ * */
+uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len)
+{
+	uint8_t *bt_oob_block = NULL;
+	uint16_t bt_oob_block_size = 0;
+	int max_block_size;
+	uint8_t offset;
+
+	/* Check adapter datas */
+	if (bt_def_oob_data.def_adapter == NULL) {
+		near_error("No bt adapter info");
+		goto fail;
+	}
+
+	/* Prepare the BT block */
+	max_block_size = sizeof(uint16_t) +		/* stored oob size */
+			BT_ADDRESS_SIZE +
+			EIR_HEADER_LEN + bt_def_oob_data.bt_name_len +
+			EIR_HEADER_LEN + COD_SIZE +	/* class */
+			EIR_HEADER_LEN + OOB_SP_SIZE +	/* oob hash */
+			EIR_HEADER_LEN + OOB_SP_SIZE;	/* oob random */
+
+
+	bt_oob_block_size = sizeof(uint16_t)	/* stored oob size */
+			+ BT_ADDRESS_SIZE;	/* device address */
+
+	bt_oob_block = g_try_malloc0(max_block_size);
+	if (bt_oob_block == NULL)
+		goto fail;
+	offset = sizeof(uint16_t); /* Skip size...will be filled later */
+
+	/* Now prepare data frame */
+	memcpy(bt_oob_block + offset, bt_def_oob_data.bd_addr, BT_ADDRESS_SIZE);
+	offset += BT_ADDRESS_SIZE;
+
+	/* bt name */
+	if (bt_def_oob_data.bt_name != NULL) {
+		bt_oob_block_size += (bt_def_oob_data.bt_name_len +
+								EIR_HEADER_LEN);
+
+		bt_oob_block[offset++] = bt_def_oob_data.bt_name_len +
+								EIR_SIZE_LEN;
+		bt_oob_block[offset++] = EIR_NAME_COMPLETE; /* EIR data type */
+		memcpy(bt_oob_block + offset, bt_def_oob_data.bt_name,
+					bt_def_oob_data.bt_name_len);
+		offset += bt_def_oob_data.bt_name_len;
+	}
+
+	/* CoD */
+	bt_oob_block_size += COD_SIZE +  EIR_HEADER_LEN;
+
+	bt_oob_block[offset++] = COD_SIZE + EIR_SIZE_LEN;
+	bt_oob_block[offset++] = EIR_CLASS_OF_DEVICE;
+
+	memcpy(bt_oob_block + offset,
+			(uint8_t *)&bt_def_oob_data.class_of_device, COD_SIZE);
+	offset += COD_SIZE;
+
+	*(uint16_t *)bt_oob_block = bt_oob_block_size ;
+	*bt_data_len = bt_oob_block_size;
+
+	return bt_oob_block;
+
+fail:
+	g_free(bt_oob_block);
+	return NULL;
 }
 
 static void bt_connect(DBusConnection *conn, void *user_data)
