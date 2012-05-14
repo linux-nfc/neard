@@ -334,17 +334,6 @@ cb_fail:
 	return;
 }
 
-static int bt_get_default_adapter(DBusConnection *conn,
-					struct near_oob_data *oob)
-{
-	DBG("");
-
-	return bt_generic_call(bt_conn, oob, BLUEZ_SERVICE,
-			MANAGER_PATH, MANAGER_INTF, "DefaultAdapter",
-			bt_get_default_adapter_cb,
-			DBUS_TYPE_INVALID);
-}
-
 static int bt_refresh_adapter_props(DBusConnection *conn, void *user_data)
 {
 	DBG("%p %p", conn, user_data);
@@ -442,13 +431,13 @@ static void bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
  * Some specifications are proprietary (eg. "short mode")
  * and are not fully documented.
  */
-int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
+int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
+		near_bool_t pair)
 {
 	struct near_oob_data *oob;
 	uint16_t bt_oob_data_size;
 	uint8_t	*ptr = bt_data;
 	uint8_t	marker;
-	int err;
 	char *tmp;
 
 	DBG("");
@@ -511,15 +500,33 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 		return -EINVAL;
 	}
 
+	if (pair == FALSE)
+		return 0;
+
 	/* check and get the default adapter */
-	err = bt_get_default_adapter(bt_conn, oob);
-	if (err  < 0) {
-		near_error("bt_get_default_adapter failed: %d", err);
+	oob->def_adapter = g_strdup(bt_def_oob_data.def_adapter);
+	if (oob->bt_name == NULL) {
+		near_error("bt_get_default_adapter failed");
 		bt_eir_free(oob);
-		return err;
+		return -EIO;
 	}
 
-	return 0;
+	return  bt_do_pairing(oob);
+}
+
+int __near_bluetooth_pair(void *data)
+{
+	struct near_oob_data *oob = data;
+
+	/* check and get the default adapter */
+	oob->def_adapter = g_strdup(bt_def_oob_data.def_adapter);
+	if (oob->bt_name == NULL) {
+		near_error("bt_get_default_adapter failed: %d", -EIO);
+		bt_eir_free(oob);
+		return -EIO;
+	}
+
+	return bt_do_pairing(oob);
 }
 
 /* This function is synchronous as oob datas change on each session */

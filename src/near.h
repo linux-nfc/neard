@@ -161,5 +161,7 @@ void __near_plugin_cleanup(void);
 
 int __near_bluetooth_init(void);
 void __near_bluetooth_cleanup(void);
-int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data);
+int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
+							near_bool_t pair);
+int __near_bluetooth_pair(void *data);
 uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len);
