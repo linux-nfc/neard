@@ -69,12 +69,18 @@ struct near_oob_data {
 	char *bd_addr;		/* oob mandatory */
 
 	/* optional */
-	uint8_t *bt_name;			/* short or long name */
+	char *bt_name;			/* short or long name */
 	uint8_t bt_name_len;
-	uint8_t class_of_device[3];		/* Class of device */
+	int class_of_device;		/* Class of device */
+	near_bool_t powered;
+	near_bool_t pairable;
+	near_bool_t discoverable;
+	uint8_t *uuids;
+	int uuids_len;
+
 	uint8_t *spair_hash;			/* OOB hash Key */
 	uint8_t *spair_randomizer;		/* OOB randomizer key */
-	uint8_t authentication[16];		/* On BT 2.0 */
+	uint8_t authentication[OOB_SP_SIZE];	/* On BT 2.0 */
 	uint8_t security_manager_oob_flags;	/* see BT Core 4.0 */
 };
 
@@ -352,11 +358,12 @@ static int bt_refresh_adapter_props(DBusConnection *conn, void *user_data)
 }
 
 /* Parse and fill the bluetooth oob information block */
-static int bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
+static void bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
 		struct near_oob_data *oob)
 {
 	uint8_t	eir_code;
 	uint8_t eir_length;
+	char *tmp;
 
 	DBG("");
 
@@ -364,39 +371,41 @@ static int bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
 		eir_length = *ptr++;	/* EIR length */
 		eir_code = *ptr++;	/* EIR code */
 
-		bt_oob_data_size = bt_oob_data_size - eir_length;
-
 		/* check for early termination */
 		if (eir_length == 0) {
 			bt_oob_data_size = 0;
 			continue;
 		}
 
-		eir_length -= EIR_SIZE_LEN;
+		/* Remaining bytes */
+		bt_oob_data_size = bt_oob_data_size - eir_length - EIR_SIZE_LEN;
+
+		/* Remove len byte from eir_length */
+		eir_length = eir_length - EIR_SIZE_LEN;
 
 		switch (eir_code) {
 		case EIR_NAME_SHORT:
 		case EIR_NAME_COMPLETE:
-			oob->bt_name = g_try_malloc0(eir_length+1);
+			oob->bt_name = g_try_malloc0(eir_length + 1); /* eos */
 			if (oob->bt_name) {
-				oob->bt_name_len = eir_length ;
-				memcpy(oob->bt_name, ptr, eir_length);
+				oob->bt_name_len = eir_length;
+				memcpy(oob->bt_name, ptr, oob->bt_name_len);
 				oob->bt_name[eir_length] = 0;	/* end str*/
 			}
-			ptr = ptr + eir_length;
 			break;
 
 		case EIR_CLASS_OF_DEVICE:
-			memcpy(oob->class_of_device, ptr, eir_length);
-			ptr = ptr + eir_length;
+			tmp = g_strdup_printf("%02X%02X%02X",
+					*ptr, *(ptr + 1), *(ptr + 2));
+			if (tmp != NULL)
+				oob->class_of_device = strtol(tmp, NULL, 16);
+			g_free(tmp);
 			break;
 
 		case EIR_SP_HASH:
 			oob->spair_hash = g_try_malloc0(OOB_SP_SIZE);
 			if (oob->spair_hash)
-				memcpy(oob->spair_hash,
-						ptr, OOB_SP_SIZE);
-			ptr = ptr + eir_length;
+				memcpy(oob->spair_hash, ptr, OOB_SP_SIZE);
 			break;
 
 		case EIR_SP_RANDOMIZER:
@@ -404,21 +413,27 @@ static int bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
 			if (oob->spair_randomizer)
 				memcpy(oob->spair_randomizer,
 						ptr, OOB_SP_SIZE);
-			ptr = ptr + eir_length;
 			break;
 
 		case EIR_SECURITY_MGR_FLAGS:
 			oob->security_manager_oob_flags = *ptr;
-			ptr = ptr + eir_length;
+			break;
+
+		case EIR_UUID128_ALL:
+			/* TODO: Process uuids128
+			 * */
 			break;
 
 		default:	/* ignore and skip */
-			ptr = ptr + eir_length;
+			near_warn("Unknown EIR: x%02x (len: %d)", eir_code,
+								eir_length);
 			break;
 		}
+		/* Next eir */
+		ptr = ptr + eir_length;
 	}
 
-	return 0;
+	return;
 }
 
 /*
@@ -434,6 +449,7 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 	uint8_t	*ptr = bt_data;
 	uint8_t	marker;
 	int err;
+	char *tmp;
 
 	DBG("");
 
@@ -464,7 +480,12 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 		ptr = ptr + BT_ADDRESS_SIZE;
 
 		/* Class of device */
-		memcpy(oob->class_of_device, ptr, 3);
+		tmp = g_strdup_printf("%02X%02X%02X",
+				*ptr, *(ptr + 1), *(ptr + 2));
+		if (tmp != NULL)
+			oob->class_of_device = strtol(tmp, NULL, 16);
+		g_free(tmp);
+
 		ptr = ptr + 3;
 
 		/* "Short mode" seems to use a 4 bytes code
