@@ -522,6 +522,58 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 	return 0;
 }
 
+/* This function is synchronous as oob datas change on each session */
+static int bt_sync_oob_readlocaldata(DBusConnection *conn, char *adapter_path,
+		char *spair_hash,
+		char *spair_randomizer)
+{
+	DBusMessage *message, *reply;
+	DBusError error;
+	int hash_len, rndm_len;
+
+	message = dbus_message_new_method_call(BLUEZ_SERVICE, adapter_path,
+			OOB_INTF, "ReadLocalData");
+	if (!message)
+		return 0;
+
+	dbus_error_init(&error);
+
+	reply = dbus_connection_send_with_reply_and_block(conn,
+			message, -1, &error);
+
+	dbus_message_unref(message);
+
+	if (!reply) {
+		if (dbus_error_is_set(&error) == TRUE) {
+			near_error("%s", error.message);
+			dbus_error_free(&error);
+		} else {
+			near_error("Failed to set property");
+		}
+		return 0;
+	}
+
+	if (dbus_message_get_args(reply, NULL,
+			DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, spair_hash, &hash_len,
+			DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
+						spair_randomizer, &rndm_len,
+			DBUS_TYPE_INVALID) == FALSE)
+		goto done;
+
+	if ((hash_len != OOB_SP_SIZE) || (rndm_len != OOB_SP_SIZE)) {
+		DBG("no OOB data found !");
+		goto done;
+	}
+
+	dbus_message_unref(reply);
+	DBG("OOB data found");
+	return hash_len;
+
+done:
+	dbus_message_unref(reply);
+	return 0;
+}
+
 /*
  * External API to get bt properties
  * Prepare a "real" oob datas block
@@ -532,6 +584,9 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len)
 	uint16_t bt_oob_block_size = 0;
 	int max_block_size;
 	uint8_t offset;
+
+	char hash[OOB_SP_SIZE];
+	char random[OOB_SP_SIZE];
 
 	/* Check adapter datas */
 	if (bt_def_oob_data.def_adapter == NULL) {
@@ -582,6 +637,29 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len)
 	memcpy(bt_oob_block + offset,
 			(uint8_t *)&bt_def_oob_data.class_of_device, COD_SIZE);
 	offset += COD_SIZE;
+
+	/* The following data are generated dynamically
+	 * so we have to read the local oob data
+	 * */
+	if (bt_sync_oob_readlocaldata(bt_conn, bt_def_oob_data.def_adapter,
+					hash, random) == OOB_SP_SIZE) {
+		bt_oob_block_size += 2 * (OOB_SP_SIZE + EIR_HEADER_LEN);
+
+		/* OOB datas */
+		if (hash != NULL) {
+			bt_oob_block[offset++] = OOB_SP_SIZE + EIR_SIZE_LEN;
+			bt_oob_block[offset++] = EIR_SP_HASH;
+			memcpy(bt_oob_block + offset, hash, OOB_SP_SIZE);
+			offset += OOB_SP_SIZE;
+		}
+
+		if (random != NULL) {
+			bt_oob_block[offset++] = OOB_SP_SIZE + EIR_SIZE_LEN;
+			bt_oob_block[offset++] = EIR_SP_RANDOMIZER;
+			memcpy(bt_oob_block + offset, random, OOB_SP_SIZE);
+			offset += OOB_SP_SIZE;
+		}
+	}
 
 	*(uint16_t *)bt_oob_block = bt_oob_block_size ;
 	*bt_data_len = bt_oob_block_size;
