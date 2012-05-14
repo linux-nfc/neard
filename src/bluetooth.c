@@ -35,6 +35,9 @@
 #define MANAGER_INTF			BLUEZ_SERVICE ".Manager"
 #define ADAPTER_INTF			BLUEZ_SERVICE ".Adapter"
 #define OOB_INTF			BLUEZ_SERVICE ".OutOfBand"
+#define DEFAULT_ADAPTER			"DefaultAdapter"
+#define ADAPTER_REMOVED			"AdapterRemoved"
+#define DEFAULT_ADAPTER_CHANGED		"DefaultAdapterChanged"
 #define MANAGER_PATH			"/"
 #define OOB_AGENT			"/org/neard/agent/neard_oob"
 
@@ -73,10 +76,11 @@ struct near_oob_data {
 };
 
 static DBusConnection *bt_conn;
+static struct near_oob_data bt_def_oob_data;
 
 static int bt_do_pairing(struct near_oob_data *oob);
 
-static void bt_eir_free(struct near_oob_data *oob)
+static void __bt_eir_free(struct near_oob_data *oob)
 {
 	DBG("");
 
@@ -85,6 +89,11 @@ static void bt_eir_free(struct near_oob_data *oob)
 	g_free(oob->bt_name);
 	g_free(oob->spair_hash);
 	g_free(oob->spair_randomizer);
+}
+
+static void bt_eir_free(struct near_oob_data *oob)
+{
+	__bt_eir_free(oob);
 
 	g_free(oob);
 }
@@ -327,6 +336,18 @@ static int bt_get_default_adapter(DBusConnection *conn,
 			DBUS_TYPE_INVALID);
 }
 
+static int bt_refresh_adapter_props(DBusConnection *conn, void *user_data)
+{
+	DBG("%p %p", conn, user_data);
+
+	return bt_generic_call(conn, user_data,
+			BLUEZ_SERVICE,
+			MANAGER_PATH, MANAGER_INTF,
+			DEFAULT_ADAPTER,
+			bt_get_default_adapter_cb,
+			DBUS_TYPE_INVALID);
+}
+
 /* Parse and fill the bluetooth oob information block */
 static int bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
 		struct near_oob_data *oob)
@@ -477,20 +498,148 @@ int __near_bt_parse_oob_record(uint8_t version, uint8_t *bt_data)
 	return 0;
 }
 
-static void bt_disconnect_callback(DBusConnection *conn, void *user_data)
+static void bt_connect(DBusConnection *conn, void *user_data)
+{
+
+	DBG("connection %p with %p", conn, user_data);
+	if (bt_refresh_adapter_props(conn, user_data) < 0)
+		near_error("bt_get_default_adapter failed");
+
+	return;
+}
+
+static void bt_disconnect(DBusConnection *conn, void *user_data)
+{
+	DBG("%p", conn);
+
+	__bt_eir_free(user_data);
+}
+
+/* BT adapter removed handler */
+static gboolean bt_adapter_removed(DBusConnection *conn,
+					DBusMessage *message,
+					void *user_data)
+{
+	DBusMessageIter iter;
+	struct near_oob_data *bt_props = user_data;
+	const char *adapter_path;
+
+	DBG("");
+
+	if (bt_props->def_adapter == NULL)
+		return TRUE;
+
+	if (dbus_message_iter_init(message, &iter) == FALSE)
+		return TRUE;
+
+	dbus_message_iter_get_basic(&iter, &adapter_path);
+
+	if (g_strcmp0(adapter_path, bt_props->def_adapter) == 0) {
+		near_info("Remove the default adapter [%s]", adapter_path);
+
+		__bt_eir_free(bt_props);
+		bt_props->def_adapter = NULL;
+	}
+
+	return TRUE;
+}
+
+/* BT default adapter changed handler */
+static gboolean bt_default_adapter_changed(DBusConnection *conn,
+					DBusMessage *message,
+					void *user_data)
+{
+	struct near_oob_data *bt_props = user_data;
+	DBusMessageIter iter;
+	const char *adapter_path;
+
+	DBG("");
+
+	if (dbus_message_iter_init(message, &iter) == FALSE)
+		return TRUE;
+
+	dbus_message_iter_get_basic(&iter, &adapter_path);
+	DBG("New default adapter [%s]", adapter_path);
+
+	/* Disable the old one */
+	__bt_eir_free(bt_props);
+	bt_props->def_adapter = NULL;
+
+	/* Refresh */
+	bt_refresh_adapter_props(conn, user_data);
+
+	return TRUE;
+}
+
+static void bt_dbus_disconnect_cb(DBusConnection *conn, void *user_data)
 {
 	near_error("D-Bus disconnect (BT)");
 	bt_conn = NULL;
 }
 
+static guint watch;
+static guint removed_watch;
+static guint adapter_watch;
+
+static int bt_prepare_handlers(DBusConnection *conn)
+{
+	DBG("%p", conn);
+
+	if (conn == NULL)
+		return -EIO;
+
+	watch = g_dbus_add_service_watch(conn, BLUEZ_SERVICE,
+						bt_connect,
+						bt_disconnect,
+						&bt_def_oob_data, NULL);
+
+	removed_watch = g_dbus_add_signal_watch(conn, NULL, NULL, MANAGER_INTF,
+						ADAPTER_REMOVED,
+						bt_adapter_removed,
+						&bt_def_oob_data, NULL);
+
+
+	adapter_watch = g_dbus_add_signal_watch(conn, NULL, NULL, MANAGER_INTF,
+						DEFAULT_ADAPTER_CHANGED,
+						bt_default_adapter_changed,
+						&bt_def_oob_data, NULL);
+
+	if (watch == 0 ||  removed_watch == 0 || adapter_watch == 0) {
+		near_error("Bluez event handlers failed to register.");
+		g_dbus_remove_watch(conn, watch);
+		g_dbus_remove_watch(conn, removed_watch);
+		g_dbus_remove_watch(conn, adapter_watch);
+
+		return -EIO;
+	}
+
+	return 0;
+}
+
+/* Bluetooth exiting function */
 void __near_bluetooth_cleanup(void)
 {
 	DBG("");
-	if (bt_conn)
-		dbus_connection_unref(bt_conn);
+
+	if (bt_conn == NULL)
+		return;
+
+	g_dbus_remove_watch(bt_conn, watch);
+	g_dbus_remove_watch(bt_conn, removed_watch);
+	g_dbus_remove_watch(bt_conn, adapter_watch);
+
+	dbus_connection_unref(bt_conn);
+
+	__bt_eir_free(&bt_def_oob_data);
+
 	return;
 }
 
+/*
+ * Bluetooth initialization function.
+ *	Allocate bt local settings storage
+ *	and setup event handlers
+ */
 int __near_bluetooth_init(void)
 {
 	DBusError err;
@@ -500,18 +649,20 @@ int __near_bluetooth_init(void)
 	dbus_error_init(&err);
 
 	/* save the dbus connection */
-	bt_conn = g_dbus_setup_bus(DBUS_BUS_SYSTEM, NULL, &err);
+	bt_conn = near_dbus_get_connection();
 	if (bt_conn == NULL) {
 		if (dbus_error_is_set(&err) == TRUE) {
 			near_error("%s", err.message);
 			dbus_error_free(&err);
 		} else
 			near_error("Can't register with system bus\n");
-		return -1;
+		return -EIO;
 	}
 
-	g_dbus_set_disconnect_function(bt_conn, bt_disconnect_callback,
-				NULL, NULL);
+	/* dbus disconnect callback */
+	g_dbus_set_disconnect_function(bt_conn, bt_dbus_disconnect_cb,
+						NULL, NULL);
 
-	return 0;
+	/* Set bluez event handlers */
+	return bt_prepare_handlers(bt_conn);
 }
