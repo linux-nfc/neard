@@ -29,3 +29,4 @@ include/near
 include/version.h
 src/builtin.h
 src/neard
+tools/snep-send
