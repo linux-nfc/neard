@@ -15,7 +15,10 @@
 
 #include "../src/near.h"
 
+/* HACK HACK */
+#ifndef AF_NFC
 #define AF_NFC 39
+#endif
 
 #define SNEP_VERSION     0x10
 
