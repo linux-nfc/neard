@@ -53,6 +53,10 @@ plugindir = $(libdir)/near/plugins
 
 configdir = ${sysconfdir}/neard
 
+dbusdir = ${sysconfdir}/dbus-1/system.d/
+
+dist_dbus_DATA = src/org.neard.conf
+
 if MAINTAINER_MODE
 build_plugindir = $(abs_top_srcdir)/plugins/.libs
 else
