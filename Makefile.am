@@ -53,6 +53,8 @@ plugindir = $(libdir)/near/plugins
 
 configdir = ${sysconfdir}/neard
 
+dist_noinst_DATA = src/main.conf
+
 dbusdir = ${sysconfdir}/dbus-1/system.d/
 
 dist_dbus_DATA = src/org.neard.conf
