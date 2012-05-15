@@ -62,7 +62,7 @@
 #define SNEP_REQ_PUT_HEADER_LENGTH 6
 /* TODO: Right now it is dummy, need to get correct value
  * from lower layers */
-#define SNEP_REQ_MAX_FRAGMENT_LENGTH 8
+#define SNEP_REQ_MAX_FRAGMENT_LENGTH 128
 
 struct p2p_snep_data {
 	uint8_t *nfc_data;
