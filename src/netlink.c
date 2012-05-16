@@ -611,6 +611,48 @@ static int nfc_netlink_event_dep_down(struct genlmsghdr *gnlh)
 	return 0;
 }
 
+static int nfc_netlink_event_tm_activated(struct genlmsghdr *gnlh)
+{
+	struct nlattr *attrs[NFC_ATTR_MAX + 1];
+	uint32_t idx;
+
+	DBG("");
+
+	nla_parse(attrs, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL) {
+		near_error("Missing device index");
+		return -ENODEV;
+	}
+
+	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
+
+	DBG("%d", idx);
+
+	return __near_adapter_add_device(idx, NULL, 0);
+}
+
+static int nfc_netlink_event_tm_deactivated(struct genlmsghdr *gnlh)
+{
+	struct nlattr *attrs[NFC_ATTR_MAX + 1];
+	uint32_t idx;
+
+	DBG("");
+
+	nla_parse(attrs, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL) {
+		near_error("Missing device index");
+		return -ENODEV;
+	}
+
+	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
+
+	DBG("%d", idx);
+
+	return __near_adapter_remove_device(idx);
+}
+
 static int nfc_netlink_event(struct nl_msg *n, void *arg)
 {
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
@@ -644,6 +686,16 @@ static int nfc_netlink_event(struct nl_msg *n, void *arg)
 	case NFC_CMD_DEP_LINK_DOWN:
 		DBG("DEP link is down");
 		nfc_netlink_event_dep_down(gnlh);
+
+		break;
+	case NFC_EVENT_TM_ACTIVATED:
+		DBG("Target mode activated");
+		nfc_netlink_event_tm_activated(gnlh);
+
+		break;
+	case NFC_EVENT_TM_DEACTIVATED:
+		DBG("Target mode deactivated");
+		nfc_netlink_event_tm_deactivated(gnlh);
 
 		break;
 	}
