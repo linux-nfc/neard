@@ -195,7 +195,7 @@ static near_bool_t snep_read_ndef(int client_fd,
 	if (device == NULL)
 		goto out;
 
-	records = near_tlv_parse(snep_data->nfc_data,
+	records = near_ndef_parse(snep_data->nfc_data,
 				snep_data->nfc_data_length);
 	near_device_add_records(device, records, snep_data->cb, 0);
 
@@ -245,11 +245,8 @@ static near_bool_t snep_read(int client_fd,
 	if (snep_data->nfc_data == NULL)
 		return FALSE;
 
-	snep_data->nfc_data[0] = TLV_NDEF;
-	snep_data->nfc_data[1] = ndef_length;
-	snep_data->nfc_data_length = ndef_length + TLV_SIZE;
-	snep_data->nfc_data_current_length = TLV_SIZE;
-	snep_data->nfc_data_ptr = snep_data->nfc_data + TLV_SIZE;
+	snep_data->nfc_data_length = ndef_length;
+	snep_data->nfc_data_ptr = snep_data->nfc_data;
 	snep_data->adapter_idx = adapter_idx;
 	snep_data->target_idx = target_idx;
 	snep_data->respond_continue = FALSE;
