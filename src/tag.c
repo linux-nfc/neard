@@ -68,6 +68,8 @@ struct near_tag {
 		uint16_t max_ndef_size;
 		uint16_t c_apdu_max_size;
 	} t4;
+
+	DBusMessage *write_msg; /* Pending write message */
 };
 
 static DBusConnection *connection = NULL;
@@ -225,7 +227,28 @@ static DBusMessage *set_property(DBusConnection *conn,
 
 static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
+	struct near_tag *tag;
+	DBusConnection *conn;
+	DBusMessage *reply;
+
 	DBG("Write status %d", status);
+
+	conn = near_dbus_get_connection();
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+
+	if (conn == NULL || tag == NULL)
+		return;
+
+	if (status != 0) {
+		reply = __near_error_failed(tag->write_msg, EINVAL);
+		if (reply != NULL)
+			g_dbus_send_message(conn, reply);
+	} else {
+		g_dbus_send_reply(conn, tag->write_msg, DBUS_TYPE_INVALID);
+	}
+
+	dbus_message_unref(tag->write_msg);
+	tag->write_msg = NULL;
 }
 
 static DBusMessage *write_ndef(DBusConnection *conn,
@@ -237,9 +260,14 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
+	if (tag->write_msg == NULL)
+		return __near_error_in_progress(msg);
+
 	ndef = __ndef_build_from_message(msg);
 	if (ndef == NULL)
 		return __near_error_failed(msg, EINVAL);
+
+	tag->write_msg = dbus_message_ref(msg);
 
 	/* Add NDEF header information depends upon tag type */
 	switch (tag->type) {
@@ -319,6 +347,9 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 
 fail:
+	dbus_message_unref(tag->write_msg);
+	tag->write_msg = NULL;
+
 	return __near_error_failed(msg, ENOMEM);
 }
 
