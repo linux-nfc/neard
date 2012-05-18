@@ -71,6 +71,7 @@ struct p2p_snep_data {
 	uint8_t *nfc_data_ptr;
 	uint32_t adapter_idx;
 	uint32_t target_idx;
+	gboolean respond_continue;
 	near_tag_io_cb cb;
 };
 
@@ -174,9 +175,11 @@ static near_bool_t snep_read_ndef(int client_fd,
 	snep_data->nfc_data_ptr += bytes_recv;
 
 	if (snep_data->nfc_data_length != snep_data->nfc_data_current_length) {
-		snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
-
-		DBG("Continue");
+		if (snep_data->respond_continue == FALSE) {
+			DBG("Continue");
+			snep_data->respond_continue = TRUE;
+			snep_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
+		}
 
 		return TRUE;
 	}
@@ -249,6 +252,7 @@ static near_bool_t snep_read(int client_fd,
 	snep_data->nfc_data_ptr = snep_data->nfc_data + TLV_SIZE;
 	snep_data->adapter_idx = adapter_idx;
 	snep_data->target_idx = target_idx;
+	snep_data->respond_continue = FALSE;
 	snep_data->cb = cb;
 
 	g_hash_table_insert(snep_client_hash,
