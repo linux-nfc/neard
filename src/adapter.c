@@ -903,8 +903,8 @@ int near_adapter_disconnect(uint32_t idx)
 		adapter->watch = 0;
 	}
 
+	g_io_channel_unref(adapter->channel);
 	adapter->channel = NULL;
-	close(adapter->tag_sock);
 	adapter->tag_sock = -1;
 	adapter->tag_link = NULL;
 
