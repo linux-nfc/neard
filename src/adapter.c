@@ -780,6 +780,49 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 	return 0;
 }
 
+int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
+{
+	struct near_adapter *adapter;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	adapter->polling = FALSE;
+	adapter->dep_up = TRUE;
+	polling_changed(adapter);
+
+	return adapter_add_device(adapter, 0, nfcid, nfcid_len);
+}
+
+int __near_adapter_remove_device(uint32_t idx)
+{
+	struct near_adapter *adapter;
+	uint32_t device_idx = 0;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return -ENODEV;
+
+	if (g_hash_table_remove(adapter->devices,
+			GINT_TO_POINTER(device_idx)) == TRUE) {
+		__near_adapter_devices_changed(idx);
+
+		return 0;
+	}
+
+	adapter->dep_up = FALSE;
+
+	if (adapter->constant_poll == TRUE)
+		adapter_start_poll(adapter);
+
+	return 0;
+}
+
 static void adapter_flush_rx(struct near_adapter *adapter, int error)
 {
 	GList *list;
