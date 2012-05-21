@@ -328,7 +328,7 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 	device->target_idx = target_idx;
 	device->n_records = 0;
 
-	if (nfcid_len <= NFC_MAX_NFCID1_LEN) {
+	if (nfcid_len <= NFC_MAX_NFCID1_LEN && nfcid_len > 0) {
 		device->nfcid_len = nfcid_len;
 		memcpy(device->nfcid, nfcid, nfcid_len);
 	}
