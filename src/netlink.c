@@ -665,6 +665,8 @@ static gboolean __nfc_netlink_event(GIOChannel *channel,
 
 	nl_recvmsgs(state->nl_sock, cb);
 
+	nl_cb_put(cb);
+
 	return TRUE;
 }
 
