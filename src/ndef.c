@@ -419,7 +419,9 @@ static DBusMessage *get_properties(DBusConnection *conn,
 }
 
 static const GDBusMethodTable record_methods[] = {
-	{ "GetProperties",     "",      "a{sv}", get_properties     },
+	{ _GDBUS_METHOD("GetProperties", "", "a{sv}",
+				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
+				get_properties) },
 	{ },
 };
 

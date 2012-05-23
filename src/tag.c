@@ -323,14 +323,21 @@ fail:
 }
 
 static const GDBusMethodTable tag_methods[] = {
-	{ "GetProperties",     "",      "a{sv}", get_properties     },
-	{ "SetProperty",       "sv",    "",      set_property       },
-	{ "Write",             "a{sv}", "",      write_ndef         },
+	{ _GDBUS_METHOD("GetProperties", "", "a{sv}",
+				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
+				get_properties) },
+	{ _GDBUS_METHOD("SetProperty", "sv", "",
+				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
+				NULL, set_property) },
+	{ _GDBUS_METHOD("Write", "a{sv}", "",
+					GDBUS_ARGS({"attributes", "a{sv}"}),
+					NULL, write_ndef) },
 	{ },
 };
 
 static const GDBusSignalTable tag_signals[] = {
-	{ "PropertyChanged",		"sv"	},
+	{ _GDBUS_SIGNAL("PropertyChanged", "sv",
+				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
 	{ }
 };
 
