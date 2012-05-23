@@ -139,7 +139,7 @@ static const GDBusMethodTable manager_methods[] = {
 	{ },
 };
 
-static GDBusSignalTable manager_signals[] = {
+static const GDBusSignalTable manager_signals[] = {
 	{ "PropertyChanged",		"sv"	},
 	{ "AdapterAdded",		"o"	},
 	{ "AdapterRemoved",		"o"	},
