@@ -463,22 +463,22 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 }
 
 static const GDBusMethodTable adapter_methods[] = {
-	{ _GDBUS_METHOD("GetProperties", "", "a{sv}",
+	{ GDBUS_METHOD("GetProperties",
 				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
 				get_properties) },
-	{ _GDBUS_METHOD("SetProperty", "sv", "",
+	{ GDBUS_METHOD("SetProperty",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
-	{ _GDBUS_METHOD("StartPoll", "", "", NULL, NULL, start_poll) },
-	{ _GDBUS_METHOD("StopPoll", "", "", NULL, NULL, stop_poll) },
+	{ GDBUS_METHOD("StartPoll", NULL, NULL, start_poll) },
+	{ GDBUS_METHOD("StopPoll", NULL, NULL, stop_poll) },
 	{ },
 };
 
 static const GDBusSignalTable adapter_signals[] = {
-	{ _GDBUS_SIGNAL("PropertyChanged", "sv",
+	{ GDBUS_SIGNAL("PropertyChanged",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
-	{ _GDBUS_SIGNAL("TagFound", "o", GDBUS_ARGS({"address", "o"})) },
-	{ _GDBUS_SIGNAL("TagLost", "o", GDBUS_ARGS({"address", "o"})) },
+	{ GDBUS_SIGNAL("TagFound", GDBUS_ARGS({"address", "o"})) },
+	{ GDBUS_SIGNAL("TagLost", GDBUS_ARGS({"address", "o"})) },
 	{ }
 };
 

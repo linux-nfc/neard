@@ -134,22 +134,20 @@ void __near_manager_adapter_remove(uint32_t idx)
 }
 
 static const GDBusMethodTable manager_methods[] = {
-	{ _GDBUS_METHOD("GetProperties", "", "a{sv}",
+	{ GDBUS_METHOD("GetProperties",
 				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
 				get_properties) },
-	{ _GDBUS_METHOD("SetProperty", "sv", "",
+	{ GDBUS_METHOD("SetProperty",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
 	{ },
 };
 
 static const GDBusSignalTable manager_signals[] = {
-	{ _GDBUS_SIGNAL("PropertyChanged", "sv",
+	{ GDBUS_SIGNAL("PropertyChanged",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
-	{ _GDBUS_SIGNAL("AdapterAdded", "o",
-					GDBUS_ARGS({"adapter", "o" })) },
-	{ _GDBUS_SIGNAL("AdapterRemoved", "o",
-					GDBUS_ARGS({"adapter", "o" })) },
+	{ GDBUS_SIGNAL("AdapterAdded", GDBUS_ARGS({"adapter", "o" })) },
+	{ GDBUS_SIGNAL("AdapterRemoved", GDBUS_ARGS({"adapter", "o" })) },
 	{ }
 };
 

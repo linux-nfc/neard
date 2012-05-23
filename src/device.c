@@ -234,20 +234,20 @@ error:
 }
 
 static const GDBusMethodTable device_methods[] = {
-	{ _GDBUS_METHOD("GetProperties", "", "a{sv}",
+	{ GDBUS_METHOD("GetProperties",
 				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
 				get_properties) },
-	{ _GDBUS_METHOD("SetProperty", "sv", "",
+	{ GDBUS_METHOD("SetProperty",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
-	{ _GDBUS_METHOD("Push", "a{sv}", "",
+	{ GDBUS_METHOD("Push",
 					GDBUS_ARGS({"attributes", "a{sv}"}),
 					NULL, push_ndef) },
 	{ },
 };
 
 static const GDBusSignalTable device_signals[] = {
-	{ _GDBUS_SIGNAL("PropertyChanged", "sv",
+	{ GDBUS_SIGNAL("PropertyChanged",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
 	{ }
 };
