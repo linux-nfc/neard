@@ -462,7 +462,7 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 					check_presence, adapter);
 }
 
-static GDBusMethodTable adapter_methods[] = {
+static const GDBusMethodTable adapter_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
 	{ "StartPoll",         "",      "",      start_poll         },

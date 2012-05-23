@@ -233,7 +233,7 @@ error:
 	return __near_error_failed(msg, -err);
 }
 
-static GDBusMethodTable device_methods[] = {
+static const GDBusMethodTable device_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
 	{ "Push",             "a{sv}",  "",      push_ndef          },

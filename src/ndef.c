@@ -418,7 +418,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	return reply;
 }
 
-static GDBusMethodTable record_methods[] = {
+static const GDBusMethodTable record_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ },
 };

@@ -133,7 +133,7 @@ void __near_manager_adapter_remove(uint32_t idx)
 				NULL);
 }
 
-static GDBusMethodTable manager_methods[] = {
+static const GDBusMethodTable manager_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
 	{ },

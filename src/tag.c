@@ -322,7 +322,7 @@ fail:
 	return __near_error_failed(msg, ENOMEM);
 }
 
-static GDBusMethodTable tag_methods[] = {
+static const GDBusMethodTable tag_methods[] = {
 	{ "GetProperties",     "",      "a{sv}", get_properties     },
 	{ "SetProperty",       "sv",    "",      set_property       },
 	{ "Write",             "a{sv}", "",      write_ndef         },
