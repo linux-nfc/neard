@@ -360,7 +360,7 @@ static const GDBusMethodTable tag_methods[] = {
 	{ GDBUS_METHOD("SetProperty",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
-	{ GDBUS_METHOD("Write", GDBUS_ARGS({"attributes", "a{sv}"}),
+	{ GDBUS_ASYNC_METHOD("Write", GDBUS_ARGS({"attributes", "a{sv}"}),
 							NULL, write_ndef) },
 	{ },
 };
