@@ -119,6 +119,7 @@ static void snep_response_noinfo(int client_fd, uint8_t response)
 
 	DBG("Response 0x%x", response);
 
+	resp.version = SNEP_VERSION;
 	resp.response = response;
 	resp.length = 0;
 
