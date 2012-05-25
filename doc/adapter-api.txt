@@ -21,11 +21,15 @@ Methods:	dict GetProperties()
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
 
-		void StartPoll()
+		void StartPollLoop(string mode)
 
-			The adapter will start polling for targets when calling
-			this method. It is only valid when the adapter is in
-			initiator mode.
+			Starts the adapter polling loop. Depending on the mode,
+			the adapter will start polling for targets, listening
+			for NFC devices or both.
+			The mode parameter can have the following values:
+			"Initiator", "Target". For any other value, the adapter
+			will start the polling loop in both target and initiator
+			mode.
 
 			This process will start emitting TagFound and
 			PropertyChanged "Polling" signals.
@@ -34,11 +38,9 @@ Methods:	dict GetProperties()
 					 org.neard.Error.Failed
 					 org.neard.Error.NotSupported
 
-		void StopPoll()
+		void StopPollLoop()
 
-			The adapter will stop polling for targets when calling
-			this method. It is only available when the adapter is in
-			initiator mode.
+			The adapter polling loop will stop.
 
 			Possible errors: org.neard.Error.NotReady
 					 org.neard.Error.Failed
@@ -93,12 +95,11 @@ Signals		PropertyChanged(string name, variant value)
 			in sight, or when it's been de-activated.
 
 
-Properties:	string Mode [readwrite]
+Properties:	string Mode [readonly]
 
 			The adapter mode.
 
 			Valid types are "initiator" and "target".
-			The default value for the adapter mode is "initiator".
 
 		boolean Powered [readwrite]
 

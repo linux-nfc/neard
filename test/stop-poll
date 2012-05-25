@@ -18,6 +18,6 @@ adapter = dbus.Interface(bus.get_object("org.neard", path),
 					"org.neard.Adapter")
 
 try:
-	adapter.StopPoll()
+	adapter.StopPollLoop()
 except dbus.DBusException, error:
 	print "%s: %s" % (error._dbus_error_name, error.message)

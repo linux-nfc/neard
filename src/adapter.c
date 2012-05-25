@@ -42,12 +42,18 @@ static DBusConnection *connection = NULL;
 
 static GHashTable *adapter_hash;
 
+#define NEAR_ADAPTER_MODE_INITIATOR 0x1
+#define NEAR_ADAPTER_MODE_TARGET    0x2
+#define NEAR_ADAPTER_MODE_DUAL      0x3
+
 struct near_adapter {
 	char *path;
 
 	char *name;
 	uint32_t idx;
 	uint32_t protocols;
+	uint32_t poll_mode;
+	uint32_t rf_mode;
 
 	near_bool_t powered;
 	near_bool_t polling;
@@ -119,6 +125,7 @@ static void polling_changed(struct near_adapter *adapter)
 static int adapter_start_poll(struct near_adapter *adapter)
 {
 	int err;
+	uint32_t im_protos, tm_protos;
 
 	if (g_hash_table_size(adapter->tags) > 0) {
 		DBG("Clearing tags");
@@ -134,7 +141,17 @@ static int adapter_start_poll(struct near_adapter *adapter)
 		__near_adapter_devices_changed(adapter->idx);
 	}
 
-	err = __near_netlink_start_poll(adapter->idx, adapter->protocols);
+	DBG("Poll mode 0x%x", adapter->poll_mode);
+
+	im_protos = tm_protos = 0;
+
+	if (adapter->poll_mode & NEAR_ADAPTER_MODE_INITIATOR)
+		im_protos = adapter->protocols;
+
+	if (adapter->poll_mode & NEAR_ADAPTER_MODE_TARGET)
+		tm_protos = adapter->protocols;
+
+	err = __near_netlink_start_poll(adapter->idx, im_protos, tm_protos);
 	if (err < 0)
 		return err;
 
@@ -367,13 +384,26 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
-static DBusMessage *start_poll(DBusConnection *conn,
+static DBusMessage *start_poll_loop(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
 	struct near_adapter *adapter = data;
+	const char *dbus_mode;
 	int err;
 
 	DBG("conn %p", conn);
+
+	dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &dbus_mode,
+							DBUS_TYPE_INVALID);
+
+	DBG("Mode %s", dbus_mode);
+
+	if (g_strcmp0(dbus_mode, "Initiator") == 0)
+		adapter->poll_mode = NEAR_ADAPTER_MODE_INITIATOR;
+	else if (g_strcmp0(dbus_mode, "Target") == 0)
+		adapter->poll_mode = NEAR_ADAPTER_MODE_TARGET;
+	else
+		adapter->poll_mode = NEAR_ADAPTER_MODE_DUAL;
 
 	err = adapter_start_poll(adapter);
 	if (err < 0)
@@ -382,7 +412,7 @@ static DBusMessage *start_poll(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
-static DBusMessage *stop_poll(DBusConnection *conn,
+static DBusMessage *stop_poll_loop(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
 	struct near_adapter *adapter = data;
@@ -469,8 +499,9 @@ static const GDBusMethodTable adapter_methods[] = {
 	{ GDBUS_METHOD("SetProperty",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
-	{ GDBUS_METHOD("StartPoll", NULL, NULL, start_poll) },
-	{ GDBUS_METHOD("StopPoll", NULL, NULL, stop_poll) },
+	{ GDBUS_METHOD("StartPollLoop", GDBUS_ARGS({"name", "s"}), NULL,
+							start_poll_loop) },
+	{ GDBUS_METHOD("StopPollLoop", NULL, NULL, stop_poll_loop) },
 	{ },
 };
 

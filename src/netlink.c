@@ -217,13 +217,14 @@ out:
 	return err;
 }
 
-int __near_netlink_start_poll(int idx, uint32_t protocols)
+int __near_netlink_start_poll(int idx,
+				uint32_t im_protocols, uint32_t tm_protocols)
 {
 	struct nl_msg *msg;
 	void *hdr;
 	int family, err = 0;
 
-	DBG("");
+	DBG("IM protos 0x%x TM protos 0x%x", im_protocols, tm_protocols);
 
 	msg = nlmsg_alloc();
 	if (msg == NULL)
@@ -239,7 +240,10 @@ int __near_netlink_start_poll(int idx, uint32_t protocols)
 	}
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
-	NLA_PUT_U32(msg, NFC_ATTR_PROTOCOLS, protocols);
+	if (im_protocols != 0)
+		NLA_PUT_U32(msg, NFC_ATTR_IM_PROTOCOLS, im_protocols);
+	if (tm_protocols != 0)
+		NLA_PUT_U32(msg, NFC_ATTR_TM_PROTOCOLS, tm_protocols);
 
 	err = nl_send_msg(nfc_state->nl_sock, msg, NULL, NULL);
 
