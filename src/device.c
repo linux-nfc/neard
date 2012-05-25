@@ -240,9 +240,8 @@ static const GDBusMethodTable device_methods[] = {
 	{ GDBUS_METHOD("SetProperty",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
-	{ GDBUS_METHOD("Push",
-					GDBUS_ARGS({"attributes", "a{sv}"}),
-					NULL, push_ndef) },
+	{ GDBUS_ASYNC_METHOD("Push", GDBUS_ARGS({"attributes", "a{sv}"}),
+							NULL, push_ndef) },
 	{ },
 };
 
