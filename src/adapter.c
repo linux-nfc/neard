@@ -809,11 +809,10 @@ int __near_adapter_remove_device(uint32_t idx)
 		return -ENODEV;
 
 	if (g_hash_table_remove(adapter->devices,
-			GINT_TO_POINTER(device_idx)) == TRUE) {
-		__near_adapter_devices_changed(idx);
-
+			GINT_TO_POINTER(device_idx)) == FALSE)
 		return 0;
-	}
+
+	__near_adapter_devices_changed(idx);
 
 	adapter->dep_up = FALSE;
 
