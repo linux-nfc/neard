@@ -402,8 +402,10 @@ static DBusMessage *start_poll_loop(DBusConnection *conn,
 		adapter->poll_mode = NEAR_ADAPTER_MODE_INITIATOR;
 	else if (g_strcmp0(dbus_mode, "Target") == 0)
 		adapter->poll_mode = NEAR_ADAPTER_MODE_TARGET;
-	else
+	else if (g_strcmp0(dbus_mode, "Dual") == 0)
 		adapter->poll_mode = NEAR_ADAPTER_MODE_DUAL;
+	else
+		adapter->poll_mode = NEAR_ADAPTER_MODE_INITIATOR;
 
 	err = adapter_start_poll(adapter);
 	if (err < 0)
