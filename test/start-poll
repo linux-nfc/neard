@@ -8,7 +8,7 @@ if len(sys.argv) < 2:
 	sys.exit(1)
 
 if len(sys.argv) < 3:
-	mode = ""
+	mode = "Initiator"
 else:
 	mode = sys.argv[2]
 
@@ -18,7 +18,7 @@ manager = dbus.Interface(bus.get_object("org.neard", "/"),
 					"org.neard.Manager")
 
 
-print "Mode %s" % (mode)
+print "Polling Mode %s" % (mode)
 
 path = "/org/neard/" + sys.argv[1]
 adapter = dbus.Interface(bus.get_object("org.neard", path),
