@@ -240,8 +240,10 @@ int __near_netlink_start_poll(int idx,
 	}
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
-	if (im_protocols != 0)
+	if (im_protocols != 0) {
 		NLA_PUT_U32(msg, NFC_ATTR_IM_PROTOCOLS, im_protocols);
+		NLA_PUT_U32(msg, NFC_ATTR_PROTOCOLS, im_protocols);
+	}
 	if (tm_protocols != 0)
 		NLA_PUT_U32(msg, NFC_ATTR_TM_PROTOCOLS, tm_protocols);
 
