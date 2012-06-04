@@ -176,10 +176,10 @@ class NeardUI(Neard):
 
             if self.adapters_actionToggle(i, 3):
                 print ("Stop Polling %s") % objpath
-                adapt_iface.StopPoll()
+                adapt_iface.StopPollLoop()
             else:
                 print ("Start Polling %s") % objpath
-                adapt_iface.StartPoll()
+                adapt_iface.StartPollLoop("Initiator")
 
 
     #------------------------------
