@@ -1,0 +1,66 @@
+HandoverAgent hierarchy
+=======================
+
+Service		unique name
+Interface	org.neard.HandoverAgent
+Object path	freely definable
+
+Methods		dict RequestOOB() [experimental]
+
+			This method gets called when the service daemon
+			needs to get Out Of Band data from the handover
+			agent, typically the BlueZ daemon.
+
+			The service daemon will use this OOB data to build
+			a Handover Select message, send it to the selector
+			and let it proceed with the Bluetooth pairing.
+
+			If there is no Bluetooth adapter or if it doesn't
+			support simple pairing the agent will return an error.
+
+			The return value should be a dictionary where the
+			keys are the field names and the values are the
+			actual fields.
+
+			Possible Errors: org.neard.HandoverAgent.Error.NotSupported
+					 org.neard.HandoverAgent.Error.NoSuchDevice
+
+		void Release() [experimental]
+
+			This method gets called when the service daemon
+			unregisters the agent. An agent can use it to do
+			cleanup tasks. There is no need to unregister the
+			agent, because when this method gets called it has
+			already been unregistered.
+
+
+Fields		string Address
+
+			The Bluetooth device address.
+			This is a mandatory field.
+
+		string Name
+
+			The Bluetooth local name.
+			This is an optional field.
+
+		array{byte} Hash
+
+			The simple pairing hash C.
+			This is an optional field.
+
+		array{byte} Randomizer
+
+			The simple pairing randomizer R.
+			This is an optional field.
+
+		uint32 Class
+
+			The Bluetooth class of device.
+			This is an optional field.
+
+		array{string} UUIDs
+
+			List of 128-bit UUIDs that represents the available
+			local services.
+			This is an optional field.
