@@ -260,7 +260,7 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
-	if (tag->write_msg == NULL)
+	if (tag->write_msg)
 		return __near_error_in_progress(msg);
 
 	ndef = __ndef_build_from_message(msg);
