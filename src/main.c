@@ -209,6 +209,7 @@ int main(int argc, char *argv[])
 	__near_ndef_init();
 	__near_manager_init(conn);
 	__near_bluetooth_init();
+	__near_handover_init();
 
 	__near_plugin_init(option_plugin, option_noplugin);
 
@@ -221,6 +222,7 @@ int main(int argc, char *argv[])
 
 	__near_plugin_cleanup();
 
+	__near_handover_cleanup();
 	__near_bluetooth_cleanup();
 	__near_manager_cleanup();
 	__near_ndef_cleanup();
