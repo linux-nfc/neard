@@ -20,6 +20,18 @@ Methods		dict GetProperties()
 
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
+
+		void RegisterHandoverAgent(object path)
+
+			Register new handover agent.
+
+			Possible Errors: org.neard.Error.InvalidArguments
+
+		void UnregisterHandoverAgent(object path)
+
+			Unregister an existing handover agent.
+
+			Possible Errors: org.neard.Error.InvalidArguments
  
 
 Signals		PropertyChanged(string name, variant value)

@@ -133,6 +133,46 @@ void __near_manager_adapter_remove(uint32_t idx)
 				NULL);
 }
 
+static DBusMessage *register_handover_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	const char *sender, *path;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
+							DBUS_TYPE_INVALID);
+
+	err = __near_handover_agent_register(sender, path);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static DBusMessage *unregister_handover_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	const char *sender, *path;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
+							DBUS_TYPE_INVALID);
+
+	err = __near_handover_agent_unregister(sender, path);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
 static const GDBusMethodTable manager_methods[] = {
 	{ GDBUS_METHOD("GetProperties",
 				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
@@ -140,6 +180,12 @@ static const GDBusMethodTable manager_methods[] = {
 	{ GDBUS_METHOD("SetProperty",
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
+	{ GDBUS_METHOD("RegisterHandoverAgent",
+			GDBUS_ARGS({ "path", "o" }), NULL,
+			register_handover_agent) },
+	{ GDBUS_METHOD("UnregisterHandoverAgent",
+			GDBUS_ARGS({ "path", "o" }), NULL,
+			unregister_handover_agent) },
 	{ },
 };
 
