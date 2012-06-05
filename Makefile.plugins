@@ -4,65 +4,27 @@ plugin_cflags = -fvisibility=hidden -I$(srcdir)/gdbus \
 plugin_ldflags = -no-undefined -module -avoid-version
 
 if NFCTYPE1
-if NFCTYPE1_BUILTIN
 builtin_modules += nfctype1
 builtin_sources += plugins/nfctype1.c
-else
-plugin_LTLIBRARIES += plugins/nfctype1.la
-plugin_objects += $(plugins_nfctype1_la_OBJECTS)
-plugins_nfctype1_la_CFLAGS = $(plugin_cflags)
-plugins_nfctype1_la_LDFLAGS = $(plugin_ldflags)
-endif
 endif
 
 if NFCTYPE2
-if NFCTYPE2_BUILTIN
 builtin_modules += nfctype2
 builtin_sources += plugins/nfctype2.c plugins/mifare.c
-else
-plugin_LTLIBRARIES += plugins/nfctype2.la
-plugin_objects += $(plugins_nfctype2_la_OBJECTS)
-plugins_nfctype2_la_SOURCES = plugins/nfctype2.c plugins/mifare.c
-plugins_nfctype2_la_CFLAGS = $(plugin_cflags)
-plugins_nfctype2_la_LDFLAGS = $(plugin_ldflags)
-endif
 endif
 
 if NFCTYPE3
-if NFCTYPE3_BUILTIN
 builtin_modules += nfctype3
 builtin_sources += plugins/nfctype3.c
-else
-plugin_LTLIBRARIES += plugins/nfctype3.la
-plugin_objects += $(plugins_nfctype3_la_OBJECTS)
-plugins_nfctype3_la_CFLAGS = $(plugin_cflags)
-plugins_nfctype3_la_LDFLAGS = $(plugin_ldflags)
-endif
 endif
 
 if NFCTYPE4
-if NFCTYPE4_BUILTIN
 builtin_modules += nfctype4
 builtin_sources += plugins/nfctype4.c
-else
-plugin_LTLIBRARIES += plugins/nfctype4.la
-plugin_objects += $(plugins_nfctype4_la_OBJECTS)
-plugins_nfctype4_la_CFLAGS = $(plugin_cflags)
-plugins_nfctype4_la_LDFLAGS = $(plugin_ldflags)
-endif
 endif
 
 if P2P
-if P2P_BUILTIN
 builtin_modules += p2p
 builtin_sources += plugins/p2p.c plugins/npp.c plugins/snep.c \
 				plugins/handover.c plugins/p2p.h
-else
-plugin_LTLIBRARIES += plugins/p2p.la
-plugin_objects += $(plugins_p2p_la_OBJECTS)
-plugins_p2p_la_SOURCES = plugins/p2p.c plugins/npp.c plugins/snep.c \
-					plugins/handover.c plugins/p2p.h
-plugins_p2p_la_CFLAGS = $(plugin_cflags)
-plugins_p2p_la_LDFLAGS = $(plugin_ldflags)
-endif
 endif
