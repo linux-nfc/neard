@@ -1,3 +1,11 @@
+ver 0.4:
+	Added target mode support for peer to peer.
+	Added a handover agent API.
+	Fixed SNEP read fragmentation.
+	Fixed SNEP response frames version field.
+	Fixed build dependencies.
+	Fixed netlink and adapter memory leaks.
+
 ver 0.3:
 	Added a Tag D-Bus API.
 	Added an SNEP testing tool.
