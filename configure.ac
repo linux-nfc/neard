@@ -89,40 +89,42 @@ AC_SUBST(NETLINK_CFLAGS)
 AC_SUBST(NETLINK_LIBS)
 
 AC_ARG_ENABLE(test, AC_HELP_STRING([--enable-test],
-		[enable test/example scripts]), [enable_test=${enableval}])
+					[enable test/example scripts]),
+					[enable_test=${enableval}])
 AM_CONDITIONAL(TEST, test "${enable_test}" = "yes")
 
 AC_ARG_ENABLE(tools, AC_HELP_STRING([--enable-tools],
-		[enable testing tools]), [enable_tools=${enableval}])
+					[enable testing tools]),
+					[enable_tools=${enableval}])
 AM_CONDITIONAL(TOOLS, test "${enable_tools}" = "yes")
 
-AC_ARG_ENABLE(nfctype1,
-	AC_HELP_STRING([--enable-nfctype1], [enable NFC forum type 1 tags support]),
-			[enable_nfctype1=${enableval}], [enable_nfctype1="no"])
+AC_ARG_ENABLE(nfctype1, AC_HELP_STRING([--disable-nfctype1],
+				[disable NFC forum type 1 tags support]),
+				[enable_nfctype1=${enableval}])
 AM_CONDITIONAL(NFCTYPE1, test "${enable_nfctype1}" != "no")
 AM_CONDITIONAL(NFCTYPE1_BUILTIN, test "${enable_nfctype1}" = "builtin")
 
-AC_ARG_ENABLE(nfctype2,
-	AC_HELP_STRING([--enable-nfctype2], [enable NFC forum type 2 tags support]),
-			[enable_nfctype2=${enableval}], [enable_nfctype2="no"])
+AC_ARG_ENABLE(nfctype2, AC_HELP_STRING([--disable-nfctype2],
+				[disable NFC forum type 2 tags support]),
+				[enable_nfctype2=${enableval}])
 AM_CONDITIONAL(NFCTYPE2, test "${enable_nfctype2}" != "no")
 AM_CONDITIONAL(NFCTYPE2_BUILTIN, test "${enable_nfctype2}" = "builtin")
 
-AC_ARG_ENABLE(nfctype3,
-	AC_HELP_STRING([--enable-nfctype3], [enable NFC forum type 3 tags support]),
-			[enable_nfctype3=${enableval}], [enable_nfctype3="no"])
+AC_ARG_ENABLE(nfctype3, AC_HELP_STRING([--disable-nfctype3],
+				[disable NFC forum type 3 tags support]),
+				[enable_nfctype3=${enableval}])
 AM_CONDITIONAL(NFCTYPE3, test "${enable_nfctype3}" != "no")
 AM_CONDITIONAL(NFCTYPE3_BUILTIN, test "${enable_nfctype3}" = "builtin")
 
-AC_ARG_ENABLE(nfctype4,
-	AC_HELP_STRING([--enable-nfctype4], [enable NFC forum type 4 tags support]),
-			[enable_nfctype4=${enableval}], [enable_nfctype4="no"])
+AC_ARG_ENABLE(nfctype4, AC_HELP_STRING([--disable-nfctype4],
+				[disable NFC forum type 4 tags support]),
+				[enable_nfctype4=${enableval}])
 AM_CONDITIONAL(NFCTYPE4, test "${enable_nfctype4}" != "no")
 AM_CONDITIONAL(NFCTYPE4_BUILTIN, test "${enable_nfctype4}" = "builtin")
 
-AC_ARG_ENABLE(p2p,
-	AC_HELP_STRING([--enable-p2p], [enable NFC peer to peer support]),
-			[enable_p2p=${enableval}], [enable_p2p="no"])
+AC_ARG_ENABLE(p2p, AC_HELP_STRING([--disable-p2p],
+				[disable NFC peer to peer support]),
+				[enable_p2p=${enableval}])
 AM_CONDITIONAL(P2P, test "${enable_p2p}" != "no")
 AM_CONDITIONAL(P2P_BUILTIN, test "${enable_p2p}" = "builtin")
 

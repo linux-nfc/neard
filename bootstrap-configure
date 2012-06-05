@@ -9,9 +9,4 @@ fi
 		--enable-debug \
 		--sysconfdir=/etc \
 		--enable-tools \
-		--enable-nfctype1=builtin \
-		--enable-nfctype2=builtin \
-		--enable-nfctype3=builtin \
-		--enable-nfctype4=builtin \
-		--enable-p2p=builtin \
 		--prefix=/usr $*
