@@ -7,6 +7,6 @@ fi
 ./bootstrap && \
     ./configure --enable-maintainer-mode \
 		--enable-debug \
+		--prefix=/usr \
 		--sysconfdir=/etc \
-		--enable-tools \
-		--prefix=/usr $*
+		--enable-tools $*
