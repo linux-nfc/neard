@@ -11,33 +11,19 @@ Background
 Core
 ====
 
-- LLCP Target Mode
-
-  Priority: High
-  Complexity: C8
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-
-  In LLCP target mode, neard plays the target mode and gets activated by a
-  remote device. It should be added to the adapter's device list.
-  In order to do so, the underlying NFC hardware must be able to run in target
-  mode which means the StartPoll API should be modified to support both
-  initiator and target modes.
-
-
-- Agent API
+- Handover Agent API
 
   Priority: Medium
   Complexity: C4
   Owner: Samuel Ortiz <sameo@linux.intel.com>
 
-  neard's agent API will allow external applications to register against neard
-  and provide it with context specific input. For now, MIFARE keys and
-  Bluetooth OOB data will be supported.
-
+  neard's handover agent API will allow an eventual BlueZ neard plugin to
+  pass OOB data to neard. From this OOB data, neard will build an Hs record
+  and reply to the handover requester.
 
 - Card Emulation Mode
 
-  Priority: High
+  Priority: Low
   Complexity: C8
   Dependencies: Core:NDEF building library
   Owner: Samuel Ortiz <sameo@linux.intel.com>
@@ -56,20 +42,6 @@ Core
 Reader mode
 ===========
 
-- Bluetooth Handover integration
-
-  Priority: Medium
-  Complexity: C4
-  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
-
-  The handover integration has to be done between bluetoothd, obexd and
-  neard. obexd should be able to expose and OOB NDEF in order for an NFC
-  peer to initiate a BT pairing. The potentially queued OBEX transfers
-  should then start once the pairing is done.
-  On the other hand, neard should be able to talk with bluetoothd for
-  pairing with a remote peer exporting an OOB NDEF. Once the pairing is
-  done, obexd should be able to handle the OBEX transfer.
-
 
 Writer mode
 ===========
@@ -84,13 +56,27 @@ Writer mode
 p2p mode
 ========
 
-- SNEP writer mode support
+- Bluetooth Handover integration
 
-  Priority: High
-  Conplexity: C4
-  Dependencies: Core:Writer mode
+  Priority: Medium
+  Complexity: C4
+  Dependencies: Core:Handover Agent API
+  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
+
+  The handover integration has to be done between bluetoothd, obexd and
+  neard. Obexd or BlueZ should be able to call a handover requester
+  org.neard.Manager method to send an Hr to a remote peer. This asynchronous
+  method will return upon reception of an Hs record. This is when BlueZ
+  will be able to initiate the pairing.
+  On the other hand, neard should be able to get the appropriate OOB data
+  from BlueZ through the handover agent API, and build an Hs to send to
+  the handover requester. The latter will then initiate the pairing.
+
+- SNEP and LLCP validation tests
+
+  Priority: Medium
+  Complexity: C4
   Owner: Ravi kumar Veeramally <ravikumar.veeramally@linux.intel.com>
 
-  SNEP is the NFC Forum defined standard for exchanging NDEFs over
-  an LLCP link. SNEP can be run as a client or a server, respectively
-  to send and receive NDEFs.
+  Implement SNEP validation test cases as an optional neard plugin, and
+  LLCP ones as a set of tools/ binaries.
