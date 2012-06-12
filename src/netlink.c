@@ -49,16 +49,6 @@ static inline void nl_socket_free(struct nl_sock *h)
 	nl_handle_destroy(h);
 }
 
-static inline int __genl_ctrl_alloc_cache(struct nl_sock *h, struct nl_cache **cache)
-{
-	struct nl_cache *tmp = genl_ctrl_alloc_cache(h);
-	if (!tmp)
-		return -ENOMEM;
-	*cache = tmp;
-	return 0;
-}
-#define genl_ctrl_alloc_cache __genl_ctrl_alloc_cache
-
 #define NLE_MISSING_ATTR	14
 
 static inline void __nl_perror(int error, const char *s)
@@ -70,8 +60,7 @@ static inline void __nl_perror(int error, const char *s)
 
 struct nlnfc_state {
 	struct nl_sock *nl_sock;
-	struct nl_cache *nl_cache;
-	struct genl_family *nlnfc;
+	int nfc_id;
 	int mcid;
 };
 
@@ -189,20 +178,18 @@ int __near_netlink_get_adapters(void)
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int err, family;
+	int err;
 
 	DBG("");
 
-	if (nfc_state == NULL || nfc_state->nlnfc == NULL)
+	if (nfc_state == NULL || nfc_state->nfc_id < 0)
 		return -ENODEV;
 
 	msg = nlmsg_alloc();
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  NLM_F_DUMP, NFC_CMD_GET_DEVICE, NFC_GENL_VERSION);
 	if (hdr == NULL) {
 		err = -EINVAL;
@@ -222,7 +209,7 @@ int __near_netlink_start_poll(int idx,
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int family, err = 0;
+	int err = 0;
 
 	DBG("IM protos 0x%x TM protos 0x%x", im_protocols, tm_protocols);
 
@@ -230,9 +217,7 @@ int __near_netlink_start_poll(int idx,
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			NLM_F_REQUEST, NFC_CMD_START_POLL, NFC_GENL_VERSION);
 	if (hdr == NULL) {
 		err = -EINVAL;
@@ -260,7 +245,7 @@ int __near_netlink_stop_poll(int idx)
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int family, err = 0;
+	int err = 0;
 
 	DBG("");
 
@@ -268,9 +253,7 @@ int __near_netlink_stop_poll(int idx)
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			NLM_F_REQUEST, NFC_CMD_STOP_POLL, NFC_GENL_VERSION);
 	if (hdr == NULL) {
 		err = -EINVAL;
@@ -292,7 +275,7 @@ int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int family, err = 0;
+	int err = 0;
 
 	DBG("");
 
@@ -300,9 +283,7 @@ int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			NLM_F_REQUEST, NFC_CMD_DEP_LINK_UP, NFC_GENL_VERSION);
 	if (hdr == NULL) {
 		err = -EINVAL;
@@ -326,7 +307,7 @@ int __near_netlink_dep_link_down(uint32_t idx)
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int family, err = 0;
+	int err = 0;
 
 	DBG("");
 
@@ -334,9 +315,7 @@ int __near_netlink_dep_link_down(uint32_t idx)
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			NLM_F_REQUEST, NFC_CMD_DEP_LINK_DOWN, NFC_GENL_VERSION);
 	if (hdr == NULL) {
 		err = -EINVAL;
@@ -357,7 +336,7 @@ int __near_netlink_adapter_enable(int idx, near_bool_t enable)
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int family, err = 0;
+	int err = 0;
 	uint8_t cmd;
 
 	DBG("");
@@ -366,14 +345,12 @@ int __near_netlink_adapter_enable(int idx, near_bool_t enable)
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(nfc_state->nlnfc);
-
 	if (enable == TRUE)
 		cmd = NFC_CMD_DEV_UP;
 	else
 		cmd = NFC_CMD_DEV_DOWN;
 
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			NLM_F_REQUEST, cmd, NFC_GENL_VERSION);
 	if (hdr == NULL) {
 		err = -EINVAL;
@@ -490,7 +467,7 @@ static int nfc_netlink_event_targets_found(struct genlmsghdr *gnlh)
 	struct nlattr *attr[NFC_ATTR_MAX + 1];
 	struct nl_msg *msg;
 	void *hdr;
-	int err, family;
+	int err;
 	uint32_t adapter_idx;
 
 	DBG("");
@@ -508,9 +485,7 @@ static int nfc_netlink_event_targets_found(struct genlmsghdr *gnlh)
 	if (msg == NULL)
 		return -ENOMEM;
 
-	family = genl_family_get_id(nfc_state->nlnfc);
-
-	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0,
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			NLM_F_DUMP, NFC_CMD_GET_TARGET, NFC_GENL_VERSION);
 	if (hdr == NULL) {
 		err = -EINVAL;
@@ -846,17 +821,11 @@ int __near_netlink_init(void)
 		goto handle_destroy;
 	}
 
-	if (genl_ctrl_alloc_cache(nfc_state->nl_sock, &nfc_state->nl_cache)) {
-		near_error("Failed to allocate generic netlink cache");
-		err = -ENOMEM;
-		goto handle_destroy;
-	}
-
-	nfc_state->nlnfc = genl_ctrl_search_by_name(nfc_state->nl_cache, "nfc");
-	if (nfc_state->nlnfc == NULL) {
-		near_error("nfc not found");
+	nfc_state->nfc_id = genl_ctrl_resolve(nfc_state->nl_sock, "nfc");
+	if (nfc_state->nfc_id < 0) {
+		near_error("Unable to find NFC netlink family");
 		err = -ENOENT;
-		goto cache_free;
+		goto handle_destroy;
 	}
 
 	nfc_state->mcid = nl_get_multicast_id(nfc_state->nl_sock, NFC_GENL_NAME,
@@ -864,21 +833,17 @@ int __near_netlink_init(void)
 	if (nfc_state->mcid <= 0) {
 		near_error("Wrong mcast id %d", nfc_state->mcid);
 		err = nfc_state->mcid;
-		goto family_free;
+		goto handle_destroy;
 	}
 
 	err = nl_socket_add_membership(nfc_state->nl_sock, nfc_state->mcid);
 	if (err) {
 		near_error("Error adding nl socket to membership");
-		goto family_free;
+		goto handle_destroy;
 	}
 
 	return nfc_event_listener(nfc_state);
 
-family_free:
-	genl_family_put(nfc_state->nlnfc);
-cache_free:
-	nl_cache_free(nfc_state->nl_cache);
 handle_destroy:
 	nl_socket_free(nfc_state->nl_sock);
 state_free:
@@ -903,8 +868,6 @@ void __near_netlink_cleanup(void)
 	if (nfc_state == NULL)
 		return;
 
-	genl_family_put(nfc_state->nlnfc);
-	nl_cache_free(nfc_state->nl_cache);
 	nl_socket_free(nfc_state->nl_sock);
 
 	g_free(nfc_state);
