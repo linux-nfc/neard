@@ -14,6 +14,7 @@ Supported tags:
 
   * Type 1: Supported.
   * Type 2: Supported.
+    * MIFARE classic 1K and 4K supported.
   * Type 3: Supported.
   * Type 4: Supported.
 
@@ -35,5 +36,10 @@ Supported tags:
 
 Peer To Peer Mode
 =================
-neard reads NDEFs from p2p devices in active mode.
-Write mode and passive mode to be implemented.
+neard reads and write NDEFs from p2p devices, through SNEP and NPP.
+Both initiator and target modes are supported.
+
+
+Handover
+========
+WIP.
