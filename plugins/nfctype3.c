@@ -192,7 +192,7 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	struct type3_tag *tag = data;
 	struct type3_cmd cmd;
 	uint8_t *nfc_data;
-	uint16_t current_length, length_read, data_length;
+	size_t current_length, length_read, data_length;
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 	int read_blocks;
@@ -208,7 +208,7 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 		goto out;
 	}
 
-	nfc_data = near_tag_get_data(tag->tag, (size_t *)&data_length);
+	nfc_data = near_tag_get_data(tag->tag, &data_length);
 	length_read = length - OFS_READ_DATA  ;
 	current_length = tag->current_block * BLOCK_SIZE;
 	if (current_length + (length - OFS_READ_DATA) > data_length)
@@ -221,7 +221,7 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 
 		tag->current_block = 0;
 
-		DBG("Done reading %d bytes at %p", data_length, nfc_data);
+		DBG("Done reading %zd bytes at %p", data_length, nfc_data);
 		records = near_ndef_parse(nfc_data, data_length);
 		near_tag_add_records(tag->tag, records, tag->cb, 0);
 

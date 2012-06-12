@@ -146,7 +146,7 @@ struct mifare_cookie {
 	uint8_t *rs_pmem;		/* Stored read sector */
 	int rs_max_length;		/* available size */
 	uint8_t *nfc_data;
-	int nfc_data_length;
+	size_t nfc_data_length;
 };
 
 struct type2_cmd {
@@ -430,7 +430,7 @@ static int mifare_read_NFC(void *data)
 
 	/* save tag memory pointer to data_block */
 	mf_ck->nfc_data = near_tag_get_data(mf_ck->tag,
-			(size_t *)&mf_ck->nfc_data_length);
+					&mf_ck->nfc_data_length);
 
 	/* First read here: */
 	err = mifare_read_sector(data,		/* cookie */

@@ -228,7 +228,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data ;
 	uint8_t *nfc_data;
-	uint16_t data_length, length_read, current_length;
+	size_t data_length, length_read, current_length;
 	uint16_t remain_bytes;
 	int err = 0;
 
@@ -243,7 +243,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 		return t4_cookie_release(err, cookie);
 	}
 
-	nfc_data = near_tag_get_data(cookie->tag, (size_t *)&data_length);
+	nfc_data = near_tag_get_data(cookie->tag, &data_length);
 
 	/* Remove SW1 / SW2  and NFC header */
 	length_read = length - NFC_HEADER_SIZE - 2 ;

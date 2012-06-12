@@ -101,7 +101,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	struct type2_tag *tag = data;
 	struct type2_cmd cmd;
 	uint8_t *nfc_data;
-	uint16_t current_length, length_read, data_length;
+	size_t current_length, length_read, data_length;
 	uint32_t adapter_idx;
 	int read_blocks;
 
@@ -113,7 +113,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 		return  length;
 	}
 
-	nfc_data = near_tag_get_data(tag->tag, (size_t *)&data_length);
+	nfc_data = near_tag_get_data(tag->tag, &data_length);
 	adapter_idx = near_tag_get_adapter_idx(tag->tag);
 
 	length_read = length - NFC_HEADER_SIZE;
