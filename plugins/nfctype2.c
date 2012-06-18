@@ -43,6 +43,8 @@ extern int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
 #define CMD_READ         0x30
+#define CMD_READ_SIZE    0x02
+
 #define CMD_WRITE        0xA2
 
 #define READ_SIZE  16
@@ -148,7 +150,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	DBG("adapter %d", adapter_idx);
 
 	return near_adapter_send(adapter_idx,
-				(uint8_t *)&cmd, sizeof(cmd),
+				(uint8_t *)&cmd, CMD_READ_SIZE,
 					data_recv, tag);
 }
 
@@ -167,7 +169,7 @@ static int data_read(struct type2_tag *tag)
 	adapter_idx = near_tag_get_adapter_idx(tag->tag);
 
 	return near_adapter_send(adapter_idx,
-				(uint8_t *)&cmd, sizeof(cmd),
+				(uint8_t *)&cmd, CMD_READ_SIZE,
 					data_recv, tag);
 }
 
@@ -260,7 +262,7 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd),
+	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, CMD_READ_SIZE,
 							meta_recv, cookie);
 }
 
@@ -468,7 +470,7 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, sizeof(cmd),
+	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, CMD_READ_SIZE,
 							check_presence, cookie);
 	if (err < 0)
 		goto out;
