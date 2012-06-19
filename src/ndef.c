@@ -569,7 +569,8 @@ static enum record_type get_external_record_type(uint8_t *type,
 {
 	DBG("");
 
-	if (strncmp((char *) type, "nokia.com:bt", 12) == 0)
+	if (strncmp((char *) type, BT_MIME_STRING_2_0,
+					strlen(BT_MIME_STRING_2_0)) == 0)
 		return RECORD_TYPE_MIME_TYPE;
 	else
 		return RECORD_TYPE_UNKNOWN;
@@ -1195,10 +1196,10 @@ parse_mime_type(struct near_ndef_record *record,
 	mime->type = g_strdup(record->header->type_name);
 
 	DBG("MIME Type  '%s'", mime->type);
-	if (strcmp(mime->type, "application/vnd.bluetooth.ep.oob") == 0) {
+	if (strcmp(mime->type, BT_MIME_STRING_2_1) == 0) {
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_1,
 				&ndef_data[offset], TRUE);
-	} else if (strcmp(mime->type, "nokia.com:bt") == 0) {
+	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_0,
 				&ndef_data[offset], TRUE);
 	}

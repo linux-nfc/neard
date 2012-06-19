@@ -161,6 +161,8 @@ void __near_plugin_cleanup(void);
 /* NFC Bluetooth Secure Simple Pairing */
 #define BT_MIME_V2_0		0
 #define BT_MIME_V2_1		1
+#define BT_MIME_STRING_2_0	"nokia.com:bt"
+#define BT_MIME_STRING_2_1	"application/vnd.bluetooth.ep.oob"
 
 int __near_bluetooth_init(void);
 void __near_bluetooth_cleanup(void);
