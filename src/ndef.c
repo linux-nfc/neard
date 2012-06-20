@@ -56,6 +56,7 @@ enum record_tnf {
 #define RECORD_TNF_BIT(val) (val & 0x7)
 
 #define NDEF_MSG_MIN_LENGTH 0x03
+#define NDEF_PAYLOAD_LENGTH_OFFSET 0x02
 
 #define RECORD_MB    0x80
 #define RECORD_ME    0x40
@@ -1515,6 +1516,249 @@ static struct near_ndef_ac_record *parse_ac_record(uint8_t *rec,
 fail:
 	near_error("ac record parsing failed");
 	free_ac_record(ac_record);
+
+	return NULL;
+}
+
+/* carrier power state & carrier reference */
+static struct near_ndef_message *near_ndef_prepare_ac_message(uint8_t cps,
+								char cdr)
+{
+	struct near_ndef_message *ac_msg;
+
+	/* alloc "ac" message minus adata*/
+	ac_msg = ndef_message_alloc_complete("ac", AC_RECORD_PAYLOAD_LEN,
+					NULL, 0,
+					RECORD_TNF_WELLKNOWN,
+					TRUE, TRUE);
+	if (ac_msg == NULL)
+		return NULL;
+
+	/* Prepare ac message */
+	ac_msg->data[ac_msg->offset++] = cps;
+	ac_msg->data[ac_msg->offset++] = 1;	/* cdr_len def size */
+	ac_msg->data[ac_msg->offset++] = cdr;	/* cdr */
+	ac_msg->data[ac_msg->offset] = 0;	/* adata ref count */
+
+	return ac_msg;
+}
+
+/* Collision Record message */
+static struct near_ndef_message *near_ndef_prepare_cr_message(uint16_t cr_id)
+{
+	struct near_ndef_message *cr_msg;
+
+	cr_msg = ndef_message_alloc_complete("cr", sizeof(uint16_t),
+						NULL, 0,
+						RECORD_TNF_WELLKNOWN,
+						TRUE, TRUE);
+	if (cr_msg == NULL)
+		return NULL;
+
+	/* Prepare ac message */
+	*(uint16_t *)(cr_msg->data + cr_msg->offset) = g_htons(cr_id);
+
+	return cr_msg;
+}
+
+/* Prepare the bluetooth data record */
+static struct near_ndef_message *near_ndef_prepare_bt_message(uint8_t *bt_data,
+			int bt_data_len, char cdr, uint8_t cdr_len)
+{
+	struct near_ndef_message *bt_msg = NULL;
+
+	if (bt_data == NULL)
+		goto fail;
+
+	bt_msg = ndef_message_alloc_complete(BT_MIME_STRING_2_1, bt_data_len,
+					&cdr, cdr_len, RECORD_TNF_MIME,
+					TRUE, TRUE);
+	if (bt_msg == NULL)
+		goto fail;
+
+	/* store data */
+	memcpy(bt_msg->data + bt_msg->offset, bt_data, bt_data_len);
+
+	return bt_msg;
+
+fail:
+	if (bt_msg != NULL)
+		g_free(bt_msg->data);
+
+	g_free(bt_msg);
+
+	return NULL;
+}
+
+/*
+ * @brief Prepare Handover select record with mandatory fields.
+ *
+ * TODO: only mime (BT) are supported now... Wifi will come soon...
+ * Only 1 ac record + 1 collision record+ Hr header
+ */
+struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
+					struct near_ndef_record *record,
+					enum near_ndef_handover_carrier carrier)
+{
+	uint8_t *oob_data = NULL;
+	int oob_size;
+	struct near_ndef_message *hs_msg = NULL;
+	struct near_ndef_message *ac_msg = NULL;
+	struct near_ndef_message *cr_msg = NULL;
+	struct near_ndef_message *bt_msg = NULL;
+	uint16_t collision;
+	uint8_t hs_length;
+	char cdr = '0';			/* Carrier data reference */
+
+	if (record->ho == NULL)
+		goto fail;
+
+	collision = record->ho->collision_record;
+
+	/*
+	 * Prepare records to be added
+	 * now prepare the cr message: MB=1 ME=0
+	 */
+	if (collision != 0) {
+		cr_msg = near_ndef_prepare_cr_message(collision);
+		if (cr_msg == NULL)
+			goto fail;
+	}
+
+	/*
+	 * ac record: if only one: MB=0 ME=1
+	 * cps should be active
+	 */
+	ac_msg = near_ndef_prepare_ac_message(CPS_ACTIVE, cdr);
+	if (ac_msg == NULL)
+		goto fail;
+
+	switch (carrier) {
+	case NEAR_CARRIER_BLUETOOTH:
+		/* Retrieve the bluetooth settings */
+		oob_data = __near_bluetooth_local_get_properties(&oob_size);
+		if (oob_data == NULL) {
+			near_error("Getting Bluetooth OOB data failed");
+			goto fail;
+		}
+
+		bt_msg = near_ndef_prepare_bt_message(oob_data, oob_size,
+								cdr, 1);
+		if (bt_msg == NULL)
+			goto fail;
+
+		near_ndef_set_mb_me(bt_msg->data, FALSE, TRUE);
+
+		break;
+
+	case NEAR_CARRIER_WIFI:
+		goto fail;
+	}
+
+	/*
+	 * Build the complete handover frame
+	 * Prepare Hs or Hr message (1 for version)
+	 */
+	hs_length = 1 + ac_msg->length;
+	if (cr_msg != NULL)
+		hs_length += cr_msg->length;
+
+	if (bt_msg != NULL)
+		hs_msg = ndef_message_alloc(type_name, hs_length +
+								bt_msg->length);
+	else
+		hs_msg = ndef_message_alloc(type_name, hs_length);
+	if (hs_msg == NULL)
+		goto fail;
+
+	/*
+	 * The handover payload length is not the *real* length.
+	 * The PL refers to the NDEF record, not the extra ones.
+	 * So, we have to fix the payload length in the header.
+	 */
+	hs_msg->data[NDEF_PAYLOAD_LENGTH_OFFSET] = hs_length;
+
+	/* Fill the message .... */
+	near_ndef_set_mb_me(hs_msg->data, TRUE, FALSE);
+
+	/* Add version */
+	hs_msg->data[hs_msg->offset++] = HANDOVER_VERSION;
+
+	/* copy cr */
+	if (cr_msg != NULL) {
+		near_ndef_set_mb_me(cr_msg->data, TRUE, FALSE);
+		memcpy(hs_msg->data + hs_msg->offset, cr_msg->data,
+				cr_msg->length);
+		hs_msg->offset += cr_msg->length;
+	}
+
+	/* copy ac */
+	if (cr_msg != NULL)
+		near_ndef_set_mb_me(ac_msg->data, FALSE, TRUE);
+	else
+		near_ndef_set_mb_me(ac_msg->data, TRUE, TRUE);
+
+	memcpy(hs_msg->data + hs_msg->offset, ac_msg->data, ac_msg->length);
+	hs_msg->offset += ac_msg->length;
+
+	if (hs_msg->offset > hs_msg->length)
+		goto fail;
+
+	/*
+	 * Additionnal NDEF (associated to the ac records)
+	 * Add the BT record which is not part in hs initial size
+	 */
+	if (bt_msg != NULL) {
+		near_ndef_set_mb_me(hs_msg->data, TRUE, FALSE);
+
+		memcpy(hs_msg->data + hs_msg->offset, bt_msg->data,
+							bt_msg->length);
+	}
+
+	if (ac_msg != NULL) {
+		g_free(ac_msg->data);
+		g_free(ac_msg);
+	}
+
+	if (cr_msg != NULL) {
+		g_free(cr_msg->data);
+		g_free(cr_msg);
+	}
+
+	if (bt_msg != NULL) {
+		g_free(bt_msg->data);
+		g_free(bt_msg);
+	}
+
+	g_free(oob_data);
+
+	near_info("handover select record preparation OK");
+	return hs_msg;
+
+fail:
+	near_error("handover select record preparation failed");
+
+	if (ac_msg != NULL) {
+		g_free(ac_msg->data);
+		g_free(ac_msg);
+	}
+
+	if (cr_msg != NULL) {
+		g_free(cr_msg->data);
+		g_free(cr_msg);
+	}
+
+	if (hs_msg != NULL) {
+		g_free(hs_msg->data);
+		g_free(hs_msg);
+	}
+
+	if (bt_msg != NULL) {
+		g_free(bt_msg->data);
+		g_free(bt_msg);
+	}
+
+	g_free(oob_data);
 
 	return NULL;
 }
