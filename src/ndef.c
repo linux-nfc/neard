@@ -1181,7 +1181,7 @@ fail:
 static struct near_ndef_mime_record *
 parse_mime_type(struct near_ndef_record *record,
 			uint8_t *ndef_data, size_t ndef_length, size_t offset,
-			uint32_t payload_length)
+			uint32_t payload_length, near_bool_t bt_pair)
 {
 	struct near_ndef_mime_record *mime = NULL;
 	int err = 0;
@@ -1197,13 +1197,13 @@ parse_mime_type(struct near_ndef_record *record,
 
 	mime->type = g_strdup(record->header->type_name);
 
-	DBG("MIME Type  '%s'", mime->type);
+	DBG("MIME Type  '%s' action: %d", mime->type, bt_pair);
 	if (strcmp(mime->type, BT_MIME_STRING_2_1) == 0) {
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_1,
-				&ndef_data[offset], TRUE);
+				&ndef_data[offset], bt_pair);
 	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_0,
-				&ndef_data[offset], TRUE);
+				&ndef_data[offset], bt_pair);
 	}
 
 	if (err < 0) {
@@ -1311,7 +1311,8 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 		case RECORD_TYPE_MIME_TYPE:
 			record->mime = parse_mime_type(record, ndef_data,
 						ndef_length, offset,
-						record->header->payload_len);
+						record->header->payload_len,
+						TRUE);
 
 
 			if (record->mime == NULL)
