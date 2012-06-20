@@ -1216,6 +1216,22 @@ parse_mime_type(struct near_ndef_record *record,
 	return mime;
 }
 
+/* Set the MB/ME bit in message header */
+static uint8_t near_ndef_set_mb_me(uint8_t *hdr, near_bool_t first_rec,
+						near_bool_t last_rec)
+{
+	/* Reset bits 0x40 and 0x80*/
+	*hdr &= (0xFF & (~(RECORD_MB | RECORD_ME)));
+
+	/* Set if needed */
+	if (first_rec == TRUE)
+		*hdr |= RECORD_MB;
+	if (last_rec == TRUE)
+		*hdr |= RECORD_ME;
+
+	return *hdr;
+}
+
 /**
  * @brief Allocates ndef message struture
  *
@@ -1276,13 +1292,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 		goto fail;
 
 	/* Set MB ME bits */
-	hdr &= (0xFF & (~(RECORD_MB | RECORD_ME)));
-
-	/* Set if needed */
-	if (first_rec == TRUE)
-		hdr |= RECORD_MB;
-	if (last_rec == TRUE)
-		hdr |= RECORD_ME;
+	hdr = near_ndef_set_mb_me(&hdr, first_rec, last_rec);
 
 	if (sr_bit == TRUE)
 		hdr |= RECORD_SR;
