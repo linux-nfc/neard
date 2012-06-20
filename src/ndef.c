@@ -537,6 +537,34 @@ static void free_mime_record(struct near_ndef_mime_record *mime)
 	mime = NULL;
 }
 
+static void free_ac_record(struct near_ndef_ac_record *ac)
+{
+	if (ac == NULL)
+		return;
+
+	g_free(ac->adata);
+	g_free(ac);
+	ac = NULL;
+}
+
+static void free_ho_record(struct near_ndef_ho_record *ho)
+{
+	int i;
+
+	if (ho == NULL)
+		return;
+
+	if (ho->ac_records != NULL) {
+		for (i = 0; i < ho->number_of_ac_records; i++)
+			free_ac_record(ho->ac_records[i]);
+	}
+
+	g_free(ho->ac_records);
+	g_free(ho);
+
+	ho = NULL;
+}
+
 static void free_ndef_record(struct near_ndef_record *record)
 {
 	if (record == NULL)
@@ -550,14 +578,17 @@ static void free_ndef_record(struct near_ndef_record *record)
 		case RECORD_TYPE_WKT_SIZE:
 		case RECORD_TYPE_WKT_TYPE:
 		case RECORD_TYPE_WKT_ACTION:
-		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
-		case RECORD_TYPE_WKT_HANDOVER_SELECT:
 		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
 		case RECORD_TYPE_WKT_ERROR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
+			break;
+
+		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		case RECORD_TYPE_WKT_HANDOVER_SELECT:
+			free_ho_record(record->ho);
 			break;
 
 		case RECORD_TYPE_WKT_TEXT:
