@@ -137,6 +137,57 @@ struct near_ndef_mime_record {
 	char *type;
 };
 
+enum carrier_power_state {
+	CPS_INACTIVE			=   0x00,
+	CPS_ACTIVE			=   0x01,
+	CPS_ACTIVATING			=   0x02,
+	CPS_UNKNOWN			=   0x03,
+};
+
+/* Handover record definitions */
+
+/* alternative record (AC) */
+#define AC_RECORD_PAYLOAD_LEN	4
+
+struct near_ndef_ac_record {
+	enum carrier_power_state cps;	/* carrier power state */
+
+	uint8_t cdr_len;	/* carrier data reference length: 0x01 */
+	uint8_t	cdr;		/* carrier data reference */
+	uint8_t adata_refcount;	/* auxiliary data reference count */
+
+	/* !: if adata_refcount == 0, then there's no data reference */
+	uint16_t **adata;	/* auxiliary data reference */
+};
+
+/*
+ * carrier data (see cdr in near_ndef_ac_record )
+ * These settings can be retrieved from mime, carrier records, etc...
+ */
+struct near_ndef_carrier_data {
+	uint8_t	cdr;		/* carrier data reference */
+	uint8_t *data;
+	size_t data_len;
+};
+
+/* Default Handover version */
+#define HANDOVER_VERSION	0x12
+
+/* General Handover Request/Select record */
+struct near_ndef_ho_record {
+	uint8_t version;		/* version id */
+	uint16_t collision_record;	/* collision record */
+
+	uint8_t number_of_ac_records;	/* At least 1 ac is needed */
+	struct near_ndef_ac_record **ac_records;
+
+	/* Optional records */
+	uint16_t *err_record;	/* not NULL if present */
+
+	uint8_t number_of_cfg_records;	/* extra NDEF records */
+	struct near_ndef_mime_record **cfg_records;
+};
+
 struct near_ndef_record {
 	char *path;
 
@@ -149,6 +200,9 @@ struct near_ndef_record {
 
 	/* MIME type */
 	struct near_ndef_mime_record *mime;
+
+	/* HANDOVER type */
+	struct near_ndef_ho_record   *ho;
 };
 
 static DBusConnection *connection = NULL;
