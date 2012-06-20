@@ -93,11 +93,32 @@ static void __bt_eir_free(struct near_oob_data *oob)
 {
 	DBG("");
 
-	g_free(oob->def_adapter);
-	g_free(oob->bd_addr);
-	g_free(oob->bt_name);
-	g_free(oob->spair_hash);
-	g_free(oob->spair_randomizer);
+	if (oob->def_adapter != NULL) {
+		g_free(oob->def_adapter);
+		oob->def_adapter = NULL;
+	}
+
+	if (oob->bd_addr != NULL) {
+		g_free(oob->bd_addr);
+		oob->bd_addr = NULL;
+	}
+
+	if (oob->bt_name != NULL) {
+		g_free(oob->bt_name);
+		oob->bt_name = NULL;
+	}
+
+	if (oob->spair_hash != NULL) {
+		g_free(oob->spair_hash);
+		oob->spair_hash = NULL;
+	}
+
+	if (oob->spair_randomizer != NULL) {
+		g_free(oob->spair_randomizer);
+		oob->spair_randomizer = NULL;
+	}
+
+
 }
 
 static void bt_eir_free(struct near_oob_data *oob)
