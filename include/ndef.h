@@ -32,6 +32,9 @@ struct near_ndef_message {
 	uint8_t *data;
 };
 
+int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
+						uint8_t record_type);
+
 int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length);
 
 GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length);

@@ -1921,6 +1921,67 @@ int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length)
 	return ndef_size;
 }
 
+int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
+			uint8_t record_type)
+{
+	uint8_t p_mb = 0, p_me = 0, err;
+	size_t offset;
+	struct near_ndef_record *record = NULL;
+	int counted_records = 0 ;
+
+	DBG("");
+
+	offset = 0;
+
+	if (ndef_in == NULL ||	ndef_in_length < NDEF_MSG_MIN_LENGTH) {
+		err = -EINVAL;
+		goto fail;
+	}
+
+	while (offset < ndef_in_length) {
+		record = g_try_malloc0(sizeof(struct near_ndef_record));
+		if (record == NULL) {
+			err = -ENOMEM;
+			goto fail;
+		}
+
+		/* Create a record */
+		record->header = parse_record_header(ndef_in, offset,
+							ndef_in_length);
+		if (record->header == NULL) {
+			err = -EINVAL;
+			goto fail;
+		}
+
+		/* Validate MB ME */
+		if (validate_record_begin_and_end_bits(&p_mb, &p_me,
+					record->header->mb,
+					record->header->me) != 0) {
+			DBG("validate mb me failed");
+			err = -EINVAL;
+			goto fail;
+		}
+
+		/* Is this what we want ? */
+		if (record->header->rec_type == record_type)
+			counted_records++;
+
+		/* Jump to the next record */
+		offset = record->header->offset + record->header->payload_len;
+
+		free_ndef_record(record);
+	}
+
+	DBG("Type %d Records found: %d", record_type, counted_records);
+
+	return counted_records;
+
+fail:
+	near_error("ndef counting failed");
+	free_ndef_record(record);
+	return err;
+}
+
 /**
  * @brief Prepare Text ndef record
  *
