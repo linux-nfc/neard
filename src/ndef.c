@@ -1216,6 +1216,160 @@ parse_mime_type(struct near_ndef_record *record,
 	return mime;
 }
 
+/**
+ * @brief Allocates ndef message struture
+ *
+ * Allocates ndef message structure and fill message header byte,
+ * type length byte, payload length and type name. Offset is payload
+ * first byte (caller of this API can start filling their payload
+ * from offset value).
+ *
+ * @note : caller responsibility to free the input and output
+ *         parameters memory.
+ *
+ * @param[in] type_name    Record type name
+ * @param[in] payload_len  Record payload length
+ * @param[in] payload_id   Record payload id string
+ * @param[in] payload_id_len  Record payload id string length
+ * @param[in] tnf          Type name format to set
+ * @param[in] first_rec    Message begin (MB) flag
+ * @param[in] last_rec     Message end (ME) flag
+ *
+ * @return struct near_ndef_message * - Success
+ *         NULL - Failure
+ */
+static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
+		uint32_t payload_len,
+		char *payload_id,
+		uint8_t payload_id_len,
+		enum record_tnf tnf,
+		near_bool_t first_rec,
+		near_bool_t last_rec)
+{
+	struct near_ndef_message *msg;
+	uint8_t hdr = 0, type_len, sr_bit, il_bit, id_len;
+
+	msg = g_try_malloc0(sizeof(struct near_ndef_message));
+	if (msg == NULL)
+		return NULL;
+
+	msg->length = 0;
+	msg->offset = 0;
+	msg->length++; /* record header*/
+	msg->length++; /* type name length byte*/
+
+	type_len = (type_name != NULL) ? strlen(type_name) : 0;
+	id_len = (payload_id != NULL) ? payload_id_len : 0;
+	sr_bit =  (payload_len <= NDEF_MSG_SHORT_RECORD_MAX_LENGTH)
+					? TRUE : FALSE;
+
+	il_bit = (payload_id != NULL) ? TRUE : FALSE;
+
+	msg->length += (sr_bit == TRUE) ? 1 : 4;
+	msg->length += (il_bit == TRUE) ? 1 : 0;
+	msg->length += type_len;
+	msg->length += payload_len;
+	msg->length += id_len;
+
+	msg->data = g_try_malloc0(msg->length);
+	if (msg->data == NULL)
+		goto fail;
+
+	/* Set MB ME bits */
+	hdr &= (0xFF & (~(RECORD_MB | RECORD_ME)));
+
+	/* Set if needed */
+	if (first_rec == TRUE)
+		hdr |= RECORD_MB;
+	if (last_rec == TRUE)
+		hdr |= RECORD_ME;
+
+	if (sr_bit == TRUE)
+		hdr |= RECORD_SR;
+
+	hdr = RECORD_TNF_WKT_SET(hdr);
+	if (il_bit == TRUE)
+		hdr |= RECORD_IL;
+
+	switch (tnf) {
+	case RECORD_TNF_EMPTY:
+		hdr = RECORD_TNF_EMPTY_SET(hdr);
+		break;
+
+	case RECORD_TNF_URI:
+		hdr = RECORD_TNF_URI_SET(hdr);
+		break;
+
+	case RECORD_TNF_EXTERNAL:
+		hdr = RECORD_TNF_EXTERNAL_SET(hdr);
+		break;
+	case RECORD_TNF_UNKNOWN:
+		hdr = RECORD_TNF_UKNOWN_SET(hdr);
+		break;
+
+	case RECORD_TNF_UNCHANGED:
+		hdr = RECORD_TNF_UNCHANGED_SET(hdr);
+		break;
+
+	case RECORD_TNF_WELLKNOWN:
+		hdr = RECORD_TNF_WKT_SET(hdr);
+		break;
+
+	case RECORD_TNF_MIME:
+		hdr = RECORD_TNF_MIME_SET(hdr);
+		break;
+	}
+
+	msg->data[msg->offset++] = hdr;
+	msg->data[msg->offset++] = type_len;
+
+	if (sr_bit == TRUE) {
+		msg->data[msg->offset++] = payload_len;
+	} else {
+		fillb32((msg->data + msg->offset), payload_len);
+		msg->offset += 4;
+	}
+
+	if (il_bit == TRUE)
+		msg->data[msg->offset++] = payload_id_len;
+
+	if (type_name != NULL) {
+		memcpy(msg->data + msg->offset, type_name, type_len);
+		msg->offset += type_len;
+	}
+
+	if (il_bit == TRUE) {
+		memcpy(msg->data + msg->offset, payload_id, payload_id_len);
+		msg->offset += payload_id_len;
+	}
+
+	return msg;
+
+fail:
+	near_error("ndef message struct allocation failed");
+	g_free(msg->data);
+	g_free(msg);
+
+	return NULL;
+}
+
+/*
+ *  @brief Allocates ndef message structure
+ *
+ *  This is a wrapper to ndef_message_alloc, as, in most cases,
+ *  there's no payload id, and MB=TRUE and ME=TRUE. Default type name format
+ *  is also set to RECORD_TNF_WELLKNOWN
+ *
+ */
+static struct near_ndef_message *ndef_message_alloc(char* type_name,
+							uint32_t payload_len)
+{
+	return ndef_message_alloc_complete(type_name, payload_len,
+			NULL, 0,
+			RECORD_TNF_WELLKNOWN,
+			TRUE, TRUE);
+}
+
 int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 {
 	record->path = path;
@@ -1391,83 +1545,6 @@ int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length)
 	DBG("near_ndef_message_length is %d", ndef_size);
 
 	return ndef_size;
-}
-
-/**
- * @brief Allocates ndef message struture
- *
- * Allocates ndef message structure and fill message header byte,
- * type length byte, payload length and type name. Offset is payload
- * first byte (caller of this API can start filling their payload
- * from offset value).
- *
- * @note : caller responsibility to free the input and output
- *         parameters memory.
- *
- * @param[in] type_name    Record type name
- * @param[in] payload_len  Record payload length
- *
- * @return struct near_ndef_message * - Success
- *         NULL - Failure
- */
-static struct near_ndef_message *ndef_message_alloc(char* type_name,
-							uint32_t payload_len)
-{
-	struct near_ndef_message *msg;
-	uint8_t hdr = 0, type_len, sr_bit;
-
-	msg = g_try_malloc0(sizeof(struct near_ndef_message));
-	if (msg == NULL)
-		return NULL;
-
-	msg->length = 0;
-	msg->offset = 0;
-	msg->length++; /* record header*/
-	msg->length++; /* type name length byte*/
-
-	type_len = (type_name != NULL) ? strlen(type_name) : 0;
-	sr_bit =  (payload_len <= NDEF_MSG_SHORT_RECORD_MAX_LENGTH)
-			? TRUE : FALSE;
-
-	msg->length += (sr_bit == TRUE) ? 1 : 4;
-	msg->length += type_len;
-	msg->length += payload_len;
-
-	msg->data = g_try_malloc0(msg->length);
-	if (msg->data == NULL)
-		goto fail;
-
-	hdr |= RECORD_MB;
-	hdr |= RECORD_ME;
-
-	if (sr_bit == TRUE)
-		hdr |= RECORD_SR;
-
-	hdr = RECORD_TNF_WKT_SET(hdr);
-
-	msg->data[msg->offset++] = hdr;
-	msg->data[msg->offset++] = type_len;
-
-	if (sr_bit == TRUE) {
-		msg->data[msg->offset++] = payload_len;
-	} else {
-		fillb32((msg->data + msg->offset), payload_len);
-		msg->offset += 4;
-	}
-
-	if (type_name != NULL) {
-		memcpy(msg->data + msg->offset, type_name, type_len);
-		msg->offset += type_len;
-	}
-
-	return msg;
-
-fail:
-	near_error("ndef message struct allocation failed");
-	g_free(msg->data);
-	g_free(msg);
-
-	return NULL;
 }
 
 /**
