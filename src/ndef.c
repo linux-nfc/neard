@@ -1334,6 +1334,64 @@ fail:
 	return records;
 }
 
+/*
+ * @brief Compute an NDEF record length
+ *
+ * Would compute ndef records length, even though the submitted frame
+ * is incomplete. This code is used in the handover read function, as
+ * we have to "guess" the final frame size.
+ *
+ * Message size for SR=1 is:
+ *  1 : ndef rec header (offset 0)
+ *  x : record type length (offset 1)
+ *  y : payload length (offset 2) 1 byte ONLY if SR=1
+ *	if SR=0: (4bytes) 32 bits
+ *  z : payload id length (offset 3) ONLY if il_length=1
+ * */
+int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length)
+{
+	int ndef_size;	 /* default size for NDEF hdr + rec typ len + payl */
+	size_t offset;
+	uint8_t hdr;
+
+	DBG("");
+
+	if (ndef_in_length < 3)
+		return -EINVAL;
+
+	ndef_size = 3;
+	offset = 0;
+
+	/* save header byte */
+	hdr = ndef_in[offset];
+	offset++;
+
+	/* header->type_len */
+	ndef_size += ndef_in[offset++];
+
+	/* header->payload_len */
+	if (RECORD_SR_BIT(hdr) == 1) {
+		ndef_size += ndef_in[offset++];
+	} else {
+		ndef_size += g_ntohl(*((uint32_t *)(ndef_in + offset)));
+		offset += 4;
+
+		if (offset >= ndef_in_length)
+			return -ERANGE;
+	}
+
+	/* header->il */
+	ndef_size += RECORD_IL_BIT(hdr);
+
+	/* header->il_length */
+	if (RECORD_IL_BIT(hdr) == 1)
+		ndef_size += ndef_in[offset++];
+
+	DBG("near_ndef_message_length is %d", ndef_size);
+
+	return ndef_size;
+}
+
 /**
  * @brief Allocates ndef message struture
  *
