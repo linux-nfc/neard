@@ -1465,6 +1465,269 @@ static struct near_ndef_message *ndef_message_alloc(char* type_name,
 			TRUE, TRUE);
 }
 
+static struct near_ndef_ac_record *parse_ac_record(uint8_t *rec,
+						uint32_t length)
+{
+	struct near_ndef_ac_record *ac_record = NULL;
+	uint32_t offset;
+
+	DBG("");
+
+	if (rec == NULL)
+		return NULL;
+
+	offset = 0;
+	ac_record = g_try_malloc0(sizeof(struct near_ndef_ac_record));
+	if (ac_record == NULL)
+		goto fail;
+
+	/* Carrier flag */
+	ac_record->cps = rec[offset];    /* TODO Check enum */
+	offset++;
+
+	/* Carrier data reference length */
+	ac_record->cdr_len = rec[offset];
+
+	/* Carrier data reference */
+	offset++;
+	ac_record->cdr = rec[offset];
+	offset = offset + ac_record->cdr_len;
+
+	/* Auxiliary data reference count */
+	ac_record->adata_refcount = rec[offset];
+	offset++;
+
+	if (ac_record->adata_refcount == 0)
+		return ac_record;
+
+	/* save the auxiliary data reference */
+	ac_record->adata = g_try_malloc0(
+			ac_record->adata_refcount * sizeof(uint16_t));
+	if (ac_record->adata == NULL)
+		goto fail;
+
+	memcpy(ac_record->adata, rec + offset,
+			ac_record->adata_refcount * sizeof(uint16_t));
+
+	/* and leave */
+	return ac_record;
+
+fail:
+	near_error("ac record parsing failed");
+	free_ac_record(ac_record);
+
+	return NULL;
+}
+
+/* Code to fill hr record structure from acs and mimes lists */
+static int near_fill_ho_record(struct near_ndef_ho_record *ho,
+					GSList *acs, GSList *mimes)
+{
+	int rec_count;
+	int i;
+	GSList *temp;
+
+
+	rec_count = g_slist_length(acs);
+	ho->ac_records = g_try_malloc0(rec_count *
+			sizeof(struct near_ndef_ac_record *));
+	if (ho->ac_records == NULL)
+		goto fail;
+	temp = acs;
+	for (i = 0; i < rec_count; i++) {
+		ho->ac_records[i] = temp->data;
+		temp = temp->next;
+	}
+	ho->number_of_ac_records = rec_count;
+	g_slist_free(acs);
+
+	/* Same process for cfg mimes */
+	rec_count = g_slist_length(mimes);
+	ho->cfg_records = g_try_malloc0(rec_count *
+			sizeof(struct near_ndef_mime_record *));
+	if (ho->cfg_records == NULL)
+		goto fail;
+	temp = mimes;
+	for (i = 0; i < rec_count; i++) {
+		ho->cfg_records[i] = temp->data;
+		temp = temp->next;
+	}
+
+	ho->number_of_cfg_records = rec_count;
+	g_slist_free(mimes);
+
+	return 0;
+fail:
+	g_free(ho->ac_records);
+	g_free(ho->cfg_records);
+	ho->ac_records = NULL;
+	ho->cfg_records = NULL;
+	return -ENOMEM;
+}
+
+/*
+ * @brief Parse the Handover request record
+ * This function will parse an Hr record, retrieving sub records
+ * like (ac, cr, er) but it  will also get the associated
+ * ndefs (eg: handover carrier record, mime type for BT)
+ * In a handover frame, only the following types are expected:
+ *     RECORD_TYPE_WKT_HANDOVER_CARRIER:
+ *     RECORD_TYPE_WKT_COLLISION_RESOLUTION
+ *     RECORD_TYPE_MIME_TYPE
+ *     RECORD_TYPE_WKT_ALTERNATIVE_CARRIER
+ */
+static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
+		uint32_t ho_length, size_t frame_length)
+{
+	struct near_ndef_ho_record *ho_record = NULL;
+	struct near_ndef_ac_record *ac = NULL;
+	struct near_ndef_mime_record *mime = NULL;
+	struct near_ndef_record *trec = NULL;
+	GSList *acs = NULL, *mimes = NULL;
+	uint8_t mb = 0, me = 0;
+	uint32_t offset;
+	int16_t	count_ac = 0;
+
+	DBG("");
+
+	if (rec == NULL)
+		return NULL;
+	offset = 0;
+
+	/* Create the handover record */
+	ho_record = g_try_malloc0(sizeof(struct near_ndef_ho_record));
+	if (ho_record == NULL)
+		return NULL;
+
+	/* Version is the first mandatory field of hr record */
+	ho_record->version = rec[offset];
+	if (ho_record->version > HANDOVER_VERSION) {
+		near_error("Unsupported version (%d)", ho_record->version);
+		goto fail;
+	}
+
+	offset = offset + 1;
+	frame_length = frame_length - 1;	/* Remove Hr length size */
+
+	/* We should work on the whole frame */
+	ho_length = frame_length;
+
+	while (offset < ho_length) {
+		/* Create local record for mime parsing */
+		trec = g_try_malloc0(sizeof(struct near_ndef_record));
+		if (trec == NULL)
+			return NULL;
+
+		trec->header = parse_record_header(rec, offset, ho_length);
+
+		if (trec->header == NULL)
+			goto fail;
+
+		if (validate_record_begin_and_end_bits(&mb, &me,
+				trec->header->mb, trec->header->me) != 0) {
+			DBG("validate mb me failed");
+			goto fail;
+		}
+
+		offset = trec->header->offset;
+
+		switch (trec->header->rec_type) {
+		case RECORD_TYPE_WKT_SMART_POSTER:
+		case RECORD_TYPE_WKT_SIZE:
+		case RECORD_TYPE_WKT_TEXT:
+		case RECORD_TYPE_WKT_TYPE:
+		case RECORD_TYPE_WKT_ACTION:
+		case RECORD_TYPE_WKT_URI:
+		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		case RECORD_TYPE_WKT_HANDOVER_SELECT:
+		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_UNKNOWN:
+		case RECORD_TYPE_ERROR:
+			break;
+
+		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
+			DBG("HANDOVER_CARRIER");
+			/*
+			 * TODO process Hc record too !!!
+			 * Used for Wifi session
+			 */
+			break;
+
+		case RECORD_TYPE_MIME_TYPE:
+			DBG("TYPE_MIME_TYPE");
+			/*
+			 * In Hr, the mime type is used for BT handover config.
+			 * The NDEF record follows the Hr record.
+			 */
+			mime = parse_mime_type(trec, rec, frame_length,
+					offset, trec->header->payload_len,
+					FALSE);
+			if (mime == NULL)
+				goto fail;
+
+			/* add the mime to the list */
+			mimes = g_slist_append(mimes, mime);
+			count_ac--;
+			if (count_ac == 0)
+				offset = ho_length;
+			break;
+
+		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
+			DBG("COLLISION_RESOLUTION");
+			ho_record->collision_record =
+					g_ntohs(*((uint16_t *)(rec + offset)));
+			break;
+
+		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
+			DBG("ALTERNATIVE_CARRIER");
+			ac = parse_ac_record(rec + offset,
+					trec->header->payload_len);
+			if (ac == NULL)
+				goto fail;
+
+			acs = g_slist_append(acs, ac);
+
+			/* TODO check if adata are present */
+			count_ac++;
+			break;
+		}
+
+		offset += trec->header->payload_len;
+		g_free(trec->header->il_field);
+		g_free(trec->header->type_name);
+		g_free(trec->header);
+		trec->header = NULL;
+
+		g_free(trec);
+	}
+
+	if ((acs == NULL) || (mimes == NULL))
+		return ho_record;
+
+	/* Save the records */
+	if (near_fill_ho_record(ho_record, acs, mimes) < 0)
+		goto fail;
+
+	near_error("handover record parsing complete");
+	return ho_record;
+
+fail:
+	near_error("handover record parsing failed");
+
+	if (trec != NULL) {
+		if (trec->header != NULL) {
+			g_free(trec->header->type_name);
+			g_free(trec->header->il_field);
+			g_free(trec->header);
+		}
+		g_free(trec);
+	}
+
+	free_ho_record(ho_record);
+
+	return NULL;
+}
+
 int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 {
 	record->path = path;
@@ -1519,14 +1782,30 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 		case RECORD_TYPE_WKT_SIZE:
 		case RECORD_TYPE_WKT_TYPE:
 		case RECORD_TYPE_WKT_ACTION:
-		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
-		case RECORD_TYPE_WKT_HANDOVER_SELECT:
 		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
 		case RECORD_TYPE_WKT_ERROR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
+			break;
+
+		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		case RECORD_TYPE_WKT_HANDOVER_SELECT:
+			/*
+			 * Handover frame are a little bit special as the NDEF
+			 * length (specified in the header) is not the real
+			 * frame size. The complete frame includes extra NDEF
+			 * following the initial handover NDEF
+			 */
+			record->ho = parse_ho_record(ndef_data + offset,
+					record->header->payload_len,
+					ndef_length);
+			if (record->ho == NULL)
+				goto fail;
+
+			/* the complete frame is processed, break the loop */
+			record->header->payload_len = ndef_length;
 			break;
 
 		case RECORD_TYPE_WKT_TEXT:
