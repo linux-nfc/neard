@@ -360,8 +360,7 @@ int __near_device_listen(struct near_device *device, near_device_io_cb cb)
 	for (list = driver_list; list; list = list->next) {
 		struct near_device_driver *driver = list->data;
 
-		return driver->listen(device->adapter_idx,
-						device->target_idx, cb);
+		return driver->listen(device->adapter_idx, cb);
 	}
 
 	return 0;

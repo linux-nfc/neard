@@ -40,8 +40,7 @@ struct near_ndef_message;
 struct near_device_driver {
 	int priority;
 
-	int (*listen)(uint32_t adapter_idx, uint32_t target_idx,
-						near_device_io_cb cb);
+	int (*listen)(uint32_t adapter_idx, near_device_io_cb cb);
 	int (*push)(uint32_t adapter_idx, uint32_t target_idx,
 					struct near_ndef_message *ndef,
 					near_device_io_cb cb);

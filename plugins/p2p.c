@@ -143,6 +143,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 		return FALSE;
 	}
 
+	client_addr_len = sizeof(client_addr);
 	client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
 							&client_addr_len);
 	if (client_fd < 0) {
@@ -154,6 +155,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 
 	DBG("client dsap %d ssap %d",
 		client_addr.dsap, client_addr.ssap);
+	DBG("target idx %d", client_addr.target_idx);
 
 	client_data = g_try_malloc0(sizeof(struct p2p_data));
 	if (client_data == NULL) {
@@ -163,7 +165,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 
 	client_data->driver = server_data->driver;
 	client_data->adapter_idx = server_data->adapter_idx;
-	client_data->target_idx = server_data->target_idx;
+	client_data->target_idx = client_addr.target_idx;
 	client_data->fd = client_fd;
 	client_data->cb = server_data->cb;
 
@@ -181,7 +183,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 }
 
 static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
-		uint32_t target_idx, near_device_io_cb cb)
+							near_device_io_cb cb)
 {
 	int err, fd;
 	struct sockaddr_nfc_llcp addr;
@@ -226,7 +228,6 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 
 	server_data->driver = driver;
 	server_data->adapter_idx = adapter_idx;
-	server_data->target_idx = target_idx;
 	server_data->fd = fd;
 	server_data->cb = cb;
 
@@ -241,8 +242,7 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 	return 0;
 }
 
-static int p2p_listen(uint32_t adapter_idx,
-		uint32_t target_idx, near_device_io_cb cb)
+static int p2p_listen(uint32_t adapter_idx, near_device_io_cb cb)
 {
 	int err = 0;
 	GSList *list;
@@ -250,7 +250,7 @@ static int p2p_listen(uint32_t adapter_idx,
 	for (list = driver_list; list != NULL; list = list->next) {
 		struct near_p2p_driver *driver = list->data;
 
-		err &= p2p_bind(driver, adapter_idx, target_idx, cb);
+		err &= p2p_bind(driver, adapter_idx, cb);
 	}
 
 	return err;
