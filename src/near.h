@@ -30,6 +30,7 @@
 #include <near/types.h>
 
 struct near_adapter;
+struct near_device_driver;
 
 #include <near/log.h>
 
@@ -86,6 +87,7 @@ int __near_adapter_remove_device(uint32_t idx);
 int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep);
 void __near_adapter_tags_changed(uint32_t adapter_idx);
 void __near_adapter_devices_changed(uint32_t adapter_idx);
+void __near_adapter_listen(struct near_device_driver *driver);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);

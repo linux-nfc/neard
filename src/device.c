@@ -400,6 +400,8 @@ int near_device_driver_register(struct near_device_driver *driver)
 
 	driver_list = g_slist_insert_sorted(driver_list, driver, cmp_prio);
 
+	__near_adapter_listen(driver);
+
 	return 0;
 }
 

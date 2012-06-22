@@ -1035,6 +1035,25 @@ out_err:
 	return err;
 }
 
+static void adapter_listen(gpointer key, gpointer value, gpointer user_data)
+{
+	struct near_adapter *adapter = value;
+	struct near_device_driver *driver = user_data;
+
+	DBG("%s", adapter->path);
+
+	if (adapter->path == NULL)
+		return;
+
+	driver->listen(adapter->idx, device_read_cb);
+}
+
+
+void __near_adapter_listen(struct near_device_driver *driver)
+{
+	g_hash_table_foreach(adapter_hash, adapter_listen, driver);
+}
+
 int __near_adapter_init(void)
 {
 	DBG("");
