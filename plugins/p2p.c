@@ -225,7 +225,12 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 	err = bind(fd, (struct sockaddr *)&addr,
 			sizeof(struct sockaddr_nfc_llcp));
 	if (err < 0) {
-		near_error("%s bind failed %d", driver->name, err);
+		if (errno == EADDRINUSE) {
+			DBG("%s is already bound", driver->name);
+			return 0;
+		}
+
+		near_error("%s bind failed %d %d", driver->name, err, errno);
 
 		close(fd);
 		return err;
