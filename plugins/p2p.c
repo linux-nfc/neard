@@ -44,6 +44,7 @@
 #include "p2p.h"
 
 static GSList *driver_list = NULL;
+static GList *server_list = NULL;
 
 struct p2p_data {
 	struct near_p2p_driver *driver;
@@ -114,6 +115,24 @@ static void free_client_data(gpointer data)
 		g_source_remove(client_data->watch);
 
 	g_free(client_data);
+}
+
+static void free_server_data(gpointer data)
+{
+	struct p2p_data *server_data;
+
+	DBG("");
+
+	server_data = (struct p2p_data *)data;
+
+	if (server_data->watch > 0)
+		g_source_remove(server_data->watch);
+	server_data->watch = 0;
+	g_list_free_full(server_data->client_list, free_client_data);
+
+	DBG("Closing server socket");
+
+	close(server_data->fd);
 }
 
 static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
@@ -239,6 +258,8 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 				p2p_listener_event,
 				(gpointer) server_data);
 
+	server_list = g_list_append(server_list, server_data);
+
 	return 0;
 }
 
@@ -355,6 +376,8 @@ static void p2p_exit(void)
 	snep_exit();
 	npp_exit();
 	handover_exit();
+
+	g_list_free_full(server_list, free_server_data);
 
 	near_device_driver_unregister(&p2p_driver);
 }
