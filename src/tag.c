@@ -260,6 +260,11 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
+	if (tag->readonly == TRUE) {
+		DBG("Read only tag");
+		return __near_error_permission_denied(msg);
+	}
+
 	if (tag->write_msg)
 		return __near_error_in_progress(msg);
 
@@ -498,7 +503,7 @@ static int tag_initialize(struct near_tag *tag,
 	tag->target_idx = target_idx;
 	tag->protocol = protocols;
 	tag->n_records = 0;
-	tag->readonly = 0;
+	tag->readonly = FALSE;
 
 	if (nfcid_len <= NFC_MAX_NFCID1_LEN) {
 		tag->nfcid_len = nfcid_len;
