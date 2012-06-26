@@ -708,11 +708,6 @@ int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
 	return 0;
 }
 
-near_bool_t near_tag_get_ro(struct near_tag *tag)
-{
-	return tag->readonly;
-}
-
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length)
 {
 	if (data_length == NULL)
