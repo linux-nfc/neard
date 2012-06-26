@@ -592,11 +592,6 @@ static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 	if (tag == NULL)
 		return -EINVAL;
 
-	if (near_tag_get_ro(tag) == TRUE) {
-		DBG("tag is read-only");
-		return -EPERM;
-	}
-
 	/* This check is valid for only static tags.
 	 * Max data length on Type 2 Tag including TLV's
 	 * is TYPE1_STATIC_MAX_DATA_SIZE */
