@@ -407,11 +407,6 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 	if (tag == NULL)
 		return -EINVAL;
 
-	if (near_tag_get_ro(tag) == TRUE) {
-		DBG("tag is read-only");
-		return -EPERM;
-	}
-
 	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
 	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
