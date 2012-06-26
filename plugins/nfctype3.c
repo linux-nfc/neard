@@ -616,11 +616,6 @@ static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
 	if (tag == NULL)
 		return -EINVAL;
 
-	if (near_tag_get_ro(tag) == TRUE) {
-		DBG("tag is read-only");
-		return -EPERM;
-	}
-
 	return data_write(adapter_idx, target_idx, ndef, tag, cb);
 }
 
