@@ -362,7 +362,7 @@ static near_bool_t handover_read(int client_fd,
 
 struct near_p2p_driver handover_driver = {
 	.name = "Handover",
-	.service_name = "urn:nfc:sn:handover",
+	.service_name = NEAR_DEVICE_SN_HANDOVER,
 	.read = handover_read,
 	.close = handover_close,
 };

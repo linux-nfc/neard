@@ -143,7 +143,7 @@ static near_bool_t npp_read(int client_fd,
 
 struct near_p2p_driver npp_driver = {
 	.name = "NPP",
-	.service_name = "com.android.npp",
+	.service_name = NEAR_DEVICE_SN_NPP,
 	.read = npp_read,
 };
 

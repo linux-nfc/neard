@@ -316,7 +316,7 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 }
 
 static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
-			struct near_ndef_message *ndef,
+			struct near_ndef_message *ndef, char *service_name,
 			near_device_io_cb cb)
 {
 	int fd;
@@ -327,7 +327,7 @@ static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
 	for (list = driver_list; list != NULL; list = list->next) {
 		struct near_p2p_driver *driver = list->data;
 
-		if (strcmp(driver->name, "SNEP") != 0)
+		if (strcmp(driver->service_name, service_name) != 0)
 			continue;
 
 		fd = p2p_connect(adapter_idx, target_idx, ndef, cb, driver);

@@ -37,12 +37,17 @@ struct near_ndef_message;
 #define NEAR_DEVICE_PRIORITY_DEFAULT     0
 #define NEAR_DEVICE_PRIORITY_HIGH      100
 
+#define NEAR_DEVICE_SN_NPP       "com.android.npp"
+#define NEAR_DEVICE_SN_SNEP      "urn:nfc:sn:snep"
+#define NEAR_DEVICE_SN_HANDOVER  "urn:nfc:sn:handover"
+
 struct near_device_driver {
 	int priority;
 
 	int (*listen)(uint32_t adapter_idx, near_device_io_cb cb);
 	int (*push)(uint32_t adapter_idx, uint32_t target_idx,
 					struct near_ndef_message *ndef,
+					char *service_name,
 					near_device_io_cb cb);
 };
 

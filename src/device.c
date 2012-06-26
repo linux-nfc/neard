@@ -196,11 +196,63 @@ static void push_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	device->push_msg = NULL;
 }
 
+static char *sn_from_message(DBusMessage *msg)
+{
+	DBusMessageIter iter;
+	DBusMessageIter arr_iter;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+						DBUS_TYPE_INVALID) {
+		const char *key, *value;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+
+		if (g_strcmp0(key, "Type") != 0) {
+			dbus_message_iter_next(&arr_iter);
+			continue;
+		}
+
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			dbus_message_iter_get_basic(&var_iter, &value);
+
+			if (g_strcmp0(value, "Text") == 0)
+				return NEAR_DEVICE_SN_SNEP;
+			else if (g_strcmp0(value, "URI") == 0)
+				return NEAR_DEVICE_SN_SNEP;
+			else if (g_strcmp0(value, "SmartPoster") == 0)
+				return NEAR_DEVICE_SN_SNEP;
+			else if (g_strcmp0(value, "Handover") == 0)
+				return NEAR_DEVICE_SN_HANDOVER;
+		        else
+				return NULL;
+
+			break;
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+	return NULL;
+}
+
 static DBusMessage *push_ndef(DBusConnection *conn,
 				DBusMessage *msg, void *data)
 {
 	struct near_device *device = data;
 	struct near_ndef_message *ndef;
+	char *service_name;
 	int err;
 
 	DBG("conn %p", conn);
@@ -210,13 +262,19 @@ static DBusMessage *push_ndef(DBusConnection *conn,
 
 	device->push_msg = dbus_message_ref(msg);
 
+	service_name = sn_from_message(msg);
+	if (service_name == NULL) {
+		err = -EINVAL;
+		goto error;
+	}
+
 	ndef = __ndef_build_from_message(msg);
 	if (ndef == NULL) {
 		err = -EINVAL;
 		goto error;
 	}
 
-	err = __near_device_push(device, ndef, push_cb);
+	err = __near_device_push(device, ndef, service_name, push_cb);
 	if (err < 0) {
 		g_free(ndef->data);
 		g_free(ndef);
@@ -367,7 +425,8 @@ int __near_device_listen(struct near_device *device, near_device_io_cb cb)
 }
 
 int __near_device_push(struct near_device *device,
-			struct near_ndef_message *ndef, near_device_io_cb cb)
+			struct near_ndef_message *ndef, char *service_name,
+			near_device_io_cb cb)
 {
 	GSList *list;
 
@@ -377,7 +436,7 @@ int __near_device_push(struct near_device *device,
 		struct near_device_driver *driver = list->data;
 
 		return driver->push(device->adapter_idx, device->target_idx,
-					ndef, cb);
+					ndef, service_name, cb);
 	}
 
 	return 0;
