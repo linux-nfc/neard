@@ -77,7 +77,7 @@ struct near_tag_driver {
 struct near_tag;
 
 struct near_tag *near_tag_get_tag(uint32_t adapter_idx, uint32_t target_idx);
-int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly);
+void near_tag_set_ro(struct near_tag *tag, near_bool_t readonly);
 void near_tag_set_blank(struct near_tag *tag, near_bool_t blank);
 int near_tag_add_data(uint32_t adapter_idx, uint32_t target_idx,
 			uint8_t *data, size_t data_length);

@@ -702,11 +702,9 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 	return 0;
 }
 
-int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
+void near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
 {
 	tag->readonly = readonly;
-
-	return 0;
 }
 
 void near_tag_set_blank(struct near_tag *tag, near_bool_t blank)
