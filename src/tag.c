@@ -870,6 +870,7 @@ int __near_tag_write(struct near_tag *tag,
 				near_tag_io_cb cb)
 {
 	GSList *list;
+	int err;
 
 	DBG("type 0x%x", tag->type);
 
@@ -878,9 +879,20 @@ int __near_tag_write(struct near_tag *tag,
 
 		DBG("driver type 0x%x", driver->type);
 
-		if (driver->type == tag->type)
+		if (driver->type == tag->type) {
+			if (tag->blank == TRUE && driver->format != NULL) {
+				DBG("Blank tag detected, formatting");
+				err = driver->format(tag->adapter_idx,
+						tag->target_idx, NULL);
+
+				if (err < 0)
+					return err;
+
+			}
+
 			return driver->write(tag->adapter_idx, tag->target_idx,
 								ndef, cb);
+		}
 	}
 
 	return 0;

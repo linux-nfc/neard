@@ -70,6 +70,8 @@ struct near_tag_driver {
 					near_tag_io_cb cb);
 	int (*check_presence)(uint32_t adapter_idx, uint32_t target_idx,
 						near_tag_io_cb cb);
+	int (*format)(uint32_t adapter_idx, uint32_t target_idx,
+					near_tag_io_cb cb);
 };
 
 struct near_tag;
