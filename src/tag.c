@@ -57,6 +57,7 @@ struct near_tag {
 
 	uint32_t n_records;
 	GList *records;
+	near_bool_t blank;
 
 	/* Tag specific structures */
 	struct {
@@ -706,6 +707,11 @@ int near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
 	tag->readonly = readonly;
 
 	return 0;
+}
+
+void near_tag_set_blank(struct near_tag *tag, near_bool_t blank)
+{
+	tag->blank = blank;
 }
 
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length)
