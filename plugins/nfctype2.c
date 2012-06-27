@@ -59,9 +59,14 @@ extern int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 #define TAG_DATA_NFC(cc) ((cc)[0] & TYPE2_MAGIC)
 
 #define TYPE2_NOWRITE_ACCESS	0x0F
+#define TYPE2_READWRITE_ACCESS	0x00
 #define TAG_T2_WRITE_FLAG(cc) ((cc)[3] & TYPE2_NOWRITE_ACCESS)
 
 #define NDEF_MAX_SIZE	0x30
+
+#define CC_BLOCK_START 3
+#define TYPE2_TAG_VER_1_0  0x10
+#define TYPE2_DATA_SIZE_48 0x6
 
 struct type2_cmd {
 	uint8_t cmd;
@@ -83,6 +88,13 @@ struct t2_cookie {
 	uint8_t current_block;
 	struct near_ndef_message *ndef;
 	near_tag_io_cb cb;
+};
+
+struct type2_cc {
+	uint8_t magic;
+	uint8_t version;
+	uint8_t mem_size;
+	uint8_t read_write;
 };
 
 static void t2_cookie_release(struct t2_cookie *cookie)
@@ -195,13 +207,11 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	cc = TAG_DATA_CC(resp + NFC_HEADER_SIZE);
 
-	if (TAG_DATA_NFC(cc) == 0) {
-		err = -EINVAL;
-		goto out;
-	}
-
+	/* Default to 48 bytes data size in case of blank tag */
 	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
-					NULL, TAG_DATA_LENGTH(cc));
+			NULL, (TAG_DATA_LENGTH(cc) ? TAG_DATA_LENGTH(cc) :
+			TYPE2_DATA_SIZE_48 << 3));
+
 	if (err < 0)
 		goto out;
 
@@ -228,6 +238,13 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		near_tag_set_ro(tag, FALSE);
 
 	near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
+
+	if (TAG_DATA_NFC(cc) == 0) {
+		DBG("Mark as blank tag");
+		near_tag_set_blank(tag, TRUE);
+	} else {
+		near_tag_set_blank(tag, FALSE);
+	}
 
 	err = data_read(t2_tag);
 	if (err < 0)
@@ -478,12 +495,94 @@ out:
 	return err;
 }
 
+static int format_resp(uint8_t *resp, int length, void *data)
+{
+	int err = 0;
+	struct t2_cookie *cookie = data;
+	struct near_tag *tag;
+
+	DBG("");
+
+	if (length < 0 || resp[0] != 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
+	if (tag == NULL) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	DBG("Done formatting");
+	near_tag_set_blank(tag, FALSE);
+
+out:
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	t2_cookie_release(cookie);
+
+	return err;
+}
+
+static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
+				near_tag_io_cb cb)
+{
+	struct type2_cmd cmd;
+	struct t2_cookie *cookie;
+	struct near_ndef_message *cc_ndef;
+	struct type2_cc *t2_cc;
+	struct near_tag *tag;
+	enum near_tag_sub_type tgt_subtype;
+	int err;
+
+	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -EINVAL;
+
+
+	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
+
+	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
+		DBG("Unknown Tag Type 2 subtype (%d)", tgt_subtype);
+		return -1;
+	}
+
+	t2_cc = g_try_malloc0(sizeof(struct type2_cc));
+	t2_cc->magic = TYPE2_MAGIC;
+	t2_cc->version = TYPE2_TAG_VER_1_0;
+	t2_cc->mem_size = TYPE2_DATA_SIZE_48;
+	t2_cc->read_write = TYPE2_READWRITE_ACCESS;
+
+	cc_ndef = g_try_malloc0(sizeof(struct near_ndef_message));
+	cookie = g_try_malloc0(sizeof(struct t2_cookie));
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->current_block = CC_BLOCK_START;
+	cookie->ndef = cc_ndef;
+	cookie->ndef->data = (uint8_t *)t2_cc;
+	cookie->cb = cb;
+
+	cmd.cmd = CMD_WRITE;
+	cmd.block = CC_BLOCK_START;
+	memcpy(cmd.data, (uint8_t *)t2_cc, BLOCK_SIZE);
+
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+					sizeof(cmd), format_resp, cookie);
+
+	return err;
+}
+
 static struct near_tag_driver type2_driver = {
 	.type           = NFC_PROTO_MIFARE,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
 	.read           = nfctype2_read,
 	.write          = nfctype2_write,
 	.check_presence = nfctype2_check_presence,
+	.format		= nfctype2_format,
 };
 
 static int nfctype2_init(void)
