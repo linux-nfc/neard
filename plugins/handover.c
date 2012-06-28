@@ -385,6 +385,22 @@ static near_bool_t handover_read(int client_fd,
 	return handover_read_hr(client_fd, adapter_idx, target_idx, cb);
 }
 
+static void free_hr_push_client(struct hr_push_client *client, int status)
+{
+	DBG("");
+
+	handover_close(client->fd, 0);
+	close(client->fd);
+
+	if (client->cb)
+		client->cb(client->adapter_idx, client->target_idx, status);
+
+	if (client->watch > 0)
+		g_source_remove(client->watch);
+
+	g_free(client);
+}
+
 static gboolean handover_push_event(GIOChannel *channel,
 				GIOCondition condition,	gpointer data)
 {
@@ -396,7 +412,7 @@ static gboolean handover_push_event(GIOChannel *channel,
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
 		near_error("Error with Handover client");
 
-		g_free(client);
+		free_hr_push_client(client, -EIO);
 
 		return FALSE;
 	}
@@ -405,11 +421,8 @@ static gboolean handover_push_event(GIOChannel *channel,
 			client->adapter_idx, client->target_idx,
 			client->cb);
 
-	if (ret == FALSE) {
-		handover_close(client->fd, 0);
-		close(client->fd);
-		g_free(client);
-	}
+	if (ret == FALSE)
+		free_hr_push_client(client, 0);
 
 	return ret;
 }
@@ -442,10 +455,8 @@ static int handover_push(int client_fd,
 					(gpointer) client);
 
 	err = send(client_fd, ndef->data, ndef->length, MSG_DONTWAIT);
-	if (err < 0) {
-		g_source_remove(client->watch);
-		g_free(client);
-	}
+	if (err < 0)
+		free_hr_push_client(client, err);
 
 	g_free(ndef);
 	g_free(ndef->data);
