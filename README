@@ -24,28 +24,29 @@ To compile and install run:
 Configuration and options
 =========================
 
-In order to actually handle NFC tags, certain configuration options
-need to be enabled:
+By default all neard plugins and features are built in. They can be
+disabled with the following configuration options:
 
-	--enable-nfctype1
+	--disable-nfctype1
 
-		Enable support for type 1 NFC tags.
+		Disable support for type 1 NFC tags.
 
-	--enable-nfctype2
+	--disable-nfctype2
 
-		Enable support for type 2 NFC tags.
+		Disable support for type 2 NFC tags.
 
-	--enable-nfctype3
+	--disable-nfctype3
 
-		Enable support for type 3 NFC tags.
+		Disable support for type 3 NFC tags.
 
-	--enable-nfctype4
+	--disable-nfctype4
 
-		Enable support for type 1 NFC tags.
+		Disable support for type 1 NFC tags.
 
-	--enable-p2p
+	--disable-p2p
 
-		Enable support for peer to peer mode.
+		Disable support for peer to peer mode.
 
 Running ./bootstrap-configure will build the configure script and then
-run it with all the above options enabled. It will also enable maintainer mode.
+run it, with maintainer mode enabled. bootstrap-configure will configure
+neard with all features enabled.
