@@ -92,6 +92,19 @@ static void free_hr_ndef(gpointer data)
 	g_free(ndef);
 }
 
+static void handover_close(int client_fd, int err)
+{
+	struct hr_ndef *ndef;
+
+	DBG("");
+
+	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
+	if (ndef == NULL)
+		return;
+
+	g_hash_table_remove(hr_ndef_hash, GINT_TO_POINTER(client_fd));
+}
+
 /* Parse an incoming handover buffer*/
 static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 {
@@ -130,19 +143,6 @@ fail:
 	near_error("ndef parsing failed (%d)", err);
 
 	return err;
-}
-
-static void handover_close(int client_fd, int err)
-{
-	struct hr_ndef *ndef;
-
-	DBG("");
-
-	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
-	if (ndef == NULL)
-		return;
-
-	g_hash_table_remove(hr_ndef_hash, GINT_TO_POINTER(client_fd));
 }
 
 static near_bool_t handover_recv_error(void)
