@@ -921,24 +921,14 @@ int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb)
 static void free_tag(gpointer data)
 {
 	struct near_tag *tag = data;
-	GList *list;
 
 	DBG("tag %p", tag);
 
-	for (list = tag->records; list; list = list->next) {
-		struct near_ndef_record *record = list->data;
+	near_ndef_records_free(tag->records);
 
-		__near_ndef_record_free(record);
-	}
-
-	DBG("record freed");
-
-	g_list_free(tag->records);
 	g_free(tag->path);
 	g_free(tag->data);
 	g_free(tag);
-
-	DBG("Done");
 }
 
 int __near_tag_init(void)
