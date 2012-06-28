@@ -275,12 +275,11 @@ static DBusMessage *push_ndef(DBusConnection *conn,
 	}
 
 	err = __near_device_push(device, ndef, service_name, push_cb);
-	if (err < 0) {
-		g_free(ndef->data);
-		g_free(ndef);
-
+	if (err < 0)
 		goto error;
-	}
+
+	g_free(ndef);
+	g_free(ndef->data);
 
 	return NULL;
 

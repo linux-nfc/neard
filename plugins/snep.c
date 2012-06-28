@@ -508,15 +508,10 @@ static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 
 	g_free(fragment->data);
 	g_free(fragment);
-	g_free(ndef->data);
-	g_free(ndef);
 
 	return 0;
 
 error:
-	g_free(ndef->data);
-	g_free(ndef);
-
 	free_snep_push_data(req, err);
 
 	return err;

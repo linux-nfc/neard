@@ -458,9 +458,6 @@ static int handover_push(int client_fd,
 	if (err < 0)
 		free_hr_push_client(client, err);
 
-	g_free(ndef);
-	g_free(ndef->data);
-
 	return err;
 }
 
