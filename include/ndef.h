@@ -44,6 +44,8 @@ int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length);
 
 GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length);
 
+void near_ndef_records_free(GList *records);
+
 struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 					char *language_code, char *text);
 

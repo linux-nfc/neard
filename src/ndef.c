@@ -2136,6 +2136,19 @@ fail:
 	return records;
 }
 
+void near_ndef_records_free(GList *records)
+{
+	GList *list;
+
+	for (list = records; list; list = list->next) {
+		struct near_ndef_record *record = list->data;
+
+		__near_ndef_record_free(record);
+	}
+
+	g_list_free(records);
+}
+
 /*
  * @brief Compute an NDEF record length
  *
