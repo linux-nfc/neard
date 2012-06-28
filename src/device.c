@@ -282,7 +282,7 @@ static DBusMessage *push_ndef(DBusConnection *conn,
 		goto error;
 	}
 
-	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+	return NULL;
 
 error:
 	dbus_message_unref(device->push_msg);
