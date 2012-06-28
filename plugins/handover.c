@@ -48,6 +48,7 @@
 					*/
 
 #define RECORD_TYPE_WKT_ALTERNATIVE_CARRIER 0x0a
+#define FRAME_TYPE_OFFSET	4
 
 enum loop_stage_flag {
 	STATE_MAIN_NDEF		= 0x00,
@@ -128,16 +129,30 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 	}
 
 	/*
-	 * The first entry on the record list is the Hr record.
-	 * We build the Hs based on it.
+	 * If we receive a request, we should reply with a Hs but
+	 * if the initial frame is Hs (it means we initiated the
+	 * exchange with a Hr), so we have to do some actions (e.g.:
+	 * pairing with bluetooth)
 	 */
-	msg = near_ndef_prepare_handover_record("Hs", records->data,
+	if (strncmp((char *)(ndef->ndef + FRAME_TYPE_OFFSET), "Hr", 2) == 0) {
+		/*
+		 * The first entry on the record list is the Hr record.
+		 * We build the Hs based on it.
+		 */
+		msg = near_ndef_prepare_handover_record("Hs", records->data,
 							NEAR_CARRIER_BLUETOOTH);
 
-	near_info("Send Hs frame");
-	err = send(client_fd, msg->data, msg->length, MSG_DONTWAIT);
-	if (err >= 0)
+		near_info("Send Hs frame");
+		err = send(client_fd, msg->data, msg->length, MSG_DONTWAIT);
+		if (err >= 0)
+			return 0;
+	} else {
+		/* We received a Hs frame */
+		DBG("Close handover connection");
+		handover_close(client_fd, 0);
+
 		return 0;
+	}
 
 fail:
 	near_error("ndef parsing failed (%d)", err);
