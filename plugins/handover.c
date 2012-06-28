@@ -145,14 +145,18 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 		near_info("Send Hs frame");
 		err = send(client_fd, msg->data, msg->length, MSG_DONTWAIT);
 		if (err >= 0)
-			return 0;
+			err = 0;
 	} else {
 		/* We received a Hs frame */
 		DBG("Close handover connection");
 		handover_close(client_fd, 0);
 
-		return 0;
+		err = 0;
 	}
+
+	near_ndef_records_free(records);
+
+	return err;
 
 fail:
 	near_error("ndef parsing failed (%d)", err);
