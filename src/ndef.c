@@ -1820,8 +1820,8 @@ fail:
  *     RECORD_TYPE_MIME_TYPE
  *     RECORD_TYPE_WKT_ALTERNATIVE_CARRIER
  */
-static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
-		uint32_t ho_length, size_t frame_length,
+static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
+		uint8_t *rec, uint32_t ho_length, size_t frame_length,
 		uint8_t ho_mb, uint8_t ho_me)
 {
 	struct near_ndef_ho_record *ho_record = NULL;
@@ -1832,6 +1832,7 @@ static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
 	uint8_t mb = 0, me = 0;
 	uint32_t offset;
 	int16_t	count_ac = 0;
+	near_bool_t bt_pair;
 
 	DBG("");
 
@@ -1903,12 +1904,19 @@ static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
 			}
 
 			/*
-			 * In Hr, the mime type is used for BT handover config.
-			 * The NDEF record follows the Hr record.
+			 * In Handover, the mime type gives bluetooth handover
+			 * configuration datas.
+			 * If we initiated the session, the received Hs frame
+			 * is the signal to launch the pairing.
 			 */
+			if (rec_type == RECORD_TYPE_WKT_HANDOVER_SELECT)
+				bt_pair = TRUE;
+			else
+				bt_pair = FALSE;
+
 			mime = parse_mime_type(trec, rec, frame_length,
 					offset, trec->header->payload_len,
-					FALSE);
+					bt_pair);
 			if (mime == NULL)
 				goto fail;
 
@@ -2061,7 +2069,8 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 			 * frame size. The complete frame includes extra NDEF
 			 * following the initial handover NDEF
 			 */
-			record->ho = parse_ho_record(ndef_data + offset,
+			record->ho = parse_ho_record(record->header->rec_type,
+					ndef_data + offset,
 					record->header->payload_len,
 					ndef_length,
 					record->header->mb, record->header->me);
