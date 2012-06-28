@@ -75,6 +75,14 @@ struct hr_ndef {
 	near_bool_t in_extra_read;
 };
 
+struct hr_push_client {
+	uint8_t fd;
+	uint32_t adapter_idx;
+	uint32_t target_idx;
+	near_device_io_cb cb;
+	guint watch;
+};
+
 static void free_hr_ndef(gpointer data)
 {
 	struct hr_ndef *ndef = data;
@@ -360,10 +368,79 @@ static near_bool_t handover_read(int client_fd,
 	return handover_read_hr(client_fd, adapter_idx, target_idx, cb);
 }
 
+static gboolean handover_push_event(GIOChannel *channel,
+				GIOCondition condition,	gpointer data)
+{
+	near_bool_t ret;
+	struct hr_push_client *client = (struct hr_push_client *)data;
+
+	DBG("condition 0x%x", condition);
+
+	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
+		near_error("Error with Handover client");
+
+		g_free(client);
+
+		return FALSE;
+	}
+
+	ret = handover_read(client->fd,
+			client->adapter_idx, client->target_idx,
+			client->cb);
+
+	if (ret == FALSE) {
+		handover_close(client->fd, 0);
+		close(client->fd);
+		g_free(client);
+	}
+
+	return ret;
+}
+
+static int handover_push(int client_fd,
+			uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_device_io_cb cb)
+{
+	int err;
+	struct hr_push_client *client;
+	GIOChannel *channel;
+
+	DBG("");
+
+	client = g_try_malloc0(sizeof(struct hr_push_client));
+	if (client == NULL)
+		return -ENOMEM;
+
+	channel = g_io_channel_unix_new(client_fd);
+	g_io_channel_set_close_on_unref(channel, TRUE);
+
+	client->fd = client_fd;
+	client->adapter_idx = adapter_idx;
+	client->target_idx = target_idx;
+	client->cb = cb;
+	client->watch = g_io_add_watch(channel,
+					G_IO_IN | G_IO_HUP | G_IO_NVAL |
+					G_IO_ERR, handover_push_event,
+					(gpointer) client);
+
+	err = send(client_fd, ndef->data, ndef->length, MSG_DONTWAIT);
+	if (err < 0) {
+		g_source_remove(client->watch);
+		g_free(client);
+	}
+
+	g_free(ndef);
+	g_free(ndef->data);
+
+	return err;
+}
+
 struct near_p2p_driver handover_driver = {
 	.name = "Handover",
 	.service_name = NEAR_DEVICE_SN_HANDOVER,
 	.read = handover_read,
+	.push = handover_push,
 	.close = handover_close,
 };
 
