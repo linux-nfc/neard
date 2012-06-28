@@ -1821,7 +1821,8 @@ fail:
  *     RECORD_TYPE_WKT_ALTERNATIVE_CARRIER
  */
 static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
-		uint32_t ho_length, size_t frame_length)
+		uint32_t ho_length, size_t frame_length,
+		uint8_t ho_mb, uint8_t ho_me)
 {
 	struct near_ndef_ho_record *ho_record = NULL;
 	struct near_ndef_ac_record *ac = NULL;
@@ -1867,12 +1868,6 @@ static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
 		if (trec->header == NULL)
 			goto fail;
 
-		if (validate_record_begin_and_end_bits(&mb, &me,
-				trec->header->mb, trec->header->me) != 0) {
-			DBG("validate mb me failed");
-			goto fail;
-		}
-
 		offset = trec->header->offset;
 
 		switch (trec->header->rec_type) {
@@ -1899,6 +1894,14 @@ static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
 
 		case RECORD_TYPE_MIME_TYPE:
 			DBG("TYPE_MIME_TYPE");
+
+			/* check mb/me bits */
+			if (validate_record_begin_and_end_bits(&ho_mb, &ho_me,
+				trec->header->mb, trec->header->me) != 0) {
+				DBG("validate mb me failed");
+				goto fail;
+			}
+
 			/*
 			 * In Hr, the mime type is used for BT handover config.
 			 * The NDEF record follows the Hr record.
@@ -1918,12 +1921,28 @@ static struct near_ndef_ho_record *parse_ho_record(uint8_t *rec,
 
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
 			DBG("COLLISION_RESOLUTION");
+
+			/* check nested mb/me bits */
+			if (validate_record_begin_and_end_bits(&mb, &me,
+				trec->header->mb, trec->header->me) != 0) {
+				DBG("validate mb me failed");
+				goto fail;
+			}
+
 			ho_record->collision_record =
 					g_ntohs(*((uint16_t *)(rec + offset)));
 			break;
 
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
 			DBG("ALTERNATIVE_CARRIER");
+
+			/* check nested mb/me bits */
+			if (validate_record_begin_and_end_bits(&mb, &me,
+				trec->header->mb, trec->header->me) != 0) {
+				DBG("validate mb me failed");
+				goto fail;
+			}
+
 			ac = parse_ac_record(rec + offset,
 					trec->header->payload_len);
 			if (ac == NULL)
@@ -2044,7 +2063,8 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 			 */
 			record->ho = parse_ho_record(ndef_data + offset,
 					record->header->payload_len,
-					ndef_length);
+					ndef_length,
+					record->header->mb, record->header->me);
 			if (record->ho == NULL)
 				goto fail;
 
