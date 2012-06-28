@@ -157,6 +157,8 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 fail:
 	near_error("ndef parsing failed (%d)", err);
 
+	handover_close(client_fd, 0);
+
 	return err;
 }
 
