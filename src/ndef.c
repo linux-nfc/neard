@@ -2447,12 +2447,15 @@ fail:
 	return NULL;
 }
 
-static char *get_uri_field(DBusMessage *msg)
+static char *get_text_field(DBusMessage *msg, char *text)
 {
 	DBusMessageIter iter, arr_iter;
 	char *uri = NULL;
 
 	DBG("");
+
+	if (text == NULL)
+		return NULL;
 
 	dbus_message_iter_init(msg, &iter);
 	dbus_message_iter_recurse(&iter, &arr_iter);
@@ -2470,7 +2473,7 @@ static char *get_uri_field(DBusMessage *msg)
 
 		switch (dbus_message_iter_get_arg_type(&var_iter)) {
 		case DBUS_TYPE_STRING:
-			if (g_strcmp0(key, "URI") == 0)
+			if (g_strcmp0(key, text) == 0)
 				dbus_message_iter_get_basic(&var_iter, &uri);
 
 			break;
@@ -2480,6 +2483,16 @@ static char *get_uri_field(DBusMessage *msg)
 	}
 
 	return uri;
+}
+
+static inline char *get_uri_field(DBusMessage *msg)
+{
+	return get_text_field(msg, "URI");
+}
+
+static inline char *get_carrier_field(DBusMessage *msg)
+{
+	return get_text_field(msg, "Carrier");
 }
 
 static struct near_ndef_message *build_text_record(DBusMessage *msg)
@@ -2590,6 +2603,87 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 						(uint8_t *)(uri + id_len));
 }
 
+static struct near_ndef_ac_record *build_ho_local_ac_record(void)
+{
+	struct near_ndef_ac_record *ac_record = NULL;
+
+	DBG("");
+
+	/* Allocate ac record */
+	ac_record = g_try_malloc0(sizeof(struct near_ndef_ac_record));
+	if (ac_record == NULL)
+		return NULL;
+
+	/* Carrier flag */
+	ac_record->cps = CPS_ACTIVE;    /* TODO Should reflect BT state */
+
+	/* Carrier data reference length */
+	ac_record->cdr_len = 1;
+
+	/* Carrier data reference */
+	ac_record->cdr = '0';
+
+	/* Auxiliary data reference count */
+	ac_record->adata_refcount = 0;
+
+	return ac_record;
+}
+
+static struct near_ndef_message *build_ho_record(DBusMessage *msg)
+{
+	char *carrier_type = NULL;
+	enum near_ndef_handover_carrier carrier;
+	struct near_ndef_record *record = NULL;
+
+	DBG("");
+
+	carrier_type = get_carrier_field(msg);
+	if (carrier_type == NULL) {
+		DBG("Empty carrier name");
+		return NULL;
+	}
+
+	if (g_strcmp0(carrier_type, "bluetooth") == 0)
+		carrier = NEAR_CARRIER_BLUETOOTH;
+	else if (g_strcmp0(carrier_type, "wifi") == 0)
+		carrier = NEAR_CARRIER_WIFI;
+	else {
+		DBG("Invalid carrier name");
+		return NULL;
+	}
+
+	/* Build local record */
+	record = g_try_malloc0(sizeof(struct near_ndef_record));
+	if (record == NULL)
+		return NULL;
+
+	/* Do a Ho */
+	record->ho = g_try_malloc0(sizeof(struct near_ndef_ho_record));
+	if (record->ho == NULL)
+		goto fail;
+
+	/* fill the Ho */
+	record->ho->version = HANDOVER_VERSION;
+
+	record->ho->collision_record = 0x1664; /* TODO randomize it */
+	record->ho->err_record = NULL;
+
+	record->ho->number_of_ac_records = 1;
+	record->ho->ac_records = g_try_malloc0(
+					sizeof(struct near_ndef_ac_record *));
+	if (record->ho->ac_records == NULL)
+		goto fail;
+	record->ho->ac_records[0] = build_ho_local_ac_record();
+
+	return near_ndef_prepare_handover_record("Hr", record, carrier);
+
+fail:
+	free_ho_record(record->ho);
+	g_free(record);
+
+	return NULL;
+}
+
 struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 {
 	DBusMessageIter iter;
@@ -2632,6 +2726,9 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 				break;
 			} else if (g_strcmp0(value, "SmartPoster") == 0) {
 				ndef = build_sp_record(msg);
+				break;
+			} else if (g_strcmp0(value, "Handover") == 0) {
+				ndef = build_ho_record(msg);
 				break;
 			} else {
 				near_error("%s not supported", value);
