@@ -374,8 +374,12 @@ static DBusMessage *set_property(DBusConnection *conn,
 		dbus_message_iter_get_basic(&value, &powered);
 
 		err = __near_netlink_adapter_enable(adapter->idx, powered);
-		if (err < 0)
+		if (err < 0) {
+			if (err == -EALREADY)
+				return __near_error_already_enabled(msg);
+
 			return __near_error_failed(msg, -err);
+		}
 
 		adapter->powered = powered;
 	} else
