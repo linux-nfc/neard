@@ -147,10 +147,6 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 		if (err >= 0)
 			err = 0;
 	} else {
-		/* We received a Hs frame */
-		DBG("Close handover connection");
-		handover_close(client_fd, 0);
-
 		err = 0;
 	}
 
