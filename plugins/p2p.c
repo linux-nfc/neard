@@ -378,11 +378,11 @@ static void p2p_exit(void)
 {
 	DBG("");
 
+	g_list_free_full(server_list, free_server_data);
+
 	snep_exit();
 	npp_exit();
 	handover_exit();
-
-	g_list_free_full(server_list, free_server_data);
 
 	near_device_driver_unregister(&p2p_driver);
 }
