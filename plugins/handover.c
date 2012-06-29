@@ -146,6 +146,9 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 		err = send(client_fd, msg->data, msg->length, MSG_DONTWAIT);
 		if (err >= 0)
 			err = 0;
+
+		g_free(msg->data);
+		g_free(msg);
 	} else {
 		err = 0;
 	}
