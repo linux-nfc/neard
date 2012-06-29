@@ -1,3 +1,13 @@
+ver 0.5:
+	Added Handover Initiator support.
+	Added Handover selector support.
+	Added support for Type 2 tags formatting.
+	Added early binding support.
+	Fixed handover and p2p memory leaks.
+	Fixed Type 2 tag read command.
+	Fixed NDEF push return value.
+	Removed plugins enablement configure options.
+
 ver 0.4:
 	Added target mode support for peer to peer.
 	Added a handover agent API.
