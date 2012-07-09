@@ -421,6 +421,7 @@ class NeardUI(Neard):
     def createRecordsWidgets(self, records_list):
         #treeview Records
         tv_records = gtk.TreeView(records_list)
+        tv_records.connect("row-activated", self.on_record_activated)
 
         column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
         tv_records.append_column(column)
@@ -431,6 +432,11 @@ class NeardUI(Neard):
         column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
         tv_records.append_column(column)
         return tv_records;
+
+    def on_record_activated(self, widget, row, col):
+        model = widget.get_model()
+        recordUI = RecordUI(self.neardDialog, model[row][0], model[row][2])
+        recordUI.show()
 
     def dlg_onResponse(self, dialog, response):
         self.neardDialog.destroy()
@@ -505,6 +511,65 @@ class NeardUI(Neard):
 
         Neard.__init__(self, self.adapter_UpdateUI, self.adapter_RemoveUI
                        , self.tag_UpdateUI, self.record_UpdateUI)
+
+class RecordUI():
+    def wr_onResponse(self, dialog, response):
+        if response != gtk.RESPONSE_ACCEPT:
+            return
+        content = self.content_entry.get_text()
+        type_name = self.type_combo.get_active_text()
+        bus = dbus.SystemBus()
+        record_path = self.path
+        tag_path = record_path[:record_path.rfind("/")]
+        tag = dbus.Interface(bus.get_object("org.neard", tag_path), "org.neard.Tag")
+        if type_name in ["Text"]:
+            content1 = content.split()
+            tag.Write({"Type" : type_name,
+                      "Encoding" : content1[0],
+                      "Language" : content1[1],
+                      "Representation" : ' '.join(content1[2:])})
+        else:
+            tag.Write({"Type" : type_name,
+                       "URI" : content})
+        dialog.destroy()
+
+    def __init__(self, parent = None, path = None, type_name = None):
+        self.path = path
+        type_combo = gtk.combo_box_new_text()
+        type_combo.append_text('Text')
+        type_combo.append_text('URI')
+        type_combo.append_text('SmartPoster')
+        if type_name == 'Text':
+            type_combo.set_active(0)
+        elif type_name == 'URI':
+            type_combo.set_active(1)
+        elif type_name == 'SmartPoster':
+            type_combo.set_active(2)
+        fixed = gtk.Fixed()
+        content_entry = gtk.Entry()
+        fixed.put(type_combo, 20, 40)
+        fixed.put(content_entry, 150, 40)
+        type_label = gtk.Label("Type")
+        content_label = gtk.Label("Content")
+        fixed.put(type_label, 20, 15)
+        fixed.put(content_label, 150, 15)
+
+        record_dialog = gtk.Dialog("Write Record", parent,
+                        gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                        (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        self.record_dialog = record_dialog
+        record_dialog.set_default_size(280, 120)
+        record_dialog.set_position(gtk.WIN_POS_CENTER)
+        record_dialog.connect('response', self.wr_onResponse)
+        hbox = record_dialog.get_content_area()
+        hbox.pack_start(fixed)
+        self.type_combo = type_combo
+        self.content_entry = content_entry
+        fixed.show_all()
+
+    def show(self):
+        self.record_dialog.run()
+        self.record_dialog.destroy()
 
 ##=================================================================
 if __name__ == "__main__":
