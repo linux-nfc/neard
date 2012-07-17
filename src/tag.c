@@ -226,6 +226,11 @@ static DBusMessage *set_property(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
+static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
+{
+	__near_adapter_tags_changed(adapter_idx);
+}
+
 static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_tag *tag;
@@ -250,6 +255,13 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	dbus_message_unref(tag->write_msg);
 	tag->write_msg = NULL;
+
+	near_ndef_records_free(tag->records);
+	tag->n_records = 0;
+	tag->records = NULL;
+	g_free(tag->data);
+
+	__near_tag_read(tag, tag_read_cb);
 }
 
 static DBusMessage *write_ndef(DBusConnection *conn,
