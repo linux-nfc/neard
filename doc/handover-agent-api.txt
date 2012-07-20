@@ -12,7 +12,7 @@ Methods		dict RequestOOB() [experimental]
 			agent, typically the BlueZ daemon.
 
 			The service daemon will use this OOB data to build
-			a Handover Select message, send it to the selector
+			a Handover Request message, send it to the selector
 			and let it proceed with the Bluetooth pairing.
 
 			If there is no Bluetooth adapter or if it doesn't
