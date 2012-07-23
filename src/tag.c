@@ -71,6 +71,7 @@ struct near_tag {
 	} t4;
 
 	DBusMessage *write_msg; /* Pending write message */
+	struct near_ndef_message *write_ndef;
 };
 
 static DBusConnection *connection = NULL;
@@ -264,6 +265,36 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	__near_tag_read(tag, tag_read_cb);
 }
 
+static void format_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
+{
+	struct near_tag *tag;
+	int err;
+
+	DBG("format status %d", status);
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return;
+
+	if (tag->write_msg == NULL)
+		return;
+
+	if (status == 0) {
+		err = __near_tag_write(tag, tag->write_ndef,
+						write_cb);
+		if (err < 0)
+			goto error;
+	} else {
+		err = status;
+		goto error;
+	}
+
+	return;
+
+error:
+	write_cb(tag->adapter_idx, tag->target_idx, err);
+}
+
 static DBusMessage *write_ndef(DBusConnection *conn,
 				DBusMessage *msg, void *data)
 {
@@ -354,6 +385,7 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 	g_free(ndef->data);
 	g_free(ndef);
 
+	tag->write_ndef = ndef_with_header;
 	err = __near_tag_write(tag, ndef_with_header, write_cb);
 	if (err < 0) {
 		g_free(ndef_with_header->data);
@@ -893,15 +925,14 @@ int __near_tag_write(struct near_tag *tag,
 			if (tag->blank == TRUE && driver->format != NULL) {
 				DBG("Blank tag detected, formatting");
 				err = driver->format(tag->adapter_idx,
-						tag->target_idx, NULL);
-
+						tag->target_idx, format_cb);
 				if (err < 0)
 					return err;
-
+			} else {
+				return driver->write(tag->adapter_idx,
+						tag->target_idx, ndef,
+						cb);
 			}
-
-			return driver->write(tag->adapter_idx, tag->target_idx,
-								ndef, cb);
 		}
 	}
 
