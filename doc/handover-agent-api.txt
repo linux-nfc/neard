@@ -12,8 +12,8 @@ Methods		dict RequestOOB() [experimental]
 			agent, typically the BlueZ daemon.
 
 			The service daemon will use this OOB data to build
-			a Handover Request message, send it to the selector
-			and let it proceed with the Bluetooth pairing.
+			a Handover Request or Select message and send it to
+			remote device.
 
 			If there is no Bluetooth adapter or if it doesn't
 			support simple pairing the agent will return an error.
@@ -47,7 +47,8 @@ Fields		string Address
 		array{byte} Hash
 
 			The simple pairing hash C.
-			This is an optional field.
+			This is a mandatory field if Randomizer is present,
+			otherwise optional.
 
 		array{byte} Randomizer
 
