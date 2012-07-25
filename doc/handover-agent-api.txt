@@ -25,6 +25,28 @@ Methods		dict RequestOOB() [experimental]
 			Possible Errors: org.neard.HandoverAgent.Error.NotSupported
 					 org.neard.HandoverAgent.Error.NoSuchDevice
 
+		void PushOOB(dict values) [experimental]
+
+			This method gets called when service daemon received
+			Handover Select message from selector and needs to pass
+			remote Out Of Band data to agent to start handover.
+
+			If there is no Bluetooth adapter or if it doesn't
+			support simple pairing the agent will return an error.
+
+			Agent shall implicitly initialize pairing if needed.
+
+			This function returns when alternative carrier
+			(Bluetooth) is ready to be used i.e. pairing has
+			finished.
+
+			Parameter should be a dictionary where the keys are the
+			field names and the values are the actual fields.
+
+			Possible Errors: org.neard.HandoverAgent.Error.NotSupported
+					 org.neard.HandoverAgent.Error.NoSuchDevice
+					 org.neard.HandoverAgent.Error.Failed
+
 		void Release() [experimental]
 
 			This method gets called when the service daemon
