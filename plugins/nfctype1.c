@@ -76,6 +76,11 @@
 
 #define UID_LENGTH 4
 
+#define TYPE1_TAG_VER_1_1 0x11
+#define TYPE1_TAG_STATIC_SIZE_120 0x0E
+#define TYPE1_READ_WRITE_ACCESS 0x00
+#define TYPE1_STATIC_TAG_DATA_LENGTH 116
+
 struct type1_cmd {
 	uint8_t cmd;
 	uint8_t addr;
@@ -103,6 +108,7 @@ struct t1_cookie {
 	uint32_t current_byte;  /* Static tag */
 	struct near_ndef_message *ndef;
 	near_tag_io_cb cb;
+	uint8_t cc[LEN_CC_BYTES];
 };
 
 static void t1_init_cmd(struct type1_tag *tag, struct type1_cmd *cmd)
@@ -255,14 +261,22 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	/* Check Magic NFC tag */
 	cc = TAG_T1_DATA_CC(resp);
 	if (TAG_T1_DATA_NFC(cc) == 0) {
-		DBG("Not a valid NFC magic tag: 0x%x",cc[0]);
-		err = -EINVAL;
-		goto out_err;
+		if (resp[OFFSET_HEADER_ROM] == HR0_TYPE1_STATIC) {
+			err = near_tag_add_data(cookie->adapter_idx,
+						cookie->target_idx,
+						NULL,
+						TYPE1_STATIC_TAG_DATA_LENGTH);
+		} else {
+			near_error("Not a valid NFC magic tag 0x%x", cc[0]);
+			err = -EINVAL;
+			goto out_err;
+		}
+	} else {
+		/* Add data to the tag */
+		err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
+						NULL, TAG_T1_DATA_LENGTH(cc));
 	}
 
-	/* Add data to the tag */
-	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
-					NULL, TAG_T1_DATA_LENGTH(cc));
 	if (err < 0)
 		goto out_err;
 
@@ -294,6 +308,11 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		uint8_t *tagdata;
 		size_t data_length;
 		GList *records;
+
+		if (TAG_T1_DATA_NFC(cc) == 0)
+			near_tag_set_blank(tag, TRUE);
+		else
+			near_tag_set_blank(tag, FALSE);
 
 		DBG("READ Static complete");
 
@@ -668,12 +687,126 @@ out:
 	return err;
 }
 
+static int format_resp(uint8_t *resp, int length, void *data)
+{
+	int err = 0;
+	struct t1_cookie *cookie = data;
+	struct near_tag *tag;
+	struct type1_cmd cmd;
+	uint8_t addr;
+
+	DBG("");
+
+	if (length < 0 || resp[0] != 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	if (cookie->current_byte < LEN_CC_BYTES) {
+		cmd.cmd  = CMD_WRITE_E;
+		addr = cookie->current_block << 3;
+		cmd.addr = addr | (cookie->current_byte & 0x7);
+		cmd.data[0] = cookie->cc[cookie->current_byte];
+		cookie->current_byte++;
+		memcpy(cmd.uid, cookie->uid, UID_LENGTH);
+
+		err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+					sizeof(cmd), format_resp, cookie);
+		if (err < 0)
+			goto out;
+
+		return 0;
+	} else {
+		tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
+		if (tag == NULL) {
+			err = -EINVAL;
+			goto out;
+		}
+
+		DBG("Done formatting");
+		near_tag_set_blank(tag, FALSE);
+	}
+
+out:
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	t1_cookie_release(cookie);
+
+	return err;
+}
+
+static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
+				near_tag_io_cb cb)
+{
+	int err;
+	struct near_tag *tag;
+	struct type1_cmd cmd;
+	struct t1_cookie *cookie;
+	uint8_t *uid, uid_length, addr;
+
+	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -EINVAL;
+
+	/* TODO: Dynamic tag format */
+	if (near_tag_get_memory_layout(tag) != NEAR_TAG_MEMORY_STATIC)
+		return -EOPNOTSUPP;
+
+	uid = near_tag_get_nfcid(adapter_idx, target_idx, &uid_length);
+	if (uid == NULL || uid_length != UID_LENGTH) {
+		near_error("Invalid type 1 UID");
+		return -EINVAL;
+	}
+
+	cookie = g_try_malloc0(sizeof(struct t1_cookie));
+	if (cookie == NULL) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+	memcpy(cookie->uid, uid, UID_LENGTH);
+	cookie->cc[0] = TYPE1_MAGIC;
+	cookie->cc[1] = TYPE1_TAG_VER_1_1;
+	cookie->cc[2] = TYPE1_TAG_STATIC_SIZE_120;
+	cookie->cc[3] = TYPE1_READ_WRITE_ACCESS;
+	cookie->current_block = 1;
+	cookie->current_byte = 0;
+
+	cmd.cmd  = CMD_WRITE_E;
+	addr = cookie->current_block << 3;
+	cmd.addr = addr | (cookie->current_byte & 0x7);
+	cmd.data[0] = cookie->cc[cookie->current_byte];
+	cookie->current_byte++;
+	memcpy(cmd.uid, cookie->uid, UID_LENGTH);
+	g_free(uid);
+
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+					sizeof(cmd), format_resp, cookie);
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	g_free(cookie);
+	g_free(uid);
+
+	return err;
+}
+
 static struct near_tag_driver type1_driver = {
 	.type           = NFC_PROTO_JEWEL,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
 	.read           = nfctype1_read,
 	.write          = nfctype1_write,
 	.check_presence = nfctype1_check_presence,
+	.format		= nfctype1_format,
 };
 
 static int nfctype1_init(void)
