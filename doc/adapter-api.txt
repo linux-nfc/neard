@@ -119,3 +119,7 @@ Properties:	string Mode [readonly]
 		array{object} Tags [readonly]
 
 			The tags object paths.
+
+		array{object} Devices [readonly]
+
+			The devices object paths.
