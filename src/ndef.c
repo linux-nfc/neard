@@ -107,6 +107,7 @@ struct near_ndef_record_header {
 	uint8_t	type_len;
 	enum record_type rec_type;
 	char *type_name;
+	uint32_t header_len;
 };
 
 struct near_ndef_text_record {
@@ -798,6 +799,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 {
 	struct near_ndef_record_header *rec_header = NULL;
 	uint8_t *type = NULL;
+	uint32_t header_len = 0;
 
 	DBG("length %d", length);
 
@@ -824,13 +826,16 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 
 	offset++;
 	rec_header->type_len = rec[offset++];
+	header_len = 2; /* type length + header bits */
 
 	if (rec_header->sr == 1) {
 		rec_header->payload_len = rec[offset++];
+		header_len++;
 	} else {
 		rec_header->payload_len =
 			g_ntohl(*((uint32_t *)(rec + offset)));
 		offset += 4;
+		header_len += 4;
 
 		if (offset >= length)
 			goto fail;
@@ -840,6 +845,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 
 	if (rec_header->il == 1) {
 		rec_header->il_length = rec[offset++];
+		header_len++;
 
 		if (offset >= length)
 			goto fail;
@@ -855,6 +861,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 
 		memcpy(type, rec + offset, rec_header->type_len);
 		offset += rec_header->type_len;
+		header_len += rec_header->type_len;
 
 		if (offset >= length)
 			goto fail;
@@ -871,6 +878,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		memcpy(rec_header->il_field, rec + offset,
 					rec_header->il_length);
 		offset += rec_header->il_length;
+		header_len += rec_header->il_length;
 
 		if (offset >= length)
 			goto fail;
@@ -882,6 +890,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 	rec_header->rec_type = get_record_type(rec_header->tnf, type,
 							rec_header->type_len);
 	rec_header->offset = offset;
+	rec_header->header_len = header_len;
 	rec_header->type_name = g_strndup((char *) type, rec_header->type_len);
 
 	g_free(type);
