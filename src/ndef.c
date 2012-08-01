@@ -205,6 +205,9 @@ struct near_ndef_record {
 
 	/* HANDOVER type */
 	struct near_ndef_ho_record   *ho;
+
+	uint8_t *data;
+	size_t data_len;
 };
 
 static DBusConnection *connection = NULL;
@@ -614,6 +617,7 @@ static void free_ndef_record(struct near_ndef_record *record)
 	}
 
 	g_free(record->header);
+	g_free(record->data);
 	g_free(record);
 	record = NULL;
 }
@@ -2024,7 +2028,7 @@ int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 {
 	GList *records;
-	uint8_t p_mb = 0, p_me = 0;
+	uint8_t p_mb = 0, p_me = 0, *record_start;
 	size_t offset = 0;
 	struct near_ndef_record *record = NULL;
 
@@ -2056,6 +2060,7 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 			goto fail;
 		}
 
+		record_start = ndef_data + offset;
 		offset = record->header->offset;
 
 		switch (record->header->rec_type) {
@@ -2130,6 +2135,15 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 
 			break;
 		}
+
+		record->data_len = record->header->header_len +
+					record->header->payload_len;
+
+		record->data = g_try_malloc0(record->data_len);
+		if (record->data == NULL)
+			goto fail;
+
+		memcpy(record->data, record_start, record->data_len);
 
 		records = g_list_append(records, record);
 
