@@ -173,6 +173,70 @@ static DBusMessage *unregister_handover_agent(DBusConnection *conn,
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
 
+static DBusMessage *register_ndef_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter;
+	const char *sender, *path, *type;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	if (dbus_message_iter_init(msg, &iter) == FALSE)
+		return __near_error_invalid_arguments(msg);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &type);
+
+	err = __near_agent_ndef_register(sender, path, type);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static DBusMessage *unregister_ndef_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter;
+	const char *sender, *path, *type;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	if (dbus_message_iter_init(msg, &iter) == FALSE)
+		return __near_error_invalid_arguments(msg);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &type);
+
+	err = __near_agent_ndef_unregister(sender, path, type);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
 static const GDBusMethodTable manager_methods[] = {
 	{ GDBUS_METHOD("GetProperties",
 				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
@@ -186,6 +250,12 @@ static const GDBusMethodTable manager_methods[] = {
 	{ GDBUS_METHOD("UnregisterHandoverAgent",
 			GDBUS_ARGS({ "path", "o" }), NULL,
 			unregister_handover_agent) },
+	{ GDBUS_METHOD("RegisterNDEFAgent",
+			GDBUS_ARGS({"path", "o"}, {"type", "s"}),
+		        NULL, register_ndef_agent) },
+	{ GDBUS_METHOD("UnregisterNDEFAgent",
+			GDBUS_ARGS({"path", "o"}, {"type", "s"}),
+		        NULL, unregister_ndef_agent) },
 	{ },
 };
 

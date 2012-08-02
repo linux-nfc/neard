@@ -32,6 +32,21 @@ Methods		dict GetProperties()
 			Unregister an existing handover agent.
 
 			Possible Errors: org.neard.Error.InvalidArguments
+
+		void RegisterNDEFAgent(object path, string type)
+
+			Register new NDEF agent.
+
+			When a record macthing the registered type is found,
+			the agent will get the whole NDEF as a raw byte stream.
+
+			Possible Errors: org.neard.Error.InvalidArguments
+
+		void UnregisterNDEFAgent(object path, string type)
+
+			Unregister an existing NDEF agent.
+
+			Possible Errors: org.neard.Error.InvalidArguments
  
 
 Signals		PropertyChanged(string name, variant value)
