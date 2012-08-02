@@ -146,7 +146,7 @@ static DBusMessage *register_handover_agent(DBusConnection *conn,
 	dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
 							DBUS_TYPE_INVALID);
 
-	err = __near_handover_agent_register(sender, path);
+	err = __near_agent_handover_register(sender, path);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
 
@@ -166,7 +166,7 @@ static DBusMessage *unregister_handover_agent(DBusConnection *conn,
 	dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
 							DBUS_TYPE_INVALID);
 
-	err = __near_handover_agent_unregister(sender, path);
+	err = __near_agent_handover_unregister(sender, path);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
 

@@ -32,7 +32,7 @@ src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/main.c src/error.c src/near.h src/log.c \
 			src/dbus.c src/manager.c src/adapter.c src/device.c \
 			src/tag.c src/plugin.c src/netlink.c src/ndef.c \
-			src/tlv.c src/bluetooth.c src/handover.c src/agent.c
+			src/tlv.c src/bluetooth.c src/agent.c
 
 src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ @NETLINK_LIBS@ -lresolv -ldl
 

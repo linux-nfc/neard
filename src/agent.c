@@ -119,6 +119,59 @@ int __near_agent_ndef_unregister(const char *sender, const char *path,
 	return 0;
 }
 
+static guint handover_agent_watch = 0;
+static gchar *handover_agent_path = NULL;
+static gchar *handover_agent_sender = NULL;
+
+static void handover_agent_free(void)
+{
+	handover_agent_watch = 0;
+
+	g_free(handover_agent_sender);
+	handover_agent_sender = NULL;
+
+	g_free(handover_agent_path);
+	handover_agent_path = NULL;
+}
+
+static void handover_agent_disconnect(DBusConnection *conn, void *data)
+{
+	DBG("data %p", data);
+
+	handover_agent_free();
+}
+
+int __near_agent_handover_register(const char *sender, const char *path)
+{
+	DBG("sender %s path %s", sender, path);
+
+	if (handover_agent_path != NULL)
+		return -EEXIST;
+
+	handover_agent_sender = g_strdup(sender);
+	handover_agent_path = g_strdup(path);
+
+	handover_agent_watch = g_dbus_add_disconnect_watch(connection, sender,
+					handover_agent_disconnect, NULL, NULL);
+
+	return 0;
+}
+
+int __near_agent_handover_unregister(const char *sender, const char *path)
+{
+	DBG("sender %s path %s", sender, path);
+
+	if (handover_agent_path == NULL)
+		return -ESRCH;
+
+	if (handover_agent_watch > 0)
+		g_dbus_remove_watch(connection, handover_agent_watch);
+
+	handover_agent_free();
+
+	return 0;
+}
+
 int __near_agent_init(void)
 {
 	DBG("");
@@ -139,4 +192,6 @@ void __near_agent_cleanup(void)
 
 	g_hash_table_destroy(ndef_app_hash);
 	ndef_app_hash = NULL;
+
+	handover_agent_free();
 }
