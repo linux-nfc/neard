@@ -173,3 +173,10 @@ int __near_handover_agent_register(const char *sender, const char *path);
 int __near_handover_agent_unregister(const char *sender, const char *path);
 int __near_handover_init(void);
 void __near_handover_cleanup(void);
+
+int __near_agent_ndef_register(const char *sender, const char *path,
+						const char *record_type);
+int __near_agent_ndef_unregister(const char *sender, const char *path,
+						const char *record_type);
+int __near_agent_init(void);
+void __near_agent_cleanup(void);
