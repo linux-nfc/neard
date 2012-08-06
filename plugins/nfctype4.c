@@ -601,6 +601,9 @@ static int data_write_cb(uint8_t *resp, int length, void *data)
 		DBG("Done writing");
 		near_adapter_disconnect(cookie->adapter_idx);
 
+		if (cookie->cb)
+			cookie->cb(cookie->adapter_idx, cookie->target_idx, 0);
+
 		return t4_cookie_release(0, cookie);
 	}
 
