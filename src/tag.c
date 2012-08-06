@@ -262,7 +262,8 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	tag->records = NULL;
 	g_free(tag->data);
 
-	__near_tag_read(tag, tag_read_cb);
+	if (status == 0)
+		__near_tag_read(tag, tag_read_cb);
 }
 
 static void format_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
