@@ -390,6 +390,9 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t2_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->current_block = DATA_BLOCK_START;
