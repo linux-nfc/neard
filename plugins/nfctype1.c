@@ -420,6 +420,11 @@ static int nfctype1_read(uint32_t adapter_idx,
 		memset(t1_cmd.uid, 0, UID_LENGTH);
 
 		cookie = g_try_malloc0(sizeof(struct t1_cookie));
+		if (cookie == NULL) {
+			g_free(uid);
+			return -ENOMEM;
+		}
+
 		cookie->adapter_idx = adapter_idx;
 		cookie->target_idx = target_idx;
 		cookie->cb = cb;
@@ -435,6 +440,11 @@ static int nfctype1_read(uint32_t adapter_idx,
 	memcpy(t1_cmd.uid, uid, UID_LENGTH);
 
 	cookie = g_try_malloc0(sizeof(struct t1_cookie));
+	if (cookie == NULL) {
+		g_free(uid);
+		return -ENOMEM;
+	}
+
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	memcpy(cookie->uid, uid, UID_LENGTH);
