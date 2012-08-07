@@ -646,6 +646,8 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 
 	/* Alloc global cookie */
 	cookie = g_try_malloc0(sizeof(struct mifare_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
 
 	/* Get the nfcid1 */
 	cookie->nfcid1 = near_tag_get_nfcid(adapter_idx, target_idx,
