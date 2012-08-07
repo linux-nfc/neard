@@ -268,7 +268,8 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 {
 	struct type2_cmd cmd;
 	struct t2_cookie *cookie;
-	
+	int err;
+
 	DBG("");
 
 	cmd.cmd = CMD_READ;
@@ -282,8 +283,12 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&cmd, CMD_READ_SIZE,
+	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, CMD_READ_SIZE,
 							meta_recv, cookie);
+	if (err < 0)
+		g_free(cookie);
+
+	return err;
 }
 
 static int nfctype2_read(uint32_t adapter_idx,
