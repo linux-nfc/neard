@@ -27,9 +27,10 @@ Methods:	dict GetProperties()
 			the adapter will start polling for targets, listening
 			for NFC devices or both.
 			The mode parameter can have the following values:
-			"Initiator", "Target". For any other value, the adapter
-			will start the polling loop in both target and initiator
-			mode.
+			"Initiator", "Target" or "Dual". For any other value, the
+			adapter will fall back to initiator mode.
+			Dual mode will have the adapter alternate between target
+			and initiator modes during the polling loop.
 
 			This process will start emitting TagFound and
 			PropertyChanged "Polling" signals.
