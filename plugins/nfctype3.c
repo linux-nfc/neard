@@ -352,7 +352,7 @@ out:
 static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 {
 	struct t3_cookie *rcv_cookie = data;
-	struct t3_cookie *snd_cookie;
+	struct t3_cookie *snd_cookie = NULL;
 	int err = 0;
 	struct type3_cmd cmd;
 
@@ -368,6 +368,11 @@ static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 		goto out;
 
 	snd_cookie = g_try_malloc0(sizeof(struct t3_cookie));
+	if (snd_cookie == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
+
 	snd_cookie->adapter_idx = rcv_cookie->adapter_idx;
 	snd_cookie->target_idx = rcv_cookie->target_idx;
 	snd_cookie->cb = rcv_cookie->cb;
@@ -380,9 +385,13 @@ static int nfctype3_recv_UID(uint8_t *resp, int length, void *data)
 			(uint8_t *)&cmd, cmd.len, nfctype3_recv_block_0, snd_cookie);
 
 out:
-	if (err < 0 && rcv_cookie->cb)
-		rcv_cookie->cb(rcv_cookie->adapter_idx,
-				rcv_cookie->target_idx, err);
+	if (err < 0) {
+		if (rcv_cookie->cb)
+			rcv_cookie->cb(rcv_cookie->adapter_idx,
+					rcv_cookie->target_idx, err);
+
+		g_free(snd_cookie);
+	}
 
 	t3_cookie_release(rcv_cookie);
 
