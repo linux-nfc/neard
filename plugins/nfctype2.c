@@ -563,13 +563,19 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 	}
 
 	t2_cc = g_try_malloc0(sizeof(struct type2_cc));
+	cc_ndef = g_try_malloc0(sizeof(struct near_ndef_message));
+	cookie = g_try_malloc0(sizeof(struct t2_cookie));
+
+	if (t2_cc == NULL || cc_ndef == NULL || cookie == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
+
 	t2_cc->magic = TYPE2_MAGIC;
 	t2_cc->version = TYPE2_TAG_VER_1_0;
 	t2_cc->mem_size = TYPE2_DATA_SIZE_48;
 	t2_cc->read_write = TYPE2_READWRITE_ACCESS;
 
-	cc_ndef = g_try_malloc0(sizeof(struct near_ndef_message));
-	cookie = g_try_malloc0(sizeof(struct t2_cookie));
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->current_block = CC_BLOCK_START;
@@ -583,6 +589,13 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
 					sizeof(cmd), format_resp, cookie);
+
+out:
+	if (err < 0) {
+		g_free(t2_cc);
+		g_free(cc_ndef);
+		g_free(cookie);
+	}
 
 	return err;
 }
