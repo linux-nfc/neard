@@ -648,7 +648,7 @@ static char *action_to_string(uint8_t action)
  * Validate type and type length and returns
  * type.
  *
- * @param type    Type name in hex foarmat
+ * @param type    Type name in hex format
  * @param type_lenth Type name length
  *
  * @return enum record type
@@ -672,7 +672,7 @@ static enum record_type get_external_record_type(uint8_t *type,
  * type.
  *
  * @param tnf     TypeNameFormat value
- * @param type    Type name in hex foarmat
+ * @param type    Type name in hex format
  * @param type_lenth Type name length
  *
  * @return enum record type
@@ -783,8 +783,8 @@ static uint8_t validate_record_begin_and_end_bits(uint8_t *msg_mb,
  *
  * Parse the ndef record header and cache the begin, end, chunkflag,
  * short-record and type-name-format bits. ID length and field, record
- * type, paylaod length and offset (where payload byte starts in input
- * parameter). Validate offset for everystep forward against total
+ * type, payload length and offset (where payload byte starts in input
+ * parameter). Validate offset for every step forward against total
  * available length.
  *
  * @note : Caller responsibility to free the memory.
@@ -1037,7 +1037,7 @@ parse_uri_record(uint8_t *rec, uint32_t length)
 
 	}
 
-	DBG("Identfier  '0X%X'", uri_record->identifier);
+	DBG("Identifier  '0X%X'", uri_record->identifier);
 	DBG("Field  '%.*s'", uri_record->field_length, uri_record->field);
 
 	return uri_record;
@@ -1053,7 +1053,7 @@ fail:
  * @brief Validate titles records language code in Smartposter.
  * There must not be two or more records with the same language identifier.
  *
- * @param[in] GSList *  list of title recods (struct near_ndef_text_record *)
+ * @param[in] GSList *  list of title records (struct near_ndef_text_record *)
  *
  * @return Zero on success
  *         Negative value on failure
@@ -1330,7 +1330,7 @@ static uint8_t near_ndef_set_mb_me(uint8_t *hdr, near_bool_t first_rec,
 }
 
 /**
- * @brief Allocates ndef message struture
+ * @brief Allocates ndef message structure
  *
  * Allocates ndef message structure and fill message header byte,
  * type length byte, payload length and type name. Offset is payload
@@ -1716,7 +1716,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		goto fail;
 
 	/*
-	 * Additionnal NDEF (associated to the ac records)
+	 * Additional NDEF (associated to the ac records)
 	 * Add the BT record which is not part in hs initial size
 	 */
 	if (bt_msg != NULL) {
@@ -2292,7 +2292,7 @@ fail:
  * @brief Prepare Text ndef record
  *
  * Prepare text ndef record with provided input data and return
- * ndef message structure (lenght and byte stream) in success or
+ * ndef message structure (length and byte stream) in success or
  * NULL in failure case.
  *
  * @note : caller responsibility to free the input and output
@@ -2610,7 +2610,7 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 	DBG("");
 
 	/*
-	 * Currently this funtion supports only mandatory URI record,
+	 * Currently this function supports only mandatory URI record,
 	 * TODO: Other records support.
 	 */
 	uri = get_uri_field(msg);

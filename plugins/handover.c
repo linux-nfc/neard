@@ -365,7 +365,7 @@ fail:
 
 /*
  * This function is a "dispatcher", to read Hr/Hs messages,
- * and/or additionnal NDEF messages
+ * and/or additional NDEF messages
  */
 static near_bool_t handover_read(int client_fd,
 		uint32_t adapter_idx, uint32_t target_idx,

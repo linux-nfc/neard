@@ -382,7 +382,7 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 	mf_ck->nfc_data_length = mf_ck->nfc_data_length - length;
 
 
-	/* Addtionnal sectors to read ? */;
+	/* Additional sectors to read ? */;
 	if (mf_ck->g_sect_list->next != NULL) {
 
 		err = mifare_read_sector(data,	/* cookie */

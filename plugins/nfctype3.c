@@ -130,7 +130,7 @@ static void t3_cookie_release(struct t3_cookie *cookie)
 	cookie = NULL;
 }
 
-/* common: Intialize structure to write block */
+/* common: Initialize structure to write block */
 static void prepare_write_block(uint8_t *UID, struct type3_cmd *cmd,
 					uint8_t block, uint8_t *data)
 {

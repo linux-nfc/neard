@@ -167,7 +167,7 @@ static int ISO_Select(uint8_t *filename, uint8_t fnamelen, uint8_t P1,
 			0x00,		/* CLA */
 			0xA4,		/* INS: Select file */
 			P1,		/* P1: select by name */
-			0x00,		/* P2: First or only occurence */
+			0x00,		/* P2: First or only occurrence */
 			filename,	/* cmd_data */
 			fnamelen,	/* uint8_t cmd_data_length*/
 			cb,
