@@ -518,45 +518,51 @@ static int bt_refresh_adapter_props(DBusConnection *conn, void *user_data)
 }
 
 /* Parse and fill the bluetooth oob information block */
-static void bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
-		struct near_oob_data *oob)
+static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
+						struct near_oob_data *oob)
 {
-	uint8_t	eir_code;
-	uint8_t eir_length;
 	char *tmp;
+	uint16_t len = 0;
 
-	DBG("");
+	DBG("total len: %u", eir_data_len);
 
-	while (bt_oob_data_size) {
-		eir_length = *ptr++;	/* EIR length */
-		eir_code = *ptr++;	/* EIR code */
+	while (len < eir_data_len - 1) {
+		uint8_t eir_len = eir_data[0];	/* EIR field length */
+		uint8_t eir_code;		/* EIR field type*/
+		uint8_t data_len;		/* EIR data length */
+		uint8_t *data;
 
 		/* check for early termination */
-		if (eir_length == 0) {
-			bt_oob_data_size = 0;
-			continue;
-		}
+		if (eir_len == 0)
+			break;
 
-		/* Remaining bytes */
-		bt_oob_data_size = bt_oob_data_size - eir_length - EIR_SIZE_LEN;
+		len += eir_len + 1;
 
-		/* Remove len byte from eir_length */
-		eir_length = eir_length - EIR_SIZE_LEN;
+		/* Do not continue EIR Data parsing if got incorrect length */
+		if (len > eir_data_len)
+			break;
+
+		data_len = eir_len - 1;
+
+		eir_code = eir_data[1]; /* EIR code */
+		data = &eir_data[2];
+
+		DBG("type 0x%.2X data_len %u", eir_code, data_len);
 
 		switch (eir_code) {
 		case EIR_NAME_SHORT:
 		case EIR_NAME_COMPLETE:
-			oob->bt_name = g_try_malloc0(eir_length + 1); /* eos */
+			oob->bt_name = g_try_malloc0(data_len + 1); /* eos */
 			if (oob->bt_name) {
-				oob->bt_name_len = eir_length;
-				memcpy(oob->bt_name, ptr, oob->bt_name_len);
-				oob->bt_name[eir_length] = 0;	/* end str*/
+				oob->bt_name_len = data_len;
+				memcpy(oob->bt_name, data, oob->bt_name_len);
+				oob->bt_name[data_len] = 0;	/* end str*/
 			}
 			break;
 
 		case EIR_CLASS_OF_DEVICE:
 			tmp = g_strdup_printf("%02X%02X%02X",
-					*ptr, *(ptr + 1), *(ptr + 2));
+					*data, *(data + 1), *(data + 2));
 			if (tmp != NULL)
 				oob->class_of_device = strtol(tmp, NULL, 16);
 			g_free(tmp);
@@ -565,18 +571,18 @@ static void bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
 		case EIR_SP_HASH:
 			oob->spair_hash = g_try_malloc0(OOB_SP_SIZE);
 			if (oob->spair_hash)
-				memcpy(oob->spair_hash, ptr, OOB_SP_SIZE);
+				memcpy(oob->spair_hash, data, OOB_SP_SIZE);
 			break;
 
 		case EIR_SP_RANDOMIZER:
 			oob->spair_randomizer = g_try_malloc0(OOB_SP_SIZE);
 			if (oob->spair_randomizer)
 				memcpy(oob->spair_randomizer,
-						ptr, OOB_SP_SIZE);
+						data, OOB_SP_SIZE);
 			break;
 
 		case EIR_SECURITY_MGR_FLAGS:
-			oob->security_manager_oob_flags = *ptr;
+			oob->security_manager_oob_flags = *data;
 			break;
 
 		case EIR_UUID128_ALL:
@@ -585,15 +591,13 @@ static void bt_parse_eir(uint8_t *ptr, uint16_t bt_oob_data_size,
 			break;
 
 		default:	/* ignore and skip */
-			near_warn("Unknown EIR: x%02x (len: %d)", eir_code,
-								eir_length);
+			near_error("Unknown EIR x%02x (len: %d)", eir_code,
+								eir_len);
 			break;
 		}
 		/* Next eir */
-		ptr = ptr + eir_length;
+		eir_data += eir_len + 1;
 	}
-
-	return;
 }
 
 /*
