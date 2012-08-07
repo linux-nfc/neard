@@ -275,6 +275,9 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 	cmd.block = META_BLOCK_START;
 
 	cookie = g_try_malloc0(sizeof(struct t2_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
