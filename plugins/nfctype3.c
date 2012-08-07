@@ -417,6 +417,9 @@ static int nfctype3_read(uint32_t adapter_idx,
 	cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
