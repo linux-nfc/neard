@@ -339,8 +339,11 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	err = nfctype3_data_read(t3_tag);
 
 out:
-	if (err < 0 && cookie->cb) {
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+	if (err < 0) {
+		if (cookie->cb)
+			cookie->cb(cookie->adapter_idx, cookie->target_idx,
+									err);
+
 		g_free(t3_tag);
 	}
 
