@@ -431,6 +431,11 @@ int __near_device_push(struct near_device *device,
 
 	DBG("");
 
+	if (__near_adapter_get_dep_state(device->adapter_idx) == FALSE) {
+		near_error("DEP link is not established");
+		return -ENOLINK;
+	}
+
 	for (list = driver_list; list; list = list->next) {
 		struct near_device_driver *driver = list->data;
 
