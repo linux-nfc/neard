@@ -267,7 +267,6 @@ static near_bool_t snep_read(int client_fd,
 		return FALSE;
 	case SNEP_REQ_PUT:
 		return snep_read_ndef(client_fd, snep_data);
-		break;
 	}
 
 	return FALSE;
