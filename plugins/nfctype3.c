@@ -403,6 +403,7 @@ static int nfctype3_read(uint32_t adapter_idx,
 {
 	struct type3_cmd cmd;
 	struct t3_cookie *cookie;
+	int err;
 
 	DBG("");
 
@@ -424,8 +425,12 @@ static int nfctype3_read(uint32_t adapter_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&cmd,
-			cmd.len , nfctype3_recv_UID, cookie);
+	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd,
+				cmd.len , nfctype3_recv_UID, cookie);
+	if (err < 0)
+		g_free(cookie);
+
+	return err;
 }
 
 static int update_attr_block_cb(uint8_t *resp, int length, void *data)
