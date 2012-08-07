@@ -72,12 +72,12 @@ Object path	[variable prefix]/{nfc0}/{tag0|device}/{record0,record1,...}
 Method		dict GetProperties()
 
 			Returns all properties for the record. Each record
-                        has it's type and properties.
+			has it's type and properties.
 
-                        If type has "Text", possible properties are "Encoding",
-                        "Language" and "Representation".
+			If type has "Text", possible properties are "Encoding",
+			"Language" and "Representation".
 
-                        See the properties section for available properties.
+			See the properties section for available properties.
 
 			Possible Errors: org.neard.Error.DoesNotExist
 
@@ -88,7 +88,7 @@ Properties	string Type [readonly]
 			Possible values are "SmartPoster", "Text", "URI",
 			"HandoverRequest", "HandoverSelect", "HandoverCarrier".
 
-                string Encoding [readonly]
+		string Encoding [readonly]
 
 			The character encoding.
 
@@ -96,14 +96,14 @@ Properties	string Type [readonly]
 			This property is only valid for Text and SmartPoster's
 			title records.
 
-                string Language [readonly]
+		string Language [readonly]
 
 			The ISO/IANA language code (For example "en" or "jp").
 
 			This property is only valid for Text and SmartPoster's
 			title records.
 
-                string Representation [readonly]
+		string Representation [readonly]
 
 			The human readable representation of a text or
 			title record.

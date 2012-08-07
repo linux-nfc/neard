@@ -147,7 +147,6 @@ static void prepare_write_block(uint8_t *UID, struct type3_cmd *cmd,
 	memcpy(cmd->data + LEN_ID + 6, data, BLOCK_SIZE); /* data to write */
 
 	cmd->len = LEN_ID + LEN_CMD + LEN_CMD_LEN + 6 + BLOCK_SIZE;
-
 }
 
 /* common: Initialize structure to read block */
@@ -702,4 +701,3 @@ static void nfctype3_exit(void)
 
 NEAR_PLUGIN_DEFINE(nfctype3, "NFC Forum Type 3 tags support", VERSION,
 			NEAR_PLUGIN_PRIORITY_HIGH, nfctype3_init, nfctype3_exit)
-

@@ -619,7 +619,6 @@ out_err:
 	return mifare_release(err, mf_ck);
 }
 
-
 /* MIFARE: entry point:
  * Read all the MAD sectors (0x00, 0x10) to get the Application Directory
  * entries.
@@ -664,7 +663,6 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 				cookie);		/* target data */
 	if (err < 0)
 		return mifare_release(err, cookie);
-
 
 	return 0;
 }

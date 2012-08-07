@@ -601,4 +601,3 @@ static void nfctype2_exit(void)
 
 NEAR_PLUGIN_DEFINE(nfctype2, "NFC Forum Type 2 tags support", VERSION,
 			NEAR_PLUGIN_PRIORITY_HIGH, nfctype2_init, nfctype2_exit)
-

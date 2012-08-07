@@ -118,7 +118,7 @@ static void polling_changed(struct near_adapter *adapter)
 {
 
 	near_dbus_property_changed_basic(adapter->path,
-				NFC_ADAPTER_INTERFACE, "Polling",
+					NFC_ADAPTER_INTERFACE, "Polling",
 					DBUS_TYPE_BOOLEAN, &adapter->polling);
 }
 
@@ -174,7 +174,6 @@ static void append_path(gpointer key, gpointer value, gpointer user_data)
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
 							&adapter->path);
-
 }
 
 void __near_adapter_list(DBusMessageIter *iter, void *user_data)
@@ -192,36 +191,31 @@ static void append_protocols(DBusMessageIter *iter, void *user_data)
 	if (adapter->protocols & NFC_PROTO_FELICA_MASK) {
 		str = "Felica";
 
-		dbus_message_iter_append_basic(iter,
-				DBUS_TYPE_STRING, &str);
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
 	}
 
 	if (adapter->protocols & NFC_PROTO_MIFARE_MASK) {
 		str = "MIFARE";
 
-		dbus_message_iter_append_basic(iter,
-				DBUS_TYPE_STRING, &str);
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
 	}
 
 	if (adapter->protocols & NFC_PROTO_JEWEL_MASK) {
 		str = "Jewel";
 
-		dbus_message_iter_append_basic(iter,
-				DBUS_TYPE_STRING, &str);
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
 	}
 
 	if (adapter->protocols & NFC_PROTO_ISO14443_MASK) {
 		str = "ISO-DEP";
 
-		dbus_message_iter_append_basic(iter,
-				DBUS_TYPE_STRING, &str);
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
 	}
 
 	if (adapter->protocols & NFC_PROTO_NFC_DEP_MASK) {
 		str = "NFC-DEP";
 
-		dbus_message_iter_append_basic(iter,
-				DBUS_TYPE_STRING, &str);
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
 	}
 }
 
@@ -237,8 +231,7 @@ static void append_tag_path(gpointer key, gpointer value, gpointer user_data)
 
 	DBG("%s", tag_path);
 
-	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
-							&tag_path);
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH, &tag_path);
 }
 
 static void append_tags(DBusMessageIter *iter, void *user_data)
@@ -282,14 +275,14 @@ void __near_adapter_tags_changed(uint32_t adapter_idx)
 	DBG("");
 
 	adapter = g_hash_table_lookup(adapter_hash,
-				GINT_TO_POINTER(adapter_idx));
+					GINT_TO_POINTER(adapter_idx));
 	if (adapter == NULL)
 		return;
 
 	near_dbus_property_changed_array(adapter->path,
-				NFC_ADAPTER_INTERFACE, "Tags",
-				DBUS_TYPE_OBJECT_PATH, append_tags,
-				adapter);
+					NFC_ADAPTER_INTERFACE, "Tags",
+					DBUS_TYPE_OBJECT_PATH, append_tags,
+					adapter);
 }
 
 void __near_adapter_devices_changed(uint32_t adapter_idx)
@@ -299,14 +292,14 @@ void __near_adapter_devices_changed(uint32_t adapter_idx)
 	DBG("");
 
 	adapter = g_hash_table_lookup(adapter_hash,
-				GINT_TO_POINTER(adapter_idx));
+					GINT_TO_POINTER(adapter_idx));
 	if (adapter == NULL)
 		return;
 
 	near_dbus_property_changed_array(adapter->path,
-				NFC_ADAPTER_INTERFACE, "Devices",
-				DBUS_TYPE_OBJECT_PATH, append_devices,
-				adapter);
+					NFC_ADAPTER_INTERFACE, "Devices",
+					DBUS_TYPE_OBJECT_PATH, append_devices,
+					adapter);
 }
 
 static DBusMessage *get_properties(DBusConnection *conn,
@@ -382,8 +375,9 @@ static DBusMessage *set_property(DBusConnection *conn,
 		}
 
 		adapter->powered = powered;
-	} else
+	} else {
 		return __near_error_invalid_property(msg);
+	}
 
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
 }
@@ -615,7 +609,7 @@ int __near_adapter_add(struct near_adapter *adapter)
 	g_dbus_register_interface(connection, adapter->path,
 					NFC_ADAPTER_INTERFACE,
 					adapter_methods, adapter_signals,
-							NULL, adapter, NULL);
+					NULL, adapter, NULL);
 
 	return 0;
 }
@@ -683,7 +677,6 @@ static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
 	__near_adapter_devices_changed(adapter_idx);
 }
 
-
 static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 			uint32_t protocols,
 			uint16_t sens_res, uint8_t sel_res,
@@ -699,8 +692,7 @@ static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 	if (tag == NULL)
 		return -ENODEV;
 
-	g_hash_table_insert(adapter->tags, GINT_TO_POINTER(target_idx),
-								tag);
+	g_hash_table_insert(adapter->tags, GINT_TO_POINTER(target_idx), tag);
 
 	tag_type = __near_tag_get_type(tag);
 
@@ -769,7 +761,6 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	else
 		return adapter_add_tag(adapter, target_idx, protocols,
 					sens_res, sel_res, nfcid, nfcid_len);
-
 }
 
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
@@ -783,14 +774,14 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 		return -ENODEV;
 
 	if (g_hash_table_remove(adapter->tags,
-			GINT_TO_POINTER(target_idx)) == TRUE) {      	
+			GINT_TO_POINTER(target_idx)) == TRUE) {
 		__near_adapter_tags_changed(idx);
 
 		return 0;
 	}
 
 	if (g_hash_table_remove(adapter->devices,
-			GINT_TO_POINTER(target_idx)) == TRUE) {      	
+			GINT_TO_POINTER(target_idx)) == TRUE) {
 		__near_adapter_devices_changed(idx);
 
 		return 0;
@@ -1064,7 +1055,6 @@ static void adapter_listen(gpointer key, gpointer value, gpointer user_data)
 
 	driver->listen(adapter->idx, device_read_cb);
 }
-
 
 void __near_adapter_listen(struct near_device_driver *driver)
 {

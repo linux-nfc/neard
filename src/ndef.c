@@ -256,7 +256,6 @@ static void append_text_record(struct near_ndef_text_record *text,
 		near_dbus_dict_append_basic(dict, "Representation",
 						DBUS_TYPE_STRING,
 						&(text->data));
-
 }
 
 static const char *uri_prefixes[NFC_MAX_URI_ID + 1] = {
@@ -447,7 +446,6 @@ static void append_record(struct near_ndef_record *record,
 		append_mime_record(record->mime, dict);
 		break;
 	}
-
 }
 
 static DBusMessage *get_properties(DBusConnection *conn,
@@ -1783,7 +1781,6 @@ static int near_fill_ho_record(struct near_ndef_ho_record *ho,
 	int rec_count;
 	int i;
 	GSList *temp;
-
 
 	rec_count = g_slist_length(acs);
 	ho->ac_records = g_try_malloc0(rec_count *

@@ -209,4 +209,3 @@ void __near_plugin_cleanup(void)
 
 	g_slist_free(plugins);
 }
-

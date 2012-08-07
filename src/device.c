@@ -235,7 +235,7 @@ static char *sn_from_message(DBusMessage *msg)
 				return NEAR_DEVICE_SN_SNEP;
 			else if (g_strcmp0(value, "Handover") == 0)
 				return NEAR_DEVICE_SN_HANDOVER;
-		        else
+			else
 				return NULL;
 
 			break;

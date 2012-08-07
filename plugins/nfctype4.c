@@ -223,7 +223,6 @@ static int t4_cookie_release(int err, struct t4_cookie *cookie)
 	return err;
 }
 
-
 static int data_read_cb(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data ;
@@ -284,7 +283,6 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 out_err:
 	return t4_cookie_release(err, cookie);
 }
-
 
 static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 {
@@ -376,7 +374,6 @@ out_err:
 	return t4_cookie_release(err, cookie);
 }
 
-
 static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data ;
@@ -463,7 +460,6 @@ out_err:
 	return t4_cookie_release(err, cookie);
 }
 
-
 static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
@@ -499,7 +495,6 @@ static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 out_err:
 	return t4_cookie_release(err, cookie);
 }
-
 
 static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 {

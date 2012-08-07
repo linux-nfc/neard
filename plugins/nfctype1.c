@@ -444,7 +444,6 @@ static int nfctype1_read(uint32_t adapter_idx,
 
 	return near_adapter_send(adapter_idx, (uint8_t *)&t1_cmd, sizeof(t1_cmd),
 							meta_recv, cookie);
-
 }
 
 static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
