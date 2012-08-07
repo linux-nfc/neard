@@ -586,6 +586,19 @@ int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 	return 0;
 }
 
+near_bool_t __near_adapter_get_dep_state(uint32_t idx)
+{
+	struct near_adapter *adapter;
+
+	DBG("idx %d", idx);
+
+	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
+	if (adapter == NULL)
+		return FALSE;
+
+	return adapter->dep_up;
+}
+
 int __near_adapter_add(struct near_adapter *adapter)
 {
 	uint32_t idx = adapter->idx;
