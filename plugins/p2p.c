@@ -133,6 +133,8 @@ static void free_server_data(gpointer data)
 	DBG("Closing server socket");
 
 	close(server_data->fd);
+
+	g_free(server_data);
 }
 
 static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
