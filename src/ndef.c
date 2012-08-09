@@ -2230,7 +2230,8 @@ int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length)
 int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 			uint8_t record_type)
 {
-	uint8_t p_mb = 0, p_me = 0, err;
+	uint8_t p_mb = 0, p_me = 0;
+	int err;
 	size_t offset;
 	struct near_ndef_record *record = NULL;
 	int counted_records = 0 ;
