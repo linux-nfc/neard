@@ -317,6 +317,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 
 	near_tag_set_max_ndef_size(tag, cookie->max_ndef_size);
 	near_tag_set_c_apdu_max_size(tag, cookie->c_apdu_max_size);
+	near_tag_set_blank(tag, FALSE);
 
 	/* save the tag */
 	cookie->tag = tag;
@@ -445,9 +446,27 @@ static int t4_select_cc(uint8_t *resp, int length, void *data)
 
 	/* Check for APDU error */
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
-		DBG("Fail SW:x%04x", APDU_STATUS(resp + STATUS_WORD_1));
-		err = -EIO;
-		goto out_err;
+
+		DBG(" Found empty tag");
+		/* Add data to the tag */
+		err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
+					NULL, 1 /* dummy length */);
+		if (err < 0)
+			goto out_err;
+
+		cookie->tag = near_tag_get_tag(cookie->adapter_idx,
+						cookie->target_idx);
+		if (cookie->tag == NULL) {
+			err = -ENOMEM;
+			goto out_err;
+		}
+
+		near_tag_set_blank(cookie->tag, TRUE);
+
+		if (cookie->cb)
+			cookie->cb(cookie->adapter_idx, cookie->target_idx, 0);
+
+		return t4_cookie_release(0, cookie);
 	}
 
 	err = ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE, t4_readbin_cc, cookie);
