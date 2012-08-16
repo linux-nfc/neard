@@ -209,7 +209,7 @@ int __near_netlink_start_poll(int idx,
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int err = 0;
+	int err;
 
 	DBG("IM protos 0x%x TM protos 0x%x", im_protocols, tm_protocols);
 
@@ -223,6 +223,8 @@ int __near_netlink_start_poll(int idx,
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
+
+	err = -EMSGSIZE;
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
 	if (im_protocols != 0) {
@@ -245,7 +247,7 @@ int __near_netlink_stop_poll(int idx)
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int err = 0;
+	int err;
 
 	DBG("");
 
@@ -259,6 +261,8 @@ int __near_netlink_stop_poll(int idx)
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
+
+	err = -EMSGSIZE;
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
 
@@ -275,7 +279,7 @@ int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int err = 0;
+	int err;
 
 	DBG("");
 
@@ -289,6 +293,8 @@ int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
+
+	err = -EMSGSIZE;
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
 	NLA_PUT_U32(msg, NFC_ATTR_TARGET_INDEX, target_idx);
@@ -307,7 +313,7 @@ int __near_netlink_dep_link_down(uint32_t idx)
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int err = 0;
+	int err;
 
 	DBG("");
 
@@ -321,6 +327,8 @@ int __near_netlink_dep_link_down(uint32_t idx)
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
+
+	err = -EMSGSIZE;
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
 
@@ -336,7 +344,7 @@ int __near_netlink_adapter_enable(int idx, near_bool_t enable)
 {
 	struct nl_msg *msg;
 	void *hdr;
-	int err = 0;
+	int err;
 	uint8_t cmd;
 
 	DBG("");
@@ -356,6 +364,8 @@ int __near_netlink_adapter_enable(int idx, near_bool_t enable)
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
+
+	err = -EMSGSIZE;
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
 
@@ -491,6 +501,8 @@ static int nfc_netlink_event_targets_found(struct genlmsghdr *gnlh)
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
+
+	err = -EMSGSIZE;
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter_idx);
 
@@ -765,7 +777,7 @@ static int nl_get_multicast_id(struct nl_sock *sock, const char *family,
 				const char *group)
 {
 	struct nl_msg *msg;
-	int err = 0, ctrlid;
+	int err, ctrlid;
 	struct handler_args grp = {
 		.group = group,
 		.id = -ENOENT,
@@ -781,6 +793,8 @@ static int nl_get_multicast_id(struct nl_sock *sock, const char *family,
 
         genlmsg_put(msg, 0, 0, ctrlid, 0,
 		    0, CTRL_CMD_GETFAMILY, 0);
+
+	err = -EMSGSIZE;
 
 	NLA_PUT_STRING(msg, CTRL_ATTR_FAMILY_NAME, family);
 
