@@ -668,8 +668,8 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 
 	/* CMD POLL */
 	cmd.cmd	 = CMD_POLL;	/* POLL command */
-	cmd.data[0] = 0x12;     /* System code (NFC SC) */
-	cmd.data[1] = 0xFC;
+	cmd.data[0] = 0xFF;     /* System code */
+	cmd.data[1] = 0xFF;
 	cmd.data[2] = 01;	/* request code */
 	cmd.data[3] = 0x00;	/* time slot */
 
