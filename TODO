@@ -15,7 +15,7 @@ Core
 
   Priority: Medium
   Complexity: C4
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
+  Owner: Szymon Janc <szymon.janc@tieto.com>
 
   neard's handover agent API will allow an eventual BlueZ neard plugin to
   pass OOB data to neard. From this OOB data, neard will build an Hs record
