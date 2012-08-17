@@ -5,7 +5,7 @@ Service		unique name
 Interface	org.neard.HandoverAgent
 Object path	freely definable
 
-Methods		dict RequestOOB() [experimental]
+Methods		dict RequestOOB(dict values) [experimental]
 
 			This method gets called when the service daemon
 			needs to get Out Of Band data from the handover
@@ -15,8 +15,13 @@ Methods		dict RequestOOB() [experimental]
 			a Handover Request or Select message and send it to
 			remote device.
 
-			If there is no Bluetooth adapter or if it doesn't
-			support simple pairing the agent will return an error.
+			Values parameter is optional. It should be a dictionary
+			where the keys are the field names and the values are
+			the actual fields. If provided it should contain remote
+			Out Of Band data received in Handover Request message.
+			Those data will be stored for future use (i.e. when
+			remote initialize pairing) and providing those will not
+			initialize pairing.
 
 			The return value should be a dictionary where the
 			keys are the field names and the values are the
@@ -24,6 +29,8 @@ Methods		dict RequestOOB() [experimental]
 
 			Possible Errors: org.neard.HandoverAgent.Error.NotSupported
 					 org.neard.HandoverAgent.Error.NoSuchDevice
+					 org.neard.HandoverAgent.Error.InProgress
+					 org.neard.HandoverAgent.Error.Failed
 
 		void PushOOB(dict values) [experimental]
 
@@ -45,6 +52,7 @@ Methods		dict RequestOOB() [experimental]
 
 			Possible Errors: org.neard.HandoverAgent.Error.NotSupported
 					 org.neard.HandoverAgent.Error.NoSuchDevice
+					 org.neard.HandoverAgent.Error.InProgress
 					 org.neard.HandoverAgent.Error.Failed
 
 		void Release() [experimental]
@@ -55,35 +63,11 @@ Methods		dict RequestOOB() [experimental]
 			agent, because when this method gets called it has
 			already been unregistered.
 
+Fields		array{byte} EIR
 
-Fields		string Address
+			This is EIR blob. Used by SSP capable devices.
 
-			The Bluetooth device address.
-			This is a mandatory field.
+		array{byte} nokia.com:bt
 
-		string Name
-
-			The Bluetooth local name.
-			This is an optional field.
-
-		array{byte} Hash
-
-			The simple pairing hash C.
-			This is a mandatory field if Randomizer is present,
-			otherwise optional.
-
-		array{byte} Randomizer
-
-			The simple pairing randomizer R.
-			This is an optional field.
-
-		uint32 Class
-
-			The Bluetooth class of device.
-			This is an optional field.
-
-		array{string} UUIDs
-
-			List of 128-bit UUIDs that represents the available
-			local services.
-			This is an optional field.
+			This is a proprietary extension blob used by some
+			Nokia Bluetooth 2.0 devices.
