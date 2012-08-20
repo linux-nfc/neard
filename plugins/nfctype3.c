@@ -92,12 +92,21 @@
 
 #define MAX_DATA_SIZE	254
 
+#define NDEF_MAPPING_VERSION	0x10
+#define MAX_READ_BLOCKS_PER_CHECK	0x04
+#define MAX_WRITE_BLOCKS_PER_UPDATE	0x01
+#define MAX_BLOCKS_FOR_NDEF_DATA	0x000D
+#define ATTR_BLOCK_WRITE_FLAG	0x00
+#define ATTR_BLOCK_RW_FLAG	0x01
+
 #define IC_TYPE_OFFSET	12
 #define SYSTEM_OPTION_OFFSET	17
 #define FELICA_LITE_MC_BLOCK	0x88
 #define FELICA_LITE_IC_TYPE	0xF0
 #define FELICA_LITE_S_IC_TYPE	0xF1
 #define FELICA_PLUG_IC_TYPE	0xE0
+
+#define FELICA_LITE_AND_LITE_S_SYS_CODE	0x88B4
 
 struct type3_cmd {
 	uint8_t len;
@@ -123,6 +132,7 @@ struct t3_cookie {
 	uint8_t attr[BLOCK_SIZE];
 	struct near_ndef_message *ndef;
 	uint8_t ic_type;
+	uint8_t mc_block[BLOCK_SIZE];
 };
 
 static void t3_cookie_release(struct t3_cookie *cookie)
@@ -827,11 +837,207 @@ out:
 	return err;
 }
 
+static int format_resp(uint8_t *resp, int length, void *data)
+{
+	struct near_tag *tag;
+	struct t3_cookie *cookie = data;
+	int err;
+
+	DBG("");
+
+	if (length < 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
+	if (err < 0)
+		goto out;
+
+	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
+	if (tag == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	near_tag_set_ro(tag, FALSE);
+	near_tag_set_idm(tag, cookie->IDm, LEN_ID);
+	near_tag_set_attr_block(tag, cookie->attr, BLOCK_SIZE);
+	near_tag_set_blank(tag, FALSE);
+
+	DBG("Formatting is done");
+
+out:
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	t3_cookie_release(cookie);
+
+	return err;
+}
+
+static int write_attr_block(uint8_t *resp, int length , void *data)
+{
+	struct type3_cmd cmd;
+	struct t3_cookie *cookie = data;
+	int err, i;
+	uint16_t checksum = 0;
+
+	DBG("length %d", length);
+
+	if (length < 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
+	if (err < 0)
+		goto out;
+
+	cookie->attr[0] = NDEF_MAPPING_VERSION;
+	cookie->attr[1] = MAX_READ_BLOCKS_PER_CHECK;
+	cookie->attr[2] = MAX_WRITE_BLOCKS_PER_UPDATE;
+	cookie->attr[3] = (uint8_t) (MAX_BLOCKS_FOR_NDEF_DATA >> 8);
+	cookie->attr[4] = (uint8_t) (MAX_BLOCKS_FOR_NDEF_DATA);
+	cookie->attr[5] = 0;
+	cookie->attr[6] = 0;
+	cookie->attr[7] = 0;
+	cookie->attr[8] = 0;
+	cookie->attr[9] = ATTR_BLOCK_WRITE_FLAG;
+	cookie->attr[10] = ATTR_BLOCK_RW_FLAG;
+	cookie->attr[11] = 0;
+	cookie->attr[12] = 0;
+	cookie->attr[13] = 0;
+
+	for (i = 0; i < (BLOCK_SIZE - CHECKSUM_LEN); i++)
+		checksum += cookie->attr[i];
+
+	cookie->attr[14] = (uint8_t) (checksum >> 8);
+	cookie->attr[15] = (uint8_t) checksum;
+
+	prepare_write_block(cookie->IDm, &cmd, META_BLOCK_START,
+						cookie->attr);
+
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+				cmd.len, format_resp, cookie);
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	if (err < 0 && cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	t3_cookie_release(cookie);
+
+	return err;
+}
+
+static int write_mc_block(uint8_t *resp, int length, void *data)
+{
+	struct type3_cmd cmd;
+	struct t3_cookie *cookie = data;
+	int err;
+
+	DBG("length %d", length);
+
+	if (length < 0) {
+		err = -EIO;
+		goto out;
+	}
+
+	err = check_recv_frame(resp, RESP_READ_WO_ENCRYPT);
+	if (err < 0)
+		goto out;
+
+	if (resp[OFS_READ_FLAG] != 0) {
+		DBG("Status 0x%x", resp[OFS_READ_FLAG]);
+		err = -EIO;
+		goto out;
+	}
+
+	memcpy(cookie->mc_block, resp + 14, BLOCK_SIZE);
+	/*
+	 * By updating Byte3 to 01h means making Felica Lite
+	 * compatible with NDEF.
+	 */
+	cookie->mc_block[3] = 1;
+	prepare_write_block(cookie->IDm, &cmd, FELICA_LITE_MC_BLOCK,
+				cookie->mc_block);
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+				cmd.len, write_attr_block, cookie);
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	if (err < 0 && cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	t3_cookie_release(cookie);
+
+	return err;
+}
+
+static int nfctype3_format(uint32_t adapter_idx,
+				uint32_t target_idx, near_tag_io_cb cb)
+{
+	struct type3_cmd cmd;
+	struct near_tag *tag;
+	struct t3_cookie *cookie;
+	uint8_t ic_type;
+	uint8_t *idm, len;
+	int err;
+
+	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return -ENOMEM;
+
+	ic_type = near_tag_get_ic_type(tag);
+	if (ic_type != FELICA_LITE_IC_TYPE)
+		return -EOPNOTSUPP;
+
+	cookie = g_try_malloc0(sizeof(struct t3_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+	cookie->ic_type = ic_type;
+
+	idm = near_tag_get_idm(tag, &len);
+	if (idm == NULL) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	memcpy(cookie->IDm, idm, len);
+
+	prepare_read_block(FELICA_LITE_MC_BLOCK, cookie->IDm, &cmd);
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+				cmd.len, write_mc_block, cookie);
+	if (err < 0)
+		goto out;
+
+	return 0;
+
+out:
+	t3_cookie_release(cookie);
+
+	return err;
+}
+
 static struct near_tag_driver type1_driver = {
 	.type           = NFC_PROTO_FELICA,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
 	.read           = nfctype3_read,
 	.write          = nfctype3_write,
+	.format		= nfctype3_format,
 	.check_presence = nfctype3_check_presence,
 };
 
