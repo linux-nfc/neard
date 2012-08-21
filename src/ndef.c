@@ -93,6 +93,9 @@ enum record_type {
 	RECORD_TYPE_ERROR                     =   0xff
 };
 
+#define RECORD_TYPE_WKT "urn:nfc:wkt:"
+#define RECORD_TYPE_EXTERNAL "urn:nfc:ext:"
+
 struct near_ndef_record_header {
 	uint8_t mb;
 	uint8_t me;
@@ -205,6 +208,8 @@ struct near_ndef_record {
 
 	/* HANDOVER type */
 	struct near_ndef_ho_record   *ho;
+
+	char *type;
 
 	uint8_t *data;
 	size_t data_len;
@@ -615,6 +620,7 @@ static void free_ndef_record(struct near_ndef_record *record)
 	}
 
 	g_free(record->header);
+	g_free(record->type);
 	g_free(record->data);
 	g_free(record);
 	record = NULL;
@@ -738,6 +744,48 @@ static enum record_type get_record_type(enum record_tnf tnf,
 	}
 
 	return RECORD_TYPE_UNKNOWN;
+}
+
+static int build_record_type_string(struct near_ndef_record *rec)
+{
+	uint8_t tnf;
+
+	DBG("");
+
+	if (rec == NULL || rec->header == NULL)
+		return -EINVAL;
+
+	tnf = rec->header->tnf;
+
+	if (rec->header->rec_type == RECORD_TYPE_WKT_SMART_POSTER) {
+		rec->type = g_strdup_printf(RECORD_TYPE_WKT "U");
+		return 0;
+	}
+
+	switch (tnf) {
+	case RECORD_TNF_EMPTY:
+	case RECORD_TNF_UNKNOWN:
+	case RECORD_TNF_UNCHANGED:
+		return -EINVAL;
+
+	case RECORD_TNF_URI:
+	case RECORD_TNF_MIME:
+		rec->type = g_strndup(rec->header->type_name,
+				      rec->header->type_len);
+		break;
+
+	case RECORD_TNF_WELLKNOWN:
+		rec->type = g_strdup_printf(RECORD_TYPE_WKT "%s",
+				      rec->header->type_name);
+		break;
+
+	case RECORD_TNF_EXTERNAL:
+		rec->type = g_strdup_printf(RECORD_TYPE_EXTERNAL "%s",
+				      rec->header->type_name);
+		break;
+	}
+
+	return 0;
 }
 
 static uint8_t validate_record_begin_and_end_bits(uint8_t *msg_mb,
@@ -2143,6 +2191,8 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 		memcpy(record->data, record_start, record->data_len);
 
 		records = g_list_append(records, record);
+
+		build_record_type_string(record);
 
 		offset += record->header->payload_len;
 	}
