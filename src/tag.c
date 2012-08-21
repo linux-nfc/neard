@@ -63,6 +63,7 @@ struct near_tag {
 	struct {
 		uint8_t IDm[TYPE3_IDM_LEN];
 		uint8_t attr[TYPE3_ATTR_BLOCK_SIZE];
+		uint8_t ic_type;
 	} t3;
 
 	struct {
@@ -862,6 +863,22 @@ uint8_t *near_tag_get_attr_block(struct near_tag *tag, uint8_t *len)
 
 	*len = TYPE3_ATTR_BLOCK_SIZE;
 	return tag->t3.attr;
+}
+
+void near_tag_set_ic_type(struct near_tag *tag, uint8_t ic_type)
+{
+	if (tag == NULL)
+		return;
+
+	tag->t3.ic_type = ic_type;
+}
+
+uint8_t near_tag_get_ic_type(struct near_tag *tag)
+{
+	if (tag == NULL)
+		return 0;
+
+	return tag->t3.ic_type;
 }
 
 static gint cmp_prio(gconstpointer a, gconstpointer b)

@@ -106,5 +106,7 @@ void near_tag_set_idm(struct near_tag *tag, uint8_t *idm, uint8_t len);
 uint8_t *near_tag_get_idm(struct near_tag *tag, uint8_t *len);
 void near_tag_set_attr_block(struct near_tag *tag, uint8_t *attr, uint8_t len);
 uint8_t *near_tag_get_attr_block(struct near_tag *tag, uint8_t *len);
+void near_tag_set_ic_type(struct near_tag *tag, uint8_t ic_type);
+uint8_t near_tag_get_ic_type(struct near_tag *tag);
 
 #endif
