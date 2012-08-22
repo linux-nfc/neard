@@ -71,3 +71,35 @@ Fields		array{byte} EIR
 
 			This is a proprietary extension blob used by some
 			Nokia Bluetooth 2.0 devices.
+
+
+NDEFAgent hierarchy
+=======================
+
+Service		unique name
+Interface	org.neard.NDEFAgent
+Object path	freely definable
+
+Methods		dict GetNDEF(dict values) [experimental]
+
+			This method gets called when the service daemon
+			found an NDEF matching the registered type.
+
+			The parameter is a dictionary where the keys are the
+			field names and the values are the actual fields.
+
+		void Release() [experimental]
+
+			This method gets called when the service daemon
+			unregisters the agent. An agent can use it to do
+			cleanup tasks. There is no need to unregister the
+			agent, because when this method gets called it has
+			already been unregistered.
+
+Fields		array{byte} NDEF
+
+			This is the raw NDEF data.
+
+		object Record
+
+		       This is a record object path.
