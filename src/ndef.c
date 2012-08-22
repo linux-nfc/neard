@@ -239,6 +239,11 @@ char *__near_ndef_record_get_path(struct near_ndef_record *record)
 	return record->path;
 }
 
+char *__near_ndef_record_get_type(struct near_ndef_record *record)
+{
+	return record->type;
+}
+
 static void append_text_record(struct near_ndef_text_record *text,
 					DBusMessageIter *dict)
 {
