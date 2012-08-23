@@ -72,8 +72,6 @@
 #define	FREE_READ_ACCESS	0x00
 #define	FREE_WRITE_ACCESS	0x00
 
-#define MIFARE_DESFIRE_EV1_SIZE(x)	(pow(2, (x >> 1)))
-
 #define T4_ALL_ACCESS		0x00
 #define T4_READ_ONLY		0xFF
 
@@ -1472,7 +1470,11 @@ static int get_version_frame2(uint8_t *resp, int length, void *data)
 	if (resp[4] == 0x01 /* Major Version */
 		&& resp[length - 1] == GET_VERSION_FRAME_RESPONSE_BYTE) {
 
-		cookie->memory_size = MIFARE_DESFIRE_EV1_SIZE(resp[6]);
+		/*
+		 * When N is the GET_VERSION response 6th byte,
+		 * the DESFire tag memory size is 2 ^ (N /2).
+		 */
+		cookie->memory_size = (1 << (resp[6] / 2));
 		err = ISO_send_cmd(PICC_CLASS,
 					GET_VERSION_FRAME_RESPONSE_BYTE,
 					0x00, 0x00, NULL, 0, FALSE,
