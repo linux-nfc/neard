@@ -46,10 +46,26 @@ struct near_ndef_agent {
 
 static void ndef_agent_free(gpointer data)
 {
+	DBusMessage *message;
 	struct near_ndef_agent *agent = data;
+
+	DBG("");
 
 	if (agent == NULL)
 		return;
+
+	DBG("%s %s %s", agent->sender, agent->path, NFC_NDEF_AGENT_INTERFACE);
+
+	message = dbus_message_new_method_call(agent->sender, agent->path,
+					NFC_NDEF_AGENT_INTERFACE, "Release");
+	if (message == NULL)
+		return;
+
+	dbus_message_set_no_reply(message, TRUE);
+
+	g_dbus_send_message(connection, message);
+
+	g_dbus_remove_watch(connection, agent->watch);
 
 	g_free(agent->sender);
 	g_free(agent->path);
@@ -61,14 +77,13 @@ static void ndef_agent_disconnect(DBusConnection *conn, void *user_data)
 
 	DBG("agent %s disconnected", agent->path);
 
-	ndef_agent_free(agent);
+	g_hash_table_remove(ndef_app_hash, agent->record_type);
 }
 
 int __near_agent_ndef_register(const char *sender, const char *path,
 						const char *record_type)
 {
 	struct near_ndef_agent *agent;
-	char *rec_type;
 
 	DBG("%s registers path %s for %s", sender, path, record_type);
 
@@ -81,10 +96,10 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 
 	agent->sender = g_strdup(sender);
 	agent->path = g_strdup(path);
-	rec_type = g_strdup(record_type);
+	agent->record_type = g_strdup(record_type);
 	
 	if (agent->sender == NULL || agent->path == NULL ||
-	    rec_type == NULL) {
+	    agent->record_type == NULL) {
 		g_free(agent);
 		return -ENOMEM;
 	}
@@ -93,7 +108,7 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 						ndef_agent_disconnect, agent, NULL);
 
 
-	g_hash_table_insert(ndef_app_hash, rec_type, agent);
+	g_hash_table_insert(ndef_app_hash, agent->record_type, agent);
 
 	return 0;
 }
@@ -111,8 +126,6 @@ int __near_agent_ndef_unregister(const char *sender, const char *path,
 
 	if (strcmp(agent->path, path) != 0 || strcmp(agent->sender, sender) != 0)
 		return -EINVAL;
-
-	g_dbus_remove_watch(connection, agent->watch);
 
 	g_hash_table_remove(ndef_app_hash, record_type);
 
@@ -194,4 +207,6 @@ void __near_agent_cleanup(void)
 	ndef_app_hash = NULL;
 
 	handover_agent_free();
+
+	dbus_connection_unref(connection);
 }
