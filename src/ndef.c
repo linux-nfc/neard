@@ -1331,7 +1331,7 @@ fail:
 static struct near_ndef_mime_record *
 parse_mime_type(struct near_ndef_record *record,
 			uint8_t *ndef_data, size_t ndef_length, size_t offset,
-			uint32_t payload_length, near_bool_t bt_pair)
+			uint32_t payload_length, near_bool_t action)
 {
 	struct near_ndef_mime_record *mime = NULL;
 	int err = 0;
@@ -1347,13 +1347,13 @@ parse_mime_type(struct near_ndef_record *record,
 
 	mime->type = g_strdup(record->header->type_name);
 
-	DBG("MIME Type  '%s' action: %d", mime->type, bt_pair);
+	DBG("MIME Type  '%s' action: %d", mime->type, action);
 	if (strcmp(mime->type, BT_MIME_STRING_2_1) == 0) {
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_1,
-				&ndef_data[offset], bt_pair);
+				&ndef_data[offset], action);
 	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_0,
-				&ndef_data[offset], bt_pair);
+				&ndef_data[offset], action);
 	}
 
 	if (err < 0) {
