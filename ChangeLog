@@ -1,3 +1,12 @@
+ver 0.6
+	Added tag formatting support for Type 1, 3 an 4.
+	Added blank tag detection for Type 1, 3 and 4.
+	Added an NDEF agent API implementation.
+	Fixed the handover agent API.
+	Fixed potential NULL pointer dereferences.
+	Fixed a few plugin memory leaks.
+	Fixed p2p NDEF push while p2p link is down.
+
 ver 0.5:
 	Added Handover Initiator support.
 	Added Handover selector support.
