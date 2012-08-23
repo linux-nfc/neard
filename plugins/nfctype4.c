@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <errno.h>
 #include <string.h>
-#include <math.h>
 #include <sys/socket.h>
 
 #include <linux/socket.h>
