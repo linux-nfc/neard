@@ -80,6 +80,85 @@ static void ndef_agent_disconnect(DBusConnection *conn, void *user_data)
 	g_hash_table_remove(ndef_app_hash, agent->record_type);
 }
 
+static void append_record_path(DBusMessageIter *iter, void *user_data)
+{
+	GList *records = user_data, *list;
+	struct near_ndef_record *record;
+	char *path;
+
+	for (list = records; list; list = list->next) {
+		record = list->data;
+
+		path = __near_ndef_record_get_path(record);
+		if (path == NULL)
+			continue;
+
+		dbus_message_iter_append_basic(iter,
+					DBUS_TYPE_STRING, &path);
+	}
+}
+
+static void ndef_agent_push_records(struct near_ndef_agent *agent,
+							GList *records)
+{
+	DBusMessageIter iter, dict;
+	DBusMessage *message;
+
+	DBG("");
+
+	if (agent->sender == NULL || agent->path == NULL)
+		return;
+
+	DBG("Sending NDEF to %s %s", agent->path, agent->sender);
+
+	message = dbus_message_new_method_call(agent->sender, agent->path,
+					NFC_NDEF_AGENT_INTERFACE,
+					"GetNDEF");
+	if (message == NULL)
+		return;
+
+	dbus_message_iter_init_append(message, &iter);
+
+	near_dbus_dict_open(&iter, &dict);
+	near_dbus_dict_append_array(&dict, "Records",
+				DBUS_TYPE_STRING, append_record_path, records);
+	near_dbus_dict_close(&iter, &dict);
+
+	DBG("sending...");
+
+	dbus_message_set_no_reply(message, TRUE);
+
+	g_dbus_send_message(connection, message);
+}
+
+void __near_agent_ndef_parse_records(GList *records)
+{
+	GList *list;
+	struct near_ndef_record *record;
+	struct near_ndef_agent *agent;
+	char *type;
+
+	DBG("");
+
+	for (list = records, agent = NULL; list; list = list->next) {
+		record = list->data;
+		type  = __near_ndef_record_get_type(record);
+
+		DBG("Looking for type %s", type);
+
+		agent = g_hash_table_lookup(ndef_app_hash, type);
+		if (agent != NULL)
+			break;
+	}
+
+	if (agent == NULL)
+		return;
+
+	ndef_agent_push_records(agent, records);
+
+	return;
+}
+
 int __near_agent_ndef_register(const char *sender, const char *path,
 						const char *record_type)
 {
@@ -106,8 +185,6 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 
 	agent->watch = g_dbus_add_disconnect_watch(connection, sender,
 						ndef_agent_disconnect, agent, NULL);
-
-
 	g_hash_table_insert(ndef_app_hash, agent->record_type, agent);
 
 	return 0;

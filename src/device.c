@@ -353,6 +353,8 @@ int near_device_add_records(struct near_device *device, GList *records,
 		device->records = g_list_append(device->records, record);
 	}
 
+	__near_agent_ndef_parse_records(device->records);
+
 	if (cb != NULL)
 		cb(device->adapter_idx, device->target_idx, status);
 

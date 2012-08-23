@@ -171,6 +171,7 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 int __near_bluetooth_pair(void *data);
 uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len);
 
+void __near_agent_ndef_parse_records(GList *records);
 int __near_agent_ndef_register(const char *sender, const char *path,
 						const char *record_type);
 int __near_agent_ndef_unregister(const char *sender, const char *path,

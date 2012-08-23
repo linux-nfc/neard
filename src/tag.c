@@ -739,6 +739,8 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 		tag->records = g_list_append(tag->records, record);
 	}
 
+	__near_agent_ndef_parse_records(tag->records);
+
 	if (cb != NULL)
 		cb(tag->adapter_idx, tag->target_idx, status);
 
