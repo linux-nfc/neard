@@ -1,0 +1,61 @@
+#!/usr/bin/python
+
+import gobject
+
+import dbus
+import dbus.service
+import dbus.mainloop.glib
+import sys
+
+class NDEFAgent(dbus.service.Object):
+
+	@dbus.service.method("org.neard.NDEFAgent",
+					in_signature='', out_signature='')
+	def Release(self):
+		print "Release"
+		mainloop.quit()
+
+	@dbus.service.method("org.neard.NDEFAgent",
+					in_signature='a{sv}',
+					out_signature='')
+	def GetNDEF(self, fields):
+		print "GetNDEF"
+
+		if fields.has_key("Records"):
+			for path in fields["Records"]:
+				print "Record path %s" % (path)
+
+		return
+
+	@dbus.service.method("org.neard.NDEFAgent",
+					in_signature='', out_signature='')
+	def Cancel(self):
+		print "Cancel"
+
+def print_usage():
+	print "Usage:"
+	print "For NDEF agent:"
+	print "%s NDEF Type=<record type>" % (sys.argv[0])
+	print "Help: %s help" % (sys.argv[0])
+	sys.exit(1)
+
+if __name__ == '__main__':
+	if len(sys.argv) == 2 and sys.argv[1] == "help":
+		print_usage()
+
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+	bus = dbus.SystemBus()
+	manager = dbus.Interface(bus.get_object('org.neard', "/"),
+					'org.neard.Manager')
+
+	if len(sys.argv) > 2:	
+		if sys.argv[1] == "NDEF":
+	   		path = "/test/ndef/agent"
+			object = NDEFAgent(bus, path)
+			rec_type = sys.argv[2].replace("Type=", "", 1)			
+
+			manager.RegisterNDEFAgent(path, rec_type)
+
+			mainloop = gobject.MainLoop()
+			mainloop.run()
