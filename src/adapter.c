@@ -368,8 +368,12 @@ static DBusMessage *set_property(DBusConnection *conn,
 
 		err = __near_netlink_adapter_enable(adapter->idx, powered);
 		if (err < 0) {
-			if (err == -EALREADY)
-				return __near_error_already_enabled(msg);
+			if (err == -EALREADY) {
+				if (powered == TRUE)
+					return __near_error_already_enabled(msg);
+				else
+					return __near_error_already_disabled(msg);
+			}
 
 			return __near_error_failed(msg, -err);
 		}
