@@ -289,7 +289,7 @@ static void free_snep_push_data(gpointer userdata, int status)
 
 	DBG("");
 
-	data = (struct p2p_snep_put_req_data *)userdata;
+	data = (struct p2p_snep_put_req_data *) userdata;
 
 	close(data->fd);
 
@@ -477,7 +477,7 @@ static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 		goto error;
 	}
 
-	memcpy(fragment->data, (uint8_t *)&header,
+	memcpy(fragment->data, (uint8_t *) &header,
 				SNEP_REQ_PUT_HEADER_LENGTH);
 
 	if (fragmenting == TRUE) {

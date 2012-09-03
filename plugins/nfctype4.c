@@ -40,7 +40,7 @@
 #include <near/ndef.h>
 #include <near/tlv.h>
 
-#define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define NFC_STATUS		0
 #define NFC_STATUS_BYTE_LEN	1
@@ -207,7 +207,7 @@ static int ISO_send_cmd(uint8_t class,
 			cmd->data[cmd_data_length] = 0;
 	}
 
-	err =  near_adapter_send(in_rcv->adapter_idx, (uint8_t *)cmd,
+	err = near_adapter_send(in_rcv->adapter_idx, (uint8_t *) cmd,
 					total_cmd_length, cb, in_rcv);
 	if (err < 0)
 		g_free(in_rcv);
@@ -248,8 +248,8 @@ static int ISO_ReadBinary(uint16_t offset, uint8_t readsize,
 	return ISO_send_cmd(
 			0x00,		/* CLA */
 			0xB0,		/* INS: Select file */
-			(uint8_t)((offset & 0xFF00)>>8),
-			(uint8_t)(offset & 0xFF),
+			(uint8_t) ((offset & 0xFF00) >> 8),
+			(uint8_t) (offset & 0xFF),
 			0,		/* no data send */
 			readsize,	/* bytes to read */
 			FALSE,
@@ -265,8 +265,8 @@ static int ISO_Update(uint16_t offset, uint8_t nlen,
 	return ISO_send_cmd(
 			0x00,			/* CLA */
 			0xD6,			/* INS: Select file */
-			(uint8_t)((offset & 0xFF00) >> 8),
-			(uint8_t)(offset & 0xFF),
+			(uint8_t) ((offset & 0xFF00) >> 8),
+			(uint8_t) (offset & 0xFF),
 			data,			/* length of NDEF data */
 			nlen,			/* NLEN + NDEF data */
 			FALSE,
@@ -342,7 +342,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 				cookie->r_apdu_max_size, data_read_cb, cookie);
 	else
 		err = ISO_ReadBinary(cookie->read_data + 2,
-				(uint8_t)remain_bytes, data_read_cb, cookie);
+				(uint8_t) remain_bytes, data_read_cb, cookie);
 	if (err < 0)
 		goto out_err;
 
@@ -354,7 +354,7 @@ out_err:
 
 static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 {
-	struct t4_cookie *cookie = data ;
+	struct t4_cookie *cookie = data;
 	struct near_tag *tag;
 	int err = 0;
 
@@ -397,7 +397,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 		near_tag_set_ro(tag, FALSE);
 
 	/* TODO: see how we can get the UID value:
-	 *  near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
+	 * near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
 	 *  */
 
 	/* Read 1st block */
@@ -445,8 +445,8 @@ out_err:
 
 static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 {
-	struct t4_cookie *cookie = data ;
-	struct type4_cc	*read_cc ;
+	struct t4_cookie *cookie = data;
+	struct type4_cc *read_cc;
 	int err = 0;
 
 	DBG("%d", length);
@@ -474,22 +474,22 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 	memcpy(read_cc, &resp[1], length - 2 - NFC_STATUS_BYTE_LEN) ;
 
 	cookie->r_apdu_max_size = g_ntohs(read_cc->max_R_apdu_data_size) -
-			APDU_HEADER_LEN ;
+			APDU_HEADER_LEN;
 	cookie->c_apdu_max_size = g_ntohs(read_cc->max_C_apdu_data_size);
 	cookie->max_ndef_size = g_ntohs(read_cc->tlv_fc.max_ndef_size);
 
-	/* TODO 5.1.1 :TLV blocks can be zero, one or more...  */
-	/* TODO 5.1.2 :Must ignore proprietary blocks (x05)...  */
-	if (read_cc->tlv_fc.tag  != 0x4) {
-		DBG("NDEF File Control tag not found !") ;
-		err = -EINVAL ;
-		goto out_err ;
+	/* TODO 5.1.1: TLV blocks can be zero, one or more... */
+	/* TODO 5.1.2: Must ignore proprietary blocks (x05)... */
+	if (read_cc->tlv_fc.tag != 0x4) {
+		DBG("NDEF File Control tag not found !");
+		err = -EINVAL;
+		goto out_err;
 	}
 
 	/* save rw conditions */
 	cookie->write_access = read_cc->tlv_fc.write_access;
 
-	err = ISO_Select((uint8_t *)&read_cc->tlv_fc.file_id,
+	err = ISO_Select((uint8_t *) &read_cc->tlv_fc.file_id,
 			LEN_ISO_CC_FILEID, 0, t4_select_NDEF_ID, cookie);
 	if (err < 0)
 		goto out_err;
@@ -550,7 +550,7 @@ out_err:
 static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err = 0 ;
+	int err = 0;
 
 	DBG("%d", length);
 
@@ -586,7 +586,7 @@ out_err:
 static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err = 0 ;
+	int err = 0;
 
 	DBG("%d", length);
 

@@ -106,7 +106,7 @@ static void free_client_data(gpointer data)
 
 	DBG("");
 
-	client_data = (struct p2p_data *)data;
+	client_data = (struct p2p_data *) data;
 
 	if (client_data->driver->close != NULL)
 		client_data->driver->close(client_data->fd, 0);
@@ -165,7 +165,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 	}
 
 	client_addr_len = sizeof(client_addr);
-	client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
+	client_fd = accept(server_fd, (struct sockaddr *) &client_addr,
 							&client_addr_len);
 	if (client_fd < 0) {
 		near_error("accept failed %d", client_fd);
@@ -224,7 +224,7 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 	addr.service_name_len = strlen(driver->service_name);
 	strcpy(addr.service_name, driver->service_name);
 
-	err = bind(fd, (struct sockaddr *)&addr,
+	err = bind(fd, (struct sockaddr *) &addr,
 			sizeof(struct sockaddr_nfc_llcp));
 	if (err < 0) {
 		if (errno == EADDRINUSE) {
@@ -305,7 +305,7 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 	addr.service_name_len = strlen(driver->service_name);
 	strcpy(addr.service_name, driver->service_name);
 
-	err = connect(fd, (struct sockaddr *)&addr,
+	err = connect(fd, (struct sockaddr *) &addr,
 			sizeof(struct sockaddr_nfc_llcp));
 	if (err < 0) {
 		near_error("Connect failed  %d", err);

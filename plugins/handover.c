@@ -90,6 +90,7 @@ static void free_hr_ndef(gpointer data)
 
 	if (ndef != NULL)
 		g_free(ndef->ndef);
+
 	g_free(ndef);
 }
 
@@ -134,7 +135,7 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 	 * exchange with a Hr), so we have to do some actions (e.g.:
 	 * pairing with bluetooth)
 	 */
-	if (strncmp((char *)(ndef->ndef + FRAME_TYPE_OFFSET), "Hr", 2) == 0) {
+	if (strncmp((char *) (ndef->ndef + FRAME_TYPE_OFFSET), "Hr", 2) == 0) {
 		/*
 		 * The first entry on the record list is the Hr record.
 		 * We build the Hs based on it.
@@ -375,7 +376,7 @@ static near_bool_t handover_read(int client_fd,
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
 	if (ndef == NULL) {
-		/* First call: allocate and read header bytes*/
+		/* First call: allocate and read header bytes */
 		return handover_read_initialize(client_fd, adapter_idx,
 						target_idx, cb);
 	}
@@ -408,7 +409,7 @@ static gboolean handover_push_event(GIOChannel *channel,
 				GIOCondition condition,	gpointer data)
 {
 	near_bool_t ret;
-	struct hr_push_client *client = (struct hr_push_client *)data;
+	struct hr_push_client *client = (struct hr_push_client *) data;
 
 	DBG("condition 0x%x", condition);
 

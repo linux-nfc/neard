@@ -170,9 +170,9 @@ static void prepare_write_block(uint8_t *UID, struct type3_cmd *cmd,
 /* common: Initialize structure to read block */
 static void prepare_read_block(uint8_t cur_block,
 				uint8_t *UID,
-				struct type3_cmd *cmd )
+				struct type3_cmd *cmd)
 {
-	cmd->cmd	 = CMD_READ_WO_ENCRYPT;		/* command */
+	cmd->cmd = CMD_READ_WO_ENCRYPT;			/* command */
 	memcpy(cmd->data, UID, LEN_ID);			/* IDm */
 
 	cmd->data[LEN_ID] = 1;				/* number of service */
@@ -192,11 +192,11 @@ static int check_recv_frame(uint8_t *resp, uint8_t reply_code)
 	int err = 0;
 
 	if (resp[OFS_NFC_STATUS] != 0) {
-		DBG("NFC Command failed: 0x%x",resp[OFS_NFC_STATUS]);
+		DBG("NFC Command failed: 0x%x", resp[OFS_NFC_STATUS]);
 		err = -EIO;
 	}
 
-	if (resp[OFS_CMD_RESP] != reply_code ) {
+	if (resp[OFS_CMD_RESP] != reply_code) {
 		DBG("Felica cmd failed: 0x%x", resp[OFS_CMD_RESP]);
 		err = -EIO;
 	}
@@ -226,7 +226,7 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	}
 
 	nfc_data = near_tag_get_data(tag->tag, &data_length);
-	length_read = length - OFS_READ_DATA  ;
+	length_read = length - OFS_READ_DATA;
 	current_length = tag->current_block * BLOCK_SIZE;
 	if (current_length + (length - OFS_READ_DATA) > data_length)
 		length_read = data_length - current_length;
@@ -252,9 +252,9 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 	tag->current_block += read_blocks;
 
 	prepare_read_block(DATA_BLOCK_START + tag->current_block,
-				tag->IDm, &cmd );
+				tag->IDm, &cmd);
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, cmd.len,
+	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd, cmd.len,
 			nfctype3_data_recv, tag);
 	if (err < 0)
 		goto out;
@@ -296,7 +296,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	int err = 0;
 	struct near_tag *tag;
 	struct type3_tag *t3_tag = NULL;
-	uint32_t  ndef_data_length;
+	uint32_t ndef_data_length;
 
 	DBG("%d", length);
 
@@ -345,7 +345,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 		goto out;
 	}
 
-	memcpy(t3_tag->IDm, cookie->IDm , LEN_ID);
+	memcpy(t3_tag->IDm, cookie->IDm, LEN_ID);
 
 	near_tag_set_idm(tag, cookie->IDm, LEN_ID);
 	near_tag_set_attr_block(tag, resp + OFS_READ_DATA, BLOCK_SIZE);
@@ -391,7 +391,7 @@ static int poll_ndef_system_code(uint8_t *resp, int length, void *data)
 
 	prepare_read_block(META_BLOCK_START, cookie->IDm, &cmd);
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, nfctype3_recv_block_0, cookie);
 	if (err < 0)
 		goto out;
@@ -463,7 +463,7 @@ static int check_sys_op_in_mc_block(uint8_t *resp, int length, void *data)
 		/* data len + 2 bytes */
 		cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
 
-		err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+		err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 			cmd.len , poll_ndef_system_code, cookie);
 	}
 
@@ -501,13 +501,13 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 
 	cookie->ic_type = resp[IC_TYPE_OFFSET];
 	memcpy(cookie->IDm, resp + OFS_IDM, LEN_ID);
-	system_code = ((uint16_t)(resp[length - 2])) << 8;
+	system_code = ((uint16_t) (resp[length - 2])) << 8;
 	system_code |= resp[length - 1];
 
 	switch (resp[IC_TYPE_OFFSET]) {
 	case FELICA_LITE_IC_TYPE:
 		prepare_read_block(FELICA_LITE_MC_BLOCK, cookie->IDm, &cmd);
-		err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+		err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					cmd.len, check_sys_op_in_mc_block,
 					cookie);
 		break;
@@ -523,7 +523,7 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 		/* data len + 2 bytes */
 		cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
 
-		err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+		err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					cmd.len, poll_ndef_system_code, cookie);
 	}
 
@@ -558,7 +558,7 @@ static int nfctype3_read(uint32_t adapter_idx,
 	cmd.data[3] = 0x00;	/* time slot */
 
 	/* data len + 2 bytes */
-	cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
+	cmd.len = LEN_CMD + LEN_CMD_LEN + 4;
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
 	if (cookie == NULL)
@@ -568,8 +568,8 @@ static int nfctype3_read(uint32_t adapter_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd,
-				cmd.len , receive_system_code, cookie);
+	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
+				cmd.len, receive_system_code, cookie);
 	if (err < 0)
 		g_free(cookie);
 
@@ -669,7 +669,7 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 	cookie->current_block++;
 	cookie->ndef->offset += BLOCK_SIZE;
 
-	err =  near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd, cmd.len,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd, cmd.len,
 						data_write_resp, cookie);
 	if (err < 0)
 		goto out;
@@ -726,7 +726,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	}
 
 	memcpy(cookie->attr, attr, len);
-	nmaxb = (((uint16_t)(cookie->attr[3])) << 8) | cookie->attr[4];
+	nmaxb = (((uint16_t) (cookie->attr[3])) << 8) | cookie->attr[4];
 
 	if (cookie->ndef->length > (nmaxb * BLOCK_SIZE)) {
 		near_error("not enough space on tag");
@@ -740,14 +740,14 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	for (i = 0; i < 14; i++)
 		checksum += cookie->attr[i];
 
-	cookie->attr[14] = (uint8_t)(checksum >> 8);
-	cookie->attr[15] = (uint8_t)(checksum);
+	cookie->attr[14] = (uint8_t) (checksum >> 8);
+	cookie->attr[15] = (uint8_t) checksum;
 
 	prepare_write_block(cookie->IDm, &cmd, cookie->current_block,
 							cookie->attr);
 	cookie->current_block++;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, cmd.len,
+	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd, cmd.len,
 						data_write_resp, cookie);
 	if (err < 0)
 		goto out;
@@ -824,8 +824,8 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd,
-			cmd.len , nfctype3_check_recv_UID, cookie);
+	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
+			cmd.len, nfctype3_check_recv_UID, cookie);
 	if (err < 0)
 		goto out;
 
@@ -918,7 +918,7 @@ static int write_attr_block(uint8_t *resp, int length , void *data)
 	prepare_write_block(cookie->IDm, &cmd, META_BLOCK_START,
 						cookie->attr);
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, format_resp, cookie);
 	if (err < 0)
 		goto out;
@@ -965,7 +965,7 @@ static int write_mc_block(uint8_t *resp, int length, void *data)
 	cookie->mc_block[3] = 1;
 	prepare_write_block(cookie->IDm, &cmd, FELICA_LITE_MC_BLOCK,
 				cookie->mc_block);
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, write_attr_block, cookie);
 	if (err < 0)
 		goto out;
@@ -1019,7 +1019,7 @@ static int nfctype3_format(uint32_t adapter_idx,
 	memcpy(cookie->IDm, idm, len);
 
 	prepare_read_block(FELICA_LITE_MC_BLOCK, cookie->IDm, &cmd);
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, write_mc_block, cookie);
 	if (err < 0)
 		goto out;

@@ -162,7 +162,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	DBG("adapter %d", adapter_idx);
 
 	return near_adapter_send(adapter_idx,
-				(uint8_t *)&cmd, CMD_READ_SIZE,
+				(uint8_t *) &cmd, CMD_READ_SIZE,
 					data_recv, tag);
 }
 
@@ -181,7 +181,7 @@ static int data_read(struct type2_tag *tag)
 	adapter_idx = near_tag_get_adapter_idx(tag->tag);
 
 	return near_adapter_send(adapter_idx,
-				(uint8_t *)&cmd, CMD_READ_SIZE,
+				(uint8_t *) &cmd, CMD_READ_SIZE,
 					data_recv, tag);
 }
 
@@ -283,7 +283,7 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, CMD_READ_SIZE,
+	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd, CMD_READ_SIZE,
 							meta_recv, cookie);
 	if (err < 0)
 		g_free(cookie);
@@ -309,7 +309,7 @@ static int nfctype2_read(uint32_t adapter_idx,
 	/* Specific Mifare read access */
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
-		err= mifare_read( adapter_idx, target_idx,
+		err = mifare_read(adapter_idx, target_idx,
 			cb, tgt_subtype);
 		break;
 
@@ -361,9 +361,8 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 		cookie->ndef->offset = cookie->ndef->length + 1;
 	}
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), data_write_resp, cookie);
-
 
 	if (err < 0)
 		goto out;
@@ -405,7 +404,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->ndef->offset += BLOCK_SIZE;
 	cookie->current_block++;
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), data_write_resp, cookie);
 
 	if (err < 0)
@@ -493,7 +492,7 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&cmd, CMD_READ_SIZE,
+	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd, CMD_READ_SIZE,
 							check_presence, cookie);
 	if (err < 0)
 		goto out;
@@ -580,14 +579,14 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->target_idx = target_idx;
 	cookie->current_block = CC_BLOCK_START;
 	cookie->ndef = cc_ndef;
-	cookie->ndef->data = (uint8_t *)t2_cc;
+	cookie->ndef->data = (uint8_t *) t2_cc;
 	cookie->cb = cb;
 
 	cmd.cmd = CMD_WRITE;
 	cmd.block = CC_BLOCK_START;
-	memcpy(cmd.data, (uint8_t *)t2_cc, BLOCK_SIZE);
+	memcpy(cmd.data, (uint8_t *) t2_cc, BLOCK_SIZE);
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), format_resp, cookie);
 
 out:

@@ -132,7 +132,7 @@ static void t1_cookie_release(struct t1_cookie *cookie)
 	cookie = NULL;
 }
 
-/* Read segments (128 bytes)and store them to the tag data block */
+/* Read segments (128 bytes) and store them to the tag data block */
 static int segment_read_recv(uint8_t *resp, int length, void *data)
 {
 	struct type1_tag *t1_tag = data;
@@ -151,9 +151,9 @@ static int segment_read_recv(uint8_t *resp, int length, void *data)
 
 	length = length - LEN_STATUS_BYTE;  /* ignore first byte */
 
-	/* Add data to tag mem*/
+	/* Add data to tag mem */
 	tagdata = near_tag_get_data(t1_tag->tag, &data_length);
-	memcpy(tagdata + t1_tag->data_read, resp+1, length);
+	memcpy(tagdata + t1_tag->data_read, resp + 1, length);
 
 	/* Next segment */
 	t1_tag->data_read =  t1_tag->data_read + length;
@@ -167,7 +167,7 @@ static int segment_read_recv(uint8_t *resp, int length, void *data)
 		t1_cmd.addr = (t1_tag->current_seg << 4) & 0xFF;
 
 		err = near_adapter_send(t1_tag->adapter_idx,
-				(uint8_t *)&t1_cmd, sizeof(t1_cmd),
+				(uint8_t *) &t1_cmd, sizeof(t1_cmd),
 				segment_read_recv, t1_tag);
 		if (err < 0)
 			goto out_err;
@@ -253,7 +253,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	/* First byte is cmd status */
 	if (resp[OFFSET_STATUS_CMD] != 0) {
-		DBG("Command failed: 0x%x",resp[OFFSET_STATUS_CMD]);
+		DBG("Command failed: 0x%x", resp[OFFSET_STATUS_CMD]);
 		err = -EIO;
 		goto out_err;
 	}
@@ -331,7 +331,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_DYNAMIC);
 		err = read_dynamic_tag(cc, length, t1_tag);
 	} else {
-		err = -EOPNOTSUPP ;
+		err = -EOPNOTSUPP;
 	}
 
 out_err:
@@ -361,7 +361,7 @@ static int rid_resp(uint8_t *resp, int length, void *data)
 
 	/* First byte is cmd status */
 	if (resp[OFFSET_STATUS_CMD] != 0) {
-		DBG("Command failed: 0x%x",resp[OFFSET_STATUS_CMD]);
+		DBG("Command failed: 0x%x", resp[OFFSET_STATUS_CMD]);
 		err = -EIO;
 		goto out_err;
 	}
@@ -430,7 +430,7 @@ static int nfctype1_read(uint32_t adapter_idx,
 		cookie->cb = cb;
 
 		return near_adapter_send(adapter_idx,
-					(uint8_t *)&t1_cmd, sizeof(t1_cmd),
+					(uint8_t *) &t1_cmd, sizeof(t1_cmd),
 					rid_resp, cookie);
 	}
 
@@ -452,8 +452,8 @@ static int nfctype1_read(uint32_t adapter_idx,
 
 	g_free(uid);
 
-	return near_adapter_send(adapter_idx, (uint8_t *)&t1_cmd, sizeof(t1_cmd),
-							meta_recv, cookie);
+	return near_adapter_send(adapter_idx, (uint8_t *) &t1_cmd,
+					sizeof(t1_cmd), meta_recv, cookie);
 }
 
 static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
@@ -489,7 +489,7 @@ static int write_nmn_e1(struct t1_cookie *cookie)
 	cmd.data[0] = TYPE1_MAGIC;
 	memcpy(cmd.uid, cookie->uid, UID_LENGTH);
 
-	return near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	return near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), write_nmn_e1_resp, cookie);
 }
 
@@ -528,7 +528,7 @@ static int data_write(uint8_t *resp, int length, void *data)
 	cookie->ndef->offset++;
 	cookie->current_byte++;
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), data_write, cookie);
 	if (err < 0)
 		goto out;
@@ -582,7 +582,7 @@ static int write_nmn_0(uint32_t adapter_idx, uint32_t target_idx,
 
 	g_free(uid);
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), data_write, cookie);
 	if (err < 0)
 		goto out;
@@ -683,8 +683,8 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *)&t1_cmd, sizeof(t1_cmd),
-							check_presence, cookie);
+	err = near_adapter_send(adapter_idx, (uint8_t *) &t1_cmd,
+				sizeof(t1_cmd), check_presence, cookie);
 	if (err < 0)
 		goto out;
 
@@ -719,7 +719,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 		cookie->current_byte++;
 		memcpy(cmd.uid, cookie->uid, UID_LENGTH);
 
-		err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+		err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), format_resp, cookie);
 		if (err < 0)
 			goto out;
@@ -795,7 +795,7 @@ static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
 	memcpy(cmd.uid, cookie->uid, UID_LENGTH);
 	g_free(uid);
 
-	err = near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
+	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), format_resp, cookie);
 	if (err < 0)
 		goto out;
