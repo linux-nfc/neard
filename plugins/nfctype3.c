@@ -378,7 +378,7 @@ static int poll_ndef_system_code(uint8_t *resp, int length, void *data)
 	int err = 0;
 	struct type3_cmd cmd;
 
-	DBG(" length: %d", length);
+	DBG("length: %d", length);
 
 	if (length < 0) {
 		err = -EIO;
@@ -488,7 +488,7 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 	struct type3_cmd cmd;
 	uint16_t system_code;
 
-	DBG(" length: %d", length);
+	DBG("length: %d", length);
 
 	if (length < 0) {
 		err = -EIO;

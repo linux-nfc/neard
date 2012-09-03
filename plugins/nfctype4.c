@@ -482,7 +482,7 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 	/* TODO 5.1.1: TLV blocks can be zero, one or more... */
 	/* TODO 5.1.2: Must ignore proprietary blocks (x05)... */
 	if (read_cc->tlv_fc.tag != 0x4) {
-		DBG("NDEF File Control tag not found !");
+		DBG("NDEF File Control tag not found");
 		err = -EINVAL;
 		goto out_err;
 	}

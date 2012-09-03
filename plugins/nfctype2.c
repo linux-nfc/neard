@@ -314,7 +314,7 @@ static int nfctype2_read(uint32_t adapter_idx,
 		break;
 
 	default:
-		DBG("Unknown TAG Type 2 subtype (%d)", tgt_subtype);
+		DBG("Unknown Tag Type 2 subtype %d", tgt_subtype);
 		err = -1;
 		break;
 	}
@@ -437,7 +437,7 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
 	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
-		DBG("Unknown Tag Type 2 subtype (%d)", tgt_subtype);
+		DBG("Unknown Tag Type 2 subtype %d", tgt_subtype);
 		return -1;
 	}
 
@@ -557,7 +557,7 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
 	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
-		DBG("Unknown Tag Type 2 subtype (%d)", tgt_subtype);
+		DBG("Unknown Tag Type 2 subtype %d", tgt_subtype);
 		return -1;
 	}
 

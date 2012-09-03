@@ -159,7 +159,7 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 	return err;
 
 fail:
-	near_error("ndef parsing failed (%d)", err);
+	near_error("ndef parsing failed %d", err);
 
 	handover_close(client_fd, 0);
 
@@ -187,7 +187,7 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
 	if (ndef == NULL) {
-		near_error("hr_ndef should exist !!!");
+		near_error("hr_ndef should exist");
 		return FALSE;
 	}
 
