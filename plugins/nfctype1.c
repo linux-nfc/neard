@@ -189,7 +189,8 @@ out_err:
 	return err;
 }
 
-/* The dynamic read function:
+/*
+ * The dynamic read function:
  * Bytes [0..3] : CC
  * [4..8]: TLV Lock ControlIT (0x01, 0x03, v1, V2, V3)
  * [9..13]: TLV Reserved Memory Control	(0x02, 0x03, V1, V2, V3)
@@ -213,9 +214,10 @@ static int read_dynamic_tag(uint8_t *cc, int length, void *data)
 	pndef = pndef + 5;	/* skip TLV Lock bits bytes */
 	pndef = pndef + 5;	/* skip TLV ControlIT bytes */
 
-	/* Save first NFC bytes to tag memory
+	/*
+	 * Save first NFC bytes to tag memory
 	 * 10 blocks[0x3..0xC] of 8 bytes + 2 bytes from block 2
-	 * */
+	 */
 	memcpy(tagdata,	pndef, 10 * BLOCK_SIZE + 2);
 
 	/* Read the next one, up to the end of the data area */
@@ -297,7 +299,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	t1_tag->tag = tag;
 	memcpy(t1_tag->uid, cookie->uid, UID_LENGTH);
 
-	/*s Set the ReadWrite flag */
+	/* Set the ReadWrite flag */
 	if (TAG_T1_WRITE_FLAG(cc) == TYPE1_NOWRITE_ACCESS)
 		near_tag_set_ro(tag, TRUE);
 	else
@@ -621,7 +623,7 @@ static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 		return -EINVAL;
 
 	/* This check is valid for only static tags.
-	 * Max data length on Type 2 Tag including TLV's
+	 * Max data length on Type 1 Tag including TLV's
 	 * is TYPE1_STATIC_MAX_DATA_SIZE */
 	if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
 		if ((ndef->length + 3) > TYPE1_STATIC_MAX_DATA_SIZE) {

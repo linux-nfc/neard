@@ -1552,9 +1552,9 @@ static struct near_ndef_ac_record *parse_ac_record(uint8_t *rec,
 
 	/* Carrier data reference length */
 	ac_record->cdr_len = rec[offset];
+	offset++;
 
 	/* Carrier data reference */
-	offset++;
 	ac_record->cdr = rec[offset];
 	offset = offset + ac_record->cdr_len;
 

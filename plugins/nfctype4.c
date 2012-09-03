@@ -396,9 +396,10 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	else
 		near_tag_set_ro(tag, FALSE);
 
-	/* TODO: see how we can get the UID value:
+	/*
+	 * TODO: see how we can get the UID value:
 	 * near_tag_set_uid(tag, resp + NFC_HEADER_SIZE, 8);
-	 *  */
+	 */
 
 	/* Read 1st block */
 	err = ISO_ReadBinary(2, cookie->r_apdu_max_size - 2,
@@ -647,7 +648,7 @@ static int nfctype4_read(uint32_t adapter_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 	cookie->tag = NULL;
-	cookie->read_data = 0;;
+	cookie->read_data = 0;
 
 	/* Check for V2 type 4 tag */
 	err = ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
@@ -816,7 +817,7 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 	cookie->tag = NULL;
-	cookie->read_data = 0;;
+	cookie->read_data = 0;
 
 	/* Check for V2 type 4 tag */
 	err = ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
