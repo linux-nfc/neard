@@ -627,8 +627,8 @@ static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 	 * is TYPE1_STATIC_MAX_DATA_SIZE */
 	if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
 		if ((ndef->length + 3) > TYPE1_STATIC_MAX_DATA_SIZE) {
-			near_error("not enough space on data");
-			return -ENOMEM;
+			near_error("not enough space on tag");
+			return -ENOSPC;
 		}
 	}
 
