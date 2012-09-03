@@ -356,7 +356,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
 	struct near_tag *tag;
-	int err = 0;
+	int err;
 
 	DBG("%d", length);
 
@@ -416,7 +416,7 @@ out_err:
 static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err = 0;
+	int err;
 
 	DBG("%d", length);
 
@@ -448,7 +448,7 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
 	struct type4_cc *read_cc;
-	int err = 0;
+	int err;
 
 	DBG("%d", length);
 
@@ -504,7 +504,7 @@ out_err:
 static int t4_select_cc(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err = 0;
+	int err;
 
 	DBG("%d", length);
 
@@ -551,7 +551,7 @@ out_err:
 static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err = 0;
+	int err;
 
 	DBG("%d", length);
 
@@ -587,7 +587,7 @@ out_err:
 static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err = 0;
+	int err;
 
 	DBG("%d", length);
 
@@ -634,7 +634,7 @@ static int nfctype4_read(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct t4_cookie *cookie;
-	int err = 0;
+	int err;
 
 	DBG("");
 
@@ -803,7 +803,7 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct t4_cookie *cookie;
-	int err = 0;
+	int err;
 
 	DBG("");
 
