@@ -680,7 +680,7 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 
 	/* check and get the default adapter */
 	oob->def_adapter = g_strdup(bt_def_oob_data.def_adapter);
-	if (oob->bt_name == NULL) {
+	if (oob->def_adapter == NULL) {
 		near_error("bt_get_default_adapter failed");
 		bt_eir_free(oob);
 		return -EIO;
