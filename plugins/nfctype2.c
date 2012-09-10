@@ -42,6 +42,9 @@
 extern int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
+extern int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
+			near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
+
 #define CMD_READ         0x30
 #define CMD_READ_SIZE    0x02
 
@@ -480,27 +483,46 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 {
 	struct type2_cmd cmd;
 	struct t2_cookie *cookie;
+	enum near_tag_sub_type tgt_subtype;
 	int err;
 
 	DBG("");
 
-	cmd.cmd = CMD_READ;
-	cmd.block = META_BLOCK_START;
+	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
-	cookie = g_try_malloc0(sizeof(struct t2_cookie));
-	if (cookie == NULL)
-		return -ENOMEM;
+	switch (tgt_subtype) {
+	case NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT:
+		cmd.cmd = CMD_READ;
+		cmd.block = META_BLOCK_START;
 
-	cookie->adapter_idx = adapter_idx;
-	cookie->target_idx = target_idx;
-	cookie->cb = cb;
+		cookie = g_try_malloc0(sizeof(struct t2_cookie));
+		if (cookie == NULL)
+			return -ENOMEM;
 
-	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd, CMD_READ_SIZE,
-							check_presence, cookie);
-	if (err < 0)
-		goto out;
+		cookie->adapter_idx = adapter_idx;
+		cookie->target_idx = target_idx;
+		cookie->cb = cb;
 
-	return 0;
+		err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
+				CMD_READ_SIZE, check_presence, cookie);
+		if (err < 0)
+			goto out;
+
+		break;
+	/* Specific Mifare check presence */
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
+		err = mifare_check_presence(adapter_idx, target_idx,
+							cb, tgt_subtype);
+		break;
+
+	default:
+		DBG("Unknown TAG Type 2 subtype %d", tgt_subtype);
+		err = -1;
+		break;
+	}
+
+	return err;
 
 out:
 	t2_cookie_release(cookie);

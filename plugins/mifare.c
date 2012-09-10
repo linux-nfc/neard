@@ -44,8 +44,11 @@
  * http://www.nxp.com/technical-support-portal/53420/71108/application-notes
  * */
 
-/* Prototype */
+/* Prototypes */
 int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
+		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
+
+int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
 /* MIFARE command set */
@@ -667,4 +670,84 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 		return mifare_release(err, cookie);
 
 	return 0;
+}
+
+static int check_presence(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *cookie = data;
+	int err = 0;
+
+	DBG("%d", length);
+
+	if (length < 0)
+		err = -EIO;
+
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	return err;
+}
+
+int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
+			near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype)
+{
+	struct mifare_cmd cmd;
+	struct mifare_cookie *cookie;
+	uint8_t *key_ref = MAD_public_key;
+	int err;
+
+	DBG("");
+
+	/* Check supported and tested Mifare type */
+	switch (tgt_subtype) {
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
+		break;
+	default:
+		near_error("Mifare tag type %d not supported.", tgt_subtype);
+		return -1;
+	}
+
+	/* Alloc global cookie */
+	cookie = g_try_malloc0(sizeof(struct mifare_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
+	/* Get the nfcid1 */
+	cookie->nfcid1 = near_tag_get_nfcid(adapter_idx, target_idx,
+					&cookie->nfcid1_len);
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+
+	/*
+	 * To check presence of Mifare Classic Tag,
+	 * send authentication command instead of read one
+	 */
+	cmd.cmd = MF_CMD_AUTH_KEY_A;
+
+	/* Authenticate the 1st block of the MAD sector */
+	cmd.block = MAD1_1ST_BLOCK;
+
+	/* Store the AUTH KEY */
+	memcpy(&cmd.key, key_ref, MAD_KEY_LEN);
+
+	/* add the UID */
+	memcpy(&cmd.nfcid, cookie->nfcid1, cookie->nfcid1_len);
+
+	err = near_adapter_send(cookie->adapter_idx,
+			(uint8_t *) &cmd,
+			sizeof(cmd) - NFC_NFCID1_MAXSIZE + cookie->nfcid1_len,
+			check_presence,
+			cookie);
+
+	if (err < 0)
+		goto out_err;
+
+	return err;
+
+out_err:
+	mifare_release(err, cookie);
+
+	return err;
 }
