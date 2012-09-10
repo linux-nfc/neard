@@ -248,11 +248,14 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	err = data_read(t2_tag);
 	if (err < 0)
-		goto out;
+		goto out_tag;
 
 	t2_cookie_release(cookie);
 
 	return 0;
+
+out_tag:
+	g_free(t2_tag);
 
 out:
 	if (err < 0 && cookie->cb)
