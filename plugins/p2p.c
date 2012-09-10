@@ -272,13 +272,14 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 
 static int p2p_listen(uint32_t adapter_idx, near_device_io_cb cb)
 {
-	int err = 0;
+	int err = -1;
 	GSList *list;
 
 	for (list = driver_list; list != NULL; list = list->next) {
 		struct near_p2p_driver *driver = list->data;
 
-		err &= p2p_bind(driver, adapter_idx, cb);
+		if (p2p_bind(driver, adapter_idx, cb) == 0)
+			err = 0;
 	}
 
 	return err;
