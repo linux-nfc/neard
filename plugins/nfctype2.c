@@ -45,6 +45,10 @@ extern int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 extern int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 			near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
+extern int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
+
 #define CMD_READ         0x30
 #define CMD_READ_SIZE    0x02
 
@@ -430,6 +434,7 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 {
 	struct near_tag *tag;
 	enum near_tag_sub_type tgt_subtype;
+	int err;
 
 	DBG("");
 
@@ -442,21 +447,35 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
-	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
-		DBG("Unknown Tag Type 2 subtype %d", tgt_subtype);
-		return -1;
-	}
-
-	/* This check is valid for only static tags.
-	 * Max data length on Type 2 Tag including TLV's is NDEF_MAX_SIZE */
-	if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
-		if ((ndef->length + 3) > NDEF_MAX_SIZE) {
-			near_error("not enough space on tag");
-			return -ENOSPC;
+	switch (tgt_subtype) {
+	case NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT:
+		/*
+		 * This check is valid for only static tags.
+		 * Max data length on Type 2 Tag
+		 * including TLV's is NDEF_MAX_SIZE
+		 */
+		if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
+			if ((ndef->length + 3) > NDEF_MAX_SIZE) {
+				near_error("not enough space on tag");
+				return -ENOSPC;
+			}
 		}
+
+		err = data_write(adapter_idx, target_idx, ndef, cb);
+		break;
+		/* Specific Mifare write access */
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
+		err = mifare_write(adapter_idx, target_idx, ndef,
+				cb, tgt_subtype);
+		break;
+	default:
+		DBG("Unknown TAG Type 2 subtype %d", tgt_subtype);
+		err = -EINVAL;
+		break;
 	}
 
-	return data_write(adapter_idx, target_idx, ndef, cb);
+	return err;
 }
 
 static int check_presence(uint8_t *resp, int length, void *data)

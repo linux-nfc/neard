@@ -51,8 +51,12 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
 
+int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
+		struct near_ndef_message *ndef,
+		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype);
+
 /* MIFARE command set */
-#define MF_CMD_WRITE		0xA2
+#define MF_CMD_WRITE		0xA0
 #define MF_CMD_READ		0x30
 #define MF_CMD_AUTH_KEY_A	0x60
 
@@ -96,11 +100,13 @@ static uint8_t MAD_NFC_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
 #define MAD1_1ST_BLOCK		0x00	/* 1st block of sector 0 */
 #define	MAD2_GPB_BITS		0x02	/* MAD v2 flag */
 
-#define MAD2_SECTOR		0x10	/* Sector 0 is for MAD2 */
+#define MAD2_SECTOR		0x10	/* Sector 16 is for MAD2 */
 #define MAD2_1ST_BLOCK		0x40	/* 1st block of MAD2 */
 
 #define MAD_V1_AIDS_LEN		15	/* 1 to 0x0F */
 #define MAD_V2_AIDS_LEN		23	/*0x11 to 0x27 */
+
+#define NFC_1ST_BLOCK		0x04	/* Sectors from 1 are for NFC */
 
 /* MAD1 sector structure. Start at block 0x00 */
 struct MAD_1 {
@@ -134,6 +140,7 @@ struct mifare_cookie {
 	struct near_tag *tag;
 	near_tag_io_cb cb;
 	near_recv next_far_func;
+	int (*command)(void *data); /* read or write after unlocking sector */
 
 	/* For MAD access */
 	struct MAD_1 *mad_1;
@@ -153,12 +160,22 @@ struct mifare_cookie {
 	int rs_max_length;		/* available size */
 	uint8_t *nfc_data;
 	size_t nfc_data_length;
+
+	/* For write only */
+	struct near_ndef_message *ndef;	/* message to write */
+	size_t ndef_length;		/* message length */
 };
 
 struct type2_cmd {
 	uint8_t cmd;
 	uint8_t block;
 	uint8_t data[];
+} __attribute__((packed));
+
+struct mf_write_cmd {
+	uint8_t cmd;
+	uint8_t block;
+	uint8_t data[DEFAULT_BLOCK_SIZE];
 } __attribute__((packed));
 
 struct mifare_cmd {
@@ -186,6 +203,11 @@ static int mifare_release(int err, struct mifare_cookie *cookie)
 	g_slist_free(cookie->g_sect_list);
 	g_free(cookie->mad_1);
 	g_free(cookie->mad_2);
+
+	if (cookie->ndef)
+		g_free(cookie->ndef->data);
+
+	g_free(cookie->ndef);
 	g_free(cookie);
 	cookie = NULL;
 
@@ -517,8 +539,8 @@ done_mad:
 		goto out_err;
 	}
 
-	/* Time to read the NFC data */
-	err = mifare_read_NFC(mf_ck);
+	/* Time to read or write the NFC data */
+	err = mf_ck->command(mf_ck);
 
 	return err;
 
@@ -662,6 +684,7 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
+	cookie->command = mifare_read_NFC;
 
 	/* Need to unlock before reading
 	 * This will check if public keys are allowed (and, so, NDEF could
@@ -754,4 +777,269 @@ out_err:
 	mifare_release(err, cookie);
 
 	return err;
+}
+
+/*
+ * Common MIFARE Block write:
+ * Each call will write 16 bytes to tag... so to write 1 sector,
+ * it has to be called it 4 or 16 times (minus 1 for the trailer block)
+ */
+static int mifare_write_block(uint8_t block_id, void *data,
+				near_recv far_func)
+{
+	struct mf_write_cmd cmd;
+	struct mifare_cookie *mf_ck = data;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.cmd = MF_CMD_WRITE; /* MIFARE WRITE */
+	cmd.block = block_id;
+
+	if ((mf_ck->ndef->offset + DEFAULT_BLOCK_SIZE) <
+			mf_ck->ndef->length) {
+		memcpy(cmd.data, mf_ck->ndef->data +
+				mf_ck->ndef->offset, DEFAULT_BLOCK_SIZE);
+		mf_ck->ndef->offset += DEFAULT_BLOCK_SIZE;
+	} else {
+		memcpy(cmd.data, mf_ck->ndef->data + mf_ck->ndef->offset,
+				mf_ck->ndef->length - mf_ck->ndef->offset);
+		mf_ck->ndef->offset = mf_ck->ndef->length + 1;
+	}
+
+	return near_adapter_send(mf_ck->adapter_idx,
+				(uint8_t *) &cmd, sizeof(cmd),
+				far_func, data);
+}
+
+static int mifare_correct_length_cb(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+
+	DBG("Done writing");
+
+	if (mf_ck->cb)
+		mf_ck->cb(mf_ck->adapter_idx, mf_ck->target_idx, 0);
+
+	return mifare_release(0, mf_ck);
+}
+
+/* After writing ndef message, its length has to be updated */
+static int mifare_correct_length(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+
+	DBG("");
+
+	/* Correct length field */
+	mf_ck->ndef->data[1] = mf_ck->ndef_length;
+	/* and ndef offset so it points to the beginning */
+	mf_ck->ndef->offset = 0;
+
+	/* Run the write process only on the first block of the sector */
+	return mifare_write_block(NFC_1ST_BLOCK, mf_ck,
+					mifare_correct_length_cb);
+}
+
+static int mifare_write_sector_cb(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err;
+
+	/* Next block */
+	mf_ck->rws_completed = mf_ck->rws_completed + 1;
+
+	/* Check if it's the last block */
+	if ((mf_ck->rws_block_start + mf_ck->rws_completed)
+			< mf_ck->rws_block_end)	{
+		/* then check if there's still data to write */
+		if (mf_ck->ndef->offset < mf_ck->ndef->length)
+			err = mifare_write_block(
+				mf_ck->rws_block_start + mf_ck->rws_completed,
+				data, mifare_write_sector_cb);
+		else
+			/* No more Data to write */
+			/* Correct length of the ndef message */
+			err = mifare_unlock_sector(NFC_1ST_BLOCK,
+						mifare_correct_length, mf_ck);
+	} else {
+		/* Process the callback */
+		err = (*mf_ck->rws_next_fct)(resp, length, data);
+	}
+
+	if (err < 0)
+		return mifare_release(err, mf_ck);
+
+	return err;
+
+}
+
+static int mifare_write_sector_unlocked(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+
+	/* Run the write process on the first block of the sector */
+	return mifare_write_block(mf_ck->rws_block_start, data,
+					mifare_write_sector_cb);
+}
+
+/*
+ * This function writes a complete sector, using block per block function.
+ * sector sizes can be:
+ * Sectors 0 to 31:
+ *	48 bytes: 3*16 (no trailer)
+ * Sectors 32 to 39:
+ *	240 bytes: 15*16 (no trailer)
+ *
+ * Unlock is done at the beginning of each sector.
+ */
+static int mifare_write_sector(void *cookie,
+				uint8_t sector_id,	/* sector to write */
+				near_recv next_func)
+{
+	struct mifare_cookie *mf_ck = cookie;
+	int blocks_count;
+
+	DBG("");
+
+	/* Prepare call values */
+
+	/* According to tag size, compute the correct block offset */
+	if (sector_id < T4K_BOUNDARY)
+		mf_ck->rws_block_start = sector_id * STD_BLK_SECT_TRAILER;
+	else
+		mf_ck->rws_block_start = T4K_BLK_OFF +
+			(sector_id - T4K_BOUNDARY) * EXT_BLK_SECT_TRAILER;
+
+	/* Find blocks_per_sect, according to position, no trailer */
+	if (sector_id < T4K_BOUNDARY)
+		blocks_count = STD_BLK_PER_SECT;
+	else
+		blocks_count = EXT_BLK_PER_SECT;
+
+	mf_ck->rws_block_end = mf_ck->rws_block_start + blocks_count;
+	mf_ck->rws_completed = 0;
+	mf_ck->rws_next_fct = next_func;
+
+	/* Being on the first block of the sector, unlock it */
+	return mifare_unlock_sector(mf_ck->rws_block_start,
+					mifare_write_sector_unlocked, mf_ck);
+}
+
+static int mifare_write_NFC_loop(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err = 0;
+
+	if (length < 0 || resp[0] != 0) {
+		err = -EIO;
+		goto out_err;
+	}
+
+	/* Something more to write? */;
+	if (mf_ck->ndef->offset < mf_ck->ndef->length) {
+		err = mifare_write_sector(data,		/* cookie */
+				GPOINTER_TO_INT(mf_ck->g_sect_list->data),
+				mifare_write_NFC_loop);	/* next function */
+
+		mf_ck->g_sect_list = g_slist_remove(mf_ck->g_sect_list,
+						mf_ck->g_sect_list->data);
+
+		if (err < 0)
+			goto out_err;
+
+	} else {
+		/* Correct length of an NDEF message */
+		err = mifare_unlock_sector(NFC_1ST_BLOCK,
+					mifare_correct_length, mf_ck);
+
+		if (err < 0)
+			goto out_err;
+	}
+
+	return err;
+out_err:
+	return mifare_release(err, mf_ck);
+}
+
+static int mifare_write_NFC(void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err;
+
+	DBG("");
+
+	mf_ck->rws_completed = 0;	/* written blocks */
+
+	/* First write here: */
+	err = mifare_write_sector(data,		/* cookie */
+		GPOINTER_TO_INT(mf_ck->g_sect_list->data), /* sector id */
+		mifare_write_NFC_loop);		/* next function */
+
+	mf_ck->g_sect_list = g_slist_remove(mf_ck->g_sect_list,
+						mf_ck->g_sect_list->data);
+
+	if (err < 0)
+		return mifare_release(err, mf_ck);
+
+	return err;
+}
+
+int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype)
+{
+	struct mifare_cookie *cookie;
+	struct near_tag *tag;
+	size_t tag_size;
+	int err;
+
+	DBG("");
+
+	/* Check supported and tested Mifare type */
+	switch (tgt_subtype) {
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
+	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
+		break;
+	default:
+		near_error("Mifare tag type %d not supported.", tgt_subtype);
+		return -1;
+	}
+
+	/* Check if there's enough space on tag */
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	near_tag_get_data(tag, &tag_size);
+
+	if (tag_size < ndef->length) {
+		near_error("not enough space on tag");
+		return -ENOSPC;
+	}
+
+	/* Alloc global cookie */
+	cookie = g_try_malloc0(sizeof(struct mifare_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
+	/* Get the nfcid1 */
+	cookie->nfcid1 = near_tag_get_nfcid(adapter_idx, target_idx,
+			&cookie->nfcid1_len);
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+
+	cookie->command = mifare_write_NFC;
+	cookie->ndef = ndef;
+	/* Save ndef length */
+	cookie->ndef_length = cookie->ndef->data[1];
+	cookie->ndef->data[1] = 0;
+	/*
+	 * Mifare Classic Tag needs to be unlocked before writing
+	 * This will check if public keys are allowed (NDEF could be "readable")
+	 */
+	err = mifare_unlock_sector(MAD1_1ST_BLOCK,	/* related block */
+					mifare_read_MAD1,	/* callback */
+					cookie);	/* target data */
+
+	if (err < 0)
+		return mifare_release(err, cookie);
+
+	return 0;
 }
