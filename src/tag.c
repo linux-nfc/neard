@@ -624,12 +624,6 @@ const char *__near_tag_get_path(struct near_tag *tag)
 	return tag->path;
 }
 
-
-uint32_t __near_tag_get_idx(struct near_tag *tag)
-{
-	return tag->target_idx;
-}
-
 uint32_t __near_tag_get_type(struct near_tag *tag)
 {
 	return tag->type;

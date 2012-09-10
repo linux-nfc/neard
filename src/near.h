@@ -116,7 +116,6 @@ struct near_tag *__near_tag_add(uint32_t idx, uint32_t target_idx,
 				uint8_t *nfcid, uint8_t nfcid_len);
 void __near_tag_remove(struct near_tag *tag);
 const char *__near_tag_get_path(struct near_tag *tag);
-uint32_t __near_tag_get_idx(struct near_tag *tag);
 uint32_t __near_tag_get_type(struct near_tag *tag);
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter);
 int __near_tag_read(struct near_tag *tag, near_tag_io_cb cb);

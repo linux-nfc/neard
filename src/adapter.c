@@ -979,7 +979,7 @@ int near_adapter_disconnect(uint32_t idx)
 		return -ENOLINK;
 
 	tag_type = __near_tag_get_type(adapter->tag_link);
-	target_idx = __near_tag_get_idx(adapter->tag_link);
+	target_idx = near_tag_get_target_idx(adapter->tag_link);
 
 	DBG("tag type %d", tag_type);
 
@@ -1024,7 +1024,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 
 		DBG("req %p cb %p data %p", req, cb, data);
 
-		req->target_idx = __near_tag_get_idx(adapter->tag_link);
+		req->target_idx = near_tag_get_target_idx(adapter->tag_link);
 		req->cb = cb;
 		req->data = data;
 
