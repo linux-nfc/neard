@@ -39,10 +39,11 @@
 #include <near/ndef.h>
 #include <near/tlv.h>
 
-/* NXP Application Notes:
+/*
+ * NXP Application Notes:
  * AN1304, AN1305, ...
  * http://www.nxp.com/technical-support-portal/53420/71108/application-notes
- * */
+ */
 
 /* Prototypes */
 int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
@@ -62,12 +63,13 @@ int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 
 #define NFC_AID_TAG		0xE103
 
-/* Define boundaries for 1K / 2K / 4K
+/*
+ * Define boundaries for 1K / 2K / 4K
  * 1K:   sector 0 to 15 (3 blocks each + trailer block )
  * 2K:   sector 0 to 31 (3 blocks each + trailer block )
  * 4K:   sector 0 to 31 (3 blocks each + trailer block )
  *	and sector 32 to 39 (15 blocks each + trailer block )
- * */
+ */
 #define DEFAULT_BLOCK_SIZE	16	/* MF_CMD_READ */
 
 #define STD_BLK_SECT_TRAILER	4	/* bl per sect with trailer 1K/2K */
@@ -214,7 +216,8 @@ static int mifare_release(int err, struct mifare_cookie *cookie)
 	return err;
 }
 
-/* Mifare_generic MAD unlock block function
+/*
+ * Mifare_generic MAD unlock block function
  * This function send unlock code to the tag, and so, allow access
  * to the complete related sector.
  */
@@ -226,9 +229,10 @@ static int mifare_unlock_sector(int block_id,
 	struct mifare_cookie *cookie = data;
 	uint8_t *key_ref;
 
-	/* For MADs sectors we use public key A (a0a1a2a3a4a5) but
-	 * for NFC sectors we use NFC_KEY_A (d3f7d3f7d3f7)
-	 *  */
+	/*
+	 * For MADs sectors we use public key A (a0a1a2a3a4a5) but
+-	 * for NFC sectors we use NFC_KEY_A (d3f7d3f7d3f7)
+	 */
 	if ((block_id == MAD1_1ST_BLOCK) || (block_id == MAD2_1ST_BLOCK))
 		key_ref = MAD_public_key;
 	else
@@ -237,7 +241,7 @@ static int mifare_unlock_sector(int block_id,
 	 /* CMD AUTHENTICATION */
 	cmd.cmd = MF_CMD_AUTH_KEY_A;
 
-	/* We want to authenticate the 1st bloc of the sector */
+	/* Authenticate will be on the 1st block of the sector */
 	cmd.block = block_id;
 
 	/* Store the AUTH KEY */
@@ -252,13 +256,15 @@ static int mifare_unlock_sector(int block_id,
 		cookie);
 }
 
-/* Common MIFARE Bloc read:
+/*
+ * Common MIFARE Block read:
  * Each call will read 16 bytes from tag... so to read 1 sector,
- * we must call it 4 times or 16 times (minus 1 or not for the trailer block)
+ * it has to be called it 4 times or 16 times
+ * (minus 1 or not for the trailer block)
  *
  * data: mifare_cookie *mf_ck
  * mf_ck->read_block: block number to read
- * */
+ */
 static int mifare_read_block(uint8_t block_id,
 				void *data,
 				near_recv far_func)
@@ -338,7 +344,8 @@ out_err:
 	return err;
 }
 
-/* This function reads a complete sector, using block per block function.
+/*
+ * This function reads a complete sector, using block per block function.
  * sector sizes can be:
  * Sectors 0 to 31:
  *	48 bytes: 3*16 no trailer
@@ -385,7 +392,7 @@ static int mifare_read_sector(void *cookie,
 
 	mf_ck->rws_next_fct = next_func;		/* leaving function */
 
-	/* As we are on the first block of a sector, we unlock it */
+	/* Being on the first block of a sector, unlock it */
 	err = mifare_unlock_sector(mf_ck->rws_block_start,
 			mifare_read_sector_unlocked, mf_ck);
 
@@ -432,7 +439,7 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 		uint8_t *nfc_data;
 		size_t nfc_data_length;
 
-		DBG("READ DONE");
+		DBG("Done reading");
 
 		nfc_data = near_tag_get_data(mf_ck->tag, &nfc_data_length);
 		if (nfc_data == NULL) {
@@ -450,8 +457,7 @@ out_err:
 	return mifare_release(err, mf_ck);
 }
 
-/* Prepare read NFC loop
- */
+/* Prepare read NFC loop */
 static int mifare_read_NFC(void *data)
 {
 	struct mifare_cookie *mf_ck = data;
@@ -548,15 +554,13 @@ out_err:
 	return mifare_release(err, mf_ck);
 }
 
-/* Transitional function - async
- */
+/* Transitional function - async */
 static int read_MAD2_complete(uint8_t *empty, int iempty, void *data)
 {
 	return mifare_process_MADs(data);
 }
 
-/* This function reads the MAD2 sector
- */
+/* This function reads the MAD2 sector */
 static int mifare_read_MAD2(void *data)
 {
 	struct mifare_cookie *mf_ck = data;
@@ -564,7 +568,7 @@ static int mifare_read_MAD2(void *data)
 
 	DBG("");
 
-	/* As auth is ok, we allocate Mifare Access Directory v1 */
+	/* As auth is ok, allocate Mifare Access Directory v1 */
 	mf_ck->mad_2 = g_try_malloc0(STD_SECTOR_SIZE);
 	if (mf_ck->mad_2 == NULL) {
 		near_error("Memory allocation failed (MAD2)");
@@ -587,10 +591,10 @@ out_err:
 	return mifare_release(err, mf_ck);
 }
 
-/* This function checks, in MAD1, if there's a MAD2 directory
+/*
+ * This function checks, in MAD1, if there's a MAD2 directory
  * available. This is is the case for 2K and 4K tag
- * If MAD2 exists, we want to read it, elsewhere we process the
- * current MAD
+ * If MAD2 exists, read it, elsewhere process the current MAD
  */
 static int read_MAD1_complete(uint8_t *empty, int iempty, void *data)
 {
@@ -599,7 +603,7 @@ static int read_MAD1_complete(uint8_t *empty, int iempty, void *data)
 
 	DBG("");
 
-	/* Check if we need to get MAD2 sector (bits 0..1)*/
+	/* Check if there's a need to get MAD2 sector */
 	if ((mf_ck->mad_1->GPB & 0x03) == MAD2_GPB_BITS)
 		err = mifare_read_MAD2(mf_ck);
 	else
@@ -608,7 +612,8 @@ static int read_MAD1_complete(uint8_t *empty, int iempty, void *data)
 	return err;
 }
 
-/* Function called to read the first MAD sector
+/*
+ * Function called to read the first MAD sector
  * MAD is mandatory
  */
 static int mifare_read_MAD1(uint8_t *resp, int length, void *data)
@@ -623,8 +628,10 @@ static int mifare_read_MAD1(uint8_t *resp, int length, void *data)
 		return err;
 	}
 
-	/* As auth is ok, we allocate Mifare Access Directory v1
-	 * allocated size is also STD_SECTOR_SIZE */
+	/*
+	 * As auth is ok, allocate Mifare Access Directory v1
+	 * allocated size is also STD_SECTOR_SIZE
+	 */
 	mf_ck->mad_1 = g_try_malloc0(STD_SECTOR_SIZE);
 	if (mf_ck->mad_1 == NULL) {
 		near_error("Memory allocation failed (MAD1)");
@@ -648,12 +655,13 @@ out_err:
 	return mifare_release(err, mf_ck);
 }
 
-/* MIFARE: entry point:
+/*
+ * MIFARE: entry point:
  * Read all the MAD sectors (0x00, 0x10) to get the Application Directory
  * entries.
  * On sector 0x00, App. directory is on block 0x01 & block 0x02
  * On sector 0x10, App. directory is on block 0x40, 0x41 & 0x42
- * On reading, we ignore the CRC.
+ * On reading, CRC is ignored.
  */
 int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype)
@@ -686,10 +694,11 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->cb = cb;
 	cookie->command = mifare_read_NFC;
 
-	/* Need to unlock before reading
+	/*
+	 * Need to unlock before reading
 	 * This will check if public keys are allowed (and, so, NDEF could
 	 * be "readable"...
-	 * */
+	 */
 	err = mifare_unlock_sector(MAD1_1ST_BLOCK,	/* related block */
 				mifare_read_MAD1,	/* callback function */
 				cookie);		/* target data */
@@ -1009,7 +1018,7 @@ int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 	near_tag_get_data(tag, &tag_size);
 
 	if (tag_size < ndef->length) {
-		near_error("not enough space on tag");
+		near_error("Not enough space on tag");
 		return -ENOSPC;
 	}
 
