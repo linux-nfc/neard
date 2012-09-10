@@ -140,11 +140,14 @@ struct mifare_cookie {
 	struct MAD_2 *mad_2;
 	GSList *g_sect_list;		/* Global sectors list */
 
-	/* For read functions */
-	near_recv rs_next_fct;		/* next function */
-	int rs_block_start;		/* first block */
-	int rs_block_end;		/* last block */
-	int rs_completed;		/* read blocks */
+	/* For read and write functions */
+	near_recv rws_next_fct;		/* next function */
+	int rws_block_start;		/* first block */
+	int rws_block_end;		/* last block */
+	int rws_completed;		/* read blocks */
+
+
+	/* For read only */
 	int rs_length;			/* read length */
 	uint8_t *rs_pmem;		/* Stored read sector */
 	int rs_max_length;		/* available size */
@@ -265,21 +268,22 @@ static int mifare_read_sector_cb(uint8_t *resp, int length, void *data)
 	/* save the length: */
 	mf_ck->rs_length = mf_ck->rs_length + length;
 
-	memcpy(mf_ck->rs_pmem + mf_ck->rs_completed * DEFAULT_BLOCK_SIZE,
+	memcpy(mf_ck->rs_pmem + mf_ck->rws_completed * DEFAULT_BLOCK_SIZE,
 			resp + 1,/* ignore reader byte */
 			length);
 
 	/* Next block */
-	mf_ck->rs_completed = mf_ck->rs_completed + 1;
+	mf_ck->rws_completed = mf_ck->rws_completed + 1;
 
-	if ((mf_ck->rs_block_start + mf_ck->rs_completed) < mf_ck->rs_block_end)
+	if ((mf_ck->rws_block_start + mf_ck->rws_completed)
+						< mf_ck->rws_block_end)
 		err = mifare_read_block(
-				(mf_ck->rs_block_start + mf_ck->rs_completed),
+				(mf_ck->rws_block_start + mf_ck->rws_completed),
 				data,
 				mifare_read_sector_cb);
 	else {
 		/* Now Process the callback ! */
-		err = (*mf_ck->rs_next_fct)(mf_ck->rs_pmem,
+		err = (*mf_ck->rws_next_fct)(mf_ck->rs_pmem,
 						mf_ck->rs_length, data);
 	}
 
@@ -301,7 +305,7 @@ static int mifare_read_sector_unlocked(uint8_t *resp, int length, void *data)
 		return err;
 	}
 	/* And run the read process on the first block of the sector */
-	err = mifare_read_block(mf_ck->rs_block_start, data,
+	err = mifare_read_block(mf_ck->rws_block_start, data,
 				mifare_read_sector_cb);
 
 	if (err < 0)
@@ -340,13 +344,13 @@ static int mifare_read_sector(void *cookie,
 	mf_ck->rs_pmem = pmem;			/* where to store */
 	mf_ck->rs_max_length = memsize;		/* max size to store */
 	mf_ck->rs_length = 0;			/* no bytes yet */
-	mf_ck->rs_completed = 0;		/* blocks read */
+	mf_ck->rws_completed = 0;		/* blocks read */
 
 	/* According to tag size, compute the correct block offset */
 	if (sector_id < T4K_BOUNDARY)
-		mf_ck->rs_block_start = sector_id * 4;  /* 1st block to read */
+		mf_ck->rws_block_start = sector_id * 4;  /* 1st block to read */
 	else
-		mf_ck->rs_block_start =
+		mf_ck->rws_block_start =
 				(sector_id - T4K_BOUNDARY) * 16 + T4K_BLK_OFF;
 
 	/* Find blocks_per_sect, according to position and trailer or not */
@@ -355,12 +359,12 @@ static int mifare_read_sector(void *cookie,
 	else
 		blocks_count = (EXT_BLK_PER_SECT + trailer);
 
-	mf_ck->rs_block_end = mf_ck->rs_block_start + blocks_count;
+	mf_ck->rws_block_end = mf_ck->rws_block_start + blocks_count;
 
-	mf_ck->rs_next_fct = next_func;		/* leaving function */
+	mf_ck->rws_next_fct = next_func;		/* leaving function */
 
 	/* As we are on the first block of a sector, we unlock it */
-	err = mifare_unlock_sector(mf_ck->rs_block_start,
+	err = mifare_unlock_sector(mf_ck->rws_block_start,
 			mifare_read_sector_unlocked, mf_ck);
 
 	return err;
