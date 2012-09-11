@@ -60,6 +60,7 @@
 #define SNEP_RESP_REJECT    0xff
 
 #define SNEP_REQ_PUT_HEADER_LENGTH 6
+#define SNEP_REQ_GET_HEADER_LENGTH 10
 /* TODO: Right now it is dummy, need to get correct value
  * from lower layers */
 #define SNEP_REQ_MAX_FRAGMENT_LENGTH 128
@@ -201,20 +202,24 @@ static void snep_parse_handover_record(int client_fd, uint8_t *ndef,
 	if (strncmp((char *)(ndef + 9), "Hr", 2) == 0)
 		*(ndef + 9) = 'c';
 
+	/* Parse the incoming frame */
 	records = near_ndef_parse(ndef, nfc_data_length);
 
 	/*
-	* The first entry on the record list is the Hr record.
-	* We build the Hs based on it.
-	*/
-	msg = near_ndef_prepare_handover_record("Hs", records->data,
+	 * If we received a Hr, we must build a Hs and send it.
+	 * If the frame is a Hs, nothing more to do (SNEP REPLY is SUCCESS and
+	 * the pairing is done in near_ndef_parse()
+	 * */
+	if (strncmp((char *)(ndef + 3), "Hr", 2) == 0) {
+		msg = near_ndef_prepare_handover_record("Hs", records->data,
 						NEAR_CARRIER_BLUETOOTH);
 
-	near_info("Send SNEP / Hs frame");
-	snep_response_with_info(client_fd, SNEP_RESP_SUCCESS,
+		near_info("Send SNEP / Hs frame");
+		snep_response_with_info(client_fd, SNEP_RESP_SUCCESS,
 					msg->data, msg->length);
-	g_free(msg->data);
-	g_free(msg);
+		g_free(msg->data);
+		g_free(msg);
+	}
 
 	near_ndef_records_free(records);
 
@@ -418,6 +423,8 @@ static int snep_send_fragment(struct p2p_snep_put_req_data *req)
 static int snep_push_response(struct p2p_snep_put_req_data *req)
 {
 	struct p2p_snep_resp_frame frame;
+	uint8_t *ndef;
+	uint32_t ndef_len;
 	int bytes_recv, err;
 
 	DBG("");
@@ -427,6 +434,9 @@ static int snep_push_response(struct p2p_snep_put_req_data *req)
 		near_error("Could not read SNEP frame %d", bytes_recv);
 		return bytes_recv;
 	}
+
+	/* Check frame length */
+	frame.length = g_ntohl(frame.length);
 
 	DBG("Response 0x%x", frame.response);
 
@@ -441,6 +451,25 @@ static int snep_push_response(struct p2p_snep_put_req_data *req)
 		return frame.response;
 
 	case SNEP_RESP_SUCCESS:
+		if (frame.length == 0)
+			return 0;
+
+		/* Get the incoming data */
+		ndef_len = frame.length;
+		ndef = g_try_malloc0(ndef_len);
+		if (ndef == NULL)
+			return -ENOMEM;
+
+		bytes_recv = recv(req->fd, ndef, ndef_len, 0);
+		if (bytes_recv < 0) {
+			near_error("Could not read SNEP frame %d", bytes_recv);
+			return bytes_recv;
+		}
+
+		snep_parse_handover_record(req->fd, ndef, ndef_len);
+
+		g_free(ndef);
+
 		return 0;
 	}
 
@@ -520,6 +549,7 @@ static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 	GIOChannel *channel;
 	gboolean fragmenting;
 	int err;
+	int snep_req_header_length, snep_additional_length;
 
 	DBG("");
 
@@ -543,8 +573,19 @@ static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 
 	max_fragment_len = SNEP_REQ_MAX_FRAGMENT_LENGTH;
 	header.version = SNEP_VERSION;
-	header.request = SNEP_REQ_PUT;
-	header.length = GUINT32_TO_BE(ndef->length);
+
+	/* Check if Hr or Hs for Handover over SNEP */
+	if (*(char *)(ndef->data + 3) == 'H') {
+		header.request = SNEP_REQ_GET;		/* Get for android */
+		snep_req_header_length = SNEP_REQ_GET_HEADER_LENGTH;
+		snep_additional_length = 4;  /* 4 Acceptable Length */
+	} else {
+		header.request = SNEP_REQ_PUT;
+		snep_req_header_length = SNEP_REQ_PUT_HEADER_LENGTH;
+		snep_additional_length = 0;
+	}
+
+	header.length = GUINT32_TO_BE(ndef->length + snep_additional_length);
 
 	fragment = g_try_malloc0(sizeof(struct snep_fragment));
 	if (fragment == NULL) {
@@ -552,8 +593,8 @@ static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 		goto error;
 	}
 
-	if (max_fragment_len >= (ndef->length + SNEP_REQ_PUT_HEADER_LENGTH)) {
-		fragment->len = ndef->length + SNEP_REQ_PUT_HEADER_LENGTH;
+	if (max_fragment_len >= (ndef->length + snep_req_header_length)) {
+		fragment->len = ndef->length + snep_req_header_length;
 		fragmenting = FALSE;
 	} else {
 		fragment->len = max_fragment_len;
@@ -567,14 +608,18 @@ static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 		goto error;
 	}
 
-	memcpy(fragment->data, (uint8_t *) &header,
-				SNEP_REQ_PUT_HEADER_LENGTH);
+	/* Header to data - common header */
+	memcpy(fragment->data, (uint8_t *)&header, SNEP_REQ_PUT_HEADER_LENGTH);
+
+	/* if GET, we add the Acceptable length */
+	if (header.request == SNEP_REQ_GET)
+		*(uint32_t *)(fragment->data + SNEP_REQ_PUT_HEADER_LENGTH)  =
+				GUINT32_TO_BE(snep_req_header_length);
 
 	if (fragmenting == TRUE) {
-		memcpy(fragment->data + SNEP_REQ_PUT_HEADER_LENGTH,
-			ndef->data,
-			max_fragment_len - SNEP_REQ_PUT_HEADER_LENGTH);
-		ndef->offset = max_fragment_len - SNEP_REQ_PUT_HEADER_LENGTH;
+		memcpy(fragment->data + snep_req_header_length, ndef->data,
+				max_fragment_len - snep_req_header_length);
+		ndef->offset = max_fragment_len - snep_req_header_length;
 
 		err = snep_push_prepare_fragments(req, ndef);
 		if (err < 0) {
@@ -584,7 +629,7 @@ static int snep_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 		}
 
 	} else {
-		memcpy(fragment->data + SNEP_REQ_PUT_HEADER_LENGTH,
+		memcpy(fragment->data + snep_req_header_length,
 					ndef->data, ndef->length);
 	}
 
