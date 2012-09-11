@@ -144,6 +144,7 @@ static near_bool_t npp_read(int client_fd,
 struct near_p2p_driver npp_driver = {
 	.name = "NPP",
 	.service_name = NEAR_DEVICE_SN_NPP,
+	.fallback_service_name = NULL,
 	.read = npp_read,
 };
 

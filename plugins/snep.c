@@ -521,6 +521,7 @@ error:
 struct near_p2p_driver snep_driver = {
 	.name = "SNEP",
 	.service_name = NEAR_DEVICE_SN_SNEP,
+	.fallback_service_name = NEAR_DEVICE_SN_NPP,
 	.read = snep_read,
 	.push = snep_push,
 	.close = snep_close,

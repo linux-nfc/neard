@@ -332,12 +332,18 @@ static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
 
 		if (strcmp(driver->service_name, service_name) != 0)
 			continue;
-
+		/*
+		 * Because of Android's implementation, we have use SNEP for
+		 * Handover. So, on Handover session, we try to connect to
+		 * the handover service and fallback to SNEP on connect fail.
+		 */
 		fd = p2p_connect(adapter_idx, target_idx, ndef, cb, driver);
 		if (fd < 0)
-			return fd;
-
-		return driver->push(fd, adapter_idx, target_idx, ndef, cb);
+			return  p2p_push(adapter_idx, target_idx, ndef,
+				(char *) driver->fallback_service_name, cb);
+		else
+			return driver->push(fd, adapter_idx, target_idx,
+					ndef, cb);
 	}
 
 	return -1;

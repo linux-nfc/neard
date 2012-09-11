@@ -468,6 +468,7 @@ static int handover_push(int client_fd,
 struct near_p2p_driver handover_driver = {
 	.name = "Handover",
 	.service_name = NEAR_DEVICE_SN_HANDOVER,
+	.fallback_service_name = NEAR_DEVICE_SN_SNEP,
 	.read = handover_read,
 	.push = handover_push,
 	.close = handover_close,
