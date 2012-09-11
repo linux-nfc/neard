@@ -620,8 +620,18 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 	oob = g_try_malloc0(sizeof(struct near_oob_data));
 
 	if (version == BT_MIME_V2_1) {
-		/* Total OOB data size (including size bytes)*/
-		bt_oob_data_size = *((uint16_t *)(bt_data));
+		/*
+		 * Total OOB data size (including size bytes)
+		 * Some implementations (e.g. Android 4.1) stores
+		 * the data_size in big endian but NDEF forum spec (BT Secure
+		 * Simple Pairing) requires a little endian. At the same time,
+		 * the NDEF forum NDEF spec define a payload length as single
+		 * byte (and the payload size IS the oob data size).
+		 */
+		bt_oob_data_size = GUINT16_FROM_LE(*(uint16_t *) bt_data);
+		if (bt_oob_data_size > 0xFF)	/* Big Endian */
+			bt_oob_data_size = GUINT16_FROM_BE(bt_oob_data_size);
+
 		bt_oob_data_size -= 2 ; /* remove oob datas size len */
 
 		/* First item: BD_ADDR (mandatory) */
