@@ -65,6 +65,7 @@
 #define SNEP_REQ_MAX_FRAGMENT_LENGTH 128
 
 struct p2p_snep_data {
+	uint8_t request_code;
 	uint8_t *nfc_data;
 	uint32_t nfc_data_length;
 	uint32_t nfc_data_current_length;
@@ -143,6 +144,83 @@ static void snep_close(int client_fd, int err)
 	g_hash_table_remove(snep_client_hash, GINT_TO_POINTER(client_fd));
 }
 
+static void snep_response_with_info(int client_fd, uint8_t response,
+		uint8_t *data, int length)
+{
+	struct p2p_snep_resp_frame *resp;
+
+	DBG("Response with info 0x%x (len:%d)", response, length);
+
+	resp = g_try_malloc0(sizeof(struct p2p_snep_resp_frame) + length);
+	if (resp == NULL) {
+		DBG("Memory allocation error");
+		return;
+	}
+
+	/* Fill */
+	resp->version = SNEP_VERSION;
+	resp->response = response;
+	resp->length = GUINT32_TO_BE(length);
+	memcpy(resp->info, data, length);
+
+	send(client_fd, resp, sizeof(struct p2p_snep_resp_frame) + length, 0);
+
+	g_free(resp);
+}
+
+/*
+ * snep_parse_handover_record
+ *
+ * The hr frame should be here BUT:
+ *	The first 4 bytes are the Max Allowed Length
+ *
+ * - Because of an Android's BUGs:
+ *	- the Hr frame is not correct; a Hr record
+ *	is embedded in a ... Hr record !!! The author
+ *	used 'Hr' instead of 'cr'
+ *	- The OOB block is badly written:
+ *	- the payload ID should be the same in the 'ac' record
+ *		and the OOB record.
+ *	- The OOB data length bytes must be swapped (Big endian to Little E.)
+ *
+ * The hack fixes the first issue (bluetooth.c fixes the second) !
+ * */
+static void snep_parse_handover_record(int client_fd, uint8_t *ndef,
+		uint32_t nfc_data_length)
+{
+	GList *records;
+	struct near_ndef_message *msg;
+
+	if (ndef == NULL)
+		return;
+
+	/*
+	 * Bugfix Android: Fix 'cr' instead of 'Hr'
+	 * Bug is in Google:HandoverManager.java:645
+	 */
+	if (strncmp((char *)(ndef + 9), "Hr", 2) == 0)
+		*(ndef + 9) = 'c';
+
+	records = near_ndef_parse(ndef, nfc_data_length);
+
+	/*
+	* The first entry on the record list is the Hr record.
+	* We build the Hs based on it.
+	*/
+	msg = near_ndef_prepare_handover_record("Hs", records->data,
+						NEAR_CARRIER_BLUETOOTH);
+
+	near_info("Send SNEP / Hs frame");
+	snep_response_with_info(client_fd, SNEP_RESP_SUCCESS,
+					msg->data, msg->length);
+	g_free(msg->data);
+	g_free(msg);
+
+	near_ndef_records_free(records);
+
+	return;
+}
+
 static near_bool_t snep_read_ndef(int client_fd,
 					struct p2p_snep_data *snep_data)
 {
@@ -184,20 +262,30 @@ static near_bool_t snep_read_ndef(int client_fd,
 		return TRUE;
 	}
 
-	snep_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
-	if (near_device_add_data(snep_data->adapter_idx, snep_data->target_idx,
-					snep_data->nfc_data,
-					snep_data->nfc_data_length) < 0)
-		goto out;
+	if (snep_data->request_code == SNEP_REQ_GET) {
+		/*
+		 * Parse the Hr and send a Hs
+		 * Max allowed size in the first 4 bytes
+		 */
+		snep_parse_handover_record(client_fd, snep_data->nfc_data + 4,
+				snep_data->nfc_data_length - 4);
+	} else {
+		snep_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
+		if (near_device_add_data(snep_data->adapter_idx,
+				snep_data->target_idx,
+				snep_data->nfc_data,
+				snep_data->nfc_data_length) < 0)
+			goto out;
 
-	device = near_device_get_device(snep_data->adapter_idx,
-						snep_data->target_idx);
-	if (device == NULL)
-		goto out;
+		device = near_device_get_device(snep_data->adapter_idx,
+				snep_data->target_idx);
+		if (device == NULL)
+			goto out;
 
-	records = near_ndef_parse(snep_data->nfc_data,
+		records = near_ndef_parse(snep_data->nfc_data,
 				snep_data->nfc_data_length);
-	near_device_add_records(device, records, snep_data->cb, 0);
+		near_device_add_records(device, records, snep_data->cb, 0);
+	}
 
 out:
 	g_hash_table_remove(snep_client_hash, GINT_TO_POINTER(client_fd));
@@ -257,14 +345,16 @@ static near_bool_t snep_read(int client_fd,
 	g_hash_table_insert(snep_client_hash,
 					GINT_TO_POINTER(client_fd), snep_data);
 
+	snep_data->request_code = frame.request;
+
 	DBG("Request 0x%x", frame.request);
 
 	switch (frame.request) {
 	case SNEP_REQ_CONTINUE:
-	case SNEP_REQ_GET:
 		near_error("Unsupported SNEP request code");
 		snep_response_noinfo(client_fd, SNEP_RESP_NOT_IMPL);
 		return FALSE;
+	case SNEP_REQ_GET:
 	case SNEP_REQ_PUT:
 		return snep_read_ndef(client_fd, snep_data);
 	}
