@@ -473,7 +473,12 @@ static int snep_push_response(struct p2p_snep_put_req_data *req)
 			return bytes_recv;
 		}
 
-		snep_parse_handover_record(req->fd, ndef, ndef_len);
+		/* Not enough bytes */
+		if (bytes_recv < 6)
+			return -EINVAL;
+
+		if (strncmp((char *)(ndef + 3), "Hs", 2) == 0)
+			snep_parse_handover_record(req->fd, ndef, ndef_len);
 
 		g_free(ndef);
 
