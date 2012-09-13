@@ -581,6 +581,9 @@ int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 	if (dep == FALSE && adapter->constant_poll == TRUE)
 		adapter_start_poll(adapter);
 
+	if (dep == TRUE)
+		__near_adapter_devices_changed(idx);
+
 	return 0;
 }
 
@@ -677,8 +680,6 @@ static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
 
 		return;
 	}
-
-	__near_adapter_devices_changed(adapter_idx);
 }
 
 static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
@@ -807,6 +808,8 @@ int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
 	adapter->polling = FALSE;
 	adapter->dep_up = TRUE;
 	polling_changed(adapter);
+
+	__near_adapter_devices_changed(idx);
 
 	return adapter_add_device(adapter, 0, nfcid, nfcid_len);
 }
