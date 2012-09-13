@@ -26,7 +26,7 @@ def property_changed_adapter(name, value, path):
     adapter = path[path.rfind("/") + 1:]
     if name in ["Polling"]:
            val = extract_bool(value)
-    elif name in ["Tags"]:
+    elif name in ["Tags", "Devices"]:
 	   val = extract_list(value)
     else:
 	   val = str(value)
