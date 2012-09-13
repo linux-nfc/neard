@@ -269,6 +269,13 @@ static near_bool_t snep_read_ndef(int client_fd,
 
 	if (snep_data->request_code == SNEP_REQ_GET) {
 		/*
+		 * This goes against the SNEP specification:
+		 * "The default server SHALL NOT accept Get requests." but
+		 * the first Android Handover implementation (Jelly Bean)
+		 * does Handover through SNEP via GET frames...Since Android
+		 * seems popular these days, we'd better support that spec
+		 * violation.
+		 *
 		 * Parse the Hr and send a Hs
 		 * Max allowed size in the first 4 bytes
 		 */
