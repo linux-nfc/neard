@@ -63,6 +63,14 @@
 #define COD_SIZE		3
 #define OOB_SP_SIZE		16
 
+#define get_unaligned(ptr)			\
+({						\
+	struct __attribute__((packed)) {	\
+		typeof(*(ptr)) __v;		\
+	} *__p = (typeof(__p)) (ptr);		\
+	__p->__v;				\
+})
+
 struct near_oob_data {
 	char *def_adapter;
 
@@ -628,7 +636,8 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 		 * the NDEF forum NDEF spec define a payload length as single
 		 * byte (and the payload size IS the oob data size).
 		 */
-		bt_oob_data_size = GUINT16_FROM_LE(*(uint16_t *) bt_data);
+		bt_oob_data_size =
+			GUINT16_FROM_LE(get_unaligned((uint16_t *) bt_data));
 		if (bt_oob_data_size > 0xFF)	/* Big Endian */
 			bt_oob_data_size = GUINT16_FROM_BE(bt_oob_data_size);
 
