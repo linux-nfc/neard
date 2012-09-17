@@ -129,6 +129,7 @@ int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb);
 int __near_device_init(void);
 void __near_device_cleanup(void);
 const char *__near_device_get_path(struct near_device *device);
+uint32_t __neard_device_get_idx(struct near_device *device);
 struct near_device *__near_device_add(uint32_t idx, uint32_t target_idx,
 					uint8_t *nfcid, uint8_t nfcid_len);
 void __near_device_remove(struct near_device *device);

@@ -117,6 +117,11 @@ const char *__near_device_get_path(struct near_device *device)
 	return device->path;
 }
 
+uint32_t __neard_device_get_idx(struct near_device *device)
+{
+	return device->target_idx;
+}
+
 static void append_records(DBusMessageIter *iter, void *user_data)
 {
 	struct near_device *device = user_data;
