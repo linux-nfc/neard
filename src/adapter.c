@@ -581,8 +581,14 @@ int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 	if (dep == FALSE && adapter->constant_poll == TRUE)
 		adapter_start_poll(adapter);
 
-	if (dep == TRUE)
+	if (dep == FALSE) {
+		uint32_t target_idx;
+
+		target_idx =  __neard_device_get_idx(adapter->device_link);
+		__near_adapter_remove_target(idx, target_idx);
+	} else {
 		__near_adapter_devices_changed(idx);
+	}
 
 	return 0;
 }
