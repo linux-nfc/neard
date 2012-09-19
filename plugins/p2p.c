@@ -264,6 +264,7 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 				G_IO_IN | G_IO_HUP | G_IO_NVAL | G_IO_ERR,
 				p2p_listener_event,
 				(gpointer) server_data);
+	g_io_channel_unref(channel);
 
 	server_list = g_list_append(server_list, server_data);
 
