@@ -412,7 +412,7 @@ static int nfctype1_read(uint32_t adapter_idx,
 
 	uid = near_tag_get_nfcid(adapter_idx, target_idx, &uid_length);
 	if (uid == NULL || uid_length != UID_LENGTH) {
-		if (uid != NULL && uid_length != UID_LENGTH) {
+		if (uid != NULL) {
 			near_error("Invalid UID");
 
 			g_free(uid);
