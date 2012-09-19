@@ -119,6 +119,12 @@ DBusMessage *__near_error_not_found(DBusMessage *msg)
 						".NotFound", "Not found");
 }
 
+DBusMessage *__near_error_not_polling(DBusMessage *msg)
+{
+	return g_dbus_create_error(msg, NFC_ERROR_INTERFACE
+						".Failed", "Not polling");
+}
+
 DBusMessage *__near_error_no_carrier(DBusMessage *msg)
 {
 	return g_dbus_create_error(msg, NFC_ERROR_INTERFACE

@@ -424,6 +424,9 @@ static DBusMessage *stop_poll_loop(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
+	if (adapter->polling == FALSE)
+		return __near_error_not_polling(msg);
+
 	err = __near_netlink_stop_poll(adapter->idx);
 	if (err < 0)
 		return __near_error_failed(msg, -err);

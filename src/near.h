@@ -51,6 +51,7 @@ DBusMessage *__near_error_not_unique(DBusMessage *msg);
 DBusMessage *__near_error_not_supported(DBusMessage *msg);
 DBusMessage *__near_error_not_implemented(DBusMessage *msg);
 DBusMessage *__near_error_not_found(DBusMessage *msg);
+DBusMessage *__near_error_not_polling(DBusMessage *msg);
 DBusMessage *__near_error_no_carrier(DBusMessage *msg);
 DBusMessage *__near_error_in_progress(DBusMessage *msg);
 DBusMessage *__near_error_already_exists(DBusMessage *msg);
