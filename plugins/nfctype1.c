@@ -336,6 +336,9 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		err = -EOPNOTSUPP;
 	}
 
+	if (err < 0)
+		g_free(t1_tag);
+
 out_err:
 	DBG("err %d", err);
 
