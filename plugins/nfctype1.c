@@ -133,7 +133,7 @@ static void t1_cookie_release(struct t1_cookie *cookie)
 }
 
 /* Read segments (128 bytes) and store them to the tag data block */
-static int segment_read_recv(uint8_t *resp, int length, void *data)
+static int data_recv(uint8_t *resp, int length, void *data)
 {
 	struct type1_tag *t1_tag = data;
 	struct type1_cmd t1_cmd;
@@ -168,7 +168,7 @@ static int segment_read_recv(uint8_t *resp, int length, void *data)
 
 		err = near_adapter_send(t1_tag->adapter_idx,
 				(uint8_t *) &t1_cmd, sizeof(t1_cmd),
-				segment_read_recv, t1_tag);
+				data_recv, t1_tag);
 		if (err < 0)
 			goto out_err;
 	} else { /* This is the end */
@@ -234,7 +234,7 @@ static int read_dynamic_tag(uint8_t *cc, int length, void *data)
 
 	return near_adapter_send(t1_tag->adapter_idx,
 			(uint8_t *)&t1_cmd, sizeof(t1_cmd),
-			segment_read_recv, t1_tag);
+			data_recv, t1_tag);
 }
 
 static int meta_recv(uint8_t *resp, int length, void *data)
@@ -505,7 +505,7 @@ static int write_nmn_e1(struct t1_cookie *cookie)
 					sizeof(cmd), write_nmn_e1_resp, cookie);
 }
 
-static int data_write(uint8_t *resp, int length, void *data)
+static int data_write_resp(uint8_t *resp, int length, void *data)
 {
 	struct t1_cookie *cookie = data;
 	uint8_t addr = 0;
@@ -541,7 +541,7 @@ static int data_write(uint8_t *resp, int length, void *data)
 	cookie->current_byte++;
 
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
-					sizeof(cmd), data_write, cookie);
+					sizeof(cmd), data_write_resp, cookie);
 	if (err < 0)
 		goto out;
 
@@ -556,7 +556,7 @@ out:
 	return err;
 }
 
-static int write_nmn_0(uint32_t adapter_idx, uint32_t target_idx,
+static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 			struct near_ndef_message *ndef, near_tag_io_cb cb)
 {
 	int err;
@@ -595,7 +595,7 @@ static int write_nmn_0(uint32_t adapter_idx, uint32_t target_idx,
 	g_free(uid);
 
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
-					sizeof(cmd), data_write, cookie);
+					sizeof(cmd), data_write_resp, cookie);
 	if (err < 0)
 		goto out;
 
@@ -642,7 +642,7 @@ static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 		}
 	}
 
-	return write_nmn_0(adapter_idx, target_idx, ndef, cb);
+	return data_write(adapter_idx, target_idx, ndef, cb);
 }
 
 static int check_presence(uint8_t *resp, int length, void *data)

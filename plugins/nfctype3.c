@@ -204,7 +204,7 @@ static int check_recv_frame(uint8_t *resp, uint8_t reply_code)
 	return err;
 }
 
-static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
+static int data_recv(uint8_t *resp, int length, void *data)
 {
 	struct type3_tag *tag = data;
 	struct type3_cmd cmd;
@@ -255,7 +255,8 @@ static int nfctype3_data_recv(uint8_t *resp, int length, void *data)
 				tag->IDm, &cmd);
 
 	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd, cmd.len,
-			nfctype3_data_recv, tag);
+				data_recv, tag);
+
 	if (err < 0)
 		goto out;
 
@@ -270,7 +271,7 @@ out:
 	return err;
 }
 
-static int nfctype3_data_read(struct type3_tag *tag)
+static int data_read(struct type3_tag *tag)
 {
 	struct type3_cmd cmd;
 	uint32_t adapter_idx;
@@ -286,7 +287,7 @@ static int nfctype3_data_read(struct type3_tag *tag)
 
 	return near_adapter_send(adapter_idx,
 					(uint8_t *) &cmd, cmd.len,
-					nfctype3_data_recv, tag);
+					data_recv, tag);
 }
 
 /* Read block 0 to retrieve the data length */
@@ -356,7 +357,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	t3_tag->cb = cookie->cb;
 	t3_tag->tag = tag;
 
-	err = nfctype3_data_read(t3_tag);
+	err = data_read(t3_tag);
 
 out:
 	if (err < 0) {
@@ -778,9 +779,9 @@ static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
 	return data_write(adapter_idx, target_idx, ndef, tag, cb);
 }
 
-static int nfctype3_check_recv_UID(uint8_t *resp, int length, void *data)
+static int check_presence(uint8_t *resp, int length, void *data)
 {
-	struct t3_cookie *rcv_cookie = data;
+	struct t3_cookie *cookie = data;
 	int err = 0;
 
 	DBG("length %d", length);
@@ -788,11 +789,11 @@ static int nfctype3_check_recv_UID(uint8_t *resp, int length, void *data)
 	if (length < 0)
 		err = -EIO;
 
-	if (rcv_cookie->cb)
-		rcv_cookie->cb(rcv_cookie->adapter_idx,
-				rcv_cookie->target_idx, err);
+	if (cookie->cb)
+		cookie->cb(cookie->adapter_idx,
+				cookie->target_idx, err);
 
-	t3_cookie_release(rcv_cookie);
+	t3_cookie_release(cookie);
 
 	return err;
 }
@@ -825,7 +826,8 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 	cookie->cb = cb;
 
 	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
-			cmd.len, nfctype3_check_recv_UID, cookie);
+				cmd.len, check_presence, cookie);
+
 	if (err < 0)
 		goto out;
 
