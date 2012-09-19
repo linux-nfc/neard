@@ -72,7 +72,7 @@ EXTRA_DIST = src/genbuiltin $(doc_files)
 test_scripts = test/disable-adapter test/enable-adapter test/list-adapters \
 		test/dump-device test/dump-tag test/dump-record \
 		test/monitor-near test/start-poll test/stop-poll test/write-tag \
-		test/push-device
+		test/push-device test/bt-handover
 
 if TEST
 testdir = $(pkglibdir)/test

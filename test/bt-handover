@@ -1,0 +1,69 @@
+#!/usr/bin/python
+
+import os
+import sys
+import gobject
+
+import dbus
+import dbus.mainloop.glib
+
+from dbus.lowlevel import MethodCallMessage, HANDLER_RESULT_NOT_YET_HANDLED
+
+mainloop = gobject.MainLoop()
+
+def property_changed_adapter(name, value, path):
+    if name in ["Devices"]:
+        if (len(value) == 0):
+            print "Lost device, exiting"
+            mainloop.quit()
+        else:
+            device_path = value[0]
+
+            print "Pairing with %s" % (device_path)
+
+            device = dbus.Interface(bus.get_object("org.neard", device_path), "org.neard.Device")
+            device.Push(({ "Type" : "Handover", "Carrier" : "bluetooth"}))
+
+if __name__ == '__main__':
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+	bus = dbus.SystemBus()
+
+        bluez_manager = dbus.Interface(bus.get_object("org.bluez", "/"), "org.bluez.Manager")
+	
+	bluez_adapter_path = bluez_manager.DefaultAdapter()
+
+	bluez_adapter = dbus.Interface(bus.get_object("org.bluez", bluez_adapter_path),
+							"org.bluez.Adapter")
+
+	for bluez_path in bluez_adapter.ListDevices():
+		print("Removing %s" % (bluez_path))
+		bluez_adapter.RemoveDevice(bluez_path)
+
+
+	manager = dbus.Interface(bus.get_object("org.neard", "/"),
+					"org.neard.Manager")
+
+	properties = manager.GetProperties()
+	device_path = properties["Adapters"][0]
+	adapter = dbus.Interface(bus.get_object("org.neard", device_path),
+					"org.neard.Adapter")
+
+        adapter_properties = adapter.GetProperties()
+
+        for key in adapter_properties.keys():
+            if key in ["Polling"]:
+                if adapter_properties[key] == dbus.Boolean(1):
+                    print "Stoping poll on %s" % (device_path)
+                    adapter.StopPollLoop()
+
+        print "Starting poll on %s" % (device_path)
+	adapter.StartPollLoop("Initiator")
+
+	bus.add_signal_receiver(property_changed_adapter,
+				bus_name="org.neard",
+				dbus_interface="org.neard.Adapter",
+				signal_name = "PropertyChanged",
+				path_keyword="path")
+
+	mainloop.run()
