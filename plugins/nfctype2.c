@@ -204,12 +204,12 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = length;
-		goto out;
+		goto out_err;
 	}
 
 	if (resp[0] != 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	cc = TAG_DATA_CC(resp + NFC_HEADER_SIZE);
@@ -220,18 +220,18 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 			TYPE2_DATA_SIZE_48 << 3));
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 	if (tag == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	t2_tag = g_try_malloc0(sizeof(struct type2_tag));
 	if (t2_tag == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	t2_tag->adapter_idx = cookie->adapter_idx;
@@ -264,7 +264,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 out_tag:
 	g_free(t2_tag);
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -342,7 +342,7 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 
 	if (length < 0 || resp[0] != 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	if (cookie->ndef->offset > cookie->ndef->length) {
@@ -375,11 +375,11 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 					sizeof(cmd), data_write_resp, cookie);
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -418,11 +418,11 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 					sizeof(cmd), data_write_resp, cookie);
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	t2_cookie_release(cookie);
 
 	return err;
@@ -525,7 +525,7 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 		err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
 				CMD_READ_SIZE, check_presence, cookie);
 		if (err < 0)
-			goto out;
+			goto out_err;
 
 		break;
 	/* Specific Mifare check presence */
@@ -543,7 +543,7 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 
 	return err;
 
-out:
+out_err:
 	t2_cookie_release(cookie);
 
 	return err;
@@ -559,19 +559,19 @@ static int format_resp(uint8_t *resp, int length, void *data)
 
 	if (length < 0 || resp[0] != 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 	if (tag == NULL) {
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	DBG("Done formatting");
 	near_tag_set_blank(tag, FALSE);
 
-out:
+out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -611,7 +611,7 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 
 	if (t2_cc == NULL || cc_ndef == NULL || cookie == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	t2_cc->magic = TYPE2_MAGIC;
@@ -633,7 +633,7 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), format_resp, cookie);
 
-out:
+out_err:
 	if (err < 0) {
 		g_free(t2_cc);
 		g_free(cc_ndef);

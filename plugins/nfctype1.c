@@ -516,12 +516,12 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = length;
-		goto out;
+		goto out_err;
 	}
 
 	if (resp[OFFSET_STATUS_CMD] != 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	if (cookie->ndef->offset > cookie->ndef->length)
@@ -543,11 +543,11 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), data_write_resp, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -597,11 +597,11 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), data_write_resp, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	t1_cookie_release(cookie);
 
 	return err;
@@ -698,11 +698,11 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 	err = near_adapter_send(adapter_idx, (uint8_t *) &t1_cmd,
 				sizeof(t1_cmd), check_presence, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	t1_cookie_release(cookie);
 
 	return err;
@@ -720,7 +720,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 
 	if (length < 0 || resp[0] != 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	if (cookie->current_byte < LEN_CC_BYTES) {
@@ -734,21 +734,21 @@ static int format_resp(uint8_t *resp, int length, void *data)
 		err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), format_resp, cookie);
 		if (err < 0)
-			goto out;
+			goto out_err;
 
 		return 0;
 	} else {
 		tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 		if (tag == NULL) {
 			err = -EINVAL;
-			goto out;
+			goto out_err;
 		}
 
 		DBG("Done formatting");
 		near_tag_set_blank(tag, FALSE);
 	}
 
-out:
+out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -785,7 +785,7 @@ static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
 	cookie = g_try_malloc0(sizeof(struct t1_cookie));
 	if (cookie == NULL) {
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	cookie->adapter_idx = adapter_idx;
@@ -810,11 +810,11 @@ static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 					sizeof(cmd), format_resp, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	g_free(cookie);
 	g_free(uid);
 

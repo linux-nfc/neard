@@ -721,7 +721,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
 	if (cookie == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	cookie->adapter_idx = adapter_idx;
@@ -736,7 +736,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	if (cookie->max_ndef_size < cookie->ndef->length) {
 		near_error("not enough space on tag to write data");
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	if ((cookie->ndef->length - cookie->ndef->offset) >
@@ -755,11 +755,11 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	}
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	t4_cookie_release(err, cookie);
 
 	return err;

@@ -222,7 +222,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	nfc_data = near_tag_get_data(tag->tag, &data_length);
@@ -258,11 +258,11 @@ static int data_recv(uint8_t *resp, int length, void *data)
 				data_recv, tag);
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && tag->cb)
 		tag->cb(adapter_idx, target_idx, err);
 
@@ -303,17 +303,17 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_READ_WO_ENCRYPT);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	if (resp[OFS_READ_FLAG] != 0) {
 		DBG("Status 0x%x", resp[OFS_READ_FLAG]);
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	/* Block 0:[11 - 13]: length is a 3 bytes value */
@@ -326,12 +326,12 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
 					NULL, ndef_data_length);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 	if (tag == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	/* Block 0:[10]: RW Flag. 1 for RW */
@@ -343,7 +343,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	t3_tag = g_try_malloc0(sizeof(struct type3_tag));
 	if (t3_tag == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	memcpy(t3_tag->IDm, cookie->IDm, LEN_ID);
@@ -359,7 +359,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 
 	err = data_read(t3_tag);
 
-out:
+out_err:
 	if (err < 0) {
 		if (cookie->cb)
 			cookie->cb(cookie->adapter_idx, cookie->target_idx,
@@ -383,23 +383,23 @@ static int poll_ndef_system_code(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_POLL);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	prepare_read_block(META_BLOCK_START, cookie->IDm, &cmd);
 
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, nfctype3_recv_block_0, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx,
 				cookie->target_idx, err);
@@ -420,12 +420,12 @@ static int check_sys_op_in_mc_block(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_READ_WO_ENCRYPT);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	if (resp[SYSTEM_OPTION_OFFSET] == 0x00) {
 		DBG("Blank tag detected");
@@ -434,13 +434,13 @@ static int check_sys_op_in_mc_block(uint8_t *resp, int length, void *data)
 					cookie->target_idx,
 					NULL, 1 /* dummy length */);
 		if (err < 0)
-			goto out;
+			goto out_err;
 
 		tag = near_tag_get_tag(cookie->adapter_idx,
 					cookie->target_idx);
 		if (tag == NULL) {
 			err = -ENOMEM;
-			goto out;
+		goto out_err;
 		}
 
 		near_tag_set_idm(tag, cookie->IDm, LEN_ID);
@@ -469,11 +469,11 @@ static int check_sys_op_in_mc_block(uint8_t *resp, int length, void *data)
 	}
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -493,12 +493,12 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_POLL);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	cookie->ic_type = resp[IC_TYPE_OFFSET];
 	memcpy(cookie->IDm, resp + OFS_IDM, LEN_ID);
@@ -529,11 +529,11 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 	}
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -586,16 +586,16 @@ static int update_attr_block_cb(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	DBG("Done writing");
 
-out:
+out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -641,17 +641,17 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	if (cookie->ndef->offset >= cookie->ndef->length) {
 		err = update_attr_block(cookie);
 		if (err < 0)
-			goto out;
+			goto out_err;
 
 		return 0;
 	}
@@ -673,11 +673,11 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd, cmd.len,
 						data_write_resp, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -703,7 +703,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
 	if (cookie == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	cookie->adapter_idx = adapter_idx;
@@ -715,7 +715,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	idm = near_tag_get_idm(tag, &len);
 	if (idm == NULL) {
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	memcpy(cookie->IDm, idm, len);
@@ -723,7 +723,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	attr = near_tag_get_attr_block(tag, &len);
 	if (attr == NULL) {
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	memcpy(cookie->attr, attr, len);
@@ -732,7 +732,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	if (cookie->ndef->length > (nmaxb * BLOCK_SIZE)) {
 		near_error("not enough space on tag");
 		err = -ENOSPC;
-		goto out;
+		goto out_err;
 	}
 
 	cookie->attr[9] = 0x0F; /* writing data in progress */
@@ -751,11 +751,11 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	err = near_adapter_send(adapter_idx, (uint8_t *) &cmd, cmd.len,
 						data_write_resp, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	t3_cookie_release(cookie);
 
 	return err;
@@ -829,11 +829,11 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 				cmd.len, check_presence, cookie);
 
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	t3_cookie_release(cookie);
 
 	return err;
@@ -849,17 +849,17 @@ static int format_resp(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
 	if (tag == NULL) {
 		err = -ENOMEM;
-		goto out;
+		goto out_err;
 	}
 
 	near_tag_set_ro(tag, FALSE);
@@ -869,7 +869,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 
 	DBG("Formatting is done");
 
-out:
+out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -889,12 +889,12 @@ static int write_attr_block(uint8_t *resp, int length , void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_WRITE_WO_ENCRYPT);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	cookie->attr[0] = NDEF_MAPPING_VERSION;
 	cookie->attr[1] = MAX_READ_BLOCKS_PER_CHECK;
@@ -923,11 +923,11 @@ static int write_attr_block(uint8_t *resp, int length , void *data)
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, format_resp, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -946,17 +946,17 @@ static int write_mc_block(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	err = check_recv_frame(resp, RESP_READ_WO_ENCRYPT);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	if (resp[OFS_READ_FLAG] != 0) {
 		DBG("Status 0x%x", resp[OFS_READ_FLAG]);
 		err = -EIO;
-		goto out;
+		goto out_err;
 	}
 
 	memcpy(cookie->mc_block, resp + 14, BLOCK_SIZE);
@@ -970,11 +970,11 @@ static int write_mc_block(uint8_t *resp, int length, void *data)
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, write_attr_block, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
@@ -1015,7 +1015,7 @@ static int nfctype3_format(uint32_t adapter_idx,
 	idm = near_tag_get_idm(tag, &len);
 	if (idm == NULL) {
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	memcpy(cookie->IDm, idm, len);
@@ -1024,11 +1024,11 @@ static int nfctype3_format(uint32_t adapter_idx,
 	err = near_adapter_send(cookie->adapter_idx, (uint8_t *) &cmd,
 				cmd.len, write_mc_block, cookie);
 	if (err < 0)
-		goto out;
+		goto out_err;
 
 	return 0;
 
-out:
+out_err:
 	t3_cookie_release(cookie);
 
 	return err;
