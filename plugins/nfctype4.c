@@ -274,8 +274,12 @@ static int ISO_Update(uint16_t offset, uint8_t nlen,
 			cookie);
 }
 
-static int t4_cookie_release(int err, struct t4_cookie *cookie)
+static int t4_cookie_release(int err, void *data)
 {
+	struct t4_cookie *cookie = data;
+
+	DBG("%p", cookie);
+
 	if (cookie == NULL)
 		return err;
 
@@ -760,9 +764,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out_err:
-	t4_cookie_release(err, cookie);
-
-	return err;
+	return t4_cookie_release(err, cookie);
 }
 
 static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,

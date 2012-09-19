@@ -104,10 +104,14 @@ struct type2_cc {
 	uint8_t read_write;
 };
 
-static void t2_cookie_release(struct t2_cookie *cookie)
+static int t2_cookie_release(int err, void *data)
 {
+	struct t2_cookie *cookie = data;
+
+	DBG("%p", cookie);
+
 	if (cookie == NULL)
-		return;
+		return err;
 
 	if (cookie->ndef)
 		g_free(cookie->ndef->data);
@@ -115,6 +119,8 @@ static void t2_cookie_release(struct t2_cookie *cookie)
 	g_free(cookie->ndef);
 	g_free(cookie);
 	cookie = NULL;
+
+	return err;
 }
 
 static int data_recv(uint8_t *resp, int length, void *data)
@@ -257,9 +263,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	if (err < 0)
 		goto out_tag;
 
-	t2_cookie_release(cookie);
-
-	return 0;
+	return t2_cookie_release(err, cookie);
 
 out_tag:
 	g_free(t2_tag);
@@ -268,9 +272,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t2_cookie_release(cookie);
-
-	return err;
+	return t2_cookie_release(err, cookie);
 }
 
 static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
@@ -351,9 +353,7 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 		if (cookie->cb)
 			cookie->cb(cookie->adapter_idx, cookie->target_idx, 0);
 
-		t2_cookie_release(cookie);
-
-		return 0;
+		return t2_cookie_release(0, cookie);
 	}
 
 	cmd.cmd = CMD_WRITE;
@@ -383,9 +383,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t2_cookie_release(cookie);
-
-	return err;
+	return t2_cookie_release(err, cookie);
 }
 
 static int data_write(uint32_t adapter_idx, uint32_t target_idx,
@@ -423,9 +421,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out_err:
-	t2_cookie_release(cookie);
-
-	return err;
+	return t2_cookie_release(err, cookie);
 }
 
 static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
@@ -492,9 +488,7 @@ static int check_presence(uint8_t *resp, int length, void *data)
 		cookie->cb(cookie->adapter_idx,
 				cookie->target_idx, err);
 
-	t2_cookie_release(cookie);
-
-	return err;
+	return t2_cookie_release(err, cookie);
 }
 
 static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
@@ -544,9 +538,7 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 	return err;
 
 out_err:
-	t2_cookie_release(cookie);
-
-	return err;
+	return t2_cookie_release(err, cookie);
 }
 
 static int format_resp(uint8_t *resp, int length, void *data)
@@ -575,9 +567,7 @@ out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t2_cookie_release(cookie);
-
-	return err;
+	return t2_cookie_release(err, cookie);
 }
 
 static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,

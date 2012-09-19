@@ -187,9 +187,10 @@ struct mifare_cmd {
 	uint8_t nfcid[NFC_NFCID1_MAXSIZE];
 } __attribute__((packed));
 
-/* Common free func */
-static int mifare_release(int err, struct mifare_cookie *cookie)
+static int mifare_release(int err, void *data)
 {
+	struct mifare_cookie *cookie = data;
+
 	DBG("%p", cookie);
 
 	if (cookie == NULL)

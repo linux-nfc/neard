@@ -135,10 +135,14 @@ struct t3_cookie {
 	uint8_t mc_block[BLOCK_SIZE];
 };
 
-static void t3_cookie_release(struct t3_cookie *cookie)
+static int t3_cookie_release(int err, void *data)
 {
+	struct t3_cookie *cookie = data;
+
+	DBG("%p", cookie);
+
 	if (cookie == NULL)
-		return;
+		return err;
 
 	if (cookie->ndef != NULL)
 		g_free(cookie->ndef->data);
@@ -146,6 +150,8 @@ static void t3_cookie_release(struct t3_cookie *cookie)
 	g_free(cookie->ndef);
 	g_free(cookie);
 	cookie = NULL;
+
+	return err;
 }
 
 /* common: Initialize structure to write block */
@@ -368,9 +374,7 @@ out_err:
 		g_free(t3_tag);
 	}
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int poll_ndef_system_code(uint8_t *resp, int length, void *data)
@@ -404,9 +408,7 @@ out_err:
 		cookie->cb(cookie->adapter_idx,
 				cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int check_sys_op_in_mc_block(uint8_t *resp, int length, void *data)
@@ -451,9 +453,7 @@ static int check_sys_op_in_mc_block(uint8_t *resp, int length, void *data)
 			cookie->cb(cookie->adapter_idx,
 					cookie->target_idx, 0);
 
-		t3_cookie_release(cookie);
-
-		return 0;
+		return t3_cookie_release(0, cookie);
 	} else {
 		/* CMD POLL */
 		cmd.cmd	 = CMD_POLL;	/* POLL command */
@@ -477,9 +477,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int receive_system_code(uint8_t *resp, int length, void *data)
@@ -537,9 +535,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int nfctype3_read(uint32_t adapter_idx,
@@ -599,9 +595,7 @@ out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int update_attr_block(struct t3_cookie *cookie)
@@ -681,9 +675,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int data_write(uint32_t adapter_idx, uint32_t target_idx,
@@ -756,9 +748,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out_err:
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
@@ -793,9 +783,7 @@ static int check_presence(uint8_t *resp, int length, void *data)
 		cookie->cb(cookie->adapter_idx,
 				cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int nfctype3_check_presence(uint32_t adapter_idx,
@@ -834,9 +822,7 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 	return 0;
 
 out_err:
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int format_resp(uint8_t *resp, int length, void *data)
@@ -873,9 +859,7 @@ out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int write_attr_block(uint8_t *resp, int length , void *data)
@@ -931,9 +915,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int write_mc_block(uint8_t *resp, int length, void *data)
@@ -978,9 +960,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static int nfctype3_format(uint32_t adapter_idx,
@@ -1029,9 +1009,7 @@ static int nfctype3_format(uint32_t adapter_idx,
 	return 0;
 
 out_err:
-	t3_cookie_release(cookie);
-
-	return err;
+	return t3_cookie_release(err, cookie);
 }
 
 static struct near_tag_driver type1_driver = {

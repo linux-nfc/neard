@@ -119,10 +119,14 @@ static void t1_init_cmd(struct type1_tag *tag, struct type1_cmd *cmd)
 	memcpy(cmd->uid, tag->uid, UID_LENGTH);
 }
 
-static void t1_cookie_release(struct t1_cookie *cookie)
+static int t1_cookie_release(int err, void *data)
 {
+	struct t1_cookie *cookie = data;
+
+	DBG("%p", cookie);
+
 	if (cookie == NULL)
-		return;
+		return err;
 
 	if (cookie->ndef)
 		g_free(cookie->ndef->data);
@@ -130,6 +134,8 @@ static void t1_cookie_release(struct t1_cookie *cookie)
 	g_free(cookie->ndef);
 	g_free(cookie);
 	cookie = NULL;
+
+	return err;
 }
 
 /* Read segments (128 bytes) and store them to the tag data block */
@@ -345,9 +351,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 /*
@@ -395,9 +399,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 static int nfctype1_read_meta(uint32_t adapter_idx, uint32_t target_idx,
@@ -434,7 +436,7 @@ static int nfctype1_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 	}
 
 	if (err < 0)
-		t1_cookie_release(cookie);
+		t1_cookie_release(err, cookie);
 
 	return err;
 }
@@ -485,9 +487,7 @@ static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
 
 	cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 static int write_nmn_e1(struct t1_cookie *cookie)
@@ -551,9 +551,7 @@ out_err:
 	if (err < 0 && cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 static int data_write(uint32_t adapter_idx, uint32_t target_idx,
@@ -602,9 +600,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out_err:
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 /*
@@ -659,9 +655,7 @@ static int check_presence(uint8_t *resp, int length, void *data)
 		cookie->cb(cookie->adapter_idx,
 				cookie->target_idx, err);
 
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 static int nfctype1_check_presence(uint32_t adapter_idx,
@@ -703,9 +697,7 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 	return 0;
 
 out_err:
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 static int format_resp(uint8_t *resp, int length, void *data)
@@ -752,9 +744,7 @@ out_err:
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	t1_cookie_release(cookie);
-
-	return err;
+	return t1_cookie_release(err, cookie);
 }
 
 static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
