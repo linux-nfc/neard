@@ -400,13 +400,52 @@ out_err:
 	return err;
 }
 
+static int nfctype1_read_meta(uint32_t adapter_idx, uint32_t target_idx,
+						near_tag_io_cb cb, uint8_t *uid)
+{
+	struct type1_cmd cmd;
+	struct t1_cookie *cookie;
+	int err;
+
+	DBG("");
+
+	memset(&cmd, 0, sizeof(cmd));
+
+	cookie = g_try_malloc0(sizeof(struct t1_cookie));
+	if (cookie == NULL)
+		return -ENOMEM;
+
+	cookie->adapter_idx = adapter_idx;
+	cookie->target_idx = target_idx;
+	cookie->cb = cb;
+
+	if (uid != NULL) {
+		cmd.cmd = CMD_READ_ALL; /* Read ALL cmd give 124 bytes */
+		memcpy(cmd.uid, uid, UID_LENGTH);
+		memcpy(cookie->uid, uid, UID_LENGTH);
+
+		err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
+						sizeof(cmd), meta_recv, cookie);
+	} else {
+		cmd.cmd = CMD_RID;
+
+		err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
+						sizeof(cmd), rid_resp, cookie);
+	}
+
+	if (err < 0)
+		t1_cookie_release(cookie);
+
+	return err;
+}
+
 /* First step: RID to get the tag UID */
 static int nfctype1_read(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
-	struct type1_cmd t1_cmd;
-	struct t1_cookie *cookie;
-	uint8_t *uid, uid_length;
+	uint8_t *uid;
+	uint8_t  uid_length;
+	int err;
 
 	DBG("");
 
@@ -419,46 +458,14 @@ static int nfctype1_read(uint32_t adapter_idx,
 			return -EINVAL;
 		}
 
-		t1_cmd.cmd = CMD_RID;
-		t1_cmd.addr = 0;
-		t1_cmd.data[0] = 0;
-		memset(t1_cmd.uid, 0, UID_LENGTH);
-
-		cookie = g_try_malloc0(sizeof(struct t1_cookie));
-		if (cookie == NULL) {
-			g_free(uid);
-			return -ENOMEM;
-		}
-
-		cookie->adapter_idx = adapter_idx;
-		cookie->target_idx = target_idx;
-		cookie->cb = cb;
-
-		return near_adapter_send(adapter_idx,
-					(uint8_t *) &t1_cmd, sizeof(t1_cmd),
-					rid_resp, cookie);
+		return nfctype1_read_meta(adapter_idx, target_idx, cb, NULL);
 	}
 
-	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
-	t1_cmd.addr = 0;	       /* NA */
-	t1_cmd.data[0] = 0;
-	memcpy(t1_cmd.uid, uid, UID_LENGTH);
-
-	cookie = g_try_malloc0(sizeof(struct t1_cookie));
-	if (cookie == NULL) {
-		g_free(uid);
-		return -ENOMEM;
-	}
-
-	cookie->adapter_idx = adapter_idx;
-	cookie->target_idx = target_idx;
-	memcpy(cookie->uid, uid, UID_LENGTH);
-	cookie->cb = cb;
+	err = nfctype1_read_meta(adapter_idx, target_idx, cb, uid);
 
 	g_free(uid);
 
-	return near_adapter_send(adapter_idx, (uint8_t *) &t1_cmd,
-					sizeof(t1_cmd), meta_recv, cookie);
+	return err;
 }
 
 static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
