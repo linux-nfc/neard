@@ -215,7 +215,10 @@ static gchar *handover_agent_sender = NULL;
 
 static void handover_agent_free(void)
 {
-	handover_agent_watch = 0;
+	if (handover_agent_watch > 0) {
+		g_dbus_remove_watch(connection, handover_agent_watch);
+		handover_agent_watch = 0;
+	}
 
 	g_free(handover_agent_sender);
 	handover_agent_sender = NULL;
@@ -227,6 +230,25 @@ static void handover_agent_free(void)
 static void handover_agent_disconnect(DBusConnection *conn, void *data)
 {
 	DBG("data %p", data);
+
+	handover_agent_watch = 0;
+
+	handover_agent_free();
+}
+
+static void handover_agent_release(void)
+{
+	DBusMessage *message;
+
+	if (handover_agent_watch == 0)
+		return;
+
+	message = dbus_message_new_method_call(handover_agent_sender,
+						handover_agent_path,
+						"org.neard.HandoverAgent",
+						"Release");
+	if (message != NULL)
+		g_dbus_send_message(connection, message);
 
 	handover_agent_free();
 }
@@ -256,9 +278,6 @@ int __near_agent_handover_unregister(const char *sender, const char *path)
 	if (handover_agent_path == NULL)
 		return -ESRCH;
 
-	if (handover_agent_watch > 0)
-		g_dbus_remove_watch(connection, handover_agent_watch);
-
 	handover_agent_free();
 
 	return 0;
@@ -285,7 +304,7 @@ void __near_agent_cleanup(void)
 	g_hash_table_destroy(ndef_app_hash);
 	ndef_app_hash = NULL;
 
-	handover_agent_free();
+	handover_agent_release();
 
 	dbus_connection_unref(connection);
 }
