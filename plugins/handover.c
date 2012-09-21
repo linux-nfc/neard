@@ -48,7 +48,7 @@
 					*/
 
 #define RECORD_TYPE_WKT_ALTERNATIVE_CARRIER 0x0a
-#define FRAME_TYPE_OFFSET	4
+#define FRAME_TYPE_OFFSET	3
 
 enum loop_stage_flag {
 	STATE_MAIN_NDEF		= 0x00,
