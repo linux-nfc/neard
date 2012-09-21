@@ -142,6 +142,10 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 		 */
 		msg = near_ndef_prepare_handover_record("Hs", records->data,
 							NEAR_CARRIER_BLUETOOTH);
+		if (msg == NULL) {
+			err = -EINVAL;
+			goto fail;
+		}
 
 		near_info("Send Hs frame");
 		err = send(client_fd, msg->data, msg->length, MSG_DONTWAIT);
