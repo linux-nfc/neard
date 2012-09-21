@@ -238,11 +238,13 @@ int __near_agent_handover_register(const char *sender, const char *path)
 	if (handover_agent_path != NULL)
 		return -EEXIST;
 
-	handover_agent_sender = g_strdup(sender);
-	handover_agent_path = g_strdup(path);
-
 	handover_agent_watch = g_dbus_add_disconnect_watch(connection, sender,
 					handover_agent_disconnect, NULL, NULL);
+	if (handover_agent_watch == 0)
+		return -ENOMEM;
+
+	handover_agent_sender = g_strdup(sender);
+	handover_agent_path = g_strdup(path);
 
 	return 0;
 }
