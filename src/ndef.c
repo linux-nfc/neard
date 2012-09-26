@@ -113,24 +113,24 @@ struct near_ndef_record_header {
 	uint32_t header_len;
 };
 
-struct near_ndef_text_record {
+struct near_ndef_text_payload {
 	char *encoding;
 	char *language_code;
 	char *data;
 };
 
-struct near_ndef_uri_record {
+struct near_ndef_uri_payload {
 	uint8_t identifier;
 
 	uint32_t  field_length;
 	uint8_t  *field;
 };
 
-struct near_ndef_sp_record {
-	struct near_ndef_uri_record *uri;
+struct near_ndef_sp_payload {
+	struct near_ndef_uri_payload *uri;
 
 	uint8_t number_of_title_records;
-	struct near_ndef_text_record **title_records;
+	struct near_ndef_text_payload **title_records;
 
 	uint32_t size; /* from Size record*/
 	char *type;    /* from Type record*/
@@ -138,7 +138,7 @@ struct near_ndef_sp_record {
 	/* TODO add icon and other records fields*/
 };
 
-struct near_ndef_mime_record {
+struct near_ndef_mime_payload {
 	char *type;
 };
 
@@ -154,7 +154,7 @@ enum carrier_power_state {
 /* alternative record (AC) */
 #define AC_RECORD_PAYLOAD_LEN	4
 
-struct near_ndef_ac_record {
+struct near_ndef_ac_payload {
 	enum carrier_power_state cps;	/* carrier power state */
 
 	uint8_t cdr_len;	/* carrier data reference length: 0x01 */
@@ -166,7 +166,7 @@ struct near_ndef_ac_record {
 };
 
 /*
- * carrier data (see cdr in near_ndef_ac_record )
+ * carrier data (see cdr in near_ndef_ac_payload )
  * These settings can be retrieved from mime, carrier records, etc...
  */
 struct near_ndef_carrier_data {
@@ -179,18 +179,18 @@ struct near_ndef_carrier_data {
 #define HANDOVER_VERSION	0x12
 
 /* General Handover Request/Select record */
-struct near_ndef_ho_record {
+struct near_ndef_ho_payload {
 	uint8_t version;		/* version id */
 	uint16_t collision_record;	/* collision record */
 
-	uint8_t number_of_ac_records;	/* At least 1 ac is needed */
-	struct near_ndef_ac_record **ac_records;
+	uint8_t number_of_ac_payloads;	/* At least 1 ac is needed */
+	struct near_ndef_ac_payload **ac_payloads;
 
 	/* Optional records */
 	uint16_t *err_record;	/* not NULL if present */
 
-	uint8_t number_of_cfg_records;	/* extra NDEF records */
-	struct near_ndef_mime_record **cfg_records;
+	uint8_t number_of_cfg_payloads;	/* extra NDEF records */
+	struct near_ndef_mime_payload **cfg_payloads;
 };
 
 struct near_ndef_record {
@@ -198,16 +198,12 @@ struct near_ndef_record {
 
 	struct near_ndef_record_header *header;
 
-	/* WKT record */
-	struct near_ndef_text_record *text;
-	struct near_ndef_uri_record  *uri;
-	struct near_ndef_sp_record   *sp;
-
-	/* MIME type */
-	struct near_ndef_mime_record *mime;
-
-	/* HANDOVER type */
-	struct near_ndef_ho_record   *ho;
+	/* specific payloads */
+	struct near_ndef_text_payload *text;
+	struct near_ndef_uri_payload  *uri;
+	struct near_ndef_sp_payload   *sp;
+	struct near_ndef_mime_payload *mime;
+	struct near_ndef_ho_payload   *ho;	/* handover payload */
 
 	char *type;
 
@@ -244,7 +240,7 @@ char *__near_ndef_record_get_type(struct near_ndef_record *record)
 	return record->type;
 }
 
-static void append_text_record(struct near_ndef_text_record *text,
+static void append_text_payload(struct near_ndef_text_payload *text,
 					DBusMessageIter *dict)
 {
 	DBG("");
@@ -315,7 +311,7 @@ const char *__near_ndef_get_uri_prefix(uint8_t id)
 	return uri_prefixes[id];
 }
 
-static void append_uri_record(struct near_ndef_uri_record *uri,
+static void append_uri_payload(struct near_ndef_uri_payload *uri,
 					DBusMessageIter *dict)
 {
 	char *value;
@@ -343,7 +339,7 @@ static void append_uri_record(struct near_ndef_uri_record *uri,
 	g_free(value);
 }
 
-static void append_smart_poster_record(struct near_ndef_sp_record *sp,
+static void append_sp_payload(struct near_ndef_sp_payload *sp,
 						DBusMessageIter *dict)
 {
 	uint8_t i;
@@ -358,12 +354,12 @@ static void append_smart_poster_record(struct near_ndef_sp_record *sp,
 							&(sp->action));
 
 	if (sp->uri != NULL)
-		append_uri_record(sp->uri, dict);
+		append_uri_payload(sp->uri, dict);
 
 	if (sp->title_records != NULL &&
 			sp->number_of_title_records > 0) {
 		for (i = 0; i < sp->number_of_title_records; i++)
-			append_text_record(sp->title_records[i], dict);
+			append_text_payload(sp->title_records[i], dict);
 	}
 
 	if (sp->type != NULL)
@@ -375,7 +371,7 @@ static void append_smart_poster_record(struct near_ndef_sp_record *sp,
 							&(sp->size));
 }
 
-static void append_mime_record(struct near_ndef_mime_record *mime,
+static void append_mime_payload(struct near_ndef_mime_payload *mime,
 					DBusMessageIter *dict)
 {
 	DBG("");
@@ -414,21 +410,21 @@ static void append_record(struct near_ndef_record *record,
 		type = "Text";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
-		append_text_record(record->text, dict);
+		append_text_payload(record->text, dict);
 		break;
 
 	case RECORD_TYPE_WKT_URI:
 		type = "URI";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
-		append_uri_record(record->uri, dict);
+		append_uri_payload(record->uri, dict);
 		break;
 
 	case RECORD_TYPE_WKT_SMART_POSTER:
 		type = "SmartPoster";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
-		append_smart_poster_record(record->sp, dict);
+		append_sp_payload(record->sp, dict);
 		break;
 
 	case RECORD_TYPE_WKT_HANDOVER_REQUEST:
@@ -453,7 +449,7 @@ static void append_record(struct near_ndef_record *record,
 		type = "MIME Type (RFC 2046)";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
-		append_mime_record(record->mime, dict);
+		append_mime_payload(record->mime, dict);
 		break;
 	}
 }
@@ -493,7 +489,7 @@ static const GDBusMethodTable record_methods[] = {
 	{ },
 };
 
-static void free_text_record(struct near_ndef_text_record *text)
+static void free_text_payload(struct near_ndef_text_payload *text)
 {
 	if (text == NULL)
 		return;
@@ -506,7 +502,7 @@ static void free_text_record(struct near_ndef_text_record *text)
 	text = NULL;
 }
 
-static void free_uri_record(struct near_ndef_uri_record *uri)
+static void free_uri_payload(struct near_ndef_uri_payload *uri)
 {
 	if (uri == NULL)
 		return;
@@ -517,18 +513,18 @@ static void free_uri_record(struct near_ndef_uri_record *uri)
 	uri = NULL;
 }
 
-static void free_sp_record(struct near_ndef_sp_record *sp)
+static void free_sp_payload(struct near_ndef_sp_payload *sp)
 {
 	uint8_t i;
 
 	if (sp == NULL)
 		return;
 
-	free_uri_record(sp->uri);
+	free_uri_payload(sp->uri);
 
 	if (sp->title_records != NULL) {
 		for (i = 0; i < sp->number_of_title_records; i++)
-			free_text_record(sp->title_records[i]);
+			free_text_payload(sp->title_records[i]);
 	}
 
 	g_free(sp->title_records);
@@ -539,7 +535,7 @@ static void free_sp_record(struct near_ndef_sp_record *sp)
 	sp = NULL;
 }
 
-static void free_mime_record(struct near_ndef_mime_record *mime)
+static void free_mime_payload(struct near_ndef_mime_payload *mime)
 {
 	if (mime == NULL)
 		return;
@@ -550,7 +546,7 @@ static void free_mime_record(struct near_ndef_mime_record *mime)
 	mime = NULL;
 }
 
-static void free_ac_record(struct near_ndef_ac_record *ac)
+static void free_ac_payload(struct near_ndef_ac_payload *ac)
 {
 	if (ac == NULL)
 		return;
@@ -560,19 +556,19 @@ static void free_ac_record(struct near_ndef_ac_record *ac)
 	ac = NULL;
 }
 
-static void free_ho_record(struct near_ndef_ho_record *ho)
+static void free_ho_payload(struct near_ndef_ho_payload *ho)
 {
 	int i;
 
 	if (ho == NULL)
 		return;
 
-	if (ho->ac_records != NULL) {
-		for (i = 0; i < ho->number_of_ac_records; i++)
-			free_ac_record(ho->ac_records[i]);
+	if (ho->ac_payloads != NULL) {
+		for (i = 0; i < ho->number_of_ac_payloads; i++)
+			free_ac_payload(ho->ac_payloads[i]);
 	}
 
-	g_free(ho->ac_records);
+	g_free(ho->ac_payloads);
 	g_free(ho);
 
 	ho = NULL;
@@ -601,23 +597,23 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
 		case RECORD_TYPE_WKT_HANDOVER_SELECT:
-			free_ho_record(record->ho);
+			free_ho_payload(record->ho);
 			break;
 
 		case RECORD_TYPE_WKT_TEXT:
-			free_text_record(record->text);
+			free_text_payload(record->text);
 			break;
 
 		case RECORD_TYPE_WKT_URI:
-			free_uri_record(record->uri);
+			free_uri_payload(record->uri);
 			break;
 
 		case RECORD_TYPE_WKT_SMART_POSTER:
-			free_sp_record(record->sp);
+			free_sp_payload(record->sp);
 			break;
 
 		case RECORD_TYPE_MIME_TYPE:
-			free_mime_record(record->mime);
+			free_mime_payload(record->mime);
 		}
 
 		g_free(record->header->il_field);
@@ -966,74 +962,74 @@ fail:
 /**
  * @brief Parse the Text record payload
  *
- * Parse the Text record.
+ * Parse the Text payload.
  *
- * @param[in] rec     NDEF pointer set to record payload first byte
+ * @param[in] payload NDEF pointer set to record payload first byte
  * @param[in] length  payload_len
  *
- * @return struct near_ndef_text_record * Record on Success
+ * @return struct near_ndef_text_payload * Payload on Success
  *                                       NULL   on Failure
  */
 
-static struct near_ndef_text_record *
-parse_text_record(uint8_t *rec, uint32_t length)
+static struct near_ndef_text_payload *
+parse_text_payload(uint8_t *payload, uint32_t length)
 {
-	struct near_ndef_text_record *text_record = NULL;
+	struct near_ndef_text_payload *text_payload = NULL;
 	uint8_t status, lang_length;
 	uint32_t offset;
 
 	DBG("");
 
-	if (rec == NULL)
+	if (payload == NULL)
 		return NULL;
 
 	offset = 0;
-	text_record = g_try_malloc0(sizeof(struct near_ndef_text_record));
-	if (text_record == NULL)
+	text_payload = g_try_malloc0(sizeof(struct near_ndef_text_payload));
+	if (text_payload == NULL)
 		return NULL;
 
 	/* 0x80 is used to get 7th bit value (0th bit is LSB) */
-	status = ((rec[offset] & 0x80) >> 7);
+	status = ((payload[offset] & 0x80) >> 7);
 
-	text_record->encoding = (status == 0) ?
+	text_payload->encoding = (status == 0) ?
 					g_strdup("UTF-8") : g_strdup("UTF-16");
 
 	/* 0x3F is used to get 5th-0th bits value (0th bit is LSB) */
-	lang_length = (rec[offset] & 0x3F);
+	lang_length = (payload[offset] & 0x3F);
 	offset++;
 
 	if (lang_length > 0) {
 		if ((offset + lang_length) >= length)
 			goto fail;
 
-		text_record->language_code = g_strndup(
-						(char *)(rec + offset),
+		text_payload->language_code = g_strndup(
+						(char *)(payload + offset),
 						lang_length);
 	} else {
-		text_record->language_code = NULL;
+		text_payload->language_code = NULL;
 	}
 
 	offset += lang_length;
 
 	if ((length - lang_length - 1) > 0) {
-		text_record->data = g_strndup((char *)(rec + offset),
+		text_payload->data = g_strndup((char *)(payload + offset),
 					length - lang_length - 1);
 	} else {
-		text_record->data = NULL;
+		text_payload->data = NULL;
 	}
 
 	if (offset >= length)
 		goto fail;
 
-	DBG("Encoding  '%s'", text_record->encoding);
-	DBG("Language Code  '%s'", text_record->language_code);
-	DBG("Data  '%s'", text_record->data);
+	DBG("Encoding  '%s'", text_payload->encoding);
+	DBG("Language Code  '%s'", text_payload->language_code);
+	DBG("Data  '%s'", text_payload->data);
 
-	return text_record;
+	return text_payload;
 
 fail:
-	near_error("text record parsing failed");
-	free_text_record(text_record);
+	near_error("text payload parsing failed");
+	free_text_payload(text_payload);
 
 	return NULL;
 }
@@ -1041,63 +1037,63 @@ fail:
 /**
  * @brief Parse the URI record payload
  *
- * Parse the URI record.
+ * Parse the URI payload.
  *
- * @param[in] rec          NDEF pointer set to record payload first byte
+ * @param[in] payload NDEF pointer set to record payload first byte
  * @param[in] length  Payload length
  *
- * @return struct near_ndef_uri_record * Record on Success
+ * @return struct near_ndef_uri_payload * payload on Success
  *                                       NULL   on Failure
  */
 
-static struct near_ndef_uri_record *
-parse_uri_record(uint8_t *rec, uint32_t length)
+static struct near_ndef_uri_payload *
+parse_uri_payload(uint8_t *payload, uint32_t length)
 {
-	struct near_ndef_uri_record *uri_record = NULL;
+	struct near_ndef_uri_payload *uri_payload = NULL;
 	uint32_t index, offset;
 
 	DBG("");
 
-	if (rec == NULL)
+	if (payload == NULL)
 		return NULL;
 
 	offset = 0;
-	uri_record = g_try_malloc0(sizeof(struct near_ndef_uri_record));
-	if (uri_record == NULL)
+	uri_payload = g_try_malloc0(sizeof(struct near_ndef_uri_payload));
+	if (uri_payload == NULL)
 		return NULL;
 
-	uri_record->identifier = rec[offset];
+	uri_payload->identifier = payload[offset];
 	offset++;
 
-	uri_record->field_length = length - 1;
+	uri_payload->field_length = length - 1;
 
-	if (uri_record->field_length > 0) {
-		uri_record->field = g_try_malloc0(uri_record->field_length);
-		if (uri_record->field == NULL)
+	if (uri_payload->field_length > 0) {
+		uri_payload->field = g_try_malloc0(uri_payload->field_length);
+		if (uri_payload->field == NULL)
 			goto fail;
 
-		memcpy(uri_record->field, rec + offset,
-				uri_record->field_length);
+		memcpy(uri_payload->field, payload + offset,
+				uri_payload->field_length);
 
-		for (index = 0; index < uri_record->field_length; index++) {
+		for (index = 0; index < uri_payload->field_length; index++) {
 			/* URI Record Type Definition 1.0 [3.2.3]
 			 * Any character value within the URI between
 			 * (and including) 0 and 31 SHALL be recorded as
 			 * an error, and the URI record to be discarded */
-			if (uri_record->field[index] <= 31)
+			if (uri_payload->field[index] <= 31)
 				goto fail;
 		}
 
 	}
 
-	DBG("Identifier  '0X%X'", uri_record->identifier);
-	DBG("Field  '%.*s'", uri_record->field_length, uri_record->field);
+	DBG("Identifier  '0X%X'", uri_payload->identifier);
+	DBG("Field  '%.*s'", uri_payload->field_length, uri_payload->field);
 
-	return uri_record;
+	return uri_payload;
 
 fail:
-	near_error("uri record parsing failed");
-	free_uri_record(uri_record);
+	near_error("uri payload parsing failed");
+	free_uri_payload(uri_payload);
 
 	return NULL;
 }
@@ -1106,7 +1102,7 @@ fail:
  * @brief Validate titles records language code in Smartposter.
  * There must not be two or more records with the same language identifier.
  *
- * @param[in] GSList *  list of title records (struct near_ndef_text_record *)
+ * @param[in] GSList *  list of title records (struct near_ndef_text_payload *)
  *
  * @return Zero on success
  *         Negative value on failure
@@ -1115,7 +1111,7 @@ fail:
 static int8_t validate_language_code_in_sp_record(GSList *titles)
 {
 	uint8_t i, j, length;
-	struct near_ndef_text_record *title1, *title2;
+	struct near_ndef_text_payload *title1, *title2;
 
 	DBG("");
 
@@ -1146,22 +1142,22 @@ static int8_t validate_language_code_in_sp_record(GSList *titles)
 /**
  * @brief Parse the smart poster record payload.
  *
- * Parse the smart poster record and cache the
+ * Parse the smart poster payload and cache the
  * data in respective fields of smart poster structure.
  *
  * @note Caller responsibility to free the memory.
  *
- * @param[in] rec         NDEF pointer set to record payload first byte
+ * @param[in] payload NDEF pointer set to record payload first byte
  * @param[in] length Record payload length
  *
- * @return struct near_ndef_sp_record * Record on Success
+ * @return struct near_ndef_sp_payload * Record on Success
  *                                      NULL   on Failure
  */
 
-static struct near_ndef_sp_record *
-parse_smart_poster_record(uint8_t *rec,	uint32_t length)
+static struct near_ndef_sp_payload *
+parse_sp_payload(uint8_t *payload, uint32_t length)
 {
-	struct near_ndef_sp_record *sp_record = NULL;
+	struct near_ndef_sp_payload *sp_payload = NULL;
 	struct near_ndef_record_header *rec_header = NULL;
 	uint8_t mb = 0, me = 0, i;
 	uint32_t offset;
@@ -1169,19 +1165,19 @@ parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 
 	DBG("");
 
-	if (rec == NULL)
+	if (payload == NULL)
 		return NULL;
 
 	offset = 0;
-	sp_record = g_try_malloc0(sizeof(struct near_ndef_sp_record));
-	if (sp_record == NULL)
+	sp_payload = g_try_malloc0(sizeof(struct near_ndef_sp_payload));
+	if (sp_payload == NULL)
 		return NULL;
 
 	while (offset < length) {
 
-		DBG("Record header : 0x%x", rec[offset]);
+		DBG("Record header : 0x%x", payload[offset]);
 
-		rec_header = parse_record_header(rec, offset, length);
+		rec_header = parse_record_header(payload, offset, length);
 		if (rec_header == NULL)
 			goto fail;
 
@@ -1208,12 +1204,12 @@ parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 
 		case RECORD_TYPE_WKT_URI:
 			/* URI record should be only one. */
-			if (sp_record->uri != NULL)
+			if (sp_payload->uri != NULL)
 				goto fail;
 
-			sp_record->uri = parse_uri_record(rec + offset,
+			sp_payload->uri = parse_uri_payload(payload + offset,
 						rec_header->payload_len);
-			if (sp_record->uri == NULL)
+			if (sp_payload->uri == NULL)
 				goto fail;
 
 			break;
@@ -1225,8 +1221,8 @@ parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 			 * and then cache them into sp record structure.
 			 */
 			{
-			struct near_ndef_text_record *title;
-			title = parse_text_record(rec + offset,
+			struct near_ndef_text_payload *title;
+			title = parse_text_payload(payload + offset,
 						rec_header->payload_len);
 			if (title == NULL)
 				goto fail;
@@ -1243,20 +1239,20 @@ parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 			if (rec_header->payload_len != 4)
 				goto fail;
 
-			sp_record->size =
-				g_ntohl(*((uint32_t *)(rec + offset)));
+			sp_payload->size =
+				g_ntohl(*((uint32_t *)(payload + offset)));
 			break;
 
 		case RECORD_TYPE_WKT_TYPE:
 
 			if (rec_header->payload_len > 0) {
-				sp_record->type = g_try_malloc0(
+				sp_payload->type = g_try_malloc0(
 						rec_header->payload_len);
-				if (sp_record->type == NULL)
+				if (sp_payload->type == NULL)
 					goto fail;
 
-				sp_record->type = g_strndup(
-						(char *) rec + offset,
+				sp_payload->type = g_strndup(
+						(char *) payload + offset,
 						rec_header->payload_len);
 			}
 
@@ -1270,8 +1266,8 @@ parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 			if (rec_header->payload_len != 1)
 				goto fail;
 
-			sp_record->action =
-				g_strdup(action_to_string(rec[offset]));
+			sp_payload->action =
+				g_strdup(action_to_string(payload[offset]));
 
 			break;
 		}
@@ -1288,7 +1284,7 @@ parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 	 * 'titles' list.
 	 */
 	if (titles == NULL)
-		return sp_record;
+		return sp_payload;
 
 	if (validate_language_code_in_sp_record(titles) != 0) {
 		DBG("language code validation failed");
@@ -1296,25 +1292,25 @@ parse_smart_poster_record(uint8_t *rec,	uint32_t length)
 	}
 
 	temp = titles;
-	sp_record->number_of_title_records = g_slist_length(temp);
-	sp_record->title_records = g_try_malloc0(
-				sp_record->number_of_title_records *
-				 sizeof(struct near_ndef_text_record *));
-	if (sp_record->title_records == NULL)
+	sp_payload->number_of_title_records = g_slist_length(temp);
+	sp_payload->title_records = g_try_malloc0(
+				sp_payload->number_of_title_records *
+				 sizeof(struct near_ndef_text_payload *));
+	if (sp_payload->title_records == NULL)
 		goto fail;
 
-	for (i = 0; i < sp_record->number_of_title_records; i++) {
-		sp_record->title_records[i] = temp->data;
+	for (i = 0; i < sp_payload->number_of_title_records; i++) {
+		sp_payload->title_records[i] = temp->data;
 		temp = temp->next;
 	}
 
 	g_slist_free(titles);
 	titles = NULL;
 
-	return sp_record;
+	return sp_payload;
 
 fail:
-	near_error("smart poster record parsing failed");
+	near_error("smart poster payload parsing failed");
 
 	if (rec_header != NULL) {
 		g_free(rec_header->type_name);
@@ -1322,18 +1318,18 @@ fail:
 		g_free(rec_header);
 	}
 
-	free_sp_record(sp_record);
+	free_sp_payload(sp_payload);
 	g_slist_free(titles);
 
 	return NULL;
 }
 
-static struct near_ndef_mime_record *
+static struct near_ndef_mime_payload *
 parse_mime_type(struct near_ndef_record *record,
 			uint8_t *ndef_data, size_t ndef_length, size_t offset,
 			uint32_t payload_length, near_bool_t action)
 {
-	struct near_ndef_mime_record *mime = NULL;
+	struct near_ndef_mime_payload *mime = NULL;
 	int err = 0;
 
 	DBG("");
@@ -1341,7 +1337,7 @@ parse_mime_type(struct near_ndef_record *record,
 	if ((ndef_data == NULL) || ((offset + payload_length) > ndef_length))
 		return NULL;
 
-	mime = g_try_malloc0(sizeof(struct near_ndef_mime_record));
+	mime = g_try_malloc0(sizeof(struct near_ndef_mime_payload));
 	if (mime == NULL)
 		return NULL;
 
@@ -1530,56 +1526,56 @@ static struct near_ndef_message *ndef_message_alloc(char* type_name,
 			TRUE, TRUE);
 }
 
-static struct near_ndef_ac_record *parse_ac_record(uint8_t *rec,
+static struct near_ndef_ac_payload *parse_ac_payload(uint8_t *payload,
 						uint32_t length)
 {
-	struct near_ndef_ac_record *ac_record = NULL;
+	struct near_ndef_ac_payload *ac_payload = NULL;
 	uint32_t offset;
 
 	DBG("");
 
-	if (rec == NULL)
+	if (payload == NULL)
 		return NULL;
 
 	offset = 0;
-	ac_record = g_try_malloc0(sizeof(struct near_ndef_ac_record));
-	if (ac_record == NULL)
+	ac_payload = g_try_malloc0(sizeof(struct near_ndef_ac_payload));
+	if (ac_payload == NULL)
 		goto fail;
 
 	/* Carrier flag */
-	ac_record->cps = rec[offset];    /* TODO Check enum */
+	ac_payload->cps = payload[offset];    /* TODO Check enum */
 	offset++;
 
 	/* Carrier data reference length */
-	ac_record->cdr_len = rec[offset];
+	ac_payload->cdr_len = payload[offset];
 	offset++;
 
 	/* Carrier data reference */
-	ac_record->cdr = rec[offset];
-	offset = offset + ac_record->cdr_len;
+	ac_payload->cdr = payload[offset];
+	offset = offset + ac_payload->cdr_len;
 
 	/* Auxiliary data reference count */
-	ac_record->adata_refcount = rec[offset];
+	ac_payload->adata_refcount = payload[offset];
 	offset++;
 
-	if (ac_record->adata_refcount == 0)
-		return ac_record;
+	if (ac_payload->adata_refcount == 0)
+		return ac_payload;
 
 	/* save the auxiliary data reference */
-	ac_record->adata = g_try_malloc0(
-			ac_record->adata_refcount * sizeof(uint16_t));
-	if (ac_record->adata == NULL)
+	ac_payload->adata = g_try_malloc0(
+			ac_payload->adata_refcount * sizeof(uint16_t));
+	if (ac_payload->adata == NULL)
 		goto fail;
 
-	memcpy(ac_record->adata, rec + offset,
-			ac_record->adata_refcount * sizeof(uint16_t));
+	memcpy(ac_payload->adata, payload + offset,
+			ac_payload->adata_refcount * sizeof(uint16_t));
 
 	/* and leave */
-	return ac_record;
+	return ac_payload;
 
 fail:
-	near_error("ac record parsing failed");
-	free_ac_record(ac_record);
+	near_error("ac payload parsing failed");
+	free_ac_payload(ac_payload);
 
 	return NULL;
 }
@@ -1829,7 +1825,7 @@ fail:
 }
 
 /* Code to fill hr record structure from acs and mimes lists */
-static int near_fill_ho_record(struct near_ndef_ho_record *ho,
+static int near_fill_ho_payload(struct near_ndef_ho_payload *ho,
 					GSList *acs, GSList *mimes)
 {
 	int rec_count;
@@ -1837,45 +1833,45 @@ static int near_fill_ho_record(struct near_ndef_ho_record *ho,
 	GSList *temp;
 
 	rec_count = g_slist_length(acs);
-	ho->ac_records = g_try_malloc0(rec_count *
-			sizeof(struct near_ndef_ac_record *));
-	if (ho->ac_records == NULL)
+	ho->ac_payloads = g_try_malloc0(rec_count *
+			sizeof(struct near_ndef_ac_payload *));
+	if (ho->ac_payloads == NULL)
 		goto fail;
 	temp = acs;
 	for (i = 0; i < rec_count; i++) {
-		ho->ac_records[i] = temp->data;
+		ho->ac_payloads[i] = temp->data;
 		temp = temp->next;
 	}
-	ho->number_of_ac_records = rec_count;
+	ho->number_of_ac_payloads = rec_count;
 	g_slist_free(acs);
 
 	/* Same process for cfg mimes */
 	rec_count = g_slist_length(mimes);
-	ho->cfg_records = g_try_malloc0(rec_count *
-			sizeof(struct near_ndef_mime_record *));
-	if (ho->cfg_records == NULL)
+	ho->cfg_payloads = g_try_malloc0(rec_count *
+			sizeof(struct near_ndef_mime_payload *));
+	if (ho->cfg_payloads == NULL)
 		goto fail;
 	temp = mimes;
 	for (i = 0; i < rec_count; i++) {
-		ho->cfg_records[i] = temp->data;
+		ho->cfg_payloads[i] = temp->data;
 		temp = temp->next;
 	}
 
-	ho->number_of_cfg_records = rec_count;
+	ho->number_of_cfg_payloads = rec_count;
 	g_slist_free(mimes);
 
 	return 0;
 fail:
-	g_free(ho->ac_records);
-	g_free(ho->cfg_records);
-	ho->ac_records = NULL;
-	ho->cfg_records = NULL;
+	g_free(ho->ac_payloads);
+	g_free(ho->cfg_payloads);
+	ho->ac_payloads = NULL;
+	ho->cfg_payloads = NULL;
 	return -ENOMEM;
 }
 
 /*
- * @brief Parse the Handover request record
- * This function will parse an Hr record, retrieving sub records
+ * @brief Parse the Handover request record payload
+ * This function will parse an Hr record payload, retrieving sub records
  * like (ac, cr, er) but it  will also get the associated
  * ndefs (eg: handover carrier record, mime type for BT)
  * In a handover frame, only the following types are expected:
@@ -1884,13 +1880,13 @@ fail:
  *     RECORD_TYPE_MIME_TYPE
  *     RECORD_TYPE_WKT_ALTERNATIVE_CARRIER
  */
-static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
-		uint8_t *rec, uint32_t ho_length, size_t frame_length,
+static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
+		uint8_t *payload, uint32_t ho_length, size_t frame_length,
 		uint8_t ho_mb, uint8_t ho_me)
 {
-	struct near_ndef_ho_record *ho_record = NULL;
-	struct near_ndef_ac_record *ac = NULL;
-	struct near_ndef_mime_record *mime = NULL;
+	struct near_ndef_ho_payload *ho_payload = NULL;
+	struct near_ndef_ac_payload *ac = NULL;
+	struct near_ndef_mime_payload *mime = NULL;
 	struct near_ndef_record *trec = NULL;
 	GSList *acs = NULL, *mimes = NULL;
 	uint8_t mb = 0, me = 0;
@@ -1900,19 +1896,19 @@ static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
 
 	DBG("");
 
-	if (rec == NULL)
+	if (payload == NULL)
 		return NULL;
 	offset = 0;
 
-	/* Create the handover record */
-	ho_record = g_try_malloc0(sizeof(struct near_ndef_ho_record));
-	if (ho_record == NULL)
+	/* Create the handover record payload */
+	ho_payload = g_try_malloc0(sizeof(struct near_ndef_ho_payload));
+	if (ho_payload == NULL)
 		return NULL;
 
-	/* Version is the first mandatory field of hr record */
-	ho_record->version = rec[offset];
-	if (ho_record->version > HANDOVER_VERSION) {
-		near_error("Unsupported version (%d)", ho_record->version);
+	/* Version is the first mandatory field of hr payload */
+	ho_payload->version = payload[offset];
+	if (ho_payload->version > HANDOVER_VERSION) {
+		near_error("Unsupported version (%d)", ho_payload->version);
 		goto fail;
 	}
 
@@ -1928,7 +1924,7 @@ static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
 		if (trec == NULL)
 			return NULL;
 
-		trec->header = parse_record_header(rec, offset, ho_length);
+		trec->header = parse_record_header(payload, offset, ho_length);
 
 		if (trec->header == NULL)
 			goto fail;
@@ -1978,7 +1974,7 @@ static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
 			else
 				bt_pair = FALSE;
 
-			mime = parse_mime_type(trec, rec, frame_length,
+			mime = parse_mime_type(trec, payload, frame_length,
 					offset, trec->header->payload_len,
 					bt_pair);
 			if (mime == NULL)
@@ -2001,8 +1997,8 @@ static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
 				goto fail;
 			}
 
-			ho_record->collision_record =
-					g_ntohs(*((uint16_t *)(rec + offset)));
+			ho_payload->collision_record =
+				g_ntohs(*((uint16_t *)(payload + offset)));
 			break;
 
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
@@ -2015,7 +2011,7 @@ static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
 				goto fail;
 			}
 
-			ac = parse_ac_record(rec + offset,
+			ac = parse_ac_payload(payload + offset,
 					trec->header->payload_len);
 			if (ac == NULL)
 				goto fail;
@@ -2037,18 +2033,18 @@ static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
 	}
 
 	if ((acs == NULL) || (mimes == NULL))
-		return ho_record;
+		return ho_payload;
 
 	/* Save the records */
-	if (near_fill_ho_record(ho_record, acs, mimes) < 0)
+	if (near_fill_ho_payload(ho_payload, acs, mimes) < 0)
 		goto fail;
 
-	DBG("handover record parsing complete");
+	DBG("handover payload parsing complete");
 
-	return ho_record;
+	return ho_payload;
 
 fail:
-	near_error("handover record parsing failed");
+	near_error("handover payload parsing failed");
 
 	if (trec != NULL) {
 		if (trec->header != NULL) {
@@ -2059,7 +2055,7 @@ fail:
 		g_free(trec);
 	}
 
-	free_ho_record(ho_record);
+	free_ho_payload(ho_payload);
 
 	return NULL;
 }
@@ -2135,7 +2131,7 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 			 * frame size. The complete frame includes extra NDEF
 			 * following the initial handover NDEF
 			 */
-			record->ho = parse_ho_record(record->header->rec_type,
+			record->ho = parse_ho_payload(record->header->rec_type,
 					ndef_data + offset,
 					record->header->payload_len,
 					ndef_length,
@@ -2148,7 +2144,7 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 			break;
 
 		case RECORD_TYPE_WKT_TEXT:
-			record->text = parse_text_record(ndef_data + offset,
+			record->text = parse_text_payload(ndef_data + offset,
 						record->header->payload_len);
 
 			if (record->text == NULL)
@@ -2157,7 +2153,7 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 			break;
 
 		case RECORD_TYPE_WKT_URI:
-			record->uri = parse_uri_record(ndef_data + offset,
+			record->uri = parse_uri_payload(ndef_data + offset,
 						record->header->payload_len);
 
 			if (record->uri == NULL)
@@ -2166,7 +2162,7 @@ GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
 			break;
 
 		case RECORD_TYPE_WKT_SMART_POSTER:
-			record->sp = parse_smart_poster_record(
+			record->sp = parse_sp_payload(
 						ndef_data + offset,
 						record->header->payload_len);
 
@@ -2695,30 +2691,30 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 						(uint8_t *)(uri + id_len));
 }
 
-static struct near_ndef_ac_record *build_ho_local_ac_record(void)
+static struct near_ndef_ac_payload *build_ho_local_ac_record(void)
 {
-	struct near_ndef_ac_record *ac_record = NULL;
+	struct near_ndef_ac_payload *ac_payload = NULL;
 
 	DBG("");
 
 	/* Allocate ac record */
-	ac_record = g_try_malloc0(sizeof(struct near_ndef_ac_record));
-	if (ac_record == NULL)
+	ac_payload = g_try_malloc0(sizeof(struct near_ndef_ac_payload));
+	if (ac_payload == NULL)
 		return NULL;
 
 	/* Carrier flag */
-	ac_record->cps = CPS_ACTIVE;    /* TODO Should reflect BT state */
+	ac_payload->cps = CPS_ACTIVE;    /* TODO Should reflect BT state */
 
 	/* Carrier data reference length */
-	ac_record->cdr_len = 1;
+	ac_payload->cdr_len = 1;
 
 	/* Carrier data reference */
-	ac_record->cdr = '0';
+	ac_payload->cdr = '0';
 
 	/* Auxiliary data reference count */
-	ac_record->adata_refcount = 0;
+	ac_payload->adata_refcount = 0;
 
-	return ac_record;
+	return ac_payload;
 }
 
 static struct near_ndef_message *build_ho_record(DBusMessage *msg)
@@ -2750,7 +2746,7 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 		return NULL;
 
 	/* Do a Ho */
-	record->ho = g_try_malloc0(sizeof(struct near_ndef_ho_record));
+	record->ho = g_try_malloc0(sizeof(struct near_ndef_ho_payload));
 	if (record->ho == NULL)
 		goto fail;
 
@@ -2762,17 +2758,17 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 				g_random_int_range(0, G_MAXUINT16 + 1));
 	record->ho->err_record = NULL;
 
-	record->ho->number_of_ac_records = 1;
-	record->ho->ac_records = g_try_malloc0(
-					sizeof(struct near_ndef_ac_record *));
-	if (record->ho->ac_records == NULL)
+	record->ho->number_of_ac_payloads = 1;
+	record->ho->ac_payloads = g_try_malloc0(
+					sizeof(struct near_ndef_ac_payload *));
+	if (record->ho->ac_payloads == NULL)
 		goto fail;
-	record->ho->ac_records[0] = build_ho_local_ac_record();
+	record->ho->ac_payloads[0] = build_ho_local_ac_record();
 
 	return near_ndef_prepare_handover_record("Hr", record, carrier);
 
 fail:
-	free_ho_record(record->ho);
+	free_ho_payload(record->ho);
 	g_free(record);
 
 	return NULL;
