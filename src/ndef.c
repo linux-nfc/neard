@@ -2757,7 +2757,9 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 	/* fill the Ho */
 	record->ho->version = HANDOVER_VERSION;
 
-	record->ho->collision_record = 0x1664; /* TODO randomize it */
+	/* Generate random number for Collision Resolution Record */
+	record->ho->collision_record = GUINT16_TO_BE(
+				g_random_int_range(0, G_MAXUINT16 + 1));
 	record->ho->err_record = NULL;
 
 	record->ho->number_of_ac_records = 1;
