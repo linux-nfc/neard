@@ -123,7 +123,7 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 	}
 
 	/* call the global parse function */
-	records = near_ndef_parse(ndef->ndef, ndef->cur_ptr);
+	records = near_ndef_parse_msg(ndef->ndef, ndef->cur_ptr);
 	if (records == NULL) {
 		err = -ENOMEM;
 		goto fail;

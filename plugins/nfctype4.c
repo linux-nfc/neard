@@ -329,7 +329,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 
 		DBG("Done reading");
 
-		records = near_ndef_parse(nfc_data, data_length);
+		records = near_ndef_parse_msg(nfc_data, data_length);
 		near_tag_add_records(cookie->tag, records, cookie->cb, 0);
 
 		return t4_cookie_release(0, cookie);

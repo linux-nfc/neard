@@ -2073,7 +2073,15 @@ int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 	return 0;
 }
 
-GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length)
+/**
+ * @brief Parse message represented by bytes block
+ *
+ * @param[in] ndef_data   pointer on data representing ndef message
+ * @param[in] ndef_length size of ndef_data
+ * @param[out]		  records list, contains all the records
+ *					from parsed message
+ */
+GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length)
 {
 	GList *records;
 	uint8_t p_mb = 0, p_me = 0, *record_start;

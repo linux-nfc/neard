@@ -42,7 +42,7 @@ int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 
 int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length);
 
-GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length);
+GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length);
 
 void near_ndef_records_free(GList *records);
 

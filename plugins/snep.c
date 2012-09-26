@@ -203,12 +203,12 @@ static void snep_parse_handover_record(int client_fd, uint8_t *ndef,
 		*(ndef + 9) = 'c';
 
 	/* Parse the incoming frame */
-	records = near_ndef_parse(ndef, nfc_data_length);
+	records = near_ndef_parse_msg(ndef, nfc_data_length);
 
 	/*
 	 * If we received a Hr, we must build a Hs and send it.
 	 * If the frame is a Hs, nothing more to do (SNEP REPLY is SUCCESS and
-	 * the pairing is done in near_ndef_parse()
+	 * the pairing is done in near_ndef_parse_msg()
 	 * */
 	if (strncmp((char *)(ndef + 3), "Hr", 2) == 0) {
 		msg = near_ndef_prepare_handover_record("Hs", records->data,
@@ -294,7 +294,7 @@ static near_bool_t snep_read_ndef(int client_fd,
 		if (device == NULL)
 			goto out;
 
-		records = near_ndef_parse(snep_data->nfc_data,
+		records = near_ndef_parse_msg(snep_data->nfc_data,
 				snep_data->nfc_data_length);
 		near_device_add_records(device, records, snep_data->cb, 0);
 	}

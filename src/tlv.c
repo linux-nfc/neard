@@ -92,7 +92,7 @@ GList *near_tlv_parse(uint8_t *tlv, size_t tlv_length)
 		case TLV_NDEF:
 			DBG("NDEF found %d bytes long", near_tlv_length(tlv));
 
-			records = near_ndef_parse(near_tlv_data(tlv),
+			records = near_ndef_parse_msg(near_tlv_data(tlv),
 						near_tlv_length(tlv));
 
 			break;
