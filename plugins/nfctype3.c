@@ -669,12 +669,20 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	uint16_t checksum, nmaxb;
 	uint8_t i, len = 0;
 	uint8_t *idm, *attr;
+	int err;
 
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
-	if (cookie == NULL)
-		return -ENOMEM;
+
+	if (cookie == NULL) {
+		err = -ENOMEM;
+
+		if (cb != NULL)
+			cb(adapter_idx, target_idx, err);
+
+		return err;
+	}
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
@@ -724,17 +732,28 @@ static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
 				near_tag_io_cb cb)
 {
 	struct near_tag *tag;
+	int err;
 
 	DBG("");
 
-	if (ndef == NULL || cb == NULL)
-		return -EINVAL;
+	if (ndef == NULL || cb == NULL) {
+		err = -EINVAL;
+		goto out_err;
+	}
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
-		return -EINVAL;
+	if (tag == NULL) {
+		err = -EINVAL;
+		goto out_err;
+	}
 
-	return data_write(adapter_idx, target_idx, ndef, tag, cb);
+	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
+
+out_err:
+	if (cb != NULL)
+		cb(adapter_idx, target_idx, err);
+
+	return err;
 }
 
 static int check_presence(uint8_t *resp, int length, void *data)
