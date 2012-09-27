@@ -399,7 +399,7 @@ static int mifare_read_sector_unlocked(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = length;
-		return err;
+		goto out_err;
 	}
 	/* And run the read process on the first block of the sector */
 	err = mifare_read_block(mf_ck->rws_block_start, data,
@@ -410,7 +410,7 @@ static int mifare_read_sector_unlocked(uint8_t *resp, int length, void *data)
 	return err;
 
 out_err:
-	return err;
+	return mifare_release(err, mf_ck);
 }
 
 /*
@@ -477,7 +477,7 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		err = length;
-		return err;
+		goto out_err;
 	}
 
 	/* ptr to the next read ptr */
@@ -561,6 +561,8 @@ static int mifare_process_MADs(void *data)
 	int i;
 	int global_tag_size = 0;
 	int ioffset;
+	uint8_t *tag_data;
+	size_t data_size;
 
 	DBG("");
 
@@ -631,17 +633,22 @@ done_mad:
 	/* n sectors, each sector is 3 blocks, each block is 16 bytes */
 	DBG("TAG Global size: [%d]", global_tag_size);
 
-	err = near_tag_add_data(mf_ck->adapter_idx,
-						mf_ck->target_idx,
-						NULL, /* Empty */
-						global_tag_size);
-	if (err < 0)
-		goto out_err;
-
 	mf_ck->tag = near_tag_get_tag(mf_ck->adapter_idx, mf_ck->target_idx);
 	if (mf_ck->tag == NULL) {
 		err = -ENOMEM;
 		goto out_err;
+	}
+
+	/* don't allocate new data before writing */
+	tag_data = near_tag_get_data(mf_ck->tag, &data_size);
+	if (tag_data == NULL) {
+		err = near_tag_add_data(mf_ck->adapter_idx,
+						mf_ck->target_idx,
+						NULL, /* Empty */
+						global_tag_size);
+
+		if (err < 0)
+			goto out_err;
 	}
 
 	/* Check access rights */
@@ -865,13 +872,16 @@ static int check_presence(uint8_t *resp, int length, void *data)
 
 	DBG("%d", length);
 
-	if (length < 0)
+	if (length < 0) {
 		err = -EIO;
+		goto out;
+	}
 
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	return err;
+out:
+	return mifare_release(err, cookie);
 }
 
 int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
@@ -1023,10 +1033,23 @@ static int mifare_write_sector_cb(uint8_t *resp, int length, void *data)
 static int mifare_write_sector_unlocked(uint8_t *resp, int length, void *data)
 {
 	struct mifare_cookie *mf_ck = data;
+	int err;
+
+	if (length < 0) {
+		err = length;
+		goto out_err;
+	}
 
 	/* Run the write process on the first block of the sector */
-	return mifare_write_block(mf_ck->rws_block_start, data,
-					mifare_write_sector_cb);
+	err = mifare_write_block(mf_ck->rws_block_start, data,
+			mifare_write_sector_cb);
+
+	if (err < 0)
+		goto out_err;
+	return err;
+
+out_err:
+	return mifare_release(err, mf_ck);
 }
 
 /*
