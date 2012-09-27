@@ -113,6 +113,9 @@ static int t2_cookie_release(int err, void *data)
 	if (cookie == NULL)
 		return err;
 
+	if (cookie->cb != NULL)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
 	if (cookie->ndef)
 		g_free(cookie->ndef->data);
 
@@ -263,15 +266,17 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	if (err < 0)
 		goto out_tag;
 
+	/*
+	 * As reading isn't complete,
+	 * callback shouldn't be called while freeing the cookie
+	 */
+	cookie->cb = NULL;
 	return t2_cookie_release(err, cookie);
 
 out_tag:
 	g_free(t2_tag);
 
 out_err:
-	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
-
 	return t2_cookie_release(err, cookie);
 }
 
@@ -339,9 +344,6 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 	if (cookie->ndef->offset > cookie->ndef->length) {
 		DBG("Done writing");
 
-		if (cookie->cb)
-			cookie->cb(cookie->adapter_idx, cookie->target_idx, 0);
-
 		return t2_cookie_release(0, cookie);
 	}
 
@@ -365,9 +367,6 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 					t2_cookie_release);
 
 out_err:
-	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
-
 	return t2_cookie_release(err, cookie);
 }
 
@@ -459,10 +458,6 @@ static int check_presence(uint8_t *resp, int length, void *data)
 	if (length < 0)
 		err = -EIO;
 
-	if (cookie->cb)
-		cookie->cb(cookie->adapter_idx,
-				cookie->target_idx, err);
-
 	return t2_cookie_release(err, cookie);
 }
 
@@ -530,9 +525,6 @@ static int format_resp(uint8_t *resp, int length, void *data)
 	near_tag_set_blank(tag, FALSE);
 
 out_err:
-	if (cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
-
 	return t2_cookie_release(err, cookie);
 }
 
