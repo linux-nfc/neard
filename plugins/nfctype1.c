@@ -128,6 +128,9 @@ static int t1_cookie_release(int err, void *data)
 	if (cookie == NULL)
 		return err;
 
+	if (cookie->cb != NULL)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
 	if (cookie->ndef)
 		g_free(cookie->ndef->data);
 
@@ -329,6 +332,11 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	} else if ((resp[OFFSET_HEADER_ROM] & 0xF0) == HR0_TYPE2_HIGH) {
 		near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_DYNAMIC);
 		err = read_dynamic_tag(cc, length, t1_tag);
+		/*
+		 * As reading isn't complete,
+		 * callback shouldn't be called while freeing the cookie
+		 */
+		cookie->cb = NULL;
 	} else {
 		err = -EOPNOTSUPP;
 	}
@@ -338,9 +346,6 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 out_err:
 	DBG("err %d", err);
-
-	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
 	return t1_cookie_release(err, cookie);
 }
@@ -386,9 +391,6 @@ static int rid_resp(uint8_t *resp, int length, void *data)
 
 out_err:
 	DBG("err %d", err);
-
-	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
 	return t1_cookie_release(err, cookie);
 }
@@ -472,8 +474,6 @@ static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
 
 	DBG("Done writing");
 
-	cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
-
 	return t1_cookie_release(err, cookie);
 }
 
@@ -537,9 +537,6 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 	return 0;
 
 out_err:
-	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
-
 	return t1_cookie_release(err, cookie);
 }
 
@@ -634,10 +631,6 @@ static int check_presence(uint8_t *resp, int length, void *data)
 	if (length < 0)
 		err = -EIO;
 
-	if (cookie->cb)
-		cookie->cb(cookie->adapter_idx,
-				cookie->target_idx, err);
-
 	return t1_cookie_release(err, cookie);
 }
 
@@ -714,9 +707,6 @@ static int format_resp(uint8_t *resp, int length, void *data)
 	}
 
 out_err:
-	if (cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
-
 	return t1_cookie_release(err, cookie);
 }
 
