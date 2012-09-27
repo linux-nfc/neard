@@ -110,6 +110,14 @@ static uint8_t MAD_NFC_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
 
 #define NFC_1ST_BLOCK		0x04	/* Sectors from 1 are for NFC */
 
+#define ACC_BITS_LEN            3
+
+/* Access bits for data blocks mask */
+static uint8_t DATA_access_mask[] = {0x77, 0x77, 0x77};
+
+/* Write with key A access bits configuration */
+static uint8_t WRITE_with_key_A[] = {0x77, 0x07, 0x00};
+
 /* MAD1 sector structure. Start at block 0x00 */
 struct MAD_1 {
 	uint8_t man_info[16];
@@ -142,7 +150,6 @@ struct mifare_cookie {
 	struct near_tag *tag;
 	near_tag_io_cb cb;
 	near_recv next_far_func;
-	int (*command)(void *data); /* read or write after unlocking sector */
 
 	/* For MAD access */
 	struct MAD_1 *mad_1;
@@ -166,6 +173,13 @@ struct mifare_cookie {
 	/* For write only */
 	struct near_ndef_message *ndef;	/* message to write */
 	size_t ndef_length;		/* message length */
+
+	/* For access check */
+	int (*acc_check_function)(void *data);	/* acc check fnc */
+	uint8_t *acc_bits_mask;			/* blocks to check */
+	uint8_t *acc_rights;			/* condition */
+	int (*acc_denied_fct)(void *data);/* fnc to call on access denial */
+	GSList *acc_sect;		  /* sector from g_sect_list to check */
 };
 
 struct type2_cmd {
@@ -277,6 +291,62 @@ static int mifare_read_block(uint8_t block_id,
 
 	return near_adapter_send(mf_ck->adapter_idx, (uint8_t *) &cmd, 2,
 					far_func, mf_ck, mifare_release);
+}
+
+/*
+ * Check access rights
+ * Function processes sector trailer received from tag and checks access rights.
+ * In case specified access isn't granted it calls appropriate
+ * access denial function.
+ * If access is granted, previous action (e.g. read, write) is continued.
+ */
+static int mifare_check_rights_cb(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err;
+	uint8_t *c;
+	int i;
+
+	if (length < 0) {
+		err = length;
+		goto out_err;
+	}
+
+	/* skip reader byte and key A */
+	 c = resp + 1 + MAD_KEY_LEN;
+
+	for (i = 0; i < ACC_BITS_LEN; i++) {
+		if ((c[i] & mf_ck->acc_bits_mask[i]) != mf_ck->acc_rights[i]) {
+			(*mf_ck->acc_denied_fct)(data);
+			return 0;
+		}
+	}
+
+	/* Continue previous action (read/write) */
+	err = (*mf_ck->rws_next_fct)(resp, length, data);
+
+	if (err < 0)
+		goto out_err;
+
+	return err;
+
+out_err:
+	return mifare_release(err, mf_ck);
+}
+
+/* Calls to mifare_read_block to get sector trailer */
+static int mifare_check_rights(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err;
+
+	err = mifare_read_block(mf_ck->rws_block_start, mf_ck,
+			mifare_check_rights_cb);
+
+	if (err < 0)
+		return mifare_release(err, mf_ck);
+
+	return err;
 }
 
 static int mifare_read_sector_cb(uint8_t *resp, int length, void *data)
@@ -457,7 +527,7 @@ out_err:
 }
 
 /* Prepare read NFC loop */
-static int mifare_read_NFC(void *data)
+static int mifare_read_NFC(uint8_t *resp, int length, void *data)
 {
 	struct mifare_cookie *mf_ck = data;
 	int err;
@@ -574,8 +644,11 @@ done_mad:
 		goto out_err;
 	}
 
-	/* Time to read or write the NFC data */
-	err = mf_ck->command(mf_ck);
+	/* Check access rights */
+	err = mf_ck->acc_check_function(data);
+
+	if (err < 0)
+		goto out_err;
 
 	return err;
 
@@ -684,6 +757,52 @@ out_err:
 	return mifare_release(err, mf_ck);
 }
 
+/* If first NFC sector isn't writable, mark whole tag as read only */
+static int is_read_only(void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+
+	DBG("Tag is read only");
+
+	near_tag_set_ro(mf_ck->tag, TRUE);
+
+	/* Continue previous action (read) */
+	(*mf_ck->rws_next_fct)(NULL, 0, data);
+
+	return 0;
+}
+
+
+static int mifare_check_read_only(void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err;
+
+	DBG("");
+
+	/*
+	 * As authorisation with key B is not supported,
+	 * in case writing with key A is not permitted, tag is read-only
+	 */
+	mf_ck->acc_bits_mask = DATA_access_mask;
+	mf_ck->acc_rights = WRITE_with_key_A;
+
+	/* Check acces rights of first NFC sector */
+	mf_ck->rws_block_start = NFC_1ST_BLOCK + STD_BLK_PER_SECT;
+	/* Afterwards read tag */
+	mf_ck->rws_next_fct = mifare_read_NFC;
+	/* In case of writing access denial, set read only */
+	mf_ck->acc_denied_fct = is_read_only;
+
+	err = mifare_unlock_sector(mf_ck->rws_block_start,
+			mifare_check_rights, mf_ck);
+
+	if (err < 0)
+		return mifare_release(err, mf_ck);
+
+	return err;
+}
+
 /*
  * MIFARE: entry point:
  * Read all the MAD sectors (0x00, 0x10) to get the Application Directory
@@ -721,7 +840,9 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
-	cookie->command = mifare_read_NFC;
+
+	/* check access rights - while reading just check read only */
+	cookie->acc_check_function = mifare_check_read_only;
 
 	/*
 	 * Need to unlock before reading
@@ -1052,11 +1173,14 @@ int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	cookie->command = mifare_write_NFC;
 	cookie->ndef = ndef;
 	/* Save ndef length */
 	cookie->ndef_length = cookie->ndef->data[1];
 	cookie->ndef->data[1] = 0;
+
+	/* Tag is writable, so don't check rights but start writing */
+	cookie->acc_check_function = mifare_write_NFC;
+
 	/*
 	 * Mifare Classic Tag needs to be unlocked before writing
 	 * This will check if public keys are allowed (NDEF could be "readable")
