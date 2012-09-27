@@ -633,8 +633,15 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	int err;
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
-	if (cookie == NULL)
-		return -ENOMEM;
+
+	if (cookie == NULL) {
+		err = -ENOMEM;
+
+		if (cb != NULL)
+			cb(adapter_idx, target_idx, err);
+
+		return err;
+	}
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
@@ -666,24 +673,41 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 		cookie->ndef->offset = cookie->ndef->length;
 	}
 
-	return err;
+	if (err < 0)
+		goto out_err;
+
+	return 0;
+
+out_err:
+	return t4_cookie_release(err, cookie);
 }
 
 static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,
 			struct near_ndef_message *ndef, near_tag_io_cb cb)
 {
 	struct near_tag *tag;
+	int err;
 
 	DBG("");
 
-	if (ndef == NULL || cb == NULL)
-		return -EINVAL;
+	if (ndef == NULL || cb == NULL) {
+		err = -EINVAL;
+		goto out_err;
+	}
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
-		return -EINVAL;
+	if (tag == NULL) {
+		err = -EINVAL;
+		goto out_err;
+	}
 
-	return data_write(adapter_idx, target_idx, ndef, tag, cb);
+	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
+
+out_err:
+	if (cb != NULL)
+		cb(adapter_idx, target_idx, err);
+
+	return err;
 }
 
 static int check_presence(uint8_t *resp, int length, void *data)
