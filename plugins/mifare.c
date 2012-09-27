@@ -1131,6 +1131,127 @@ static int mifare_write_NFC(void *data)
 	return err;
 }
 
+static int mifare_check_rights_loop(uint8_t *resp, int length, void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err;
+	int sector_id;
+
+	if (mf_ck->acc_sect->next != NULL) {
+
+		mf_ck->acc_sect = mf_ck->acc_sect->next;
+		sector_id = GPOINTER_TO_INT(mf_ck->acc_sect->data);
+
+		if (sector_id < T4K_BOUNDARY)
+			mf_ck->rws_block_start = sector_id * 4
+							+ STD_BLK_PER_SECT;
+		else
+			mf_ck->rws_block_start = T4K_BLK_OFF + EXT_BLK_PER_SECT
+				+ (sector_id - T4K_BOUNDARY) * 16;
+
+		err = mifare_unlock_sector(mf_ck->rws_block_start,
+				mifare_check_rights, mf_ck);
+	} else {
+		/* Full access granted, start writing */
+		err = mifare_write_NFC(data);
+	}
+
+	if (err < 0)
+		return mifare_release(err, mf_ck);
+
+	return err;
+}
+
+
+/*
+ * If one of NFC sectors isn't writable,
+ * tag size for writing is smaller than actual memory size,
+ * so calculate it and check if it is enough for ndef message.
+ */
+static int writing_not_permitted(void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	unsigned int new_tag_size = 0;
+	int sector_id;
+	int i;
+
+	sector_id = GPOINTER_TO_INT(mf_ck->acc_sect->data);
+	DBG("Writing sector %i not permitted", sector_id);
+
+	/* Read only sector found, calculate new tag size */
+	if (sector_id <= MAD_V1_AIDS_LEN) {
+		for (i = GPOINTER_TO_INT(mf_ck->g_sect_list->data);
+				i < sector_id; i++)
+			new_tag_size += SECTOR_SIZE;
+	} else {
+		/* Start from first NFC sector */
+		for (i = GPOINTER_TO_INT(mf_ck->g_sect_list->data);
+				i <= MAD_V1_AIDS_LEN; i++)
+			new_tag_size += SECTOR_SIZE;
+
+		/*
+		 * If any of previous sector was NFC, skip MAD2
+		 * If not, leave "i" as it was
+		 */
+		if (i < MAD2_SECTOR)
+			i = MAD2_SECTOR + 1;
+
+		for (; i < sector_id; i++) {
+			if (i < T4K_BOUNDARY)
+				new_tag_size += SECTOR_SIZE;
+			else
+				new_tag_size += BIG_SECTOR_SIZE;
+		}
+	}
+
+	DBG("TAG writable sectors' size: [%d].", new_tag_size);
+
+	/* Check if there's enough space on tag */
+	if (new_tag_size < mf_ck->ndef->length) {
+		near_error("Not enough space on tag");
+
+		if (mf_ck->cb)
+			mf_ck->cb(mf_ck->adapter_idx,
+					mf_ck->target_idx, -ENOSPC);
+
+		mifare_release(0, data);
+		return -ENOSPC;
+	}
+
+	/* Enough space on tag, continue writing */
+	mifare_write_NFC(data);
+
+	return 0;
+}
+
+static int mifare_check_rights_NFC(void *data)
+{
+	struct mifare_cookie *mf_ck = data;
+	int err;
+
+	DBG("");
+
+	/*
+	 * As authorisation with key B is not supported,
+	 * in case writing with key A is not permitted, tag is read-only
+	 */
+	mf_ck->acc_bits_mask = DATA_access_mask;
+	mf_ck->acc_rights = WRITE_with_key_A;
+
+	mf_ck->acc_sect = mf_ck->g_sect_list;
+	mf_ck->rws_block_start = NFC_1ST_BLOCK + STD_BLK_PER_SECT;
+	mf_ck->rws_next_fct = mifare_check_rights_loop;
+
+	mf_ck->acc_denied_fct = writing_not_permitted;
+	err = mifare_unlock_sector(mf_ck->rws_block_start,
+			mifare_check_rights, mf_ck);
+
+	if (err < 0)
+		return mifare_release(err, mf_ck);
+
+	return err;
+}
+
 int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 			struct near_ndef_message *ndef,
 			near_tag_io_cb cb, enum near_tag_sub_type tgt_subtype)
@@ -1178,8 +1299,11 @@ int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->ndef_length = cookie->ndef->data[1];
 	cookie->ndef->data[1] = 0;
 
-	/* Tag is writable, so don't check rights but start writing */
-	cookie->acc_check_function = mifare_write_NFC;
+	/*
+	 * Check if all sectors are writable
+	 * if not, message may be too long to be written
+	 */
+	cookie->acc_check_function = mifare_check_rights_NFC;
 
 	/*
 	 * Mifare Classic Tag needs to be unlocked before writing
