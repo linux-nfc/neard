@@ -27,10 +27,12 @@
 #include <unistd.h>
 
 typedef int (*near_recv)(uint8_t *resp, int length, void *data);
+typedef int (*near_release)(int err, void *data);
 
 int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol);
 int near_adapter_disconnect(uint32_t idx);
-int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length, near_recv rx_cb, void *data);
+int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
+			near_recv rx_cb, void *data, near_release data_rel);
 int near_adapter_recv(uint32_t idx, uint8_t *buf, size_t length);
 
 #endif

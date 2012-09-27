@@ -1044,7 +1044,7 @@ int near_adapter_disconnect(uint32_t idx)
 }
 
 int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
-			near_recv cb, void *data)
+			near_recv cb, void *data, near_release data_rel)
 {
 	struct near_adapter *adapter;
 	struct near_adapter_ioreq *req = NULL;
@@ -1053,16 +1053,22 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
-		return -ENODEV;
+	if (adapter == NULL) {
+		err = -ENODEV;
+		goto out_err;
+	}
 
-	if (adapter->tag_sock == -1 || adapter->tag_link == NULL)
-		return -ENOLINK;
+	if (adapter->tag_sock == -1 || adapter->tag_link == NULL) {
+		err = -ENOLINK;
+		goto out_err;
+	}
 
 	if (cb != NULL && adapter->watch != 0) {
 		req = g_try_malloc0(sizeof(*req));
-		if (req == NULL)
-			return -ENOMEM;
+		if (req == NULL) {
+			err = -ENOMEM;
+			goto out_err;
+		}
 
 		DBG("req %p cb %p data %p", req, cb, data);
 
@@ -1088,6 +1094,9 @@ out_err:
 		adapter->ioreq_list =
 				g_list_delete_link(adapter->ioreq_list, last);
 	}
+
+	if (data_rel != NULL)
+		return (*data_rel)(err, data);
 
 	return err;
 }

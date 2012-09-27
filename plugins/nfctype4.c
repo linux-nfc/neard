@@ -158,6 +158,27 @@ struct t4_cookie {
 	uint16_t memory_size;
 };
 
+static int t4_cookie_release(int err, void *data)
+{
+	struct t4_cookie *cookie = data;
+
+	DBG("%p", cookie);
+
+	if (cookie == NULL)
+		return err;
+
+	if (err < 0 && cookie->cb)
+		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
+
+	if (cookie->ndef)
+		g_free(cookie->ndef->data);
+
+	g_free(cookie->ndef);
+	g_free(cookie);
+
+	return err;
+}
+
 /* ISO functions: This code prepares APDU */
 static int ISO_send_cmd(uint8_t class,
 			uint8_t instruction,
@@ -207,10 +228,9 @@ static int ISO_send_cmd(uint8_t class,
 			cmd->data[cmd_data_length] = 0;
 	}
 
-	err = near_adapter_send(in_rcv->adapter_idx, (uint8_t *) cmd,
-					total_cmd_length, cb, in_rcv);
-	if (err < 0)
-		g_free(in_rcv);
+	return near_adapter_send(in_rcv->adapter_idx, (uint8_t *) cmd,
+					total_cmd_length, cb, in_rcv,
+					t4_cookie_release);
 
 out_err:
 	/* On exit, clean memory */
@@ -272,27 +292,6 @@ static int ISO_Update(uint16_t offset, uint8_t nlen,
 			FALSE,
 			cb,
 			cookie);
-}
-
-static int t4_cookie_release(int err, void *data)
-{
-	struct t4_cookie *cookie = data;
-
-	DBG("%p", cookie);
-
-	if (cookie == NULL)
-		return err;
-
-	if (err < 0 && cookie->cb)
-		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
-
-	if (cookie->ndef)
-		g_free(cookie->ndef->data);
-
-	g_free(cookie->ndef);
-	g_free(cookie);
-
-	return err;
 }
 
 static int data_read_cb(uint8_t *resp, int length, void *data)

@@ -253,8 +253,7 @@ static int mifare_unlock_sector(int block_id,
 
 	return near_adapter_send(cookie->adapter_idx, (uint8_t *)&cmd,
 		sizeof(cmd) - NFC_NFCID1_MAXSIZE + cookie->nfcid1_len,
-		next_far_fct,
-		cookie);
+		next_far_fct, cookie, mifare_release);
 }
 
 /*
@@ -276,9 +275,8 @@ static int mifare_read_block(uint8_t block_id,
 	cmd.cmd = MF_CMD_READ; /* MIFARE READ */
 	cmd.block = block_id;
 
-	return near_adapter_send(mf_ck->adapter_idx,
-			(uint8_t *) &cmd, 2,
-			far_func, data);
+	return near_adapter_send(mf_ck->adapter_idx, (uint8_t *) &cmd, 2,
+					far_func, mf_ck, mifare_release);
 }
 
 static int mifare_read_sector_cb(uint8_t *resp, int length, void *data)
@@ -731,7 +729,6 @@ int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 	struct mifare_cmd cmd;
 	struct mifare_cookie *cookie;
 	uint8_t *key_ref = MAD_public_key;
-	int err;
 
 	DBG("");
 
@@ -772,21 +769,11 @@ int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 	/* add the UID */
 	memcpy(&cmd.nfcid, cookie->nfcid1, cookie->nfcid1_len);
 
-	err = near_adapter_send(cookie->adapter_idx,
+	return near_adapter_send(cookie->adapter_idx,
 			(uint8_t *) &cmd,
 			sizeof(cmd) - NFC_NFCID1_MAXSIZE + cookie->nfcid1_len,
 			check_presence,
-			cookie);
-
-	if (err < 0)
-		goto out_err;
-
-	return err;
-
-out_err:
-	mifare_release(err, cookie);
-
-	return err;
+			cookie, mifare_release);
 }
 
 /*
@@ -817,7 +804,7 @@ static int mifare_write_block(uint8_t block_id, void *data,
 
 	return near_adapter_send(mf_ck->adapter_idx,
 				(uint8_t *) &cmd, sizeof(cmd),
-				far_func, data);
+				far_func, data, NULL);
 }
 
 static int mifare_correct_length_cb(uint8_t *resp, int length, void *data)
