@@ -684,7 +684,6 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	uint16_t checksum, nmaxb;
 	uint8_t i, len = 0;
 	uint8_t *idm, *attr;
-	int err;
 
 	DBG("");
 
@@ -699,26 +698,22 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->current_block = 0;
 
 	idm = near_tag_get_idm(tag, &len);
-	if (idm == NULL) {
-		err = -EINVAL;
-		goto out_err;
-	}
+	if (idm == NULL)
+		return t3_cookie_release(-EINVAL, cookie);
 
 	memcpy(cookie->IDm, idm, len);
 
 	attr = near_tag_get_attr_block(tag, &len);
-	if (attr == NULL) {
-		err = -EINVAL;
-		goto out_err;
-	}
+	if (attr == NULL)
+		return t3_cookie_release(-EINVAL, cookie);
 
 	memcpy(cookie->attr, attr, len);
 	nmaxb = (((uint16_t) (cookie->attr[3])) << 8) | cookie->attr[4];
 
 	if (cookie->ndef->length > (nmaxb * BLOCK_SIZE)) {
 		near_error("not enough space on tag");
-		err = -ENOSPC;
-		goto out_err;
+
+		return t3_cookie_release(-ENOSPC, cookie);
 	}
 
 	cookie->attr[9] = 0x0F; /* writing data in progress */
@@ -737,9 +732,6 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	return near_adapter_send(adapter_idx, (uint8_t *) &cmd, cmd.len,
 					data_write_resp, cookie,
 					t3_cookie_release);
-
-out_err:
-	return t3_cookie_release(err, cookie);
 }
 
 static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,

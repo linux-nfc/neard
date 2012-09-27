@@ -300,17 +300,16 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 	uint8_t *nfc_data;
 	size_t data_length, length_read, current_length;
 	uint16_t remain_bytes;
-	int err = 0;
 
 	DBG("%d", length);
 
 	if (length < 0)
-		return t4_cookie_release(err, cookie);
+		return t4_cookie_release(length, cookie);
 
 	if (APDU_STATUS(resp + length - 2) != APDU_OK) {
 		DBG("Fail read_cb SW:x%04x", APDU_STATUS(resp + length - 2));
-		err = -EIO;
-		return t4_cookie_release(err, cookie);
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	nfc_data = near_tag_get_data(cookie->tag, &data_length);
@@ -333,8 +332,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 		records = near_ndef_parse(nfc_data, data_length);
 		near_tag_add_records(cookie->tag, records, cookie->cb, 0);
 
-		err = 0;
-		goto out_err;
+		return t4_cookie_release(0, cookie);
 	}
 
 	cookie->read_data += length ;
@@ -346,9 +344,6 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 	else
 		return ISO_ReadBinary(cookie->read_data + 2,
 				(uint8_t) remain_bytes, data_read_cb, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
@@ -359,28 +354,24 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		return t4_cookie_release(length, cookie);
 
 	if (APDU_STATUS(resp + length - 2) != APDU_OK) {
 		DBG("Fail SW:x%04x", APDU_STATUS(resp + length - 2));
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	/* Add data to the tag */
 	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx, NULL,
 				g_ntohs(*((uint16_t *)(resp + NFC_STATUS_BYTE_LEN))));
 	if (err < 0)
-		goto out_err;
+		return t4_cookie_release(err, cookie);
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	if (tag == NULL)
+		return t4_cookie_release(-ENOMEM, cookie);
 
 	near_tag_set_max_ndef_size(tag, cookie->max_ndef_size);
 	near_tag_set_c_apdu_max_size(tag, cookie->c_apdu_max_size);
@@ -403,64 +394,52 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	/* Read 1st block */
 	return ISO_ReadBinary(2, cookie->r_apdu_max_size - 2,
 			data_read_cb, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err;
 
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		return t4_cookie_release(length, cookie);
 
 	/* Check for APDU error */
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
 		DBG("Fail SW:x%04x", APDU_STATUS(resp + STATUS_WORD_1));
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	/* Read 0x0f bytes, to grab the NDEF msg length */
 	return ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE,
 					t4_readbin_NDEF_ID, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
 	struct type4_cc *read_cc;
-	int err;
 
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		return t4_cookie_release(length, cookie);
 
 	/* Check APDU error ( the two last bytes of the resp) */
 	if (APDU_STATUS(resp + length - 2) != APDU_OK) {
 		DBG("Fail SW:x%04x", APDU_STATUS(resp + length - 2));
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	/* -2 for status word and -1 is for NFC first byte... */
 	read_cc = g_try_malloc0(length - 2 - NFC_STATUS_BYTE_LEN);
 	if (read_cc == NULL) {
 		DBG("Mem alloc failed");
-		err = -ENOMEM;
-		goto out_err;
+
+		return t4_cookie_release(-ENOMEM, cookie);
 	}
 
 	memcpy(read_cc, &resp[1], length - 2 - NFC_STATUS_BYTE_LEN) ;
@@ -474,8 +453,8 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 	/* TODO 5.1.2: Must ignore proprietary blocks (x05)... */
 	if (read_cc->tlv_fc.tag != 0x4) {
 		DBG("NDEF File Control tag not found");
-		err = -EINVAL;
-		goto out_err;
+
+		return t4_cookie_release(-EINVAL, cookie);
 	}
 
 	/* save rw conditions */
@@ -483,9 +462,6 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 
 	return ISO_Select((uint8_t *) &read_cc->tlv_fc.file_id,
 			LEN_ISO_CC_FILEID, 0, t4_select_NDEF_ID, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int t4_select_cc(uint8_t *resp, int length, void *data)
@@ -495,10 +471,8 @@ static int t4_select_cc(uint8_t *resp, int length, void *data)
 
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		return t4_cookie_release(length, cookie);
 
 	/* Check for APDU error */
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
@@ -508,14 +482,12 @@ static int t4_select_cc(uint8_t *resp, int length, void *data)
 		err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
 					NULL, 1 /* dummy length */);
 		if (err < 0)
-			goto out_err;
+			return t4_cookie_release(err, cookie);
 
 		cookie->tag = near_tag_get_tag(cookie->adapter_idx,
 						cookie->target_idx);
-		if (cookie->tag == NULL) {
-			err = -ENOMEM;
-			goto out_err;
-		}
+		if (cookie->tag == NULL)
+			return t4_cookie_release(-ENOMEM, cookie);
 
 		near_tag_set_blank(cookie->tag, TRUE);
 
@@ -526,54 +498,40 @@ static int t4_select_cc(uint8_t *resp, int length, void *data)
 	}
 
 	return ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE, t4_readbin_cc, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err;
 
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		return t4_cookie_release(length, cookie);
 
 	/* Check for APDU error */
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
 		DBG("V1 Fail SW:x%04x", APDU_STATUS(resp + STATUS_WORD_1));
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
-	if (resp[NFC_STATUS] != 0) {
-		err = -EIO;
-		goto out_err;
-	}
+	if (resp[NFC_STATUS] != 0)
+		return t4_cookie_release(-EIO, cookie);
 
 	/* Jump to select phase */
 	return ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0,
 				t4_select_cc, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err;
 
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		t4_cookie_release(length, cookie);
 
 	/* Check for APDU error - Not found */
 	if (APDU_STATUS(resp + STATUS_WORD_1) == APDU_NOT_FOUND) {
@@ -585,36 +543,28 @@ static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
 		DBG("V2 Fail SW:x%04x", APDU_STATUS(resp + STATUS_WORD_1));
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
-	if (resp[NFC_STATUS] != 0) {
-		err = -EIO;
-		goto out_err;
-	}
+	if (resp[NFC_STATUS] != 0)
+		return t4_cookie_release(-EIO, cookie);
 
 	/* Jump to select phase */
 	return ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0, t4_select_cc,
 									cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int nfctype4_read(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct t4_cookie *cookie;
-	int err;
 
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
-	if (cookie == NULL) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	if (cookie == NULL)
+		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
@@ -625,9 +575,6 @@ static int nfctype4_read(uint32_t adapter_idx,
 	/* Check for V2 type 4 tag */
 	return ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
 				0x4, t4_select_file_by_name_v2, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int data_write_cb(uint8_t *resp, int length, void *data)
@@ -638,14 +585,13 @@ static int data_write_cb(uint8_t *resp, int length, void *data)
 	DBG("%d", length);
 
 	if (length < 0)
-		return t4_cookie_release(err, cookie);
+		return t4_cookie_release(length, cookie);
 
 	if (APDU_STATUS(resp + length - 2) != APDU_OK) {
 		near_error("write failed SWx%04x",
 				APDU_STATUS(resp + length - 2));
-		err = -EIO;
 
-		return t4_cookie_release(err, cookie);
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	if (cookie->ndef->offset >= cookie->ndef->length) {
@@ -687,10 +633,8 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	int err;
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
-	if (cookie == NULL) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	if (cookie == NULL)
+		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
@@ -703,8 +647,8 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	if (cookie->max_ndef_size < cookie->ndef->length) {
 		near_error("not enough space on tag to write data");
-		err = -ENOMEM;
-		goto out_err;
+
+		return t4_cookie_release(-ENOMEM, cookie);
 	}
 
 	if ((cookie->ndef->length - cookie->ndef->offset) >
@@ -722,13 +666,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 		cookie->ndef->offset = cookie->ndef->length;
 	}
 
-	if (err < 0)
-		goto out_err;
-
-	return 0;
-
-out_err:
-	return t4_cookie_release(err, cookie);
+	return err;
 }
 
 static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,
@@ -769,15 +707,12 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct t4_cookie *cookie;
-	int err;
 
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
-	if (cookie == NULL) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	if (cookie == NULL)
+		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
@@ -788,28 +723,22 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 	/* Check for V2 type 4 tag */
 	return ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
 				0x4, check_presence, cookie);
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int select_ndef_file(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	int err = 0;
 
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		return t4_cookie_release(length, cookie);
 
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
 		near_error("select ndef file resp failed %02X",
 					resp[length - 1]);
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	DBG("ndef file selected");
@@ -817,8 +746,7 @@ static int select_ndef_file(uint8_t *resp, int length, void *data)
 	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, 0);
 
-out_err:
-	return t4_cookie_release(err, cookie);
+	return t4_cookie_release(0, cookie);
 }
 
 static int read_cc_file(uint8_t *resp, int length, void *data)
@@ -891,15 +819,15 @@ static int select_cc_file(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		near_error("CC file select resp failed %d", length);
-		err = length;
-		goto out_err;
+
+		return t4_cookie_release(length, cookie);
 	}
 
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
 		near_error("CC file select response %02X",
 						resp[length - 1]);
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	err = ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE, read_cc_file, cookie);
@@ -921,15 +849,15 @@ static int select_iso_appname_v2(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		near_error("iso app select resp failed %d", length);
-		err = length;
-		goto out_err;
+
+		return t4_cookie_release(length, cookie);
 	}
 
 	if (resp[NFC_STATUS] != 0x00) {
 		near_error("iso app select response %02X",
 					resp[length - 1]);
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	err = ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0,
@@ -955,22 +883,20 @@ static int format_resp(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		near_error("write data to ndef file resp failed %d", length);
-		err = length;
-		goto out_err;
+
+		return t4_cookie_release(length, cookie);
 	}
 
 	if (APDU_STATUS(resp + 1) != PICC_LEVEL_APDU_OK) {
 		near_error("wrtie data to ndef file response %02X",
 						resp[length - 1]);
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
-		err = -EINVAL;
-		goto out_err;
-	}
+	if (tag == NULL)
+		return t4_cookie_release(-EINVAL, cookie);
 
 	DBG("Formatting is done");
 	near_tag_set_blank(tag, FALSE);
@@ -989,7 +915,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 		goto out_err;
 	}
 
-	return 0;
+	return err;
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -1389,8 +1315,8 @@ static int get_version_frame3(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		near_error("get version2 resp failed %d", length);
-		err = length;
-		goto out_err;
+
+		return t4_cookie_release(length, cookie);
 	}
 
 	if (resp[4] == 0x01 /* Major Version */
@@ -1402,18 +1328,16 @@ static int get_version_frame3(uint8_t *resp, int length, void *data)
 					select_application, cookie);
 		if (err < 0) {
 			near_error("get version3 req failed %d", err);
-			goto out_err;
+
+			return t4_cookie_release(err, cookie);
 		}
 	} else {
 		near_error("get version2 response %02X", resp[length - 1]);
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	return 0;
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int get_version_frame2(uint8_t *resp, int length, void *data)
@@ -1425,8 +1349,8 @@ static int get_version_frame2(uint8_t *resp, int length, void *data)
 
 	if (length < 0) {
 		near_error(" get version resp failed %d", length);
-		err = length;
-		goto out_err;
+
+		return t4_cookie_release(length, cookie);
 	}
 
 	if (resp[4] == 0x01 /* Major Version */
@@ -1443,18 +1367,16 @@ static int get_version_frame2(uint8_t *resp, int length, void *data)
 					get_version_frame3, cookie);
 		if (err < 0) {
 			near_error("get version2 req failed %d", err);
-			goto out_err;
+
+			return t4_cookie_release(err, cookie);
 		}
 	} else {
 		near_error("get version response %02X", resp[length - 1]);
-		err = -EIO;
-		goto out_err;
+
+		return t4_cookie_release(-EIO, cookie);
 	}
 
 	return 0;
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 /* Steps to format Type 4 (MIFARE DESFire EV1) tag as per AN1104.pdf from nxp.
