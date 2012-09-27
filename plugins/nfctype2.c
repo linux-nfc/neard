@@ -376,12 +376,17 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 {
 	struct type2_cmd cmd;
 	struct t2_cookie *cookie;
+	int err;
 
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t2_cookie));
-	if (cookie == NULL)
-		return -ENOMEM;
+	if (cookie == NULL) {
+		err = -ENOMEM;
+		if (cb != NULL)
+			cb(adapter_idx, target_idx, err);
+		return err;
+	}
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
@@ -406,15 +411,20 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 {
 	struct near_tag *tag;
 	enum near_tag_sub_type tgt_subtype;
+	int err;
 
 	DBG("");
 
-	if (ndef == NULL || cb == NULL)
-		return -EINVAL;
+	if (ndef == NULL || cb == NULL) {
+		err = -EINVAL;
+		goto out_err;
+	}
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
-		return -EINVAL;
+	if (tag == NULL) {
+		err = -EINVAL;
+		goto out_err;
+	}
 
 	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
@@ -428,8 +438,8 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 		if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
 			if ((ndef->length + 3) > NDEF_MAX_SIZE) {
 				near_error("not enough space on tag");
-
-				return -ENOSPC;
+				err = -ENOSPC;
+				goto out_err;
 			}
 		}
 
@@ -438,14 +448,21 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 	/* Specific Mifare write access */
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
-		return mifare_write(adapter_idx, target_idx, ndef, cb,
-					tgt_subtype);
-
+		return mifare_write(adapter_idx, target_idx, ndef,
+				cb, tgt_subtype);
 	default:
 		DBG("Unknown TAG Type 2 subtype %d", tgt_subtype);
-
-		return -EINVAL;
+		err = -EINVAL;
+		goto out_err;
 	}
+
+	return 0;
+
+out_err:
+	if (cb != NULL)
+		cb(adapter_idx, target_idx, err);
+
+	return err;
 }
 
 static int check_presence(uint8_t *resp, int length, void *data)
