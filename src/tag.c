@@ -777,6 +777,11 @@ void near_tag_set_blank(struct near_tag *tag, near_bool_t blank)
 	tag->blank = blank;
 }
 
+near_bool_t near_tag_get_blank(struct near_tag *tag)
+{
+	return tag->blank;
+}
+
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length)
 {
 	if (data_length == NULL)
