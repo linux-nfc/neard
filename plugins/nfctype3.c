@@ -195,19 +195,17 @@ static void prepare_read_block(uint8_t cur_block,
 /* common: Simple checks on received frame */
 static int check_recv_frame(uint8_t *resp, uint8_t reply_code)
 {
-	int err = 0;
-
 	if (resp[OFS_NFC_STATUS] != 0) {
 		DBG("NFC Command failed: 0x%x", resp[OFS_NFC_STATUS]);
-		err = -EIO;
+		return -EIO;
 	}
 
 	if (resp[OFS_CMD_RESP] != reply_code) {
 		DBG("Felica cmd failed: 0x%x", resp[OFS_CMD_RESP]);
-		err = -EIO;
+		return -EIO;
 	}
 
-	return err;
+	return 0;
 }
 
 static int data_recv(uint8_t *resp, int length, void *data)
@@ -691,10 +689,8 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
-	if (cookie == NULL) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	if (cookie == NULL)
+		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;

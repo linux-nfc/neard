@@ -301,7 +301,6 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 static int nfctype2_read(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
-	int err;
 	enum near_tag_sub_type tgt_subtype;
 
 	DBG("");
@@ -310,23 +309,18 @@ static int nfctype2_read(uint32_t adapter_idx,
 
 	switch (tgt_subtype) {
 	case NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT:
-		err = nfctype2_read_meta(adapter_idx, target_idx, cb);
-		break;
+		return nfctype2_read_meta(adapter_idx, target_idx, cb);
 
 	/* Specific Mifare read access */
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
-		err = mifare_read(adapter_idx, target_idx,
+		return mifare_read(adapter_idx, target_idx,
 			cb, tgt_subtype);
-		break;
 
 	default:
 		DBG("Unknown Tag Type 2 subtype %d", tgt_subtype);
-		err = -1;
-		break;
+		return -1;
 	}
-
-	return err;
 }
 
 static int data_write_resp(uint8_t *resp, int length, void *data)
@@ -413,7 +407,6 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 {
 	struct near_tag *tag;
 	enum near_tag_sub_type tgt_subtype;
-	int err;
 
 	DBG("");
 
@@ -436,25 +429,24 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 		if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
 			if ((ndef->length + 3) > NDEF_MAX_SIZE) {
 				near_error("not enough space on tag");
+
 				return -ENOSPC;
 			}
 		}
 
-		err = data_write(adapter_idx, target_idx, ndef, cb);
-		break;
-		/* Specific Mifare write access */
+		return data_write(adapter_idx, target_idx, ndef, cb);
+
+	/* Specific Mifare write access */
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
-		err = mifare_write(adapter_idx, target_idx, ndef,
-				cb, tgt_subtype);
-		break;
+		return mifare_write(adapter_idx, target_idx, ndef, cb,
+					tgt_subtype);
+
 	default:
 		DBG("Unknown TAG Type 2 subtype %d", tgt_subtype);
-		err = -EINVAL;
-		break;
-	}
 
-	return err;
+		return -EINVAL;
+	}
 }
 
 static int check_presence(uint8_t *resp, int length, void *data)
@@ -480,7 +472,6 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 	struct type2_cmd cmd;
 	struct t2_cookie *cookie;
 	enum near_tag_sub_type tgt_subtype;
-	int err;
 
 	DBG("");
 
@@ -499,24 +490,21 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 		cookie->target_idx = target_idx;
 		cookie->cb = cb;
 
-		err = near_adapter_send(adapter_idx, (uint8_t *) &cmd,
+		return near_adapter_send(adapter_idx, (uint8_t *) &cmd,
 					CMD_READ_SIZE, check_presence, cookie,
 					t2_cookie_release);
-		break;
+
 	/* Specific Mifare check presence */
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_1K:
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
-		err = mifare_check_presence(adapter_idx, target_idx,
+		return mifare_check_presence(adapter_idx, target_idx,
 							cb, tgt_subtype);
-		break;
 
 	default:
 		DBG("Unknown TAG Type 2 subtype %d", tgt_subtype);
-		err = -1;
-		break;
-	}
 
-	return err;
+		return -1;
+	}
 }
 
 static int format_resp(uint8_t *resp, int length, void *data)

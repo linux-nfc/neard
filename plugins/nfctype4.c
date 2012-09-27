@@ -341,15 +341,11 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 	remain_bytes = (data_length - cookie->read_data);
 
 	if (remain_bytes >= cookie->r_apdu_max_size)
-		err = ISO_ReadBinary(cookie->read_data + 2,
+		return ISO_ReadBinary(cookie->read_data + 2,
 				cookie->r_apdu_max_size, data_read_cb, cookie);
 	else
-		err = ISO_ReadBinary(cookie->read_data + 2,
+		return ISO_ReadBinary(cookie->read_data + 2,
 				(uint8_t) remain_bytes, data_read_cb, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -405,12 +401,8 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	 */
 
 	/* Read 1st block */
-	err = ISO_ReadBinary(2, cookie->r_apdu_max_size - 2,
+	return ISO_ReadBinary(2, cookie->r_apdu_max_size - 2,
 			data_read_cb, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -436,12 +428,8 @@ static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
 	}
 
 	/* Read 0x0f bytes, to grab the NDEF msg length */
-	err = ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE,
+	return ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE,
 					t4_readbin_NDEF_ID, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -493,12 +481,8 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 	/* save rw conditions */
 	cookie->write_access = read_cc->tlv_fc.write_access;
 
-	err = ISO_Select((uint8_t *) &read_cc->tlv_fc.file_id,
+	return ISO_Select((uint8_t *) &read_cc->tlv_fc.file_id,
 			LEN_ISO_CC_FILEID, 0, t4_select_NDEF_ID, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -541,11 +525,7 @@ static int t4_select_cc(uint8_t *resp, int length, void *data)
 		return t4_cookie_release(0, cookie);
 	}
 
-	err = ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE, t4_readbin_cc, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
+	return ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE, t4_readbin_cc, cookie);
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -576,12 +556,8 @@ static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 	}
 
 	/* Jump to select phase */
-	err = ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0,
+	return ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0,
 				t4_select_cc, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -602,12 +578,9 @@ static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 	/* Check for APDU error - Not found */
 	if (APDU_STATUS(resp + STATUS_WORD_1) == APDU_NOT_FOUND) {
 		DBG("Fallback to V1");
-		err = ISO_Select(iso_appname_v1, ARRAY_SIZE(iso_appname_v1),
-				0x4, t4_select_file_by_name_v1, cookie);
-		if (err < 0)
-			goto out_err;
 
-		return err;
+		return ISO_Select(iso_appname_v1, ARRAY_SIZE(iso_appname_v1),
+					0x4, t4_select_file_by_name_v1, cookie);
 	}
 
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
@@ -622,12 +595,8 @@ static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 	}
 
 	/* Jump to select phase */
-	err = ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0,
-			t4_select_cc, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
+	return ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0, t4_select_cc,
+									cookie);
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -654,12 +623,8 @@ static int nfctype4_read(uint32_t adapter_idx,
 	cookie->read_data = 0;
 
 	/* Check for V2 type 4 tag */
-	err = ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
-			0x4, t4_select_file_by_name_v2, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
+	return ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
+				0x4, t4_select_file_by_name_v2, cookie);
 
 out_err:
 	return t4_cookie_release(err, cookie);
@@ -821,12 +786,8 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 	cookie->read_data = 0;
 
 	/* Check for V2 type 4 tag */
-	err = ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
-			0x4, check_presence, cookie);
-	if (err < 0)
-		goto out_err;
-
-	return err;
+	return ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
+				0x4, check_presence, cookie);
 
 out_err:
 	return t4_cookie_release(err, cookie);

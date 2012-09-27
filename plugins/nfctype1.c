@@ -146,14 +146,10 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	uint8_t *tagdata;
 	size_t data_length;
 
-	int err;
-
 	DBG("%d", length);
 
-	if (length < 0) {
-		err = length;
-		goto out_err;
-	}
+	if (length < 0)
+		return length;
 
 	length = length - LEN_STATUS_BYTE;  /* ignore first byte */
 
@@ -183,14 +179,11 @@ static int data_recv(uint8_t *resp, int length, void *data)
 		records = near_tlv_parse(tagdata, data_length);
 		near_tag_add_records(t1_tag->tag, records, t1_tag->cb, 0);
 
-		err = 0;
-
 		/* free memory */
 		g_free(t1_tag);
-	}
 
-out_err:
-	return err;
+		return 0;
+	}
 }
 
 /*
