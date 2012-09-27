@@ -500,9 +500,20 @@ static int mifare_process_MADs(void *data)
 		goto out_err;
 	}
 
-	for (i = 0; i < MAD_V1_AIDS_LEN; i++) {
+	/* Skip non-NFC sectors at the beginning of the tag, if any */
+	for (i = 0 ; i < MAD_V1_AIDS_LEN; i++) {
+		if (mf_ck->mad_1->aids[i] == NFC_AID_TAG)
+			break;
+	}
+
+	/*
+	 * NFC sectors have to be continuous,
+	 * so only some sectors at the beginning and at the end of tag
+	 * can be non-NFC.
+	 */
+	for (; i < MAD_V1_AIDS_LEN; i++) {
 		if (mf_ck->mad_1->aids[i] != NFC_AID_TAG)
-			continue;
+			goto done_mad;
 
 		/* Save in the global list */
 		mf_ck->g_sect_list = g_slist_append(mf_ck->g_sect_list,
@@ -515,9 +526,20 @@ static int mifare_process_MADs(void *data)
 	if (mf_ck->mad_2 == NULL)
 		goto done_mad;
 
-	for (i = 0; i < MAD_V2_AIDS_LEN; i++) {
+	/*
+	 * If all sectors from MAD1 were non-NFC,
+	 * skip initial non-NFC sectors from MAD2
+	 */
+	i = 0;
+
+	if (global_tag_size == 0)
+		for (; i < MAD_V2_AIDS_LEN; i++)
+			if (mf_ck->mad_2->aids[i] == NFC_AID_TAG)
+				break;
+
+	for (; i < MAD_V2_AIDS_LEN; i++) {
 		if (mf_ck->mad_2->aids[i] != NFC_AID_TAG)
-			continue;
+			goto done_mad;
 
 		mf_ck->g_sect_list = g_slist_append( mf_ck->g_sect_list,
 						GINT_TO_POINTER(ioffset + i));
@@ -528,6 +550,14 @@ static int mifare_process_MADs(void *data)
 	}
 
 done_mad:
+	if (global_tag_size == 0) {
+
+		/* no NFC sectors - mark tag as blank */
+		near_error("TAG Global size: [%d], not valid NFC tag.",
+				global_tag_size);
+		return -ENODEV;
+	}
+
 	/* n sectors, each sector is 3 blocks, each block is 16 bytes */
 	DBG("TAG Global size: [%d]", global_tag_size);
 
