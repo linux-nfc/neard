@@ -418,7 +418,7 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 
 
 	/* Additional sectors to read ? */;
-	if (mf_ck->g_sect_list->next != NULL) {
+	if (mf_ck->g_sect_list != NULL && mf_ck->g_sect_list->next != NULL) {
 
 		err = mifare_read_sector(data,	/* cookie */
 			mf_ck->nfc_data,		/* where to store */
