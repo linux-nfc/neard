@@ -326,7 +326,7 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 {
 	struct near_tag *tag = data;
 	struct near_ndef_message *ndef, *ndef_with_header = NULL;
-	int err;
+	int tlv_len_size, err;
 
 	DBG("conn %p", conn);
 
@@ -348,22 +348,38 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 	switch (tag->type) {
 	case NFC_PROTO_JEWEL:
 	case NFC_PROTO_MIFARE:
+		if (ndef->length < 0xff)
+			tlv_len_size = 3;
+		else
+			tlv_len_size = 5;
+
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
 		if (ndef_with_header == NULL)
 			goto fail;
 
 		ndef_with_header->offset = 0;
-		ndef_with_header->length = ndef->length + 3;
-		ndef_with_header->data = g_try_malloc0(ndef->length + 3);
+		ndef_with_header->length = ndef->length + tlv_len_size;
+		ndef_with_header->data =
+				g_try_malloc0(ndef->length + tlv_len_size);
 		if (ndef_with_header->data == NULL)
 			goto fail;
 
 		ndef_with_header->data[0] = TLV_NDEF;
-		ndef_with_header->data[1] = ndef->length;
-		memcpy(ndef_with_header->data + 2, ndef->data, ndef->length);
-		ndef_with_header->data[ndef->length + 2] = TLV_END;
 
+		if (ndef->length < 0xff) {
+			ndef_with_header->data[1] = ndef->length;
+		} else {
+			ndef_with_header->data[1] = 0xff;
+			ndef_with_header->data[2] =
+					(uint8_t)(ndef->length >> 8);
+			ndef_with_header->data[3] = (uint8_t)(ndef->length);
+		}
+
+		memcpy(ndef_with_header->data + tlv_len_size - 1, ndef->data,
+				ndef->length);
+		ndef_with_header->data[ndef->length + tlv_len_size - 1] =
+									TLV_END;
 		break;
 
 	case NFC_PROTO_FELICA:
