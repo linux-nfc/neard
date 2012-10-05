@@ -2627,7 +2627,7 @@ static struct near_ndef_message *build_uri_record(DBusMessage *msg)
 {
 	char *uri = NULL;
 	const char *uri_prefix = NULL;
-	uint8_t id_len, i;
+	uint8_t id_len, i, id;
 	uint32_t uri_len;
 
 	DBG("");
@@ -2636,23 +2636,24 @@ static struct near_ndef_message *build_uri_record(DBusMessage *msg)
 	if (uri == NULL)
 		return NULL;
 
+	id = 0;
+	id_len = 0;
+
 	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
 		uri_prefix = __near_ndef_get_uri_prefix(i);
 
 		if (uri_prefix != NULL &&
-				g_str_has_prefix(uri, uri_prefix) == TRUE)
+		    g_str_has_prefix(uri, uri_prefix) == TRUE) {
+			id = i;
+			id_len = strlen(uri_prefix);
 			break;
+		}
 	}
 
-	/* If uri_prefix is NULL then ID will be zero */
-	if (uri_prefix == NULL) {
-		i = 0;
-		id_len = 0;
-	} else
-		id_len = strlen(uri_prefix);
+	DBG("%d %d\n", i, id_len);
 
 	uri_len = strlen(uri) - id_len;
-	return near_ndef_prepare_uri_record(i, uri_len,
+	return near_ndef_prepare_uri_record(id, uri_len,
 						(uint8_t *)(uri + id_len));
 }
 
