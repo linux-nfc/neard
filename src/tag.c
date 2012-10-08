@@ -230,6 +230,16 @@ static DBusMessage *set_property(DBusConnection *conn,
 
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
+	struct near_tag *tag;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+
+	if (tag == NULL)
+		return;
+
+	dbus_message_unref(tag->write_msg);
+	tag->write_msg = NULL;
+
 	__near_adapter_start_check_presence(adapter_idx, target_idx);
 
 	__near_adapter_tags_changed(adapter_idx);
@@ -243,10 +253,12 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	DBG("Write status %d", status);
 
-	conn = near_dbus_get_connection();
 	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (tag == NULL)
+		return;
 
-	if (conn == NULL || tag == NULL)
+	conn = near_dbus_get_connection();
+	if (conn == NULL)
 		goto out;
 
 	if (status != 0) {
@@ -256,9 +268,6 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	} else {
 		g_dbus_send_reply(conn, tag->write_msg, DBUS_TYPE_INVALID);
 	}
-
-	dbus_message_unref(tag->write_msg);
-	tag->write_msg = NULL;
 
 	near_ndef_records_free(tag->records);
 	tag->n_records = 0;
@@ -275,6 +284,9 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	}
 
 out:
+	dbus_message_unref(tag->write_msg);
+	tag->write_msg = NULL;
+
 	__near_adapter_start_check_presence(tag->adapter_idx, tag->target_idx);
 }
 
