@@ -499,6 +499,39 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 					check_presence, adapter);
 }
 
+void __near_adapter_start_check_presence(uint32_t adapter_idx,
+						uint32_t target_idx)
+{
+	struct near_adapter *adapter;
+
+	DBG("");
+
+	adapter = g_hash_table_lookup(adapter_hash,
+			GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
+	adapter->presence_timeout =
+			g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
+					check_presence, adapter);
+}
+
+void __near_adapter_stop_check_presence(uint32_t adapter_idx,
+						uint32_t target_idx)
+{
+	struct near_adapter *adapter;
+
+	DBG("");
+
+	adapter = g_hash_table_lookup(adapter_hash,
+			GINT_TO_POINTER(adapter_idx));
+	if (adapter == NULL)
+		return;
+
+	if (adapter->presence_timeout > 0)
+		g_source_remove(adapter->presence_timeout);
+}
+
 static const GDBusMethodTable adapter_methods[] = {
 	{ GDBUS_METHOD("GetProperties",
 				NULL, GDBUS_ARGS({"properties", "a{sv}"}),

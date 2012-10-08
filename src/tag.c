@@ -230,6 +230,8 @@ static DBusMessage *set_property(DBusConnection *conn,
 
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
+	__near_adapter_start_check_presence(adapter_idx, target_idx);
+
 	__near_adapter_tags_changed(adapter_idx);
 }
 
@@ -245,7 +247,7 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	tag = near_tag_get_tag(adapter_idx, target_idx);
 
 	if (conn == NULL || tag == NULL)
-		return;
+		goto out;
 
 	if (status != 0) {
 		reply = __near_error_failed(tag->write_msg, EINVAL);
@@ -263,8 +265,17 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	tag->records = NULL;
 	g_free(tag->data);
 
-	if (status == 0)
+	if (status == 0) {
+		/*
+		 * If writing succeeded,
+		 * check presence will be restored after reading
+		 */
 		__near_tag_read(tag, tag_read_cb);
+		return;
+	}
+
+out:
+	__near_adapter_start_check_presence(tag->adapter_idx, tag->target_idx);
 }
 
 static void format_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
@@ -908,6 +919,9 @@ int __near_tag_read(struct near_tag *tag, near_tag_io_cb cb)
 
 	DBG("type 0x%x", tag->type);
 
+	/* Stop check presence while reading */
+	__near_adapter_stop_check_presence(tag->adapter_idx, tag->target_idx);
+
 	for (list = driver_list; list; list = list->next) {
 		struct near_tag_driver *driver = list->data;
 
@@ -936,21 +950,32 @@ int __near_tag_write(struct near_tag *tag,
 		DBG("driver type 0x%x", driver->type);
 
 		if (driver->type == tag->type) {
+			/* Stop check presence while writing */
+			__near_adapter_stop_check_presence(tag->adapter_idx,
+								tag->target_idx);
+
 			if (tag->blank == TRUE && driver->format != NULL) {
 				DBG("Blank tag detected, formatting");
 				err = driver->format(tag->adapter_idx,
 						tag->target_idx, format_cb);
-				if (err < 0)
-					return err;
 			} else {
-				return driver->write(tag->adapter_idx,
-						tag->target_idx, ndef,
-						cb);
+				err = driver->write(tag->adapter_idx,
+							tag->target_idx, ndef,
+							cb);
 			}
+
+			break;
 		}
 	}
 
-	return 0;
+	if (list == NULL)
+		err = -EOPNOTSUPP;
+
+	if (err < 0)
+		__near_adapter_start_check_presence(tag->adapter_idx,
+							tag->target_idx);
+
+	return err;
 }
 
 int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb)

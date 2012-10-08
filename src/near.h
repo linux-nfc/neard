@@ -91,6 +91,8 @@ void __near_adapter_tags_changed(uint32_t adapter_idx);
 void __near_adapter_devices_changed(uint32_t adapter_idx);
 void __near_adapter_listen(struct near_device_driver *driver);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
+void __near_adapter_start_check_presence(uint32_t adapter_idx, uint32_t target_idx);
+void __near_adapter_stop_check_presence(uint32_t adapter_idx, uint32_t target_idx);
 int __near_adapter_init(void);
 void __near_adapter_cleanup(void);
 
