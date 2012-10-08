@@ -273,6 +273,7 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	tag->n_records = 0;
 	tag->records = NULL;
 	g_free(tag->data);
+	tag->data = NULL;
 
 	if (status == 0) {
 		/*
