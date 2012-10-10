@@ -1,3 +1,14 @@
+ver 0.7
+	Added support for Android Jelly Bean handover.
+	Added a Bluetooth handover automated script.
+	Added MIFARE Classic writing support.
+	Added MIFARE read only check support.
+	Added MIFARE check presence support.
+	Fixed a tag writing related double free.
+	Fixed tag plugins memory leaks.
+	Fixed tag plugins callback calls code paths.
+	Fixed URI NDEF writing.
+
 ver 0.6
 	Added tag formatting support for Type 1, 3 an 4.
 	Added blank tag detection for Type 1, 3 and 4.
