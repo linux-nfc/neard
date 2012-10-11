@@ -2042,7 +2042,8 @@ static struct near_ndef_ho_record *parse_ho_record(enum record_type rec_type,
 	if (near_fill_ho_record(ho_record, acs, mimes) < 0)
 		goto fail;
 
-	near_error("handover record parsing complete");
+	DBG("handover record parsing complete");
+
 	return ho_record;
 
 fail:
