@@ -129,6 +129,7 @@ static void free_server_data(gpointer data)
 		g_source_remove(server_data->watch);
 	server_data->watch = 0;
 	g_list_free_full(server_data->client_list, free_client_data);
+	server_data->client_list = NULL;
 
 	DBG("Closing server socket");
 
@@ -155,9 +156,9 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 		if (server_data->watch > 0)
 			g_source_remove(server_data->watch);
 		server_data->watch = 0;
-		g_list_free_full(server_data->client_list, free_client_data);
 
-		close(server_fd);
+		g_list_free_full(server_data->client_list, free_client_data);
+		server_data->client_list = NULL;
 
 		near_error("Error with %s server channel", driver->name);
 
@@ -170,7 +171,6 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 	if (client_fd < 0) {
 		near_error("accept failed %d", client_fd);
 
-		close(server_fd);
 		return FALSE;
 	}
 
