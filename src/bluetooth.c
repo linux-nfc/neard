@@ -211,7 +211,7 @@ static void bt_create_paired_device_cb(DBusPendingCall *pending,
 		goto cb_done;
 	}
 
-	near_info("Pairing done successfully !");
+	DBG("Successful pairing");
 
 cb_done:
 	/* task completed - clean memory*/
