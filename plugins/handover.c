@@ -398,7 +398,6 @@ static void free_hr_push_client(struct hr_push_client *client, int status)
 	DBG("");
 
 	handover_close(client->fd, 0);
-	close(client->fd);
 
 	if (client->cb)
 		client->cb(client->adapter_idx, client->target_idx, status);
@@ -462,9 +461,13 @@ static int handover_push(int client_fd,
 					G_IO_ERR, handover_push_event,
 					(gpointer) client);
 
+	g_io_channel_unref(channel);
+
 	err = send(client_fd, ndef->data, ndef->length, MSG_DONTWAIT);
-	if (err < 0)
+	if (err < 0) {
 		free_hr_push_client(client, err);
+		g_io_channel_unref(channel);
+	}
 
 	return err;
 }
