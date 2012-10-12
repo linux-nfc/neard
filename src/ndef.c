@@ -1796,7 +1796,8 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 
 	g_free(oob_data);
 
-	near_info("handover select record preparation OK");
+	DBG("Hs NDEF done");
+
 	return hs_msg;
 
 fail:
