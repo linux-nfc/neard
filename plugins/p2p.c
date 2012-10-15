@@ -229,6 +229,7 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 	if (err < 0) {
 		if (errno == EADDRINUSE) {
 			DBG("%s is already bound", driver->name);
+			close(fd);
 			return 0;
 		}
 
