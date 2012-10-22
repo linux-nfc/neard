@@ -149,8 +149,6 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 
 		near_info("Send Hs frame");
 		err = send(client_fd, msg->data, msg->length, MSG_DONTWAIT);
-		if (err >= 0)
-			err = 0;
 
 		g_free(msg->data);
 		g_free(msg);
@@ -188,6 +186,7 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 	struct hr_ndef *ndef;
 	int bytes_recv;
 	int ndef_size;
+	int err;
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
 	if (ndef == NULL) {
@@ -248,7 +247,13 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 
 	if (ndef->extra_ndef_count == 0) {
 		/* All the bytes are read so now, parse the frame */
-		handover_ndef_parse(client_fd, ndef);
+		err = handover_ndef_parse(client_fd, ndef);
+		if (err > 0) {
+			/* clean memory */
+			handover_close(client_fd, 0);
+			return TRUE;
+		}
+
 		return FALSE;
 	}
 

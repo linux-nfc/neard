@@ -91,12 +91,6 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 						client_data->target_idx,
 						client_data->cb);
 
-	if (more == FALSE) {
-		if (client_data->driver->close != NULL)
-			client_data->driver->close(client_data->fd, 0);
-		close(client_data->fd);
-	}
-
 	return more;
 }
 
