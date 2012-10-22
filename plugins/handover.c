@@ -304,6 +304,12 @@ static near_bool_t handover_read_hr(int client_fd,
 	ndef->in_extra_read = TRUE;
 	ndef->cfg_record_state = TRUE;
 
+	/* But, if there's no ac record, we jump to the parsing */
+	if (ndef->extra_ndef_count == 0) {
+		handover_ndef_parse(client_fd, ndef);
+		return FALSE;
+	}
+
 	return TRUE;
 
 fail:
