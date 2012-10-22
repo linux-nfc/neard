@@ -527,7 +527,7 @@ static int bt_refresh_adapter_props(DBusConnection *conn, void *user_data)
 
 /* Parse and fill the bluetooth oob information block */
 static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
-						struct near_oob_data *oob)
+				struct near_oob_data *oob, uint16_t *props)
 {
 	char *tmp;
 	uint16_t len = 0;
@@ -571,22 +571,28 @@ static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
 		case EIR_CLASS_OF_DEVICE:
 			tmp = g_strdup_printf("%02X%02X%02X",
 					*data, *(data + 1), *(data + 2));
-			if (tmp != NULL)
+			if (tmp != NULL) {
 				oob->class_of_device = strtol(tmp, NULL, 16);
+				*props |= OOB_PROPS_COD;
+			}
 			g_free(tmp);
 			break;
 
 		case EIR_SP_HASH:
 			oob->spair_hash = g_try_malloc0(OOB_SP_SIZE);
-			if (oob->spair_hash)
+			if (oob->spair_hash) {
 				memcpy(oob->spair_hash, data, OOB_SP_SIZE);
+				*props |= OOB_PROPS_SP_HASH;
+			}
 			break;
 
 		case EIR_SP_RANDOMIZER:
 			oob->spair_randomizer = g_try_malloc0(OOB_SP_SIZE);
-			if (oob->spair_randomizer)
+			if (oob->spair_randomizer) {
 				memcpy(oob->spair_randomizer,
 						data, OOB_SP_SIZE);
+				*props |= OOB_PROPS_SP_RANDOM;
+			}
 			break;
 
 		case EIR_SECURITY_MGR_FLAGS:
@@ -613,9 +619,11 @@ static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
  * to determine the record data structure.
  * Some specifications are proprietary (eg. "short mode")
  * and are not fully documented.
+ * mime_properties is a bitmask and should reflect the fields found in
+ * the incoming oob.
  */
 int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
-		near_bool_t pair)
+				uint16_t *mime_properties, near_bool_t pair)
 {
 	struct near_oob_data *oob;
 	uint16_t bt_oob_data_size;
@@ -653,7 +661,8 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 		bt_oob_data_size -= BT_ADDRESS_SIZE ;
 
 		if (bt_oob_data_size)
-			bt_parse_eir(ptr, bt_oob_data_size, oob);
+			bt_parse_eir(ptr, bt_oob_data_size, oob,
+							mime_properties);
 	} else if (version == BT_MIME_V2_0) {
 		marker = *ptr++;	/* could be '$' */
 
@@ -778,8 +787,11 @@ done:
 /*
  * External API to get bt properties
  * Prepare a "real" oob datas block
+ * mime_props is a bitmask we use to add or not specific fields in the
+ * oob frame (e.g.: OOB keys)
  * */
-uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len)
+uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len,
+						uint16_t mime_props)
 {
 	uint8_t *bt_oob_block = NULL;
 	uint16_t bt_oob_block_size = 0;
@@ -799,10 +811,13 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len)
 	max_block_size = sizeof(uint16_t) +		/* stored oob size */
 			BT_ADDRESS_SIZE +
 			EIR_HEADER_LEN + bt_def_oob_data.bt_name_len +
-			EIR_HEADER_LEN + COD_SIZE +	/* class */
-			EIR_HEADER_LEN + OOB_SP_SIZE +	/* oob hash */
-			EIR_HEADER_LEN + OOB_SP_SIZE;	/* oob random */
+			EIR_HEADER_LEN + COD_SIZE;	/* class */
 
+	/* Should we add oob pairing keys ?*/
+	if (mime_props & OOB_PROPS_SP) {
+		max_block_size += (EIR_HEADER_LEN + OOB_SP_SIZE + /* oob hash */
+				EIR_HEADER_LEN + OOB_SP_SIZE); /* oob random */
+	}
 
 	bt_oob_block_size = sizeof(uint16_t)	/* stored oob size */
 			+ BT_ADDRESS_SIZE;	/* device address */
@@ -842,6 +857,10 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len)
 	/* The following data are generated dynamically
 	 * so we have to read the local oob data
 	 * */
+	/* Should we add oob pairing keys */
+	if ((mime_props & OOB_PROPS_SP) == 0)
+		goto out;
+
 	if (bt_sync_oob_readlocaldata(bt_conn, bt_def_oob_data.def_adapter,
 					hash, random) == OOB_SP_SIZE) {
 		bt_oob_block_size += 2 * (OOB_SP_SIZE + EIR_HEADER_LEN);
@@ -862,6 +881,7 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len)
 		}
 	}
 
+out:
 	*(uint16_t *)bt_oob_block = bt_oob_block_size ;
 	*bt_data_len = bt_oob_block_size;
 

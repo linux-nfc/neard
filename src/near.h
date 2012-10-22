@@ -168,13 +168,23 @@ void __near_plugin_cleanup(void);
 #define BT_MIME_V2_1		1
 #define BT_MIME_STRING_2_0	"nokia.com:bt"
 #define BT_MIME_STRING_2_1	"application/vnd.bluetooth.ep.oob"
+#define WIFI_MIME_STRING	"application/vnd.wfa.wsc"
+
+/* Mime specific properties */
+#define OOB_PROPS_EMPTY		0x00
+#define OOB_PROPS_SP_HASH	0x01
+#define OOB_PROPS_SP_RANDOM	0x02
+#define OOB_PROPS_SHORT_NAME	0x04
+#define OOB_PROPS_COD		0x08
+#define OOB_PROPS_SP		(OOB_PROPS_SP_HASH | OOB_PROPS_SP_RANDOM)
 
 int __near_bluetooth_init(void);
 void __near_bluetooth_cleanup(void);
 int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
-							near_bool_t pair);
+					uint16_t *properties, near_bool_t pair);
 int __near_bluetooth_pair(void *data);
-uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len);
+uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len,
+							uint16_t mime_props);
 
 void __near_agent_ndef_parse_records(GList *records);
 int __near_agent_ndef_register(const char *sender, const char *path,

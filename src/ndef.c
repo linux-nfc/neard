@@ -140,6 +140,11 @@ struct near_ndef_sp_payload {
 
 struct near_ndef_mime_payload {
 	char *type;
+
+	struct {
+		uint8_t carrier_type;
+		uint16_t properties;	/* e.g.: NO_PAIRING_KEY */
+	} handover;
 };
 
 enum carrier_power_state {
@@ -1370,11 +1375,15 @@ parse_mime_type(struct near_ndef_record *record,
 
 	DBG("MIME Type  '%s' action: %d", mime->type, action);
 	if (strcmp(mime->type, BT_MIME_STRING_2_1) == 0) {
+		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_1,
-				&ndef_data[offset], action);
+				&ndef_data[offset], &mime->handover.properties,
+				action);
 	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
+		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
 		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_0,
-				&ndef_data[offset], action);
+				&ndef_data[offset], &mime->handover.properties,
+				action);
 	}
 
 	if (err < 0) {
@@ -1676,6 +1685,46 @@ fail:
 }
 
 /*
+ * Walk thru the cfgs list and set the carriers bitfield
+ */
+static uint8_t near_get_carriers_list(struct near_ndef_record *record)
+{
+	struct near_ndef_ho_payload *ho = record->ho;
+	uint8_t carriers;
+	int i;
+
+	carriers = 0;
+
+	for (i = 0; i < ho->number_of_cfg_payloads; i++) {
+		struct near_ndef_mime_payload *rec = ho->cfg_payloads[i];
+
+		carriers |= rec->handover.carrier_type;
+	}
+
+	return carriers;
+}
+
+/*
+ * Walk thru the cfgs list and get the properties corresponding
+ * to the carrier bit.
+ */
+static uint16_t near_get_carrier_properties(struct near_ndef_record *record,
+						uint8_t carrier_bit)
+{
+	struct near_ndef_ho_payload *ho = record->ho;
+	int i;
+
+	for (i = 0; i < ho->number_of_cfg_payloads; i++) {
+		struct near_ndef_mime_payload *rec = ho->cfg_payloads[i];
+
+		if ((rec->handover.carrier_type & carrier_bit) != 0)
+			return rec->handover.properties;
+	}
+
+	return OOB_PROPS_EMPTY;
+}
+
+/*
  * @brief Prepare Handover select record with mandatory fields.
  *
  * TODO: only mime (BT) are supported now... Wifi will come soon...
@@ -1692,6 +1741,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	struct near_ndef_message *ac_msg = NULL;
 	struct near_ndef_message *cr_msg = NULL;
 	struct near_ndef_message *bt_msg = NULL;
+	uint16_t props;
 	uint16_t collision;
 	uint8_t hs_length;
 	char cdr = '0';			/* Carrier data reference */
@@ -1700,6 +1750,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		goto fail;
 
 	collision = record->ho->collision_record;
+
+	/* Walk the cfg list to get the carriers */
+	if (carriers == NEAR_CARRIER_UNKNOWN)
+		carriers = near_get_carriers_list(record);
 
 	/*
 	 * Prepare records to be added
@@ -1721,7 +1775,11 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 
 	if (carriers & NEAR_CARRIER_BLUETOOTH) {
 		/* Retrieve the bluetooth settings */
-		oob_data = __near_bluetooth_local_get_properties(&oob_size);
+		props = near_get_carrier_properties(record,
+							NEAR_CARRIER_BLUETOOTH);
+
+		oob_data = __near_bluetooth_local_get_properties(&oob_size,
+									props);
 		if (oob_data == NULL) {
 			near_error("Getting Bluetooth OOB data failed");
 			goto fail;
