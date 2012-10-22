@@ -916,7 +916,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		offset += 4;
 		header_len += 4;
 
-		if (offset >= length)
+		if ((offset + rec_header->payload_len) > length)
 			goto fail;
 	}
 
@@ -926,7 +926,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		rec_header->il_length = rec[offset++];
 		header_len++;
 
-		if (offset >= length)
+		if ((offset + rec_header->payload_len) > length)
 			goto fail;
 	}
 
@@ -942,7 +942,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		offset += rec_header->type_len;
 		header_len += rec_header->type_len;
 
-		if (offset >= length)
+		if ((offset + rec_header->payload_len) > length)
 			goto fail;
 	}
 
@@ -959,12 +959,9 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		offset += rec_header->il_length;
 		header_len += rec_header->il_length;
 
-		if (offset >= length)
+		if ((offset + rec_header->payload_len) > length)
 			goto fail;
 	}
-
-	if ((offset + rec_header->payload_len) > length)
-		goto fail;
 
 	rec_header->rec_type = get_record_type(rec_header->tnf, type,
 							rec_header->type_len);
