@@ -1634,6 +1634,10 @@ static struct near_ndef_message *near_ndef_prepare_ac_message(uint8_t cps,
 	ac_msg->data[ac_msg->offset++] = cdr;	/* cdr */
 	ac_msg->data[ac_msg->offset] = 0;	/* adata ref count */
 
+	/* Check if we want an empty record */
+	if (cdr == 0x00)
+		ac_msg->length = 0;
+
 	return ac_msg;
 }
 
@@ -1744,6 +1748,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	uint16_t props;
 	uint16_t collision;
 	uint8_t hs_length;
+	near_bool_t mb, me;
 	char cdr = '0';			/* Carrier data reference */
 
 	if (record->ho == NULL)
@@ -1764,6 +1769,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		if (cr_msg == NULL)
 			goto fail;
 	}
+
+	/* If there's no carrier, we create en empty ac record */
+	if (carriers == NEAR_CARRIER_EMPTY)
+		cdr = 0x00;
 
 	/*
 	 * ac record: if only one: MB=0 ME=1
@@ -1829,20 +1838,33 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	/* Add version */
 	hs_msg->data[hs_msg->offset++] = HANDOVER_VERSION;
 
+	/* Prepare MB / ME flags */
+	/* cr */
+	mb = TRUE;
+	me = FALSE;
+
+	if (cr_msg != NULL) {
+		near_ndef_set_mb_me(cr_msg->data, mb, me);
+		mb = FALSE; me = TRUE;
+	}
+
+	/* ac */
+	me = TRUE;
+	if (ac_msg->length != 0)
+		near_ndef_set_mb_me(ac_msg->data, mb, me); /* xxx, TRUE */
+	else
+		/* cr is alone: TRUE/TRUE */
+		near_ndef_set_mb_me(cr_msg->data, TRUE, me);
+
+	/* Now, copy the datas */
 	/* copy cr */
 	if (cr_msg != NULL) {
-		near_ndef_set_mb_me(cr_msg->data, TRUE, FALSE);
 		memcpy(hs_msg->data + hs_msg->offset, cr_msg->data,
 				cr_msg->length);
 		hs_msg->offset += cr_msg->length;
 	}
 
 	/* copy ac */
-	if (cr_msg != NULL)
-		near_ndef_set_mb_me(ac_msg->data, FALSE, TRUE);
-	else
-		near_ndef_set_mb_me(ac_msg->data, TRUE, TRUE);
-
 	memcpy(hs_msg->data + hs_msg->offset, ac_msg->data, ac_msg->length);
 	hs_msg->offset += ac_msg->length;
 
