@@ -1683,7 +1683,8 @@ fail:
  */
 struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 					struct near_ndef_record *record,
-					enum near_ndef_handover_carrier carrier)
+					uint8_t carriers)
+
 {
 	uint8_t *oob_data = NULL;
 	int oob_size;
@@ -1718,8 +1719,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	if (ac_msg == NULL)
 		goto fail;
 
-	switch (carrier) {
-	case NEAR_CARRIER_BLUETOOTH:
+	if (carriers & NEAR_CARRIER_BLUETOOTH) {
 		/* Retrieve the bluetooth settings */
 		oob_data = __near_bluetooth_local_get_properties(&oob_size);
 		if (oob_data == NULL) {
@@ -1733,10 +1733,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 			goto fail;
 
 		near_ndef_set_mb_me(bt_msg->data, FALSE, TRUE);
+	}
 
-		break;
-
-	case NEAR_CARRIER_WIFI:
+	if (carriers & NEAR_CARRIER_WIFI) {
+		/* TODO LATER */
 		goto fail;
 	}
 
@@ -1763,8 +1763,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	 */
 	hs_msg->data[NDEF_PAYLOAD_LENGTH_OFFSET] = hs_length;
 
-	/* Fill the message .... */
-	near_ndef_set_mb_me(hs_msg->data, TRUE, FALSE);
+	if (carriers == NEAR_CARRIER_EMPTY)
+		near_ndef_set_mb_me(hs_msg->data, TRUE, TRUE);
+	else
+		near_ndef_set_mb_me(hs_msg->data, TRUE, FALSE);
 
 	/* Add version */
 	hs_msg->data[hs_msg->offset++] = HANDOVER_VERSION;
@@ -2752,7 +2754,7 @@ static struct near_ndef_ac_payload *build_ho_local_ac_record(void)
 static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 {
 	char *carrier_type = NULL;
-	enum near_ndef_handover_carrier carrier;
+	uint8_t carrier;
 	struct near_ndef_record *record = NULL;
 
 	DBG("");
@@ -2763,11 +2765,13 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 		return NULL;
 	}
 
+	carrier = NEAR_CARRIER_EMPTY;
 	if (g_strcmp0(carrier_type, "bluetooth") == 0)
-		carrier = NEAR_CARRIER_BLUETOOTH;
-	else if (g_strcmp0(carrier_type, "wifi") == 0)
-		carrier = NEAR_CARRIER_WIFI;
-	else {
+		carrier |= NEAR_CARRIER_BLUETOOTH;
+	if (g_strcmp0(carrier_type, "wifi") == 0)
+		carrier |= NEAR_CARRIER_WIFI;
+
+	if (carrier == NEAR_CARRIER_EMPTY) {
 		DBG("Invalid carrier name");
 		return NULL;
 	}

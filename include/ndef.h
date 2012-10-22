@@ -32,10 +32,11 @@ struct near_ndef_message {
 	uint8_t *data;
 };
 
-enum near_ndef_handover_carrier {
-	NEAR_CARRIER_BLUETOOTH,
-	NEAR_CARRIER_WIFI,
-};
+/* near_ndef_handover_carrier*/
+#define		NEAR_CARRIER_EMPTY	0x00
+#define		NEAR_CARRIER_BLUETOOTH	0x01	/* bit 0 */
+#define		NEAR_CARRIER_WIFI	0x02	/* bit 1 */
+#define		NEAR_CARRIER_UNKNOWN	0x80	/* Bit 7 */
 
 int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 						uint8_t record_type);
@@ -54,7 +55,7 @@ struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 
 struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 						struct near_ndef_record *record,
-						enum near_ndef_handover_carrier carrier);
+						uint8_t carriers);
 
 struct near_ndef_message *
 near_ndef_prepare_smartposter_record(uint8_t uri_identifier,

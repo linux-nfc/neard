@@ -141,7 +141,7 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 		 * We build the Hs based on it.
 		 */
 		msg = near_ndef_prepare_handover_record("Hs", records->data,
-							NEAR_CARRIER_BLUETOOTH);
+							NEAR_CARRIER_UNKNOWN);
 		if (msg == NULL) {
 			err = -EINVAL;
 			goto fail;
