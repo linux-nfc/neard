@@ -240,6 +240,14 @@ char *__near_ndef_record_get_type(struct near_ndef_record *record)
 	return record->type;
 }
 
+uint8_t *__near_ndef_record_get_data(struct near_ndef_record *record,
+								size_t *len)
+{
+	*len = record->data_len;
+
+	return record->data;
+}
+
 static void append_text_payload(struct near_ndef_text_payload *text,
 					DBusMessageIter *dict)
 {
