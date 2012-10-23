@@ -248,6 +248,26 @@ uint8_t *__near_ndef_record_get_data(struct near_ndef_record *record,
 	return record->data;
 }
 
+void __near_ndef_append_records(DBusMessageIter *iter, GList *records)
+{
+	GList *list;
+
+	DBG("");
+
+	for (list = records; list; list = list->next) {
+		struct near_ndef_record *record = list->data;
+		uint8_t *data;
+		size_t data_len;
+
+		data = __near_ndef_record_get_data(record, &data_len);
+		if (data == NULL)
+			continue;
+
+		dbus_message_iter_append_fixed_array(iter, DBUS_TYPE_BYTE,
+							&data, data_len);
+	}
+}
+
 static void append_text_payload(struct near_ndef_text_payload *text,
 					DBusMessageIter *dict)
 {

@@ -107,6 +107,7 @@ void __near_ndef_record_free(struct near_ndef_record *record);
 char *__near_ndef_record_get_path(struct near_ndef_record *record);
 char *__near_ndef_record_get_type(struct near_ndef_record *record);
 uint8_t *__near_ndef_record_get_data(struct near_ndef_record *record, size_t *len);
+void __near_ndef_append_records(DBusMessageIter *iter, GList *record);
 const char *__near_ndef_get_uri_prefix(uint8_t id);
 struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg);
 
