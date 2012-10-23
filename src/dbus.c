@@ -185,6 +185,10 @@ void near_dbus_property_append_array(DBusMessageIter *iter,
 		variant_sig = DBUS_TYPE_ARRAY_AS_STRING DBUS_TYPE_OBJECT_PATH_AS_STRING;
 		array_sig = DBUS_TYPE_OBJECT_PATH_AS_STRING;
 		break;
+	case DBUS_TYPE_BYTE:
+		variant_sig = DBUS_TYPE_ARRAY_AS_STRING DBUS_TYPE_BYTE_AS_STRING;
+		array_sig = DBUS_TYPE_BYTE_AS_STRING;
+		break;
 	default:
 		return;
 	}

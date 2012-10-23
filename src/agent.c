@@ -98,6 +98,13 @@ static void append_record_path(DBusMessageIter *iter, void *user_data)
 	}
 }
 
+static void append_ndef(DBusMessageIter *iter, void *user_data)
+{
+	GList *records = user_data;
+
+	__near_ndef_append_records(iter, records);
+}
+
 static void ndef_agent_push_records(struct near_ndef_agent *agent,
 							GList *records)
 {
@@ -122,6 +129,8 @@ static void ndef_agent_push_records(struct near_ndef_agent *agent,
 	near_dbus_dict_open(&iter, &dict);
 	near_dbus_dict_append_array(&dict, "Records",
 				DBUS_TYPE_STRING, append_record_path, records);
+	near_dbus_dict_append_array(&dict, "NDEF",
+				DBUS_TYPE_BYTE, append_ndef, records);
 	near_dbus_dict_close(&iter, &dict);
 
 	DBG("sending...");

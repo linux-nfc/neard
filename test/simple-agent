@@ -19,11 +19,18 @@ class NDEFAgent(dbus.service.Object):
 					in_signature='a{sv}',
 					out_signature='')
 	def GetNDEF(self, fields):
-		print "GetNDEF"
+		print "GetNDEF %s"
 
 		if fields.has_key("Records"):
 			for path in fields["Records"]:
 				print "Record path %s" % (path)
+
+		if fields.has_key("NDEF"):
+			val = "["
+			for i in fields["NDEF"]:
+				val += " 0x%x" % i
+			val += " ]"
+			print "NDEF %s" % val
 
 		return
 
