@@ -1938,7 +1938,6 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	}
 
 	offset = offset + 1;
-	frame_length = frame_length - 1;	/* Remove Hr length size */
 
 	/* We should work on the whole frame */
 	ho_length = frame_length;
@@ -2167,7 +2166,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length)
 			record->ho = parse_ho_payload(record->header->rec_type,
 					ndef_data + offset,
 					record->header->payload_len,
-					ndef_length,
+					ndef_length - offset,
 					record->header->mb, record->header->me);
 			if (record->ho == NULL)
 				goto fail;
