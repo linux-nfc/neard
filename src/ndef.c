@@ -182,6 +182,9 @@ struct near_ndef_carrier_data {
 
 /* Default Handover version */
 #define HANDOVER_VERSION	0x12
+#define HANDOVER_MAJOR(version) (((version) >> 4) & 0xf)
+#define HANDOVER_MINOR(version) ((version) & 0xf)
+
 
 /* General Handover Request/Select record */
 struct near_ndef_ho_payload {
@@ -2014,9 +2017,13 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 
 	/* Version is the first mandatory field of hr payload */
 	ho_payload->version = payload[offset];
-	if (ho_payload->version > HANDOVER_VERSION) {
+
+	/* If major is different, reply with an empty Hs */
+	if (HANDOVER_MAJOR(ho_payload->version) !=
+	    HANDOVER_MAJOR(HANDOVER_VERSION)) {
 		near_error("Unsupported version (%d)", ho_payload->version);
-		goto fail;
+		/* Skip parsing and return an empty record */
+		return ho_payload;
 	}
 
 	offset = offset + 1;
