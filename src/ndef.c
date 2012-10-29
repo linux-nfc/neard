@@ -1399,20 +1399,38 @@ parse_mime_type(struct near_ndef_record *record,
 	return mime;
 }
 
-/* Set the MB/ME bit in message header */
-static uint8_t near_ndef_set_mb_me(uint8_t *hdr, near_bool_t first_rec,
-						near_bool_t last_rec)
+/* Set the MB bit in message header */
+static uint8_t near_ndef_set_mb(uint8_t *hdr, near_bool_t first_rec)
 {
-	/* Reset bits 0x40 and 0x80*/
-	*hdr &= (0xFF & (~(RECORD_MB | RECORD_ME)));
+	/* Reset bits 0x40 */
+	*hdr &= (0xFF & (~RECORD_MB));
 
 	/* Set if needed */
 	if (first_rec == TRUE)
 		*hdr |= RECORD_MB;
+
+	return *hdr;
+}
+
+/* Set the MB/ME bit in message header */
+static uint8_t near_ndef_set_me(uint8_t *hdr, near_bool_t last_rec)
+{
+	/* Reset bits 0x80 */
+	*hdr &= (0xFF & (~RECORD_ME));
+
+	/* Set if needed */
 	if (last_rec == TRUE)
 		*hdr |= RECORD_ME;
 
 	return *hdr;
+}
+
+/* Set the MB/ME bit in message header */
+static uint8_t near_ndef_set_mb_me(uint8_t *hdr, near_bool_t first_rec,
+						near_bool_t last_rec)
+{
+	near_ndef_set_mb(hdr, first_rec);
+	return near_ndef_set_me(hdr, last_rec);
 }
 
 /**
@@ -1759,6 +1777,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 
 	collision = record->ho->collision_record;
 
+	/* no cr on Hs */
+	if (strncmp((char *) type_name, "Hs", 2) == 0)
+		collision = 0;
+
 	/* Walk the cfg list to get the carriers */
 	if (carriers == NEAR_CARRIER_UNKNOWN)
 		carriers = near_get_carriers_list(record);
@@ -1833,10 +1855,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	 */
 	hs_msg->data[NDEF_PAYLOAD_LENGTH_OFFSET] = hs_length;
 
-	if (carriers == NEAR_CARRIER_EMPTY)
-		near_ndef_set_mb_me(hs_msg->data, TRUE, TRUE);
-	else
-		near_ndef_set_mb_me(hs_msg->data, TRUE, FALSE);
+	near_ndef_set_mb_me(hs_msg->data, TRUE, TRUE);
+
+	if ((carriers != NEAR_CARRIER_EMPTY) || (cr_msg != NULL))
+		near_ndef_set_me(hs_msg->data, FALSE);
 
 	/* Add version */
 	hs_msg->data[hs_msg->offset++] = HANDOVER_VERSION;
@@ -1844,20 +1866,17 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	/* Prepare MB / ME flags */
 	/* cr */
 	mb = TRUE;
-	me = FALSE;
-
+	me = TRUE;
 	if (cr_msg != NULL) {
 		near_ndef_set_mb_me(cr_msg->data, mb, me);
-		mb = FALSE; me = TRUE;
+		if (ac_msg->length != 0)
+			near_ndef_set_me(cr_msg->data, FALSE);
+		mb = FALSE;
 	}
 
 	/* ac */
-	me = TRUE;
 	if (ac_msg->length != 0)
-		near_ndef_set_mb_me(ac_msg->data, mb, me); /* xxx, TRUE */
-	else
-		/* cr is alone: TRUE/TRUE */
-		near_ndef_set_mb_me(cr_msg->data, TRUE, me);
+		near_ndef_set_mb_me(ac_msg->data, mb, TRUE); /* xxx, TRUE */
 
 	/* Now, copy the datas */
 	/* copy cr */
@@ -1878,12 +1897,9 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 	 * Additional NDEF (associated to the ac records)
 	 * Add the BT record which is not part in hs initial size
 	 */
-	if (bt_msg != NULL) {
-		near_ndef_set_mb_me(hs_msg->data, TRUE, FALSE);
-
+	if (bt_msg != NULL)
 		memcpy(hs_msg->data + hs_msg->offset, bt_msg->data,
 							bt_msg->length);
-	}
 
 	if (ac_msg != NULL) {
 		g_free(ac_msg->data);
