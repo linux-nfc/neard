@@ -1,3 +1,12 @@
+ver 0.8
+	Added raw NDEF push through the NDEF agent API.
+	Fixed a couple of p2p file descriptor leaks.
+	Fixed CR handover record handling in handover Select frames.
+	Fixed handover version check support.
+	Fixed handover code to support AC less frames.
+	Fixed p2p client event routine to support multiple incoming requests.
+	Fixed netlink support for nested events.
+
 ver 0.7
 	Added support for Android Jelly Bean handover.
 	Added a Bluetooth handover automated script.
