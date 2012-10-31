@@ -1369,6 +1369,15 @@ static void correct_eir_len(struct bt_data *data)
 		data->data[0] = data->data[1];
 		data->data[1] = 0;
 	}
+
+	/*
+	 * Some Nokia BH-505 report total OOB block length without length field
+	 * size.
+	 */
+	if (data->data[0] == data->size - 2) {
+		DBG("EIR length without length field size");
+		data->data[0] += 2;
+	}
 }
 
 static struct near_ndef_mime_payload *
