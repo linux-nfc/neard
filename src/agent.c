@@ -153,6 +153,9 @@ void __near_agent_ndef_parse_records(GList *records)
 		record = list->data;
 		type  = __near_ndef_record_get_type(record);
 
+		if (type == NULL)
+			continue;
+
 		DBG("Looking for type %s", type);
 
 		agent = g_hash_table_lookup(ndef_app_hash, type);
