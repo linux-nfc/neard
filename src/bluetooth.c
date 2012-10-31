@@ -791,11 +791,9 @@ done:
  * mime_props is a bitmask we use to add or not specific fields in the
  * oob frame (e.g.: OOB keys)
  * */
-uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len,
-						uint16_t mime_props)
+struct bt_data *__near_bluetooth_local_get_properties(uint16_t mime_props)
 {
-	uint8_t *bt_oob_block = NULL;
-	uint16_t bt_oob_block_size = 0;
+	struct bt_data *data = NULL;
 	uint8_t offset;
 
 	char hash[OOB_SP_SIZE];
@@ -807,25 +805,26 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len,
 		goto fail;
 	}
 
-	bt_oob_block_size = sizeof(uint16_t)	/* stored oob size */
+	data = g_try_malloc0(sizeof(*data));
+	if (data == NULL)
+		goto fail;
+
+	data->size = sizeof(uint16_t)	/* stored oob size */
 			+ BT_ADDRESS_SIZE;	/* device address */
 
-	bt_oob_block = g_try_malloc0(EIR_SIZE_MAX);
-	if (bt_oob_block == NULL)
-		goto fail;
 	offset = sizeof(uint16_t); /* Skip size...will be filled later */
 
 	/* Now prepare data frame */
-	memcpy(bt_oob_block + offset, bt_def_oob_data.bd_addr, BT_ADDRESS_SIZE);
+	memcpy(data->data + offset, bt_def_oob_data.bd_addr, BT_ADDRESS_SIZE);
 	offset += BT_ADDRESS_SIZE;
 
 	/* CoD */
-	bt_oob_block_size += COD_SIZE +  EIR_HEADER_LEN;
+	data->size += COD_SIZE +  EIR_HEADER_LEN;
 
-	bt_oob_block[offset++] = COD_SIZE + EIR_SIZE_LEN;
-	bt_oob_block[offset++] = EIR_CLASS_OF_DEVICE;
+	data->data[offset++] = COD_SIZE + EIR_SIZE_LEN;
+	data->data[offset++] = EIR_CLASS_OF_DEVICE;
 
-	memcpy(bt_oob_block + offset,
+	memcpy(data->data + offset,
 			(uint8_t *)&bt_def_oob_data.class_of_device, COD_SIZE);
 	offset += COD_SIZE;
 
@@ -837,20 +836,20 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len,
 			bt_sync_oob_readlocaldata(bt_conn,
 					bt_def_oob_data.def_adapter,
 					hash, random) == OOB_SP_SIZE) {
-		bt_oob_block_size += 2 * (OOB_SP_SIZE + EIR_HEADER_LEN);
+		data->size += 2 * (OOB_SP_SIZE + EIR_HEADER_LEN);
 
 		/* OOB datas */
 		if (hash != NULL) {
-			bt_oob_block[offset++] = OOB_SP_SIZE + EIR_SIZE_LEN;
-			bt_oob_block[offset++] = EIR_SP_HASH;
-			memcpy(bt_oob_block + offset, hash, OOB_SP_SIZE);
+			data->data[offset++] = OOB_SP_SIZE + EIR_SIZE_LEN;
+			data->data[offset++] = EIR_SP_HASH;
+			memcpy(data->data + offset, hash, OOB_SP_SIZE);
 			offset += OOB_SP_SIZE;
 		}
 
 		if (random != NULL) {
-			bt_oob_block[offset++] = OOB_SP_SIZE + EIR_SIZE_LEN;
-			bt_oob_block[offset++] = EIR_SP_RANDOMIZER;
-			memcpy(bt_oob_block + offset, random, OOB_SP_SIZE);
+			data->data[offset++] = OOB_SP_SIZE + EIR_SIZE_LEN;
+			data->data[offset++] = EIR_SP_RANDOMIZER;
+			memcpy(data->data + offset, random, OOB_SP_SIZE);
 			offset += OOB_SP_SIZE;
 		}
 	}
@@ -859,34 +858,32 @@ uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len,
 	if (bt_def_oob_data.bt_name != NULL) {
 		int name_len;
 
-		bt_oob_block_size += EIR_HEADER_LEN;
+		data->size += EIR_HEADER_LEN;
 
-		if (bt_oob_block_size + bt_def_oob_data.bt_name_len
+		if (data->size + bt_def_oob_data.bt_name_len
 				> EIR_SIZE_MAX) {
-			name_len = EIR_SIZE_MAX - bt_oob_block_size;
-			bt_oob_block[offset++] = name_len + EIR_SIZE_LEN;
+			name_len = EIR_SIZE_MAX - data->size;
+			data->data[offset++] = name_len + EIR_SIZE_LEN;
 			/* EIR data type */
-			bt_oob_block[offset++] = EIR_NAME_SHORT;
+			data->data[offset++] = EIR_NAME_COMPLETE;
 		} else {
 			name_len = bt_def_oob_data.bt_name_len;
-			bt_oob_block[offset++] = name_len + EIR_SIZE_LEN;
+			data->data[offset++] = name_len + EIR_SIZE_LEN;
 			/* EIR data type */
-			bt_oob_block[offset++] = EIR_NAME_COMPLETE;
+			data->data[offset++] = EIR_NAME_SHORT;
 		}
 
-		bt_oob_block_size += name_len;
-		memcpy(bt_oob_block + offset, bt_def_oob_data.bt_name,
-								name_len);
+		data->size += name_len;
+		memcpy(data->data + offset, bt_def_oob_data.bt_name, name_len);
 		offset += name_len;
 	}
 
-	*(uint16_t *)bt_oob_block = bt_oob_block_size ;
-	*bt_data_len = bt_oob_block_size;
+	data->data[0] = data->size ;
 
-	return bt_oob_block;
+	return data;
 
 fail:
-	g_free(bt_oob_block);
+	g_free(data);
 	return NULL;
 }
 

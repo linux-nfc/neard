@@ -189,8 +189,7 @@ void __near_bluetooth_cleanup(void);
 int __near_bluetooth_parse_oob_record(struct bt_data *data,
 					uint16_t *properties, near_bool_t pair);
 int __near_bluetooth_pair(void *data);
-uint8_t *__near_bluetooth_local_get_properties(int *bt_data_len,
-							uint16_t mime_props);
+struct bt_data *__near_bluetooth_local_get_properties(uint16_t mime_props);
 
 void __near_agent_ndef_parse_records(GList *records);
 int __near_agent_ndef_register(const char *sender, const char *path,

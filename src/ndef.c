@@ -1767,8 +1767,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 					uint8_t carriers)
 
 {
-	uint8_t *oob_data = NULL;
-	int oob_size;
+	struct bt_data *data = NULL;
 	struct near_ndef_message *hs_msg = NULL;
 	struct near_ndef_message *ac_msg = NULL;
 	struct near_ndef_message *cr_msg = NULL;
@@ -1819,14 +1818,13 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		props = near_get_carrier_properties(record,
 							NEAR_CARRIER_BLUETOOTH);
 
-		oob_data = __near_bluetooth_local_get_properties(&oob_size,
-									props);
-		if (oob_data == NULL) {
+		data = __near_bluetooth_local_get_properties(props);
+		if (data == NULL) {
 			near_error("Getting Bluetooth OOB data failed");
 			goto fail;
 		}
 
-		bt_msg = near_ndef_prepare_bt_message(oob_data, oob_size,
+		bt_msg = near_ndef_prepare_bt_message(data->data, data->size,
 								cdr, 1);
 		if (bt_msg == NULL)
 			goto fail;
@@ -1923,7 +1921,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		g_free(bt_msg);
 	}
 
-	g_free(oob_data);
+	g_free(data);
 
 	DBG("Hs NDEF done");
 
@@ -1952,7 +1950,7 @@ fail:
 		g_free(bt_msg);
 	}
 
-	g_free(oob_data);
+	g_free(data);
 
 	return NULL;
 }
