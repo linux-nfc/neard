@@ -44,6 +44,9 @@
 #define BT_NOINPUTOUTPUT		"NoInputNoOutput"
 #define BT_DISPLAY_YESNO		"DisplayYesNo"
 
+#define DBUS_MANAGER_INTF		"org.freedesktop.DBus.ObjectManager"
+#define AGENT_REGISTER_TIMEOUT	2
+
 /* BT EIR list */
 #define EIR_UUID128_ALL		0x07 /* 128-bit UUID, all listed */
 #define EIR_NAME_SHORT		0x08 /* shortened local name */
@@ -95,6 +98,13 @@ struct near_oob_data {
 
 static DBusConnection *bt_conn;
 static struct near_oob_data bt_def_oob_data;
+
+static guint watch;
+static guint removed_watch;
+static guint adapter_watch;
+
+static guint version_check_timer;
+static near_bool_t bluez_version_4;
 
 static int bt_do_pairing(struct near_oob_data *oob);
 
@@ -887,23 +897,6 @@ fail:
 	return NULL;
 }
 
-static void bt_connect(DBusConnection *conn, void *user_data)
-{
-
-	DBG("connection %p with %p", conn, user_data);
-	if (bt_refresh_adapter_props(conn, user_data) < 0)
-		near_error("bt_get_default_adapter failed");
-
-	return;
-}
-
-static void bt_disconnect(DBusConnection *conn, void *user_data)
-{
-	DBG("%p", conn);
-
-	__bt_eir_free(user_data);
-}
-
 /* BT adapter removed handler */
 static gboolean bt_adapter_removed(DBusConnection *conn,
 					DBusMessage *message,
@@ -966,43 +959,157 @@ static void bt_dbus_disconnect_cb(DBusConnection *conn, void *user_data)
 	bt_conn = NULL;
 }
 
-static guint watch;
-static guint removed_watch;
-static guint adapter_watch;
-
-static int bt_prepare_handlers(DBusConnection *conn)
+static void check_bluez4_cb(DBusPendingCall *pending, void *user_data)
 {
-	DBG("%p", conn);
+	DBusMessage *reply;
+	DBusError error;
 
-	if (conn == NULL)
-		return -EIO;
+	reply = dbus_pending_call_steal_reply(pending);
+	if (reply == NULL)
+		return;
 
-	watch = g_dbus_add_service_watch(conn, BLUEZ_SERVICE,
-						bt_connect,
-						bt_disconnect,
-						&bt_def_oob_data, NULL);
+	dbus_error_init(&error);
 
-	removed_watch = g_dbus_add_signal_watch(conn, NULL, NULL, MANAGER_INTF,
+	if (!dbus_set_error_from_message(&error, reply)) {
+		DBG("BlueZ 5 detected");
+		goto done;
+	}
+
+	DBG("BlueZ 4 detected");
+
+	dbus_error_free(&error);
+
+	bluez_version_4 = TRUE;
+
+	removed_watch = g_dbus_add_signal_watch(bt_conn, NULL, NULL,
+						MANAGER_INTF,
 						ADAPTER_REMOVED,
 						bt_adapter_removed,
 						&bt_def_oob_data, NULL);
 
 
-	adapter_watch = g_dbus_add_signal_watch(conn, NULL, NULL, MANAGER_INTF,
+	adapter_watch = g_dbus_add_signal_watch(bt_conn, NULL, NULL,
+						MANAGER_INTF,
 						DEFAULT_ADAPTER_CHANGED,
 						bt_default_adapter_changed,
 						&bt_def_oob_data, NULL);
 
-	if (watch == 0 ||  removed_watch == 0 || adapter_watch == 0) {
-		near_error("Bluez event handlers failed to register.");
-		g_dbus_remove_watch(conn, watch);
-		g_dbus_remove_watch(conn, removed_watch);
-		g_dbus_remove_watch(conn, adapter_watch);
+	if (removed_watch == 0 || adapter_watch == 0) {
+		near_error("BlueZ 4 event handlers failed to register.");
+		g_dbus_remove_watch(bt_conn, removed_watch);
+		g_dbus_remove_watch(bt_conn, adapter_watch);
 
+		goto done;
+	}
+
+	if (bt_refresh_adapter_props(bt_conn, user_data) < 0)
+		near_error("Failed to get BT adapter properties");
+
+done:
+	dbus_message_unref(reply);
+	dbus_pending_call_unref(pending);
+}
+
+/*
+ * BlueZ 5 will register itself as HandoverAgent, for BlueZ 4
+ * org.bluez.Adapter and dbusoob APIs will be used.
+ * ObjectManager is implemented in BlueZ 5, but not in BlueZ 4. Let use it to
+ * differentiate BlueZ versions for now.
+ *
+ * TODO Check if there is some 'standard' way to check for BlueZ 5 when it is
+ * released.
+ */
+
+static gboolean check_bluez4(gpointer user_data)
+{
+	DBG("");
+
+	bt_generic_call(bt_conn, user_data, BLUEZ_SERVICE, MANAGER_PATH,
+			DBUS_MANAGER_INTF, "GetManagedObjects",
+			check_bluez4_cb, DBUS_TYPE_INVALID);
+
+	version_check_timer = 0;
+
+	return FALSE;
+}
+
+static void bt_connect(DBusConnection *conn, void *data)
+{
+	DBG("connection %p with %p", conn, data);
+
+	if (__near_agent_handover_registered()) {
+		DBG("Agent already registered");
+		return;
+	}
+
+	/* Give ho agent time to register before checking BlueZ version */
+	version_check_timer = g_timeout_add_seconds(AGENT_REGISTER_TIMEOUT,
+							check_bluez4, data);
+}
+
+static void bt_disconnect(DBusConnection *conn, void *user_data)
+{
+	DBG("%p", conn);
+
+	/* If timer is running no BlueZ version check was performed yet */
+	if (version_check_timer > 0) {
+		g_source_remove(version_check_timer);
+		version_check_timer = 0;
+		return;
+	}
+
+	if (bluez_version_4 == FALSE)
+		return;
+
+	bluez_version_4 = FALSE;
+
+	__bt_eir_free(user_data);
+
+	g_dbus_remove_watch(bt_conn, removed_watch);
+	removed_watch = 0;
+
+	g_dbus_remove_watch(bt_conn, adapter_watch);
+	adapter_watch = 0;
+}
+
+static int bt_prepare_handlers(DBusConnection *conn)
+{
+	if (__near_agent_handover_registered() == TRUE)
+		return 0;
+
+	watch = g_dbus_add_service_watch(bt_conn, BLUEZ_SERVICE,
+						bt_connect,
+						bt_disconnect,
+						&bt_def_oob_data, NULL);
+	if (watch == 0) {
+		near_error("BlueZ service watch handler failed to register.");
+		g_dbus_remove_watch(bt_conn, watch);
 		return -EIO;
 	}
 
 	return 0;
+}
+
+void __near_bluetooth_legacy_start(void)
+{
+	DBG("");
+
+	bt_prepare_handlers(bt_conn);
+}
+
+void __near_bluetooth_legacy_stop(void)
+{
+	DBG("");
+
+	g_dbus_remove_watch(bt_conn, watch);
+	watch = 0;
+
+	bt_disconnect(bt_conn, &bt_def_oob_data);
+}
+
+near_bool_t __near_bluez_is_legacy(void)
+{
+	return bluez_version_4;
 }
 
 /* Bluetooth exiting function */
@@ -1013,15 +1120,9 @@ void __near_bluetooth_cleanup(void)
 	if (bt_conn == NULL)
 		return;
 
-	g_dbus_remove_watch(bt_conn, watch);
-	g_dbus_remove_watch(bt_conn, removed_watch);
-	g_dbus_remove_watch(bt_conn, adapter_watch);
+	__near_bluetooth_legacy_stop();
 
 	dbus_connection_unref(bt_conn);
-
-	__bt_eir_free(&bt_def_oob_data);
-
-	return;
 }
 
 /*

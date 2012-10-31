@@ -1392,7 +1392,7 @@ parse_mime_type(struct near_ndef_record *record,
 		memcpy(data.data, ndef_data + offset, data.size);
 	}
 
-	if (data.size > 0)
+	if (data.size > 0 && __near_bluez_is_legacy())
 		err = __near_bluetooth_parse_oob_record(&data,
 					&mime->handover.properties, action);
 
@@ -1814,6 +1814,9 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		goto fail;
 
 	if (carriers & NEAR_CARRIER_BLUETOOTH) {
+		if (__near_bluez_is_legacy() == FALSE)
+			goto fail;
+
 		/* Retrieve the bluetooth settings */
 		props = near_get_carrier_properties(record,
 							NEAR_CARRIER_BLUETOOTH);

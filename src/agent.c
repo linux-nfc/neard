@@ -410,6 +410,9 @@ static void handover_agent_disconnect(DBusConnection *conn, void *data)
 	handover_agent_watch = 0;
 
 	handover_agent_free();
+
+	/* start watching for legacy bluez */
+	__near_bluetooth_legacy_start();
 }
 
 static void handover_agent_release(void)
@@ -444,6 +447,9 @@ int __near_agent_handover_register(const char *sender, const char *path)
 	handover_agent_sender = g_strdup(sender);
 	handover_agent_path = g_strdup(path);
 
+	/* stop watching for legacy bluez */
+	__near_bluetooth_legacy_stop();
+
 	return 0;
 }
 
@@ -455,6 +461,9 @@ int __near_agent_handover_unregister(const char *sender, const char *path)
 		return -ESRCH;
 
 	handover_agent_free();
+
+	/* start watching for legacy bluez */
+	__near_bluetooth_legacy_start();
 
 	return 0;
 }

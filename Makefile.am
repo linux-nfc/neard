@@ -83,7 +83,7 @@ if TOOLS
 noinst_PROGRAMS = tools/snep-send
 
 tools_snep_send_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
-			src/bluetooth.c src/ndef.c tools/snep-send.c
+			src/bluetooth.c src/ndef.c tools/snep-send.c src/agent.c
 tools_snep_send_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 endif
