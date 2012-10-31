@@ -246,7 +246,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 		tag->current_block = 0;
 
 		DBG("Done reading %zd bytes at %p", data_length, nfc_data);
-		records = near_ndef_parse_msg(nfc_data, data_length);
+		records = near_ndef_parse_msg(nfc_data, data_length, NULL);
 		near_tag_add_records(tag->tag, records, tag->cb, 0);
 
 		g_free(tag);

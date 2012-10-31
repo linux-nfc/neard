@@ -25,6 +25,7 @@
 #include <near/tag.h>
 
 struct near_ndef_record;
+struct bt_data;
 
 struct near_ndef_message {
 	size_t length;
@@ -43,7 +44,8 @@ int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 
 int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length);
 
-GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length);
+GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
+					struct near_ndef_message **reply);
 
 void near_ndef_records_free(GList *records);
 
@@ -54,8 +56,9 @@ struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 					 uint32_t field_length, uint8_t *field);
 
 struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
-						struct near_ndef_record *record,
-						uint8_t carriers);
+					struct near_ndef_record *record,
+					uint8_t carriers,
+					struct bt_data *remote);
 
 struct near_ndef_message *
 near_ndef_prepare_smartposter_record(uint8_t uri_identifier,

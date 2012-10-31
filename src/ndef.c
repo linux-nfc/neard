@@ -1358,9 +1358,9 @@ fail:
 }
 
 static struct near_ndef_mime_payload *
-parse_mime_type(struct near_ndef_record *record,
-			uint8_t *ndef_data, size_t ndef_length, size_t offset,
-			uint32_t payload_length, near_bool_t action)
+parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
+		size_t ndef_length, size_t offset, uint32_t payload_length,
+		near_bool_t action, struct near_ndef_message **reply)
 {
 	struct near_ndef_mime_payload *mime = NULL;
 	int err = 0;
@@ -1392,10 +1392,28 @@ parse_mime_type(struct near_ndef_record *record,
 		memcpy(data.data, ndef_data + offset, data.size);
 	}
 
-	if (data.size > 0 && __near_bluez_is_legacy())
+	if (data.size == 0)
+		goto done;
+
+	if (__near_bluez_is_legacy()) {
 		err = __near_bluetooth_parse_oob_record(&data,
 					&mime->handover.properties, action);
+		if (err == 0 && reply != NULL)
+			*reply = near_ndef_prepare_handover_record("Hs",
+					record, NEAR_CARRIER_BLUETOOTH, NULL);
+	} else {
+		if (action)
+			err = __near_agent_handover_push_data(&data);
+		else if (reply != NULL)
+			*reply = near_ndef_prepare_handover_record("Hs",
+					record, NEAR_CARRIER_BLUETOOTH, &data);
+	}
 
+	/* check if requested reply message was created successfully */
+	if (reply != NULL && *reply == NULL)
+		err = -ENOMEM;
+
+done:
 	if (err < 0) {
 		DBG("Parsing mime error %d", err);
 		g_free(mime->type);
@@ -1764,15 +1782,14 @@ static uint16_t near_get_carrier_properties(struct near_ndef_record *record,
  */
 struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 					struct near_ndef_record *record,
-					uint8_t carriers)
-
+					uint8_t carriers,
+					struct bt_data *remote)
 {
-	struct bt_data *data = NULL;
+	struct bt_data *local = NULL;
 	struct near_ndef_message *hs_msg = NULL;
 	struct near_ndef_message *ac_msg = NULL;
 	struct near_ndef_message *cr_msg = NULL;
 	struct near_ndef_message *bt_msg = NULL;
-	uint16_t props;
 	uint16_t collision;
 	uint8_t hs_length;
 	near_bool_t mb, me;
@@ -1814,20 +1831,22 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		goto fail;
 
 	if (carriers & NEAR_CARRIER_BLUETOOTH) {
-		if (__near_bluez_is_legacy() == FALSE)
-			goto fail;
-
-		/* Retrieve the bluetooth settings */
-		props = near_get_carrier_properties(record,
+		if (__near_bluez_is_legacy()) {
+			/* Retrieve the bluetooth settings */
+			uint16_t props = near_get_carrier_properties(record,
 							NEAR_CARRIER_BLUETOOTH);
 
-		data = __near_bluetooth_local_get_properties(props);
-		if (data == NULL) {
+			local = __near_bluetooth_local_get_properties(props);
+		} else {
+			local = __near_agent_handover_request_data(remote);
+		}
+
+		if (local == NULL) {
 			near_error("Getting Bluetooth OOB data failed");
 			goto fail;
 		}
 
-		bt_msg = near_ndef_prepare_bt_message(data->data, data->size,
+		bt_msg = near_ndef_prepare_bt_message(local->data, local->size,
 								cdr, 1);
 		if (bt_msg == NULL)
 			goto fail;
@@ -1924,7 +1943,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 		g_free(bt_msg);
 	}
 
-	g_free(data);
+	g_free(local);
 
 	DBG("Hs NDEF done");
 
@@ -1953,7 +1972,7 @@ fail:
 		g_free(bt_msg);
 	}
 
-	g_free(data);
+	g_free(local);
 
 	return NULL;
 }
@@ -2016,7 +2035,7 @@ fail:
  */
 static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 		uint8_t *payload, uint32_t ho_length, size_t frame_length,
-		uint8_t ho_mb, uint8_t ho_me)
+		uint8_t ho_mb, uint8_t ho_me, struct near_ndef_message **reply)
 {
 	struct near_ndef_ho_payload *ho_payload = NULL;
 	struct near_ndef_ac_payload *ac = NULL;
@@ -2111,9 +2130,16 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 			else
 				bt_pair = FALSE;
 
+			/* HO payload for reply creation */
+			trec->ho = ho_payload;
+
 			mime = parse_mime_type(trec, payload, frame_length,
-					offset, trec->header->payload_len,
-					bt_pair);
+						offset,
+						trec->header->payload_len,
+						bt_pair, reply);
+
+			trec->ho = NULL;
+
 			if (mime == NULL)
 				goto fail;
 
@@ -2212,13 +2238,16 @@ int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 
 /**
  * @brief Parse message represented by bytes block
+GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length,
+					struct near_ndef_message **reply)
  *
  * @param[in] ndef_data   pointer on data representing ndef message
  * @param[in] ndef_length size of ndef_data
  * @param[out]		  records list, contains all the records
  *					from parsed message
  */
-GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length)
+GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
+				struct near_ndef_message **reply)
 {
 	GList *records;
 	uint8_t p_mb = 0, p_me = 0, *record_start;
@@ -2280,7 +2309,8 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length)
 					ndef_data + offset,
 					record->header->payload_len,
 					ndef_length - offset,
-					record->header->mb, record->header->me);
+					record->header->mb, record->header->me,
+					reply);
 			if (record->ho == NULL)
 				goto fail;
 
@@ -2320,7 +2350,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length)
 			record->mime = parse_mime_type(record, ndef_data,
 						ndef_length, offset,
 						record->header->payload_len,
-						TRUE);
+						TRUE, reply);
 
 
 			if (record->mime == NULL)
@@ -2912,7 +2942,7 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 		goto fail;
 	record->ho->ac_payloads[0] = build_ho_local_ac_record();
 
-	return near_ndef_prepare_handover_record("Hr", record, carrier);
+	return near_ndef_prepare_handover_record("Hr", record, carrier, NULL);
 
 fail:
 	free_ho_payload(record->ho);

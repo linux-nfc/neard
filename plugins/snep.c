@@ -190,7 +190,7 @@ static void snep_parse_handover_record(int client_fd, uint8_t *ndef,
 		uint32_t nfc_data_length)
 {
 	GList *records;
-	struct near_ndef_message *msg;
+	struct near_ndef_message *msg = NULL;
 
 	if (ndef == NULL)
 		return;
@@ -203,27 +203,22 @@ static void snep_parse_handover_record(int client_fd, uint8_t *ndef,
 		*(ndef + 9) = 'c';
 
 	/* Parse the incoming frame */
-	records = near_ndef_parse_msg(ndef, nfc_data_length);
-
-	/*
-	 * If we received a Hr, we must build a Hs and send it.
-	 * If the frame is a Hs, nothing more to do (SNEP REPLY is SUCCESS and
-	 * the pairing is done in near_ndef_parse_msg()
-	 * */
-	if (strncmp((char *)(ndef + 3), "Hr", 2) == 0) {
-		msg = near_ndef_prepare_handover_record("Hs", records->data,
-						NEAR_CARRIER_BLUETOOTH);
-
-		near_info("Send SNEP / Hs frame");
-		snep_response_with_info(client_fd, SNEP_RESP_SUCCESS,
-					msg->data, msg->length);
-		g_free(msg->data);
-		g_free(msg);
-	}
+	records = near_ndef_parse_msg(ndef, nfc_data_length, &msg);
+	if (records == NULL)
+		return;
 
 	near_ndef_records_free(records);
 
-	return;
+	if (!msg)
+		return;
+
+	near_info("Send SNEP / Hs frame");
+
+	snep_response_with_info(client_fd, SNEP_RESP_SUCCESS, msg->data,
+								msg->length);
+
+	g_free(msg->data);
+	g_free(msg);
 }
 
 static near_bool_t snep_read_ndef(int client_fd,
@@ -295,7 +290,7 @@ static near_bool_t snep_read_ndef(int client_fd,
 			goto out;
 
 		records = near_ndef_parse_msg(snep_data->nfc_data,
-				snep_data->nfc_data_length);
+					snep_data->nfc_data_length, NULL);
 		near_device_add_records(device, records, snep_data->cb, 0);
 	}
 
