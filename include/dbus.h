@@ -24,16 +24,17 @@
 #define NFC_SERVICE     "org.neard"
 #define NFC_PATH	"/org/neard"
 
-#define NFC_ERROR_INTERFACE	 NFC_SERVICE ".Error"
-#define NFC_NDEF_AGENT_INTERFACE NFC_SERVICE ".NDEFAgent"
+#define NFC_ERROR_INTERFACE		NFC_SERVICE ".Error"
+#define NFC_NDEF_AGENT_INTERFACE	NFC_SERVICE ".NDEFAgent"
+#define NFC_HANDOVER_AGENT_INTERFACE	NFC_SERVICE ".HandoverAgent"
 
-#define NFC_MANAGER_INTERFACE	 NFC_SERVICE ".Manager"
-#define NFC_MANAGER_PATH	 "/"
+#define NFC_MANAGER_INTERFACE		NFC_SERVICE ".Manager"
+#define NFC_MANAGER_PATH		"/"
 
-#define NFC_ADAPTER_INTERFACE	 NFC_SERVICE ".Adapter"
-#define NFC_DEVICE_INTERFACE	 NFC_SERVICE ".Device"
-#define NFC_TAG_INTERFACE	 NFC_SERVICE ".Tag"
-#define NFC_RECORD_INTERFACE	 NFC_SERVICE ".Record"
+#define NFC_ADAPTER_INTERFACE		NFC_SERVICE ".Adapter"
+#define NFC_DEVICE_INTERFACE		NFC_SERVICE ".Device"
+#define NFC_TAG_INTERFACE		NFC_SERVICE ".Tag"
+#define NFC_RECORD_INTERFACE		NFC_SERVICE ".Record"
 
 typedef void (* near_dbus_append_cb_t) (DBusMessageIter *iter,
 							void *user_data);

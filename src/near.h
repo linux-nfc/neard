@@ -178,6 +178,12 @@ void __near_plugin_cleanup(void);
 #define OOB_PROPS_COD		0x08
 #define OOB_PROPS_SP		(OOB_PROPS_SP_HASH | OOB_PROPS_SP_RANDOM)
 
+struct bt_data {
+	uint8_t type;
+	uint8_t size;
+	uint8_t data[UINT8_MAX];
+};
+
 int __near_bluetooth_init(void);
 void __near_bluetooth_cleanup(void);
 int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
@@ -193,6 +199,8 @@ int __near_agent_ndef_unregister(const char *sender, const char *path,
 						const char *record_type);
 int __near_agent_handover_register(const char *sender, const char *path);
 int __near_agent_handover_unregister(const char *sender, const char *path);
+
+int __near_agent_handover_push_data(struct bt_data *data);
 
 int __near_agent_init(void);
 void __near_agent_cleanup(void);

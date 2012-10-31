@@ -222,6 +222,74 @@ static guint handover_agent_watch = 0;
 static gchar *handover_agent_path = NULL;
 static gchar *handover_agent_sender = NULL;
 
+static void prepare_bt_data(DBusMessage *message, struct bt_data *data)
+{
+	DBusMessageIter iter;
+	DBusMessageIter dict;
+	char *name;
+
+	DBG("data %p", data);
+
+	dbus_message_iter_init_append(message, &iter);
+
+	near_dbus_dict_open(&iter, &dict);
+
+	if (data != NULL) {
+		void *pdata = data->data;
+
+		if (data->type == BT_MIME_V2_1)
+			name = "EIR";
+		else
+			name = "nokia.com:bt";
+
+		near_dbus_dict_append_fixed_array(&dict, name, DBUS_TYPE_BYTE,
+							&pdata, data->size);
+	}
+
+	near_dbus_dict_close(&iter, &dict);
+}
+
+int __near_agent_handover_push_data(struct bt_data *data)
+{
+	DBusMessage *message;
+	DBusMessage *reply;
+	DBusError error;
+
+	DBG("agent %s", handover_agent_path ? : "not present");
+
+	if (handover_agent_path == NULL)
+		return -ESRCH;
+
+	message = dbus_message_new_method_call(handover_agent_sender,
+			handover_agent_path, NFC_HANDOVER_AGENT_INTERFACE,
+			"PushOOB");
+	if (message == NULL)
+		return -ENOMEM;
+
+	prepare_bt_data(message, data);
+
+	dbus_error_init(&error);
+
+	reply = dbus_connection_send_with_reply_and_block(connection, message,
+					DBUS_TIMEOUT_USE_DEFAULT, &error);
+
+	dbus_message_unref(message);
+
+	if (reply != NULL) {
+		dbus_message_unref(reply);
+		return 0;
+	}
+
+	if (dbus_error_is_set(&error) == TRUE) {
+			near_error("PushOOB failed: %s", error.message);
+			dbus_error_free(&error);
+	} else {
+		near_error("PushOOB failed");
+	}
+
+	return -EIO;
+}
+
 static void handover_agent_free(void)
 {
 	if (handover_agent_watch > 0) {
