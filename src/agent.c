@@ -459,6 +459,11 @@ int __near_agent_handover_unregister(const char *sender, const char *path)
 	return 0;
 }
 
+near_bool_t __near_agent_handover_registered(void)
+{
+	return handover_agent_path != NULL ? TRUE : FALSE;
+}
+
 int __near_agent_init(void)
 {
 	DBG("");
