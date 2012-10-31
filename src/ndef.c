@@ -1411,10 +1411,13 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 
 		correct_eir_len(&data);
 	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
-		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
-		data.type = BT_MIME_V2_0;
-		data.size = record->header->payload_len;
-		memcpy(data.data, ndef_data + offset, data.size);
+		/* support this only for static handover */
+		if (action) {
+			mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
+			data.type = BT_MIME_V2_0;
+			data.size = record->header->payload_len;
+			memcpy(data.data, ndef_data + offset, data.size);
+		}
 	}
 
 	if (data.size == 0)
