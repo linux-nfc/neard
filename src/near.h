@@ -200,6 +200,7 @@ int __near_agent_ndef_unregister(const char *sender, const char *path,
 int __near_agent_handover_register(const char *sender, const char *path);
 int __near_agent_handover_unregister(const char *sender, const char *path);
 
+struct bt_data *__near_agent_handover_request_data(struct bt_data *data);
 int __near_agent_handover_push_data(struct bt_data *data);
 
 int __near_agent_init(void);

@@ -222,6 +222,59 @@ static guint handover_agent_watch = 0;
 static gchar *handover_agent_path = NULL;
 static gchar *handover_agent_sender = NULL;
 
+static struct bt_data *parse_reply(DBusMessage *reply)
+{
+	DBusMessageIter args;
+	DBusMessageIter data;
+	DBusMessageIter value;
+	DBusMessageIter entry;
+	DBusMessageIter array;
+	struct bt_data *bt_data;
+	const char *key;
+	uint8_t type;
+	int size;
+	void *oob_data;
+
+	dbus_message_iter_init(reply, &args);
+	dbus_message_iter_recurse(&args, &data);
+
+	if (dbus_message_iter_get_arg_type(&data) != DBUS_TYPE_DICT_ENTRY)
+		return NULL;
+
+	dbus_message_iter_recurse(&data, &entry);
+	dbus_message_iter_get_basic(&entry, &key);
+
+	if (strcasecmp(key, "EIR") == 0)
+		type = BT_MIME_V2_1;
+	else if (strcasecmp(key, "nokia.com:bt") == 0)
+		type = BT_MIME_V2_0;
+	else
+		return NULL;
+
+	dbus_message_iter_next(&entry);
+	dbus_message_iter_recurse(&entry, &value);
+
+	if (dbus_message_iter_get_arg_type(&value) != DBUS_TYPE_ARRAY)
+		return NULL;
+
+	dbus_message_iter_recurse(&value, &array);
+	dbus_message_iter_get_fixed_array(&array, &oob_data, &size);
+
+	if (size > UINT8_MAX || size < 8)
+		return NULL;
+
+	bt_data = g_try_new0(struct bt_data, 1);
+	if (bt_data == NULL)
+		return NULL;
+
+	memcpy(bt_data->data, oob_data, size);
+
+	bt_data->size = size;
+	bt_data->type = type;
+
+	return bt_data;
+}
+
 static void prepare_bt_data(DBusMessage *message, struct bt_data *data)
 {
 	DBusMessageIter iter;
@@ -247,6 +300,52 @@ static void prepare_bt_data(DBusMessage *message, struct bt_data *data)
 	}
 
 	near_dbus_dict_close(&iter, &dict);
+}
+
+struct bt_data *__near_agent_handover_request_data(struct bt_data *data)
+{
+	DBusMessage *message;
+	DBusMessage *reply;
+	DBusError error;
+	struct bt_data *bt_data_reply;
+
+	DBG("agent %s", handover_agent_path ? : "not present");
+
+	if (handover_agent_path == NULL)
+		return NULL;
+
+	message = dbus_message_new_method_call(handover_agent_sender,
+			handover_agent_path, NFC_HANDOVER_AGENT_INTERFACE,
+			"RequestOOB");
+	if (message == NULL)
+		return NULL;
+
+	prepare_bt_data(message, data);
+
+	dbus_error_init(&error);
+
+	reply = dbus_connection_send_with_reply_and_block(connection, message,
+					DBUS_TIMEOUT_USE_DEFAULT, &error);
+
+	dbus_message_unref(message);
+
+	if (reply == NULL) {
+		if (dbus_error_is_set(&error) == TRUE) {
+			near_error("RequestOOB failed: %s", error.message);
+			dbus_error_free(&error);
+		} else {
+			near_error("RequestOOB failed");
+		}
+		return NULL;
+	}
+
+	bt_data_reply = parse_reply(reply);
+
+	dbus_message_unref(reply);
+
+	DBG("OOB data %p", bt_data_reply);
+
+	return bt_data_reply;
 }
 
 int __near_agent_handover_push_data(struct bt_data *data)
