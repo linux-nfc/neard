@@ -1357,6 +1357,20 @@ fail:
 	return NULL;
 }
 
+static void correct_eir_len(struct bt_data *data)
+{
+	/*
+	 * Android 4.1 BUG - OOB EIR length should be in LE, but is in BE.
+	 * Fortunately payload length is 1 byte so this can be detected and
+	 * corrected before sending it to handover agent.
+	 */
+	if (data->data[0] == 0) {
+		DBG("EIR length in BE");
+		data->data[0] = data->data[1];
+		data->data[1] = 0;
+	}
+}
+
 static struct near_ndef_mime_payload *
 parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 		size_t ndef_length, size_t offset, uint32_t payload_length,
@@ -1385,6 +1399,8 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 		data.type = BT_MIME_V2_1;
 		data.size = record->header->payload_len;
 		memcpy(data.data, ndef_data + offset, data.size);
+
+		correct_eir_len(&data);
 	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
 		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
 		data.type = BT_MIME_V2_0;
