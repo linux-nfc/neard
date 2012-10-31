@@ -622,12 +622,12 @@ static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
  * mime_properties is a bitmask and should reflect the fields found in
  * the incoming oob.
  */
-int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
+int __near_bluetooth_parse_oob_record(struct bt_data *data,
 				uint16_t *mime_properties, near_bool_t pair)
 {
 	struct near_oob_data *oob;
 	uint16_t bt_oob_data_size;
-	uint8_t	*ptr = bt_data;
+	uint8_t *ptr = data->data;
 	uint8_t	marker;
 	char *tmp;
 
@@ -635,7 +635,7 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 
 	oob = g_try_malloc0(sizeof(struct near_oob_data));
 
-	if (version == BT_MIME_V2_1) {
+	if (data->type == BT_MIME_V2_1) {
 		/*
 		 * Total OOB data size (including size bytes)
 		 * Some implementations (e.g. Android 4.1) stores
@@ -645,14 +645,14 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 		 * byte (and the payload size IS the oob data size).
 		 */
 		bt_oob_data_size =
-			GUINT16_FROM_LE(get_unaligned((uint16_t *) bt_data));
+			GUINT16_FROM_LE(get_unaligned((uint16_t *) ptr));
 		if (bt_oob_data_size > 0xFF)	/* Big Endian */
 			bt_oob_data_size = GUINT16_FROM_BE(bt_oob_data_size);
 
 		bt_oob_data_size -= 2 ; /* remove oob datas size len */
 
 		/* First item: BD_ADDR (mandatory) */
-		ptr = &bt_data[2];
+		ptr = &data->data[2];
 		oob->bd_addr = g_strdup_printf("%02X:%02X:%02X:%02X:%02X:%02X",
 				ptr[5],	ptr[4], ptr[3], ptr[2], ptr[1], ptr[0]);
 
@@ -663,7 +663,7 @@ int __near_bluetooth_parse_oob_record(uint8_t version, uint8_t *bt_data,
 		if (bt_oob_data_size)
 			bt_parse_eir(ptr, bt_oob_data_size, oob,
 							mime_properties);
-	} else if (version == BT_MIME_V2_0) {
+	} else if (data->type == BT_MIME_V2_0) {
 		marker = *ptr++;	/* could be '$' */
 
 		oob->bd_addr = g_strdup_printf(

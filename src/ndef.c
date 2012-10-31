@@ -1364,8 +1364,11 @@ parse_mime_type(struct near_ndef_record *record,
 {
 	struct near_ndef_mime_payload *mime = NULL;
 	int err = 0;
+	struct bt_data data;
 
 	DBG("");
+
+	memset(&data, 0, sizeof(data));
 
 	if ((ndef_data == NULL) || ((offset + payload_length) > ndef_length))
 		return NULL;
@@ -1379,15 +1382,19 @@ parse_mime_type(struct near_ndef_record *record,
 	DBG("MIME Type  '%s' action: %d", mime->type, action);
 	if (strcmp(mime->type, BT_MIME_STRING_2_1) == 0) {
 		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
-		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_1,
-				&ndef_data[offset], &mime->handover.properties,
-				action);
+		data.type = BT_MIME_V2_1;
+		data.size = record->header->payload_len;
+		memcpy(data.data, ndef_data + offset, data.size);
 	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
 		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
-		err = __near_bluetooth_parse_oob_record(BT_MIME_V2_0,
-				&ndef_data[offset], &mime->handover.properties,
-				action);
+		data.type = BT_MIME_V2_0;
+		data.size = record->header->payload_len;
+		memcpy(data.data, ndef_data + offset, data.size);
 	}
+
+	if (data.size > 0)
+		err = __near_bluetooth_parse_oob_record(&data,
+					&mime->handover.properties, action);
 
 	if (err < 0) {
 		DBG("Parsing mime error %d", err);
