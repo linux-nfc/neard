@@ -117,7 +117,8 @@ Properties	string Type [readonly]
 
 			This is the complete URI, including the scheme and
 			the resource.
-			This property is only valid for SmartPoster's URI records.
+			This property is only valid for SmartPoster's URI
+			records.
 
 		string MIMEType [readonly]
 
@@ -145,6 +146,6 @@ Properties	string Type [readonly]
 			This one is only valid for Smart Posters and is a
 			suggestion only. It can be ignored, and the possible
 			values are "Do" (for example launch the browser),
-			"Save" (for example save the URI in the bookmarks folder,
-			or "Edit" (for example open the URI in an URI editor for
-			the user to modify it.
+			"Save" (for example save the URI in the bookmarks
+			folder, or "Edit" (for example open the URI in an URI
+			editor for the user to modify it.

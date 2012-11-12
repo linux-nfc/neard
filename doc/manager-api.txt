@@ -37,7 +37,7 @@ Methods		dict GetProperties()
 
 			Register new NDEF agent.
 
-			When a record macthing the registered type is found,
+			When a record matching the registered type is found,
 			the agent will get the whole NDEF as a raw byte stream.
 
 			Possible Errors: org.neard.Error.InvalidArguments
@@ -47,7 +47,7 @@ Methods		dict GetProperties()
 			Unregister an existing NDEF agent.
 
 			Possible Errors: org.neard.Error.InvalidArguments
- 
+
 
 Signals		PropertyChanged(string name, variant value)
 
@@ -62,6 +62,7 @@ Signals		PropertyChanged(string name, variant value)
 
 			Parameter is the object path of removed adapter.
 
-Properties 	array{object} Adapters [readonly]
+
+Properties	array{object} Adapters [readonly]
 
 			List of adapter object paths.

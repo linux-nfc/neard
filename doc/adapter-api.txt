@@ -27,8 +27,8 @@ Methods:	dict GetProperties()
 			the adapter will start polling for targets, listening
 			for NFC devices or both.
 			The mode parameter can have the following values:
-			"Initiator", "Target" or "Dual". For any other value, the
-			adapter will fall back to initiator mode.
+			"Initiator", "Target" or "Dual". For any other value
+			the adapter will fall back to initiator mode.
 			Dual mode will have the adapter alternate between target
 			and initiator modes during the polling loop.
 
@@ -85,7 +85,7 @@ Signals		PropertyChanged(string name, variant value)
 
 			This signal is sent whenever an NFC tag is found,
 			as a result of a probe response reception.
- 
+
 			The dictionary contains basically the same values
 			that are returned by the GetProperties method
 			from the org.neard.Tag interface.
@@ -96,7 +96,7 @@ Signals		PropertyChanged(string name, variant value)
 			in sight, or when it's been de-activated.
 
 
-Properties:	string Mode [readonly]
+Properties	string Mode [readonly]
 
 			The adapter mode.
 
@@ -108,8 +108,9 @@ Properties:	string Mode [readonly]
 
 		boolean Polling [readonly]
 
-			Indicates that the adapter is currently polling for targets.
-			This is only valid when the adapter is in initiator mode.
+			Indicates that the adapter is currently polling for
+			targets. This is only valid when the adapter is in
+			initiator mode.
 
 		array{string} Protocols [readonly]
 
