@@ -65,7 +65,9 @@ Methods		dict RequestOOB(dict values) [experimental]
 
 Fields		array{byte} EIR
 
-			This is EIR blob. Used by SSP capable devices.
+			This is EIR blob as described in Bluetooth Core
+			Specification 4.0 (Vol 3, Part C, chapter 8.1.6).
+			Used by SSP capable devices.
 
 		array{byte} nokia.com:bt
 
