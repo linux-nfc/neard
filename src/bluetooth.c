@@ -1037,7 +1037,7 @@ static void bt_connect(DBusConnection *conn, void *data)
 {
 	DBG("connection %p with %p", conn, data);
 
-	if (__near_agent_handover_registered()) {
+	if (__near_agent_handover_registered() == TRUE) {
 		DBG("Agent already registered");
 		return;
 	}
