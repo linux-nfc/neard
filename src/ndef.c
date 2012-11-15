@@ -1412,7 +1412,7 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 		correct_eir_len(&data);
 	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
 		/* support this only for static handover */
-		if (action) {
+		if (action == TRUE) {
 			mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
 			data.type = BT_MIME_V2_0;
 			data.size = record->header->payload_len;
@@ -1424,7 +1424,7 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 		goto done;
 
 	if (__near_agent_handover_registered() == TRUE) {
-		if (action)
+		if (action == TRUE)
 			err = __near_agent_handover_push_data(&data);
 		else if (reply != NULL)
 			*reply = near_ndef_prepare_handover_record("Hs",
