@@ -184,8 +184,6 @@ struct bt_data {
 	uint8_t data[UINT8_MAX];
 };
 
-near_bool_t __near_bluez_is_legacy(void);
-
 int __near_bluetooth_init(void);
 void __near_bluetooth_cleanup(void);
 void __near_bluetooth_legacy_start(void);

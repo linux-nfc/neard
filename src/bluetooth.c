@@ -103,8 +103,7 @@ static guint watch;
 static guint removed_watch;
 static guint adapter_watch;
 
-static guint version_check_timer;
-static near_bool_t bluez_version_4;
+static guint register_bluez_timer;
 
 static int bt_do_pairing(struct near_oob_data *oob);
 
@@ -959,27 +958,11 @@ static void bt_dbus_disconnect_cb(DBusConnection *conn, void *user_data)
 	bt_conn = NULL;
 }
 
-static void check_bluez4_cb(DBusPendingCall *pending, void *user_data)
+static gboolean register_bluez(gpointer user_data)
 {
-	DBusMessage *reply;
-	DBusError error;
+	DBG("");
 
-	reply = dbus_pending_call_steal_reply(pending);
-	if (reply == NULL)
-		return;
-
-	dbus_error_init(&error);
-
-	if (!dbus_set_error_from_message(&error, reply)) {
-		DBG("BlueZ 5 detected");
-		goto done;
-	}
-
-	DBG("BlueZ 4 detected");
-
-	dbus_error_free(&error);
-
-	bluez_version_4 = TRUE;
+	register_bluez_timer = 0;
 
 	removed_watch = g_dbus_add_signal_watch(bt_conn, NULL, NULL,
 						MANAGER_INTF,
@@ -995,40 +978,15 @@ static void check_bluez4_cb(DBusPendingCall *pending, void *user_data)
 						&bt_def_oob_data, NULL);
 
 	if (removed_watch == 0 || adapter_watch == 0) {
-		near_error("BlueZ 4 event handlers failed to register.");
+		near_error("BlueZ event handlers failed to register.");
 		g_dbus_remove_watch(bt_conn, removed_watch);
 		g_dbus_remove_watch(bt_conn, adapter_watch);
 
-		goto done;
+		return FALSE;
 	}
 
 	if (bt_refresh_adapter_props(bt_conn, user_data) < 0)
 		near_error("Failed to get BT adapter properties");
-
-done:
-	dbus_message_unref(reply);
-	dbus_pending_call_unref(pending);
-}
-
-/*
- * BlueZ 5 will register itself as HandoverAgent, for BlueZ 4
- * org.bluez.Adapter and dbusoob APIs will be used.
- * ObjectManager is implemented in BlueZ 5, but not in BlueZ 4. Let use it to
- * differentiate BlueZ versions for now.
- *
- * TODO Check if there is some 'standard' way to check for BlueZ 5 when it is
- * released.
- */
-
-static gboolean check_bluez4(gpointer user_data)
-{
-	DBG("");
-
-	bt_generic_call(bt_conn, user_data, BLUEZ_SERVICE, MANAGER_PATH,
-			DBUS_MANAGER_INTF, "GetManagedObjects",
-			check_bluez4_cb, DBUS_TYPE_INVALID);
-
-	version_check_timer = 0;
 
 	return FALSE;
 }
@@ -1042,26 +1000,24 @@ static void bt_connect(DBusConnection *conn, void *data)
 		return;
 	}
 
-	/* Give ho agent time to register before checking BlueZ version */
-	version_check_timer = g_timeout_add_seconds(AGENT_REGISTER_TIMEOUT,
-							check_bluez4, data);
+	/*
+	 * BlueZ 5 will register itself as HandoverAgent, give it some time
+	 * to do it before going legacy way.
+	 */
+	register_bluez_timer = g_timeout_add_seconds(AGENT_REGISTER_TIMEOUT,
+							register_bluez, data);
 }
 
 static void bt_disconnect(DBusConnection *conn, void *user_data)
 {
 	DBG("%p", conn);
 
-	/* If timer is running no BlueZ version check was performed yet */
-	if (version_check_timer > 0) {
-		g_source_remove(version_check_timer);
-		version_check_timer = 0;
+	/* If timer is running no BlueZ watchers were registered yet */
+	if (register_bluez_timer > 0) {
+		g_source_remove(register_bluez_timer);
+		register_bluez_timer = 0;
 		return;
 	}
-
-	if (bluez_version_4 == FALSE)
-		return;
-
-	bluez_version_4 = FALSE;
 
 	__bt_eir_free(user_data);
 
@@ -1105,11 +1061,6 @@ void __near_bluetooth_legacy_stop(void)
 	watch = 0;
 
 	bt_disconnect(bt_conn, &bt_def_oob_data);
-}
-
-near_bool_t __near_bluez_is_legacy(void)
-{
-	return bluez_version_4;
 }
 
 /* Bluetooth exiting function */
