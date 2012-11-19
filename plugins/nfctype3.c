@@ -503,8 +503,7 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 					cookie, NULL);
 		break;
 
-	case FELICA_LITE_S_IC_TYPE:
-	case FELICA_PLUG_IC_TYPE:
+	default:
 		/* CMD POLL */
 		cmd.cmd	 = CMD_POLL;	/* POLL command */
 		cmd.data[0] = 0x12;     /* System code (NFC SC) */
