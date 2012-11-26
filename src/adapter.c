@@ -142,6 +142,18 @@ static void polling_changed(struct near_adapter *adapter)
 					DBUS_TYPE_BOOLEAN, &adapter->polling);
 }
 
+static void rf_mode_changed(struct near_adapter *adapter)
+{
+	const char *rf_mode = rf_mode_to_string(adapter);
+
+	if (rf_mode == NULL)
+		return;
+
+	near_dbus_property_changed_basic(adapter->path,
+					NFC_ADAPTER_INTERFACE, "Mode",
+					DBUS_TYPE_STRING, &rf_mode);
+}
+
 static int adapter_start_poll(struct near_adapter *adapter)
 {
 	int err;
@@ -828,6 +840,9 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	adapter->polling = FALSE;
 	polling_changed(adapter);
 
+	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_INITIATOR;
+	rf_mode_changed(adapter);
+
 	if (protocols & NFC_PROTO_NFC_DEP_MASK)
 		return adapter_add_device(adapter, target_idx,
 						nfcid, nfcid_len);
@@ -845,6 +860,9 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (adapter == NULL)
 		return -ENODEV;
+
+	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_IDLE;
+	rf_mode_changed(adapter);
 
 	if (g_hash_table_remove(adapter->tags,
 			GINT_TO_POINTER(target_idx)) == TRUE) {
@@ -875,7 +893,9 @@ int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
 
 	adapter->polling = FALSE;
 	adapter->dep_up = TRUE;
+	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_TARGET;
 	polling_changed(adapter);
+	rf_mode_changed(adapter);
 
 	__near_adapter_devices_changed(idx);
 
@@ -897,6 +917,8 @@ int __near_adapter_remove_device(uint32_t idx)
 			GINT_TO_POINTER(device_idx)) == FALSE)
 		return 0;
 
+	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_IDLE;
+	rf_mode_changed(adapter);
 	__near_adapter_devices_changed(idx);
 
 	adapter->dep_up = FALSE;
