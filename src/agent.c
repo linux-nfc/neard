@@ -34,6 +34,10 @@
 
 #include "near.h"
 
+#ifndef DBUS_TIMEOUT_USE_DEFAULT
+#define DBUS_TIMEOUT_USE_DEFAULT (-1)
+#endif
+
 static DBusConnection *connection = NULL;
 static GHashTable *ndef_app_hash;
 
