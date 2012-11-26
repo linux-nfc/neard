@@ -98,9 +98,9 @@ Signals		PropertyChanged(string name, variant value)
 
 Properties	string Mode [readonly]
 
-			The adapter mode.
+			The adapter NFC radio mode.
 
-			Valid types are "initiator" and "target".
+			Valid types are "Initiator", "Target" and "Idle"
 
 		boolean Powered [readwrite]
 

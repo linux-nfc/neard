@@ -42,6 +42,12 @@ static DBusConnection *connection = NULL;
 
 static GHashTable *adapter_hash;
 
+enum near_adapter_rf_mode {
+	NEAR_ADAPTER_RF_MODE_IDLE      = 0,
+	NEAR_ADAPTER_RF_MODE_INITIATOR = 1,
+	NEAR_ADAPTER_RF_MODE_TARGET    = 2
+};
+
 #define NEAR_ADAPTER_MODE_INITIATOR 0x1
 #define NEAR_ADAPTER_MODE_TARGET    0x2
 #define NEAR_ADAPTER_MODE_DUAL      0x3
@@ -53,7 +59,7 @@ struct near_adapter {
 	uint32_t idx;
 	uint32_t protocols;
 	uint32_t poll_mode;
-	uint32_t rf_mode;
+	enum near_adapter_rf_mode rf_mode;
 
 	near_bool_t powered;
 	near_bool_t polling;
@@ -112,6 +118,20 @@ static void free_device(gpointer data)
 	struct near_device *device = data;
 
 	__near_device_remove(device);
+}
+
+static char *rf_mode_to_string(struct near_adapter *adapter)
+{
+	switch (adapter->rf_mode) {
+	case NEAR_ADAPTER_RF_MODE_IDLE:
+		return "Idle";
+	case NEAR_ADAPTER_RF_MODE_INITIATOR:
+		return "Initiator";
+	case NEAR_ADAPTER_RF_MODE_TARGET:
+		return "Target";
+	}
+
+	return NULL;
 }
 
 static void polling_changed(struct near_adapter *adapter)
@@ -306,6 +326,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
 	struct near_adapter *adapter = data;
+	const char *rf_mode;
 	DBusMessage *reply;
 	DBusMessageIter array, dict;
 
@@ -324,6 +345,11 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 	near_dbus_dict_append_basic(&dict, "Polling",
 				    DBUS_TYPE_BOOLEAN, &adapter->polling);
+
+	rf_mode = rf_mode_to_string(adapter);
+	if (rf_mode != NULL)
+		near_dbus_dict_append_basic(&dict, "Mode",
+						DBUS_TYPE_STRING, &rf_mode);
 
 	near_dbus_dict_append_array(&dict, "Protocols",
 				DBUS_TYPE_STRING, append_protocols, adapter);
