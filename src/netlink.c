@@ -140,7 +140,6 @@ static int nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
 	return err;
 }
 
-
 static int get_devices_handler(struct nl_msg *n, void *arg)
 {
 	struct nlmsghdr *nlh = nlmsg_hdr(n);
@@ -159,7 +158,6 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 		nl_perror(NLE_MISSING_ATTR, "NFC_CMD_GET_DEVICE");
 		return NL_STOP;
 	}
-
 
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 	name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
@@ -242,7 +240,6 @@ nla_put_failure:
 
 	return err;
 }
-
 
 int __near_netlink_stop_poll(int idx)
 {
@@ -752,7 +749,7 @@ static int family_handler(struct nl_msg *msg, void *arg)
 	nla_parse(tb, CTRL_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
 
-        if (!tb[CTRL_ATTR_MCAST_GROUPS])
+	if (!tb[CTRL_ATTR_MCAST_GROUPS])
 		return NL_SKIP;
 
 	nla_for_each_nested(mcgrp, tb[CTRL_ATTR_MCAST_GROUPS], rem_mcgrp) {
@@ -770,7 +767,7 @@ static int family_handler(struct nl_msg *msg, void *arg)
 		grp->id = nla_get_u32(tb_mcgrp[CTRL_ATTR_MCAST_GRP_ID]);
 		break;
 	}
-	
+
 	return NL_SKIP;
 }
 
@@ -792,8 +789,7 @@ static int nl_get_multicast_id(struct nl_sock *sock, const char *family,
 
 	ctrlid = genl_ctrl_resolve(sock, "nlctrl");
 
-        genlmsg_put(msg, 0, 0, ctrlid, 0,
-		    0, CTRL_CMD_GETFAMILY, 0);
+	genlmsg_put(msg, 0, 0, ctrlid, 0, 0, CTRL_CMD_GETFAMILY, 0);
 
 	err = -EMSGSIZE;
 
@@ -907,4 +903,3 @@ void __near_netlink_cleanup(void)
 
 	DBG("");
 }
-

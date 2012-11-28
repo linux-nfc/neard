@@ -135,8 +135,6 @@ static void __bt_eir_free(struct near_oob_data *oob)
 		g_free(oob->spair_randomizer);
 		oob->spair_randomizer = NULL;
 	}
-
-
 }
 
 static void bt_eir_free(struct near_oob_data *oob)
@@ -229,13 +227,11 @@ cb_done:
 
 	dbus_message_unref(reply);
 	dbus_pending_call_unref(pending);
-
-	return;
 }
 
 static int bt_create_paired_device(DBusConnection *conn,
-				struct near_oob_data *oob,
-				const char *capabilities)
+						struct near_oob_data *oob,
+						const char *capabilities)
 {
 	const char *agent_path = OOB_AGENT;
 
@@ -247,7 +243,6 @@ static int bt_create_paired_device(DBusConnection *conn,
 			DBUS_TYPE_OBJECT_PATH, &agent_path,
 			DBUS_TYPE_STRING, &capabilities,
 			DBUS_TYPE_INVALID);
-
 }
 
 static void bt_oob_add_remote_data_cb(DBusPendingCall *pending, void *user_data)
@@ -285,12 +280,10 @@ cb_fail:
 
 	dbus_message_unref(reply);
 	dbus_pending_call_unref(pending);
-
-	return;
 }
 
 static int bt_oob_add_remote_data(DBusConnection *conn,
-				struct near_oob_data *oob)
+						struct near_oob_data *oob)
 {
 	int16_t hash_len = 16;
 	int16_t rdm_len = 16;
@@ -329,8 +322,7 @@ static int bt_do_pairing(struct near_oob_data *oob)
 
 /*
  */
-static int extract_properties(DBusMessage *reply,
-		struct near_oob_data *oob)
+static int extract_properties(DBusMessage *reply, struct near_oob_data *oob)
 {
 	char *data = NULL;
 	int idata;
@@ -470,8 +462,6 @@ cb_fail:
 
 	dbus_message_unref(reply);
 	dbus_pending_call_unref(pending);
-
-	return;
 }
 
 static void bt_get_default_adapter_cb(DBusPendingCall *pending, void *user_data)
@@ -519,8 +509,6 @@ cb_fail:
 
 	dbus_message_unref(reply);
 	dbus_pending_call_unref(pending);
-
-	return;
 }
 
 static int bt_refresh_adapter_props(DBusConnection *conn, void *user_data)
@@ -633,7 +621,8 @@ static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
  * the incoming oob.
  */
 int __near_bluetooth_parse_oob_record(struct bt_data *data,
-				uint16_t *mime_properties, near_bool_t pair)
+						uint16_t *mime_properties,
+						near_bool_t pair)
 {
 	struct near_oob_data *oob;
 	uint16_t bt_oob_data_size;
@@ -744,8 +733,8 @@ int __near_bluetooth_pair(void *data)
 
 /* This function is synchronous as oob datas change on each session */
 static int bt_sync_oob_readlocaldata(DBusConnection *conn, char *adapter_path,
-		char *spair_hash,
-		char *spair_randomizer)
+							char *spair_hash,
+							char *spair_randomizer)
 {
 	DBusMessage *message, *reply;
 	DBusError error;
@@ -897,9 +886,8 @@ fail:
 }
 
 /* BT adapter removed handler */
-static gboolean bt_adapter_removed(DBusConnection *conn,
-					DBusMessage *message,
-					void *user_data)
+static gboolean bt_adapter_removed(DBusConnection *conn, DBusMessage *message,
+							void *user_data)
 {
 	DBusMessageIter iter;
 	struct near_oob_data *bt_props = user_data;

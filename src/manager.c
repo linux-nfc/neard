@@ -252,10 +252,10 @@ static const GDBusMethodTable manager_methods[] = {
 			unregister_handover_agent) },
 	{ GDBUS_METHOD("RegisterNDEFAgent",
 			GDBUS_ARGS({"path", "o"}, {"type", "s"}),
-		        NULL, register_ndef_agent) },
+			NULL, register_ndef_agent) },
 	{ GDBUS_METHOD("UnregisterNDEFAgent",
 			GDBUS_ARGS({"path", "o"}, {"type", "s"}),
-		        NULL, unregister_ndef_agent) },
+			NULL, unregister_ndef_agent) },
 	{ },
 };
 
@@ -278,7 +278,8 @@ int __near_manager_init(DBusConnection *conn)
 	g_dbus_register_interface(connection, NFC_MANAGER_PATH,
 						NFC_MANAGER_INTERFACE,
 						manager_methods,
-						manager_signals, NULL, NULL, NULL);
+						manager_signals,
+						NULL, NULL, NULL);
 
 	return __near_netlink_get_adapters();
 }

@@ -613,7 +613,7 @@ static int mifare_process_MADs(void *data)
 		if (mf_ck->mad_2->aids[i] != NFC_AID_TAG)
 			goto done_mad;
 
-		mf_ck->g_sect_list = g_slist_append( mf_ck->g_sect_list,
+		mf_ck->g_sect_list = g_slist_append(mf_ck->g_sect_list,
 						GINT_TO_POINTER(ioffset + i));
 		if (i < EXT_BLK_PER_SECT)
 			global_tag_size += SECTOR_SIZE;

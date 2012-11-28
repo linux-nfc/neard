@@ -97,8 +97,7 @@ static void append_record_path(DBusMessageIter *iter, void *user_data)
 		if (path == NULL)
 			continue;
 
-		dbus_message_iter_append_basic(iter,
-					DBUS_TYPE_STRING, &path);
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &path);
 	}
 }
 
@@ -171,8 +170,6 @@ void __near_agent_ndef_parse_records(GList *records)
 		return;
 
 	ndef_agent_push_records(agent, records);
-
-	return;
 }
 
 int __near_agent_ndef_register(const char *sender, const char *path,
@@ -192,7 +189,7 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 	agent->sender = g_strdup(sender);
 	agent->path = g_strdup(path);
 	agent->record_type = g_strdup(record_type);
-	
+
 	if (agent->sender == NULL || agent->path == NULL ||
 	    agent->record_type == NULL) {
 		g_free(agent);
@@ -200,7 +197,8 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 	}
 
 	agent->watch = g_dbus_add_disconnect_watch(connection, sender,
-						ndef_agent_disconnect, agent, NULL);
+							ndef_agent_disconnect,
+							agent, NULL);
 	g_hash_table_insert(ndef_app_hash, agent->record_type, agent);
 
 	return 0;

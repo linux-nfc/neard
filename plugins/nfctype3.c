@@ -288,7 +288,7 @@ static int data_read(struct type3_tag *tag)
 	tag->current_block = 0;
 
 	prepare_read_block(DATA_BLOCK_START + tag->current_block,
-							tag->IDm, &cmd );
+							tag->IDm, &cmd);
 
 	adapter_idx = near_tag_get_adapter_idx(tag->tag);
 

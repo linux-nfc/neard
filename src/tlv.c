@@ -83,7 +83,7 @@ GList *near_tlv_parse(uint8_t *tlv, size_t tlv_length)
 	records = NULL;
 	data = tlv;
 
-	while(1) {
+	while (1) {
 		t = tlv[0];
 
 		DBG("tlv 0x%x", tlv[0]);

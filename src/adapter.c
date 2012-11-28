@@ -591,7 +591,7 @@ static const GDBusSignalTable adapter_signals[] = {
 	{ }
 };
 
-struct near_adapter * __near_adapter_create(uint32_t idx,
+struct near_adapter *__near_adapter_create(uint32_t idx,
 		const char *name, uint32_t protocols, near_bool_t powered)
 {
 	struct near_adapter *adapter;

@@ -163,7 +163,7 @@ struct near_ndef_ac_payload {
 	enum carrier_power_state cps;	/* carrier power state */
 
 	uint8_t cdr_len;	/* carrier data reference length: 0x01 */
-	uint8_t	cdr;		/* carrier data reference */
+	uint8_t cdr;		/* carrier data reference */
 	uint8_t adata_refcount;	/* auxiliary data reference count */
 
 	/* !: if adata_refcount == 0, then there's no data reference */
@@ -175,7 +175,7 @@ struct near_ndef_ac_payload {
  * These settings can be retrieved from mime, carrier records, etc...
  */
 struct near_ndef_carrier_data {
-	uint8_t	cdr;		/* carrier data reference */
+	uint8_t cdr;		/* carrier data reference */
 	uint8_t *data;
 	size_t data_len;
 };
@@ -1625,7 +1625,7 @@ fail:
  *  is also set to RECORD_TNF_WELLKNOWN
  *
  */
-static struct near_ndef_message *ndef_message_alloc(char* type_name,
+static struct near_ndef_message *ndef_message_alloc(char *type_name,
 							uint32_t payload_len)
 {
 	return ndef_message_alloc_complete(type_name, payload_len,
@@ -1808,7 +1808,7 @@ static uint16_t near_get_carrier_properties(struct near_ndef_record *record,
  * TODO: only mime (BT) are supported now... Wifi will come soon...
  * Only 1 ac record + 1 collision record+ Hr header
  */
-struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
+struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 					struct near_ndef_record *record,
 					uint8_t carriers,
 					struct bt_data *remote)
@@ -2072,7 +2072,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	GSList *acs = NULL, *mimes = NULL;
 	uint8_t mb = 0, me = 0;
 	uint32_t offset;
-	int16_t	count_ac = 0;
+	int16_t count_ac = 0;
 	near_bool_t bt_pair;
 
 	DBG("");
