@@ -1,0 +1,70 @@
+#!/usr/bin/python
+
+import gobject
+
+import dbus
+import dbus.service
+import dbus.mainloop.glib
+
+eir_test_data = [0x16,0x00\
+		,0x01,0x02,0x03,0x04,0x05,0x06\
+		,0x08,0x09,0x41,0x72,0x72,0x61,0x6b,0x69,0x73\
+		,0x04,0x0d,0x6e,0x01,0x00]
+
+def print_fields(fields):
+	if 'EIR' in fields:
+		s = ' '.join('{:#02x}'.format(i) for i in fields['EIR'])
+		print '  EIR:  %s' % s
+
+	if 'nokia.com:bt' in fields:
+		s = ' '.join('{:#02x}'.format(i) for i in fields['nokia.com:bt'])
+		print '  nokia.com:bt:  %s' % s
+
+class HOAgent(dbus.service.Object):
+
+	@dbus.service.method('org.neard.HandoverAgent',
+					in_signature='',
+					out_signature='')
+	def Release(self):
+		print 'Release'
+		mainloop.quit()
+
+	@dbus.service.method('org.neard.HandoverAgent',
+					in_signature='a{sv}',
+					out_signature='')
+	def PushOOB(self, fields):
+		print 'PushOOB'
+		print_fields(fields)
+
+	@dbus.service.method('org.neard.HandoverAgent',
+					in_signature='a{sv}',
+					out_signature='a{sv}')
+
+	def RequestOOB(self, fields):
+		print 'RequestOOB'
+		print_fields(fields)
+
+		print '  Replying with'
+		s = ' '.join('{:#02x}'.format(i) for i in eir_test_data)
+		print '    EIR: %s' % s
+
+		return {'EIR' : eir_test_data}
+
+if __name__ == '__main__':
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+	bus = dbus.SystemBus()
+	manager = dbus.Interface(bus.get_object('org.neard', '/'),
+							'org.neard.Manager')
+
+	path = '/test/handover/agent'
+	object = HOAgent(bus, path)
+
+	manager.RegisterHandoverAgent(path)
+
+	mainloop = gobject.MainLoop()
+
+	try:
+		mainloop.run()
+	except (KeyboardInterrupt):
+		manager.UnregisterHandoverAgent(path)
