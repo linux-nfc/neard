@@ -534,8 +534,6 @@ static void free_text_payload(struct near_ndef_text_payload *text)
 	g_free(text->language_code);
 	g_free(text->data);
 	g_free(text);
-
-	text = NULL;
 }
 
 static void free_uri_payload(struct near_ndef_uri_payload *uri)
@@ -545,8 +543,6 @@ static void free_uri_payload(struct near_ndef_uri_payload *uri)
 
 	g_free(uri->field);
 	g_free(uri);
-
-	uri = NULL;
 }
 
 static void free_sp_payload(struct near_ndef_sp_payload *sp)
@@ -567,8 +563,6 @@ static void free_sp_payload(struct near_ndef_sp_payload *sp)
 	g_free(sp->type);
 	g_free(sp->action);
 	g_free(sp);
-
-	sp = NULL;
 }
 
 static void free_mime_payload(struct near_ndef_mime_payload *mime)
@@ -578,8 +572,6 @@ static void free_mime_payload(struct near_ndef_mime_payload *mime)
 
 	g_free(mime->type);
 	g_free(mime);
-
-	mime = NULL;
 }
 
 static void free_ac_payload(struct near_ndef_ac_payload *ac)
@@ -589,7 +581,6 @@ static void free_ac_payload(struct near_ndef_ac_payload *ac)
 
 	g_free(ac->adata);
 	g_free(ac);
-	ac = NULL;
 }
 
 static void free_ho_payload(struct near_ndef_ho_payload *ho)
@@ -606,8 +597,6 @@ static void free_ho_payload(struct near_ndef_ho_payload *ho)
 
 	g_free(ho->ac_payloads);
 	g_free(ho);
-
-	ho = NULL;
 }
 
 static void free_ndef_record(struct near_ndef_record *record)
@@ -660,7 +649,6 @@ static void free_ndef_record(struct near_ndef_record *record)
 	g_free(record->type);
 	g_free(record->data);
 	g_free(record);
-	record = NULL;
 }
 
 void __near_ndef_record_free(struct near_ndef_record *record)
