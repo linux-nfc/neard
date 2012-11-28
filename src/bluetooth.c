@@ -105,8 +105,6 @@ static guint adapter_watch;
 
 static guint register_bluez_timer;
 
-static int bt_do_pairing(struct near_oob_data *oob);
-
 static void __bt_eir_free(struct near_oob_data *oob)
 {
 	DBG("");
