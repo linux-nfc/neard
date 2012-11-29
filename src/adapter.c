@@ -884,6 +884,7 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
 {
 	struct near_adapter *adapter;
+	int ret;
 
 	DBG("idx %d", idx);
 
@@ -897,9 +898,13 @@ int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
 	polling_changed(adapter);
 	rf_mode_changed(adapter);
 
+	ret = adapter_add_device(adapter, 0, nfcid, nfcid_len);
+	if (ret < 0)
+		return ret;
+
 	__near_adapter_devices_changed(idx);
 
-	return adapter_add_device(adapter, 0, nfcid, nfcid_len);
+	return 0;
 }
 
 int __near_adapter_remove_device(uint32_t idx)
