@@ -103,6 +103,8 @@ static void free_adapter(gpointer data)
 
 	g_free(adapter->name);
 	g_free(adapter->path);
+	g_hash_table_destroy(adapter->tags);
+	g_hash_table_destroy(adapter->devices);
 	g_free(adapter);
 }
 
