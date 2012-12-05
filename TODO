@@ -11,16 +11,6 @@ Background
 Core
 ====
 
-- Handover Agent API
-
-  Priority: Medium
-  Complexity: C4
-  Owner: Szymon Janc <szymon.janc@tieto.com>
-
-  neard's handover agent API will allow an eventual BlueZ neard plugin to
-  pass OOB data to neard. From this OOB data, neard will build an Hs record
-  and reply to the handover requester.
-
 - Card Emulation Mode
 
   Priority: Low
@@ -37,6 +27,37 @@ Core
   to activate it. Once activated, the NFC socket should enter the accept
   state, and dispatch the various commands to the right plugins (one per
   protocol, a.k.a. tags).
+
+- WiFi handover
+
+  Priority: Medium
+  Complexity: C4
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  We should extend the handover API for support Wi-Fi as well, and implement
+  the neard Wi-Fi handover agent from network manager components
+  (e.g. ConnMan).
+
+- Unit tests
+
+  Priority: Medium
+  Complexity: C2
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+- Packaging
+
+  Priority: Medium
+  Complexity: C2
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  Packaging for both RPM and Debian packages based distributions should
+  be done in order to push neard into the mainstream Linux distributions.
+
+- OBEX over LLCP
+
+  Priority: Medium
+  Complexity: C4
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
 
 
 Reader mode
@@ -80,3 +101,30 @@ p2p mode
 
   Implement SNEP validation test cases as an optional neard plugin, and
   LLCP ones as a set of tools/ binaries.
+
+- Microsoft handover
+
+  Priority: Low
+  Complexity: C4
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  Microsoft handover implementation does not follow the NFC Forum specs.
+  It is specified here:
+
+     http://msdn.microsoft.com/en-us/library/ee941641
+
+  In order to support this handover implementation, a specific plugin
+  should be implemented as there is no overlap between it and the NFC
+  Forum handover.
+
+- PHDC service
+
+  Priority: Medium
+  Complexity: C4
+  Owner: Samuel Ortiz <sameo@linux.intel.com>
+
+  PHDC (Personal Health Device Communication) is a protocol on top of LLCP
+  for exchanging ISO/IEEE 11073 PDUs. It has its own LLCP service name and
+  as such could be implemented as a p2p plugin.
+  The PHDC plugin would define its own D-Bus interface for both the PHDC
+  Manager and Agent roles.
