@@ -334,12 +334,18 @@ static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
 		 * the handover service and fallback to SNEP on connect fail.
 		 */
 		fd = p2p_connect(adapter_idx, target_idx, ndef, cb, driver);
-		if (fd < 0)
-			return  p2p_push(adapter_idx, target_idx, ndef,
-				(char *) driver->fallback_service_name, cb);
-		else
+		if (fd < 0) {
+			if (driver->fallback_service_name != NULL)
+				return  p2p_push(adapter_idx, target_idx, ndef,
+					(char *) driver->fallback_service_name,
+					cb);
+			else
+				return -1;
+
+		} else if (driver->push != NULL) {
 			return driver->push(fd, adapter_idx, target_idx,
 					ndef, cb);
+		}
 	}
 
 	return -1;
