@@ -32,3 +32,4 @@ include/version.h
 src/builtin.h
 src/neard
 tools/snep-send
+tools/nfctool/nfctool
