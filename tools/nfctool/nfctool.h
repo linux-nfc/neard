@@ -30,6 +30,10 @@
 
 #define print_error(fmt, ...) fprintf(stderr, fmt"\n", ## __VA_ARGS__)
 
+#define POLLING_MODE_INITIATOR	0x01
+#define POLLING_MODE_TARGET	0x02
+#define POLLING_MODE_BOTH	0x03
+
 #define INVALID_ADAPTER_IDX 0xFFFFFFFF
 
 #define TARGET_TYPE_TAG		0
@@ -44,12 +48,16 @@ struct nfc_adapter {
 	guint32 idx;
 	guint32 protocols;
 	guint8 powered;
+	guint8 polling;
+	guint8 rf_mode;
 	GSList *tags;
 	GSList *devices;
 };
 
 struct nfctool_options {
 	gboolean list;
+	gboolean poll;
+	guint8 poll_mode;
 	gchar *device_name;
 	guint32 adapter_idx;
 };

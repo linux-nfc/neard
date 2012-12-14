@@ -32,6 +32,33 @@
 
 GSList *adapters = NULL;
 
+static GMainLoop *main_loop = NULL;
+
+static gint nfctool_compare_adapter_idx(struct nfc_adapter *adapter,
+								guint32 idx)
+{
+	if (adapter->idx < idx)
+		return -1;
+
+	if (adapter->idx > idx)
+		return 1;
+
+	return 0;
+}
+
+static struct nfc_adapter *nfctool_find_adapter(guint32 adapter_idx)
+{
+	GSList *elem;
+
+	elem = g_slist_find_custom(adapters, GINT_TO_POINTER(adapter_idx),
+				(GCompareFunc)nfctool_compare_adapter_idx);
+
+	if (elem)
+		return elem->data;
+
+	return NULL;
+}
+
 static void nfctool_print_target(guint32 idx, gchar *type)
 {
 	printf("%s%d ", type, idx);
@@ -55,6 +82,8 @@ static void nfctool_print_targets(struct nfc_adapter *adapter, gchar *prefix)
 
 static void nfctool_print_adapter_info(struct nfc_adapter *adapter)
 {
+	gchar *rf_mode_str;
+
 	printf("nfc%d:\n", adapter->idx);
 
 	nfctool_print_targets(adapter, "          ");
@@ -81,6 +110,15 @@ static void nfctool_print_adapter_info(struct nfc_adapter *adapter)
 	printf("          Powered: %s\n",
 		adapter->powered ? "Yes" : "No");
 
+	if (adapter->rf_mode == NFC_RF_INITIATOR)
+		rf_mode_str = "Initiator";
+	else if (adapter->rf_mode == NFC_RF_TARGET)
+		rf_mode_str = "Target";
+	else
+		rf_mode_str = "None";
+
+	printf("          RF Mode: %s\n", rf_mode_str);
+
 	printf("\n");
 }
 
@@ -104,9 +142,54 @@ static void nfctool_adapter_free(struct nfc_adapter *adapter)
 	g_free(adapter);
 }
 
+static gchar *nfctool_poll_mode_str(int mode)
+{
+	if (mode == POLLING_MODE_TARGET)
+		return "target";
+
+	if (mode == POLLING_MODE_BOTH)
+		return "both initiator and target";
+
+	return "initiator";
+}
+
+static int nfctool_start_poll(void)
+{
+	int err;
+
+	struct nfc_adapter *adapter;
+
+	adapter = nfctool_find_adapter(opts.adapter_idx);
+
+	if (adapter == NULL) {
+		print_error("Invalid adapter index: %d", opts.adapter_idx);
+
+		return -ENODEV;
+	}
+
+	err = nl_start_poll(adapter, opts.poll_mode);
+
+	if (err == 0) {
+		printf("Start polling on nfc%d as %s\n\n",
+			adapter->idx, nfctool_poll_mode_str(opts.poll_mode));
+		return 0;
+	}
+
+	if (err != -EBUSY)
+		return err;
+
+	if (adapter->rf_mode == NFC_RF_NONE)
+		printf("nfc%d already in polling mode\n\n", adapter->idx);
+	else
+		printf("nfc%d already activated\n\n", adapter->idx);
+
+	return err;
+}
+
 static void nfctool_get_device(struct nfc_adapter *adapter)
 {
-	nl_get_targets(adapter);
+	if (adapter->rf_mode == NFC_RF_INITIATOR)
+		nl_get_targets(adapter);
 }
 
 static int nfctool_get_devices(void)
@@ -122,17 +205,123 @@ static int nfctool_get_devices(void)
 	return 0;
 }
 
+static int nfctool_tm_activated(void)
+{
+	printf("Target mode activated\n");
+
+	g_main_loop_quit(main_loop);
+
+	return 0;
+}
+
+static void nfctool_send_dep_link_up(guint32 target_idx, guint32 adapter_idx)
+{
+	nl_send_dep_link_up(adapter_idx, target_idx);
+}
+
+static int nfctool_targets_found(guint32 adapter_idx)
+{
+	int err;
+	struct nfc_adapter *adapter;
+
+	DBG("adapter_idx: %d", adapter_idx);
+
+	if (adapter_idx == INVALID_ADAPTER_IDX)
+		return -ENODEV;
+
+	adapter = nfctool_find_adapter(adapter_idx);
+
+	if (adapter == NULL)
+		return -ENODEV;
+
+	err = nl_get_targets(adapter);
+	if (err) {
+		print_error("Error getting targets\n");
+		goto exit;
+	}
+
+	printf("Targets found for nfc%d\n", adapter_idx);
+	nfctool_print_targets(adapter, "  ");
+
+	if (adapter->polling) {
+		g_slist_foreach(adapter->devices,
+				(GFunc)nfctool_send_dep_link_up,
+				GINT_TO_POINTER(adapter_idx));
+
+		adapter->polling = FALSE;
+	}
+
+exit:
+	g_main_loop_quit(main_loop);
+
+	return err;
+}
+
+static int nfc_event_cb(guint8 cmd, guint32 idx)
+{
+	int err = 0;
+
+	switch (cmd) {
+	case NFC_EVENT_TARGETS_FOUND:
+		DBG("Targets found");
+		err = nfctool_targets_found(idx);
+		break;
+	case NFC_EVENT_TM_ACTIVATED:
+		DBG("Target mode activated");
+		err = nfctool_tm_activated();
+		break;
+	}
+
+	return err;
+}
+
+static volatile sig_atomic_t __terminated = 0;
+
+static void sig_term(int sig)
+{
+	if (__terminated > 0)
+		return;
+
+	__terminated = 1;
+
+	DBG("Terminating");
+
+	g_main_loop_quit(main_loop);
+}
+
 struct nfctool_options opts = {
 	.list = FALSE,
+	.poll = FALSE,
+	.poll_mode = POLLING_MODE_INITIATOR,
 	.device_name = NULL,
 	.adapter_idx = INVALID_ADAPTER_IDX,
 };
+
+static gboolean opt_parse_poll_arg(const gchar *option_name, const gchar *value,
+				   gpointer data, GError **error)
+{
+	opts.poll = TRUE;
+
+	opts.poll_mode = POLLING_MODE_INITIATOR;
+
+	if (value != NULL) {
+		if (*value == 't' || *value == 'T')
+			opts.poll_mode = POLLING_MODE_TARGET;
+		else if (*value == 'b' || *value == 'B')
+			opts.poll_mode = POLLING_MODE_BOTH;
+	}
+
+	return TRUE;
+}
 
 static GOptionEntry option_entries[] = {
 	{ "list", 'l', 0, G_OPTION_ARG_NONE, &opts.list,
 	  "list attached NFC devices", NULL },
 	{ "device", 'd', 0, G_OPTION_ARG_STRING, &opts.device_name,
 	  "specify a nfc device", "nfcX" },
+	{ "poll", 'p', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,
+	  opt_parse_poll_arg, "start polling as initiator, target, or both; "
+	  "default mode is initiator", "[Initiator|Target|Both]" },
 	{ NULL }
 };
 
@@ -173,8 +362,14 @@ static int nfctool_options_parse(int argc, char **argv)
 		}
 	}
 
-	if (!opts.list) {
+	if (!opts.poll && !opts.list) {
 		printf("%s", g_option_context_get_help(context, TRUE, NULL));
+
+		goto exit;
+	}
+
+	if (opts.poll && opts.adapter_idx == INVALID_ADAPTER_IDX) {
+		print_error("Please specify a device with -d nfcX option");
 
 		goto exit;
 	}
@@ -187,10 +382,30 @@ exit:
 	return err;
 }
 
+static void nfctool_main_loop_start(void)
+{
+	struct sigaction sa;
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = sig_term;
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
+
+	main_loop = g_main_loop_new(NULL, FALSE);
+
+	g_main_loop_run(main_loop);
+}
+
 static void nfctool_options_cleanup(void)
 {
 	if (opts.device_name != NULL)
 		g_free(opts.device_name);
+}
+
+static void nfctool_main_loop_clean(void)
+{
+	if (main_loop != NULL)
+		g_main_loop_unref(main_loop);
 }
 
 int main(int argc, char **argv)
@@ -201,7 +416,7 @@ int main(int argc, char **argv)
 	if (err)
 		goto exit_err;
 
-	err = nl_init();
+	err = nl_init(nfc_event_cb);
 	if (err)
 		goto exit_err;
 
@@ -212,9 +427,19 @@ int main(int argc, char **argv)
 	if (opts.list)
 		nfctool_list_adapters();
 
+	if (opts.poll) {
+		err = nfctool_start_poll();
+		if (err)
+			goto exit_err;
+
+		nfctool_main_loop_start();
+	}
+
 	err = 0;
 
 exit_err:
+	nfctool_main_loop_clean();
+
 	g_slist_free_full(adapters, (GDestroyNotify)nfctool_adapter_free);
 
 	nl_cleanup();
