@@ -52,6 +52,9 @@ struct nfc_adapter {
 	guint8 rf_mode;
 	GSList *tags;
 	GSList *devices;
+	gint32 param_lto;
+	gint32 param_rw;
+	gint32 param_miux;
 };
 
 struct nfctool_options {
@@ -60,6 +63,10 @@ struct nfctool_options {
 	guint8 poll_mode;
 	gchar *device_name;
 	guint32 adapter_idx;
+	gboolean set_param;
+	gint32 lto;
+	gint32 rw;
+	gint32 miux;
 };
 
 extern struct nfctool_options opts;

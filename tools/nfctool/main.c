@@ -30,6 +30,10 @@
 #include "nfctool.h"
 #include "netlink.h"
 
+#define LLCP_MAX_LTO  0xff
+#define LLCP_MAX_RW   0x0f
+#define LLCP_MAX_MIUX 0x7ff
+
 GSList *adapters = NULL;
 
 static GMainLoop *main_loop = NULL;
@@ -119,6 +123,10 @@ static void nfctool_print_adapter_info(struct nfc_adapter *adapter)
 
 	printf("          RF Mode: %s\n", rf_mode_str);
 
+	printf("          lto: %d\n", adapter->param_lto);
+	printf("          rw: %d\n", adapter->param_rw);
+	printf("          miux: %d\n", adapter->param_miux);
+
 	printf("\n");
 }
 
@@ -190,6 +198,8 @@ static void nfctool_get_device(struct nfc_adapter *adapter)
 {
 	if (adapter->rf_mode == NFC_RF_INITIATOR)
 		nl_get_targets(adapter);
+
+	nl_get_params(adapter);
 }
 
 static int nfctool_get_devices(void)
@@ -203,6 +213,29 @@ static int nfctool_get_devices(void)
 	g_slist_foreach(adapters, (GFunc)nfctool_get_device, NULL);
 
 	return 0;
+}
+
+static int nfctool_set_params(void)
+{
+	struct nfc_adapter *adapter;
+	int err;
+
+	adapter = nfctool_find_adapter(opts.adapter_idx);
+	if (!adapter)
+		return -ENODEV;
+
+	err = nl_set_params(adapter, opts.lto, opts.rw, opts.miux);
+	if (err) {
+		print_error("Error setting one of the parameters.");
+		goto exit;
+	}
+
+	nl_get_params(adapter);
+
+	nfctool_print_adapter_info(adapter);
+
+exit:
+	return err;
 }
 
 static int nfctool_tm_activated(void)
@@ -295,6 +328,10 @@ struct nfctool_options opts = {
 	.poll_mode = POLLING_MODE_INITIATOR,
 	.device_name = NULL,
 	.adapter_idx = INVALID_ADAPTER_IDX,
+	.set_param = FALSE,
+	.lto = -1,
+	.rw = -1,
+	.miux = -1,
 };
 
 static gboolean opt_parse_poll_arg(const gchar *option_name, const gchar *value,
@@ -314,6 +351,84 @@ static gboolean opt_parse_poll_arg(const gchar *option_name, const gchar *value,
 	return TRUE;
 }
 
+static gboolean opt_parse_set_param_arg(const gchar *option_name,
+					const gchar *value,
+					gpointer data, GError **error)
+{
+	gchar **params = NULL, **keyval = NULL;
+	gchar *end;
+	gint i, intval;
+	gboolean result;
+
+	params = g_strsplit(value, ",", -1);
+
+	i = 0;
+	while (params[i] != NULL) {
+		keyval = g_strsplit(params[i], "=", 2);
+
+		if (keyval[0] == NULL || keyval[1] == NULL) {
+			result = FALSE;
+			goto exit;
+		}
+
+		intval = strtol(keyval[1], &end, 10);
+		if (keyval[1] == end) {
+			result = FALSE;
+			goto exit;
+		}
+
+		if (g_ascii_strcasecmp(keyval[0], "lto") == 0) {
+			if (intval < 0 || intval > LLCP_MAX_LTO) {
+				print_error("Bad value: max lto value is %d",
+								LLCP_MAX_LTO);
+				result = FALSE;
+				goto exit;
+			}
+
+			opts.lto = intval;
+		} else if (g_ascii_strcasecmp(keyval[0], "rw") == 0) {
+			if (intval < 0 || intval > LLCP_MAX_RW) {
+				print_error("Bad value: max rw value is %d",
+								LLCP_MAX_RW);
+				result = FALSE;
+				goto exit;
+			}
+
+			opts.rw = intval;
+		} else if (g_ascii_strcasecmp(keyval[0], "miux") == 0) {
+			if (intval < 0 || intval > LLCP_MAX_MIUX) {
+				print_error("Bad value: max miux value is %d",
+								LLCP_MAX_MIUX);
+				result = FALSE;
+				goto exit;
+			}
+
+			opts.miux = intval;
+		} else {
+			result = FALSE;
+			goto exit;
+		}
+
+		opts.set_param = TRUE;
+
+		g_strfreev(keyval);
+		keyval = NULL;
+
+		i++;
+	}
+
+	result = TRUE;
+
+exit:
+	if (params)
+		g_strfreev(params);
+
+	if (keyval)
+		g_strfreev(keyval);
+
+	return result;
+}
+
 static GOptionEntry option_entries[] = {
 	{ "list", 'l', 0, G_OPTION_ARG_NONE, &opts.list,
 	  "list attached NFC devices", NULL },
@@ -322,6 +437,8 @@ static GOptionEntry option_entries[] = {
 	{ "poll", 'p', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,
 	  opt_parse_poll_arg, "start polling as initiator, target, or both; "
 	  "default mode is initiator", "[Initiator|Target|Both]" },
+	{ "set-param", 's', 0, G_OPTION_ARG_CALLBACK, opt_parse_set_param_arg,
+	  "set lto, rw, and/or miux parameters", "lto=150,rw=1,miux=100" },
 	{ NULL }
 };
 
@@ -362,13 +479,14 @@ static int nfctool_options_parse(int argc, char **argv)
 		}
 	}
 
-	if (!opts.poll && !opts.list) {
+	if (!opts.poll && !opts.list && !opts.set_param) {
 		printf("%s", g_option_context_get_help(context, TRUE, NULL));
 
 		goto exit;
 	}
 
-	if (opts.poll && opts.adapter_idx == INVALID_ADAPTER_IDX) {
+	if ((opts.poll || opts.set_param) &&
+	    opts.adapter_idx == INVALID_ADAPTER_IDX) {
 		print_error("Please specify a device with -d nfcX option");
 
 		goto exit;
@@ -424,8 +542,14 @@ int main(int argc, char **argv)
 	if (err)
 		goto exit_err;
 
-	if (opts.list)
+	if (opts.list && !opts.set_param)
 		nfctool_list_adapters();
+
+	if (opts.set_param) {
+		err = nfctool_set_params();
+		if (err)
+			goto exit_err;
+	}
 
 	if (opts.poll) {
 		err = nfctool_start_poll();

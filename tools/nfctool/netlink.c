@@ -213,6 +213,114 @@ static int nl_no_seq_check_cb(struct nl_msg *n, void *arg)
 	return NL_OK;
 }
 
+static int nl_get_params_handler(struct nl_msg *n, void *arg)
+{
+	struct nlmsghdr *nlh = nlmsg_hdr(n);
+	struct nlattr *attrs[NFC_ATTR_MAX + 1];
+	struct nfc_adapter *adapter = (struct nfc_adapter *)arg;
+	guint32 idx;
+
+	DBG("");
+
+	genlmsg_parse(nlh, 0, attrs, NFC_ATTR_MAX, NULL);
+
+	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL) {
+		nl_perror(NLE_MISSING_ATTR, "NFC_CMD_GET_PARAMS");
+		return NL_STOP;
+	}
+
+	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
+	if (idx != adapter->idx) {
+		nl_perror(NLE_MISSING_ATTR, "NFC_CMD_GET_PARAMS");
+		return NL_STOP;
+	}
+
+	adapter->param_lto = nla_get_u8(attrs[NFC_ATTR_LLC_PARAM_LTO]);
+	adapter->param_rw = nla_get_u8(attrs[NFC_ATTR_LLC_PARAM_RW]);
+	adapter->param_miux = nla_get_u16(attrs[NFC_ATTR_LLC_PARAM_MIUX]);
+
+	return NL_STOP;
+}
+
+int nl_get_params(struct nfc_adapter *adapter)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	int err = 0;
+
+	DBG("");
+
+	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+		return -ENODEV;
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		return -ENOMEM;
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
+			  0, NFC_CMD_LLC_GET_PARAMS, NFC_GENL_VERSION);
+	if (hdr == NULL) {
+		err = -EINVAL;
+		goto nla_put_failure;
+	}
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter->idx);
+
+	err = nl_send_msg(nfc_state->cmd_sock, msg, nl_get_params_handler,
+			  adapter);
+
+	DBG("nl_send_msg returns %d", err);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
+int nl_set_params(struct nfc_adapter *adapter, gint32 lto, gint32 rw,
+		  gint32 miux)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	int err = 0;
+
+	DBG("");
+
+	if (lto < 0 && rw < 0 && miux < 0)
+		return -EINVAL;
+
+	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+		return -ENODEV;
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		return -ENOMEM;
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
+			  0, NFC_CMD_LLC_SET_PARAMS, NFC_GENL_VERSION);
+	if (hdr == NULL) {
+		err = -EINVAL;
+		goto nla_put_failure;
+	}
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter->idx);
+	if (lto >= 0)
+		NLA_PUT_U8(msg, NFC_ATTR_LLC_PARAM_LTO, (guint8)lto);
+	if (rw >= 0)
+		NLA_PUT_U8(msg, NFC_ATTR_LLC_PARAM_RW, (guint8)rw);
+	if (miux >= 0)
+		NLA_PUT_U16(msg, NFC_ATTR_LLC_PARAM_MIUX, (guint16)miux);
+
+	err = nl_send_msg(nfc_state->cmd_sock, msg, NULL, NULL);
+
+	DBG("nl_send_msg returns %d", err);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
 static int nl_get_targets_handler(struct nl_msg *n, void *arg)
 {
 	struct nlmsghdr *nlh = nlmsg_hdr(n);

@@ -37,4 +37,9 @@ int nl_send_dep_link_up(guint32 idx, guint32 target_idx);
 
 int nl_start_poll(struct nfc_adapter *adapter, guint8 mode);
 
+int nl_set_params(struct nfc_adapter *adapter, gint32 lto, gint32 rw,
+		  gint32 miux);
+
+int nl_get_params(struct nfc_adapter *adapter);
+
 #endif /* __NETLINK_H */
