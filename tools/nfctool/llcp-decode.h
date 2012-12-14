@@ -18,19 +18,13 @@
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
+#ifndef __LLCP_DECODE_H
+#define __LLCP_DECODE_H
 
-#ifndef __SNIFFER_H
-#define __SNIFFER_H
+int llcp_decode_init(void);
 
-#ifndef AF_NFC
-#define AF_NFC 39
-#endif
+void llcp_decode_cleanup(void);
 
-int sniffer_init(void);
+int llcp_print_pdu(guint8 *buffer, guint32 len, struct timeval *timestamp);
 
-void sniffer_cleanup(void);
-
-void sniffer_print_hexdump(FILE *file, unsigned char *data, int len,
-							char *line_prefix);
-
-#endif /* __SNIFFER_H */
+#endif /* __LLCP_DECODE_H */

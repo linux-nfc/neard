@@ -37,6 +37,7 @@
 #include <glib.h>
 
 #include "nfctool.h"
+#include "llcp-decode.h"
 #include "sniffer.h"
 
 #define PCAP_MAGIC_NUMBER 0xa1b2c3d4
@@ -154,7 +155,7 @@ static void pcap_file_cleanup(void)
  * 00000000: 01 01 43 20 30 70 72 6F 70 65 72 74 69 65 73 20  |..C 0properties |
  *
  */
-static void sniffer_print_hexdump(FILE *file, unsigned char *data, int len,
+void sniffer_print_hexdump(FILE *file, unsigned char *data, int len,
 							char *line_prefix)
 {
 	int digits;
@@ -247,8 +248,7 @@ static gboolean gio_handler(GIOChannel *channel,
 	else
 		gettimeofday(&msg_timestamp, NULL);
 
-	sniffer_print_hexdump(stdout, buffer, len, NULL);
-	printf("\n");
+	llcp_print_pdu(buffer, len, &msg_timestamp);
 
 	pcap_file_write_packet(buffer, len, &msg_timestamp);
 
@@ -267,6 +267,8 @@ void sniffer_cleanup(void)
 	}
 
 	pcap_file_cleanup();
+
+	llcp_decode_cleanup();
 }
 
 int sniffer_init(void)
@@ -320,6 +322,10 @@ int sniffer_init(void)
 		if (err)
 			goto exit;
 	}
+
+	err = llcp_decode_init();
+	if (err)
+		goto exit;
 
 	printf("Start sniffer on nfc%d\n\n", opts.adapter_idx);
 

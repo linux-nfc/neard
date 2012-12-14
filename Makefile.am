@@ -87,7 +87,8 @@ tools_snep_send_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 tools_snep_send_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c tools/nfctool/netlink.c \
-				tools/nfctool/sniffer.c
+				tools/nfctool/sniffer.c tools/nfctool/llcp-decode.c
+
 tools_nfctool_nfctool_LDADD = @GLIB_LIBS@ @NETLINK_LIBS@
 
 endif

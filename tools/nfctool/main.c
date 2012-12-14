@@ -338,6 +338,8 @@ struct nfctool_options opts = {
 	.need_netlink = FALSE,
 	.sniff = FALSE,
 	.snap_len = 0,
+	.dump_symm = FALSE,
+	.show_timestamp = SNIFFER_SHOW_TIMESTAMP_NONE,
 	.pcap_filename = NULL,
 };
 
@@ -436,6 +438,18 @@ exit:
 	return result;
 }
 
+static gboolean opt_parse_show_timestamp_arg(const gchar *option_name,
+					     const gchar *value,
+					     gpointer data, GError **error)
+{
+	if (value != NULL && (*value == 'a' || *value == 'A'))
+		opts.show_timestamp = SNIFFER_SHOW_TIMESTAMP_ABS;
+	else
+		opts.show_timestamp = SNIFFER_SHOW_TIMESTAMP_DELTA;
+
+	return TRUE;
+}
+
 static GOptionEntry option_entries[] = {
 	{ "list", 'l', 0, G_OPTION_ARG_NONE, &opts.list,
 	  "list attached NFC devices", NULL },
@@ -450,6 +464,13 @@ static GOptionEntry option_entries[] = {
 	  "start LLCP sniffer on the specified device", NULL },
 	{ "snapshot-len", 'a', 0, G_OPTION_ARG_INT, &opts.snap_len,
 	  "packet snapshot length (in bytes); only relevant with -n", "1024" },
+	{ "dump-symm", 'y', 0, G_OPTION_ARG_NONE, &opts.dump_symm,
+	  "dump SYMM packets to stdout (flooding); only relevant with -n",
+	  NULL },
+	{ "show-timestamp", 't', G_OPTION_FLAG_OPTIONAL_ARG,
+	  G_OPTION_ARG_CALLBACK, opt_parse_show_timestamp_arg,
+	  "show packet timestamp as the delta from first frame (default) "
+	  "or absolute value; only relevant with -n", "[delta|abs]" },
 	{ "pcap-file", 'f', 0, G_OPTION_ARG_STRING, &opts.pcap_filename,
 	  "specify a filename to save traffic in pcap format; "
 	  "only relevant with -n", "filename" },

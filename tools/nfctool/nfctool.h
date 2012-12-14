@@ -39,6 +39,10 @@
 #define TARGET_TYPE_TAG		0
 #define TARGET_TYPE_DEVICE	1
 
+#define SNIFFER_SHOW_TIMESTAMP_NONE	0
+#define SNIFFER_SHOW_TIMESTAMP_DELTA	1
+#define SNIFFER_SHOW_TIMESTAMP_ABS	2
+
 struct nfc_target {
 	guint32 idx;
 	guint8 type;
@@ -70,6 +74,8 @@ struct nfctool_options {
 	gboolean need_netlink;
 	gboolean sniff;
 	gsize snap_len;
+	gboolean dump_symm;
+	guint8 show_timestamp;
 	gchar *pcap_filename;
 };
 
