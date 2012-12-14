@@ -67,6 +67,10 @@ struct nfctool_options {
 	gint32 lto;
 	gint32 rw;
 	gint32 miux;
+	gboolean need_netlink;
+	gboolean sniff;
+	gsize snap_len;
+	gchar *pcap_filename;
 };
 
 extern struct nfctool_options opts;

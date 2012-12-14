@@ -29,6 +29,7 @@
 
 #include "nfctool.h"
 #include "netlink.h"
+#include "sniffer.h"
 
 #define LLCP_MAX_LTO  0xff
 #define LLCP_MAX_RW   0x0f
@@ -242,7 +243,8 @@ static int nfctool_tm_activated(void)
 {
 	printf("Target mode activated\n");
 
-	g_main_loop_quit(main_loop);
+	if (!opts.sniff)
+		g_main_loop_quit(main_loop);
 
 	return 0;
 }
@@ -285,7 +287,8 @@ static int nfctool_targets_found(guint32 adapter_idx)
 	}
 
 exit:
-	g_main_loop_quit(main_loop);
+	if (!opts.sniff)
+		g_main_loop_quit(main_loop);
 
 	return err;
 }
@@ -332,6 +335,10 @@ struct nfctool_options opts = {
 	.lto = -1,
 	.rw = -1,
 	.miux = -1,
+	.need_netlink = FALSE,
+	.sniff = FALSE,
+	.snap_len = 0,
+	.pcap_filename = NULL,
 };
 
 static gboolean opt_parse_poll_arg(const gchar *option_name, const gchar *value,
@@ -439,6 +446,13 @@ static GOptionEntry option_entries[] = {
 	  "default mode is initiator", "[Initiator|Target|Both]" },
 	{ "set-param", 's', 0, G_OPTION_ARG_CALLBACK, opt_parse_set_param_arg,
 	  "set lto, rw, and/or miux parameters", "lto=150,rw=1,miux=100" },
+	{ "sniff", 'n', 0, G_OPTION_ARG_NONE, &opts.sniff,
+	  "start LLCP sniffer on the specified device", NULL },
+	{ "snapshot-len", 'a', 0, G_OPTION_ARG_INT, &opts.snap_len,
+	  "packet snapshot length (in bytes); only relevant with -n", "1024" },
+	{ "pcap-file", 'f', 0, G_OPTION_ARG_STRING, &opts.pcap_filename,
+	  "specify a filename to save traffic in pcap format; "
+	  "only relevant with -n", "filename" },
 	{ NULL }
 };
 
@@ -479,13 +493,15 @@ static int nfctool_options_parse(int argc, char **argv)
 		}
 	}
 
-	if (!opts.poll && !opts.list && !opts.set_param) {
+	opts.need_netlink = opts.list || opts.poll || opts.set_param;
+
+	if (!opts.need_netlink && !opts.sniff) {
 		printf("%s", g_option_context_get_help(context, TRUE, NULL));
 
 		goto exit;
 	}
 
-	if ((opts.poll || opts.set_param) &&
+	if ((opts.poll || opts.set_param || opts.sniff) &&
 	    opts.adapter_idx == INVALID_ADAPTER_IDX) {
 		print_error("Please specify a device with -d nfcX option");
 
@@ -518,6 +534,9 @@ static void nfctool_options_cleanup(void)
 {
 	if (opts.device_name != NULL)
 		g_free(opts.device_name);
+
+	if (opts.pcap_filename != NULL)
+		g_free(opts.pcap_filename);
 }
 
 static void nfctool_main_loop_clean(void)
@@ -534,30 +553,43 @@ int main(int argc, char **argv)
 	if (err)
 		goto exit_err;
 
-	err = nl_init(nfc_event_cb);
-	if (err)
-		goto exit_err;
+	if (opts.need_netlink) {
+		err = nl_init(nfc_event_cb);
+		if (err)
+			goto exit_err;
 
-	err = nfctool_get_devices();
-	if (err)
-		goto exit_err;
+		err = nfctool_get_devices();
+		if (err)
+			goto exit_err;
 
-	if (opts.list && !opts.set_param)
-		nfctool_list_adapters();
+		if (opts.list && !opts.set_param)
+			nfctool_list_adapters();
 
-	if (opts.set_param) {
-		err = nfctool_set_params();
+		if (opts.set_param) {
+			err = nfctool_set_params();
+			if (err)
+				goto exit_err;
+		}
+
+		if (opts.poll) {
+			err = nfctool_start_poll();
+
+			if (err == -EBUSY && opts.sniff)
+				err = 0;
+
+			if (err)
+				goto exit_err;
+		}
+	}
+
+	if (opts.sniff) {
+		err = sniffer_init();
 		if (err)
 			goto exit_err;
 	}
 
-	if (opts.poll) {
-		err = nfctool_start_poll();
-		if (err)
-			goto exit_err;
-
+	if (opts.poll || opts.sniff)
 		nfctool_main_loop_start();
-	}
 
 	err = 0;
 
@@ -567,6 +599,8 @@ exit_err:
 	g_slist_free_full(adapters, (GDestroyNotify)nfctool_adapter_free);
 
 	nl_cleanup();
+
+	sniffer_cleanup();
 
 	nfctool_options_cleanup();
 
