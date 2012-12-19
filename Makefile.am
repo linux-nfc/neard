@@ -15,7 +15,7 @@ local_headers = $(foreach file,$(include_HEADERS) $(nodist_include_HEADERS) \
 			$(noinst_HEADERS), include/near/$(notdir $(file)))
 
 gdbus_sources = gdbus/gdbus.h gdbus/mainloop.c gdbus/watch.c \
-					gdbus/object.c gdbus/polkit.c
+				gdbus/object.c gdbus/client.c gdbus/polkit.c
 
 plugin_LTLIBRARIES =
 
