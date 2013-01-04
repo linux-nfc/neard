@@ -38,6 +38,7 @@
 #define DEFAULT_ADAPTER			"DefaultAdapter"
 #define ADAPTER_REMOVED			"AdapterRemoved"
 #define DEFAULT_ADAPTER_CHANGED		"DefaultAdapterChanged"
+#define ADAPTER_PROPERTY_CHANGED	"PropertyChanged"
 #define MANAGER_PATH			"/"
 #define OOB_AGENT			"/org/neard/agent/neard_oob"
 
@@ -94,6 +95,7 @@ static struct near_oob_data bt_def_oob_data;
 static guint watch;
 static guint removed_watch;
 static guint adapter_watch;
+static guint adapter_props_watch;
 
 static guint register_bluez_timer;
 
@@ -415,6 +417,66 @@ fail:
 	return -ENOMEM;
 }
 
+static gboolean bt_adapter_property_changed(DBusConnection *conn,
+							DBusMessage *message,
+							void *user_data)
+{
+	DBusMessageIter iter;
+	DBusMessageIter var;
+	const char *property;
+
+	if (dbus_message_iter_init(message, &iter) == FALSE)
+		return TRUE;
+
+	dbus_message_iter_get_basic(&iter, &property);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT)
+		return TRUE;
+
+	dbus_message_iter_recurse(&iter, &var);
+
+	if (g_str_equal(property, "Name") == TRUE) {
+		const char *name;
+
+		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_STRING)
+			return TRUE;
+
+		dbus_message_iter_get_basic(&iter, &name);
+
+		g_free(bt_def_oob_data.bt_name);
+		bt_def_oob_data.bt_name = g_strdup(name);
+
+		if (bt_def_oob_data.bt_name != NULL)
+			bt_def_oob_data.bt_name_len = strlen(name);
+		else
+			bt_def_oob_data.bt_name_len = 0;
+
+		DBG("%s: %s", property, name);
+	} else if (g_str_equal(property, "Class") == TRUE) {
+		int class;
+
+		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_UINT32)
+			return TRUE;
+
+		dbus_message_iter_get_basic(&var, &class);
+		bt_def_oob_data.class_of_device = class;
+
+		DBG("%s: %x", property, bt_def_oob_data.class_of_device);
+	} else if (g_str_equal(property, "Powered") == TRUE) {
+		dbus_bool_t powered;
+
+		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_BOOLEAN)
+			return TRUE;
+
+		dbus_message_iter_get_basic(&var, &powered);
+		bt_def_oob_data.powered = powered;
+
+		DBG("%s: %u", property, bt_def_oob_data.powered);
+	}
+
+	return TRUE;
+}
 
 /* Get default local adapter properties */
 static void bt_get_properties_cb(DBusPendingCall *pending, void *user_data)
@@ -440,6 +502,12 @@ static void bt_get_properties_cb(DBusPendingCall *pending, void *user_data)
 		near_error("Problem parsing local properties %d", err);
 	else
 		DBG("Get Properties complete: %s", bt_props->def_adapter);
+
+	adapter_props_watch = g_dbus_add_signal_watch(bt_conn, NULL, NULL,
+						ADAPTER_INTF,
+						ADAPTER_PROPERTY_CHANGED,
+						bt_adapter_property_changed,
+						NULL, NULL);
 
 	/* clean */
 	dbus_message_unref(reply);
@@ -892,6 +960,9 @@ static gboolean bt_adapter_removed(DBusConnection *conn, DBusMessage *message,
 	if (bt_props->def_adapter == NULL)
 		return TRUE;
 
+	g_dbus_remove_watch(bt_conn, adapter_props_watch);
+	adapter_props_watch = 0;
+
 	if (dbus_message_iter_init(message, &iter) == FALSE)
 		return TRUE;
 
@@ -920,6 +991,9 @@ static gboolean bt_default_adapter_changed(DBusConnection *conn,
 
 	if (dbus_message_iter_init(message, &iter) == FALSE)
 		return TRUE;
+
+	g_dbus_remove_watch(bt_conn, adapter_props_watch);
+	adapter_props_watch = 0;
 
 	dbus_message_iter_get_basic(&iter, &adapter_path);
 	DBG("New default adapter [%s]", adapter_path);
@@ -1008,6 +1082,9 @@ static void bt_disconnect(DBusConnection *conn, void *user_data)
 
 	g_dbus_remove_watch(bt_conn, adapter_watch);
 	adapter_watch = 0;
+
+	g_dbus_remove_watch(bt_conn, adapter_props_watch);
+	adapter_props_watch = 0;
 }
 
 static int bt_prepare_handlers(DBusConnection *conn)
