@@ -2967,32 +2967,6 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 						(uint8_t *)(uri + id_len));
 }
 
-static struct near_ndef_ac_payload *build_ho_local_ac_record(void)
-{
-	struct near_ndef_ac_payload *ac_payload = NULL;
-
-	DBG("");
-
-	/* Allocate ac record */
-	ac_payload = g_try_malloc0(sizeof(struct near_ndef_ac_payload));
-	if (ac_payload == NULL)
-		return NULL;
-
-	/* Carrier flag */
-	ac_payload->cps = CPS_ACTIVE;    /* TODO Should reflect BT state */
-
-	/* Carrier data reference length */
-	ac_payload->cdr_len = 1;
-
-	/* Carrier data reference */
-	ac_payload->cdr = '0';
-
-	/* Auxiliary data reference count */
-	ac_payload->adata_refcount = 0;
-
-	return ac_payload;
-}
-
 static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 {
 	char *carrier_type = NULL;
@@ -3035,16 +3009,8 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 				g_random_int_range(0, G_MAXUINT16 + 1));
 	record.ho->err_record = NULL;
 
-	record.ho->number_of_ac_payloads = 1;
-	record.ho->ac_payloads = g_try_malloc0(
-					sizeof(struct near_ndef_ac_payload *));
-	if (record.ho->ac_payloads == NULL)
-		goto fail;
-	record.ho->ac_payloads[0] = build_ho_local_ac_record();
-
 	ho = near_ndef_prepare_handover_record("Hr", &record, carrier, NULL);
 
-fail:
 	free_ho_payload(record.ho);
 
 	return ho;
