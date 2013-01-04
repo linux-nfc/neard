@@ -1415,22 +1415,24 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 		data.state = CPS_UNKNOWN;
 
 	if (__near_agent_handover_registered() == TRUE) {
-		if (action == TRUE)
+		if (action == TRUE) {
 			err = __near_agent_handover_push_data(&data);
-		else if (reply != NULL)
+		} else if (reply != NULL) {
 			*reply = near_ndef_prepare_handover_record("Hs",
 					record, NEAR_CARRIER_BLUETOOTH, &data);
+			if (*reply == NULL)
+				err = -ENOMEM;
+		}
 	} else {
 		err = __near_bluetooth_parse_oob_record(&data,
 					&mime->handover.properties, action);
-		if (err == 0 && reply != NULL)
+		if (err == 0 && reply != NULL) {
 			*reply = near_ndef_prepare_handover_record("Hs",
 					record, NEAR_CARRIER_BLUETOOTH, NULL);
+			if (*reply == NULL)
+				err = -ENOMEM;
+		}
 	}
-
-	/* check if requested reply message was created successfully */
-	if (reply != NULL && *reply == NULL)
-		err = -ENOMEM;
 
 done:
 	if (err < 0) {
