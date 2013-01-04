@@ -147,13 +147,6 @@ struct near_ndef_mime_payload {
 	} handover;
 };
 
-enum carrier_power_state {
-	CPS_INACTIVE			=   0x00,
-	CPS_ACTIVE			=   0x01,
-	CPS_ACTIVATING			=   0x02,
-	CPS_UNKNOWN			=   0x03,
-};
-
 /* Handover record definitions */
 
 /* alternative record (AC) */
