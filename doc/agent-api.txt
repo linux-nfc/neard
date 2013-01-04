@@ -74,6 +74,19 @@ Fields		array{byte} EIR
 			This is a proprietary extension blob used by some
 			Nokia Bluetooth 2.0 devices.
 
+		string State
+
+			Carrier power state. This is a hint for handover agent
+			about power state of carrier on remote device. Agent
+			should also use it to inform neard about power state
+			of its own carrier (in RequestOOB reply). It is up to
+			agent to decide how to use this information.
+
+			This field may be present only if nokia.com:bt or
+			EIR field is also present.
+
+			Possible values are "active", "inactive", "activating".
+
 
 NDEFAgent hierarchy
 =======================
