@@ -1978,7 +1978,7 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 	return hs_msg;
 
 fail:
-	near_error("handover select record preparation failed");
+	near_error("handover %s record preparation failed", type_name);
 
 	if (ac_msg != NULL) {
 		g_free(ac_msg->data);
