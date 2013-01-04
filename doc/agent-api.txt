@@ -27,9 +27,7 @@ Methods		dict RequestOOB(dict values) [experimental]
 			keys are the field names and the values are the
 			actual fields.
 
-			Possible Errors: org.neard.HandoverAgent.Error.NotSupported
-					 org.neard.HandoverAgent.Error.NoSuchDevice
-					 org.neard.HandoverAgent.Error.InProgress
+			Possible Errors: org.neard.HandoverAgent.Error.InProgress
 					 org.neard.HandoverAgent.Error.Failed
 
 		void PushOOB(dict values) [experimental]
@@ -50,9 +48,7 @@ Methods		dict RequestOOB(dict values) [experimental]
 			Parameter should be a dictionary where the keys are the
 			field names and the values are the actual fields.
 
-			Possible Errors: org.neard.HandoverAgent.Error.NotSupported
-					 org.neard.HandoverAgent.Error.NoSuchDevice
-					 org.neard.HandoverAgent.Error.InProgress
+			Possible Errors: org.neard.HandoverAgent.Error.InProgress
 					 org.neard.HandoverAgent.Error.Failed
 
 		void Release() [experimental]
