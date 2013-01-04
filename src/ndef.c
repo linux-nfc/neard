@@ -1364,7 +1364,8 @@ static void correct_eir_len(struct bt_data *data)
 static struct near_ndef_mime_payload *
 parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 		size_t ndef_length, size_t offset, uint32_t payload_length,
-		near_bool_t action, struct near_ndef_message **reply)
+		near_bool_t action, struct near_ndef_ac_payload *ac,
+		struct near_ndef_message **reply)
 {
 	struct near_ndef_mime_payload *mime = NULL;
 	int err = 0;
@@ -1403,6 +1404,15 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 
 	if (data.size == 0)
 		goto done;
+
+	/*
+	 * ac might be NULL if not present eg. in simplified tag format for
+	 * a single BT carrier.
+	 */
+	if (ac != NULL)
+		data.state = ac->cps;
+	else
+		data.state = CPS_UNKNOWN;
 
 	if (__near_agent_handover_registered() == TRUE) {
 		if (action == TRUE)
@@ -2151,7 +2161,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 			mime = parse_mime_type(trec, payload, frame_length,
 						offset,
 						trec->header->payload_len,
-						bt_pair, reply);
+						bt_pair, ac, reply);
 
 			trec->ho = NULL;
 
@@ -2440,7 +2450,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 			record->mime = parse_mime_type(record, ndef_data,
 						ndef_length, offset,
 						record->header->payload_len,
-						TRUE, reply);
+						TRUE, NULL, reply);
 
 
 			if (record->mime == NULL)

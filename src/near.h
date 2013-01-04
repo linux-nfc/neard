@@ -181,6 +181,7 @@ void __near_plugin_cleanup(void);
 struct bt_data {
 	uint8_t type;
 	uint8_t size;
+	enum carrier_power_state state;
 	uint8_t data[UINT8_MAX];
 };
 

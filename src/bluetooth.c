@@ -867,6 +867,11 @@ struct bt_data *__near_bluetooth_local_get_properties(uint16_t mime_props)
 
 	data->data[0] = data->size ;
 
+	if (bt_def_oob_data.powered == TRUE)
+		data->state = CPS_ACTIVE;
+	else
+		data->state = CPS_INACTIVE;
+
 	return data;
 
 fail:
