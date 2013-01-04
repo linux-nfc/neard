@@ -227,57 +227,110 @@ static guint handover_agent_watch = 0;
 static gchar *handover_agent_path = NULL;
 static gchar *handover_agent_sender = NULL;
 
+static enum carrier_power_state string2cps(const char *state)
+{
+	if (strcasecmp(state, "active") == 0)
+		return CPS_ACTIVE;
+
+	if (strcasecmp(state, "inactive") == 0)
+		return CPS_INACTIVE;
+
+	if (strcasecmp(state, "activating") == 0)
+		return CPS_ACTIVATING;
+
+	return CPS_UNKNOWN;
+}
+
 static struct bt_data *parse_reply(DBusMessage *reply)
 {
 	DBusMessageIter args;
 	DBusMessageIter data;
-	DBusMessageIter value;
-	DBusMessageIter entry;
-	DBusMessageIter array;
 	struct bt_data *bt_data;
-	const char *key;
-	uint8_t type;
-	int size;
-	void *oob_data;
-
-	dbus_message_iter_init(reply, &args);
-	dbus_message_iter_recurse(&args, &data);
-
-	if (dbus_message_iter_get_arg_type(&data) != DBUS_TYPE_DICT_ENTRY)
-		return NULL;
-
-	dbus_message_iter_recurse(&data, &entry);
-	dbus_message_iter_get_basic(&entry, &key);
-
-	if (strcasecmp(key, "EIR") == 0)
-		type = BT_MIME_V2_1;
-	else if (strcasecmp(key, "nokia.com:bt") == 0)
-		type = BT_MIME_V2_0;
-	else
-		return NULL;
-
-	dbus_message_iter_next(&entry);
-	dbus_message_iter_recurse(&entry, &value);
-
-	if (dbus_message_iter_get_arg_type(&value) != DBUS_TYPE_ARRAY)
-		return NULL;
-
-	dbus_message_iter_recurse(&value, &array);
-	dbus_message_iter_get_fixed_array(&array, &oob_data, &size);
-
-	if (size > UINT8_MAX || size < 8)
-		return NULL;
 
 	bt_data = g_try_new0(struct bt_data, 1);
 	if (bt_data == NULL)
 		return NULL;
 
-	memcpy(bt_data->data, oob_data, size);
+	bt_data->state = CPS_UNKNOWN;
 
-	bt_data->size = size;
-	bt_data->type = type;
+	dbus_message_iter_init(reply, &args);
+	dbus_message_iter_recurse(&args, &data);
+
+	while (dbus_message_iter_get_arg_type(&data) == DBUS_TYPE_DICT_ENTRY) {
+		DBusMessageIter value;
+		DBusMessageIter entry;
+		DBusMessageIter array;
+		const char *key;
+		int var;
+
+		dbus_message_iter_recurse(&data, &entry);
+		dbus_message_iter_get_basic(&entry, &key);
+
+		dbus_message_iter_next(&entry);
+		dbus_message_iter_recurse(&entry, &value);
+
+		var = dbus_message_iter_get_arg_type(&value);
+
+		if (strcasecmp(key, "State") == 0) {
+			const char *state;
+
+			if (var != DBUS_TYPE_STRING)
+				goto failed;
+
+			dbus_message_iter_get_basic(&value, &state);
+
+			bt_data->state = string2cps(state);
+			if (bt_data->state == CPS_UNKNOWN)
+				goto failed;
+		} else if (strcasecmp(key, "EIR") == 0) {
+			int size;
+			void *oob_data;
+
+			if (var != DBUS_TYPE_ARRAY)
+				goto failed;
+
+			dbus_message_iter_recurse(&value, &array);
+			dbus_message_iter_get_fixed_array(&array, &oob_data,
+									&size);
+
+			if (size > UINT8_MAX || size < 8)
+				goto failed;
+
+			memcpy(bt_data->data, oob_data, size);
+			bt_data->size = size;
+			bt_data->type = BT_MIME_V2_1;
+		} else if (strcasecmp(key, "nokia.com:bt") == 0) {
+			int size;
+			void *oob_data;
+
+			/* prefer EIR over nokia.com:bt */
+			if (bt_data->type == BT_MIME_V2_1)
+				continue;
+
+			dbus_message_iter_recurse(&value, &array);
+			dbus_message_iter_get_fixed_array(&array, &oob_data,
+									&size);
+
+			if (size > UINT8_MAX || size < 8)
+				goto failed;
+
+			memcpy(bt_data->data, oob_data, size);
+			bt_data->size = size;
+			bt_data->type = BT_MIME_V2_1;
+		}
+
+		dbus_message_iter_next(&data);
+	}
+
+	/* State can be present only if EIR or nokia.com:bt is also present */
+	if (bt_data->state != CPS_UNKNOWN && bt_data->size == 0)
+		goto failed;
 
 	return bt_data;
+
+failed:
+	g_free(bt_data);
+	return NULL;
 }
 
 static const char *cps2string[] = {
