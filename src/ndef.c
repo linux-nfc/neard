@@ -75,6 +75,8 @@ enum record_tnf {
 #define NDEF_TEXT_RECORD_TYPE_NAME_HEX_VALUE 0x54
 #define NDEF_TEXT_RECORD_UTF16_STATUS 0x80
 
+#define AC_CPS_MASK 0x03
+
 enum record_type {
 	RECORD_TYPE_WKT_SMART_POSTER          =   0x01,
 	RECORD_TYPE_WKT_URI                   =   0x02,
@@ -1613,6 +1615,12 @@ static struct near_ndef_message *ndef_message_alloc(char *type_name,
 			TRUE, TRUE);
 }
 
+static enum carrier_power_state get_cps(uint8_t data)
+{
+	/* enum carrier_power_state values match binary format */
+	return data & AC_CPS_MASK;
+}
+
 static struct near_ndef_ac_payload *parse_ac_payload(uint8_t *payload,
 						uint32_t length)
 {
@@ -1630,7 +1638,7 @@ static struct near_ndef_ac_payload *parse_ac_payload(uint8_t *payload,
 		goto fail;
 
 	/* Carrier flag */
-	ac_payload->cps = payload[offset];    /* TODO Check enum */
+	ac_payload->cps = get_cps(payload[offset]);
 	offset++;
 
 	/* Carrier data reference length */
