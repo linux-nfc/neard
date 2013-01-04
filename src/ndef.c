@@ -2998,6 +2998,7 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 	char *carrier_type = NULL;
 	uint8_t carrier;
 	struct near_ndef_record *record = NULL;
+	struct near_ndef_message *ho = NULL;
 
 	DBG("");
 
@@ -3043,13 +3044,13 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 		goto fail;
 	record->ho->ac_payloads[0] = build_ho_local_ac_record();
 
-	return near_ndef_prepare_handover_record("Hr", record, carrier, NULL);
+	ho = near_ndef_prepare_handover_record("Hr", record, carrier, NULL);
 
 fail:
 	free_ho_payload(record->ho);
 	g_free(record);
 
-	return NULL;
+	return ho;
 }
 
 struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
