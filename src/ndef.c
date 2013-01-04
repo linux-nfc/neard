@@ -1844,16 +1844,13 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 	}
 
 	/* If there's no carrier, we create en empty ac record */
-	if (carriers == NEAR_CARRIER_EMPTY)
+	if (carriers == NEAR_CARRIER_EMPTY) {
 		cdr = 0x00;
 
-	/*
-	 * ac record: if only one: MB=0 ME=1
-	 * cps should be active
-	 */
-	ac_msg = near_ndef_prepare_ac_message(CPS_ACTIVE, cdr);
-	if (ac_msg == NULL)
-		goto fail;
+		ac_msg = near_ndef_prepare_ac_message(CPS_ACTIVE, cdr);
+		if (ac_msg == NULL)
+			goto fail;
+	}
 
 	if (carriers & NEAR_CARRIER_BLUETOOTH) {
 		if (__near_agent_handover_registered() == TRUE) {
@@ -1874,6 +1871,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 		bt_msg = near_ndef_prepare_bt_message(local->data, local->size,
 								cdr, 1);
 		if (bt_msg == NULL)
+			goto fail;
+
+		ac_msg = near_ndef_prepare_ac_message(local->state, cdr);
+		if (ac_msg == NULL)
 			goto fail;
 
 		near_ndef_set_mb_me(bt_msg->data, FALSE, TRUE);
