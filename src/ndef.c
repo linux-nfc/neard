@@ -2997,7 +2997,7 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 {
 	char *carrier_type = NULL;
 	uint8_t carrier;
-	struct near_ndef_record *record = NULL;
+	struct near_ndef_record record;
 	struct near_ndef_message *ho = NULL;
 
 	DBG("");
@@ -3020,35 +3020,32 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 	}
 
 	/* Build local record */
-	record = g_try_malloc0(sizeof(struct near_ndef_record));
-	if (record == NULL)
-		return NULL;
+	memset(&record, 0, sizeof(record));
 
 	/* Do a Ho */
-	record->ho = g_try_malloc0(sizeof(struct near_ndef_ho_payload));
-	if (record->ho == NULL)
-		goto fail;
+	record.ho = g_try_malloc0(sizeof(struct near_ndef_ho_payload));
+	if (record.ho == NULL)
+		return NULL;
 
 	/* fill the Ho */
-	record->ho->version = HANDOVER_VERSION;
+	record.ho->version = HANDOVER_VERSION;
 
 	/* Generate random number for Collision Resolution Record */
-	record->ho->collision_record = GUINT16_TO_BE(
+	record.ho->collision_record = GUINT16_TO_BE(
 				g_random_int_range(0, G_MAXUINT16 + 1));
-	record->ho->err_record = NULL;
+	record.ho->err_record = NULL;
 
-	record->ho->number_of_ac_payloads = 1;
-	record->ho->ac_payloads = g_try_malloc0(
+	record.ho->number_of_ac_payloads = 1;
+	record.ho->ac_payloads = g_try_malloc0(
 					sizeof(struct near_ndef_ac_payload *));
-	if (record->ho->ac_payloads == NULL)
+	if (record.ho->ac_payloads == NULL)
 		goto fail;
-	record->ho->ac_payloads[0] = build_ho_local_ac_record();
+	record.ho->ac_payloads[0] = build_ho_local_ac_record();
 
-	ho = near_ndef_prepare_handover_record("Hr", record, carrier, NULL);
+	ho = near_ndef_prepare_handover_record("Hr", &record, carrier, NULL);
 
 fail:
-	free_ho_payload(record->ho);
-	g_free(record);
+	free_ho_payload(record.ho);
 
 	return ho;
 }
