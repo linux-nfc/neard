@@ -280,6 +280,12 @@ static struct bt_data *parse_reply(DBusMessage *reply)
 	return bt_data;
 }
 
+static const char *cps2string[] = {
+	"inactive",
+	"active",
+	"activating",
+};
+
 static void prepare_bt_data(DBusMessage *message, struct bt_data *data)
 {
 	DBusMessageIter iter;
@@ -302,6 +308,13 @@ static void prepare_bt_data(DBusMessage *message, struct bt_data *data)
 
 		near_dbus_dict_append_fixed_array(&dict, name, DBUS_TYPE_BYTE,
 							&pdata, data->size);
+
+		if (data->state != CPS_UNKNOWN) {
+			const char *state = cps2string[data->state];
+
+			near_dbus_dict_append_basic(&dict, "State",
+						DBUS_TYPE_STRING, &state);
+		}
 	}
 
 	near_dbus_dict_close(&iter, &dict);
