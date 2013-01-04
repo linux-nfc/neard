@@ -192,6 +192,8 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 				p2p_client_event,
 				client_data);
 
+	g_io_channel_unref(client_channel);
+
 	server_data->client_list = g_list_append(server_data->client_list, client_data);
 
 	return TRUE;
