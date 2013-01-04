@@ -5,11 +5,14 @@ import gobject
 import dbus
 import dbus.service
 import dbus.mainloop.glib
+from optparse import OptionParser
 
 eir_test_data = [0x16,0x00\
 		,0x01,0x02,0x03,0x04,0x05,0x06\
 		,0x08,0x09,0x41,0x72,0x72,0x61,0x6b,0x69,0x73\
 		,0x04,0x0d,0x6e,0x01,0x00]
+
+power_state = None
 
 def print_fields(fields):
 	if 'EIR' in fields:
@@ -19,6 +22,9 @@ def print_fields(fields):
 	if 'nokia.com:bt' in fields:
 		s = ' '.join('{:#02x}'.format(i) for i in fields['nokia.com:bt'])
 		print '  nokia.com:bt:  %s' % s
+
+	if 'State' in fields:
+		print '  State: %s' % fields['State']
 
 class HOAgent(dbus.service.Object):
 
@@ -48,12 +54,25 @@ class HOAgent(dbus.service.Object):
 		s = ' '.join('{:#02x}'.format(i) for i in eir_test_data)
 		print '    EIR: %s' % s
 
-		return {'EIR' : eir_test_data}
+		if power_state != 'unknown':
+			print '    State: %s' % power_state
+			return {'EIR' : eir_test_data, 'State' : power_state}
+		else:
+			return {'EIR' : eir_test_data}
 
 if __name__ == '__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 	bus = dbus.SystemBus()
+
+	parser = OptionParser()
+	parser.add_option("-s", "--power-state", action="store", type="string",
+				dest="power_state", default="active",
+				help="active inactive activating unknown")
+	(options, args) = parser.parse_args()
+
+	power_state = options.power_state
+
 	manager = dbus.Interface(bus.get_object('org.neard', '/'),
 							'org.neard.Manager')
 
