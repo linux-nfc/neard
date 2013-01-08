@@ -21,6 +21,8 @@ plugin_LTLIBRARIES =
 
 plugin_objects =
 
+unit_objects =
+
 builtin_modules =
 builtin_sources =
 builtin_cflags =
@@ -80,7 +82,7 @@ test_SCRIPTS = $(test_scripts)
 endif
 
 if TOOLS
-noinst_PROGRAMS = tools/snep-send tools/nfctool/nfctool
+noinst_PROGRAMS = tools/snep-send tools/nfctool/nfctool unit/test-ndef
 
 tools_snep_send_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 			src/bluetooth.c src/ndef.c tools/snep-send.c src/agent.c
@@ -90,6 +92,14 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c tools/nfctool/netlink.c \
 				tools/nfctool/sniffer.c tools/nfctool/llcp-decode.c
 
 tools_nfctool_nfctool_LDADD = @GLIB_LIBS@ @NETLINK_LIBS@
+
+unit_test_ndef_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
+			src/agent.c src/bluetooth.c src/ndef.c unit/test-ndef.c
+unit_test_ndef_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+unit_objects += $(unit_test_ndef_OBJECTS)
+
+TESTS = $(unit_tests)
+
 
 endif
 
