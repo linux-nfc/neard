@@ -41,12 +41,14 @@ class NDEFAgent(dbus.service.Object):
 
 def print_usage():
 	print "Usage:"
-	print "For NDEF agent:"
-	print "%s NDEF Type=<record type>" % (sys.argv[0])
+	print "%s Type=<record type>" % (sys.argv[0])
 	print "Help: %s help" % (sys.argv[0])
 	sys.exit(1)
 
 if __name__ == '__main__':
+	if len(sys.argv) != 2:
+		print_usage()
+
 	if len(sys.argv) == 2 and sys.argv[1] == "help":
 		print_usage()
 
@@ -56,13 +58,11 @@ if __name__ == '__main__':
 	manager = dbus.Interface(bus.get_object('org.neard', "/"),
 					'org.neard.Manager')
 
-	if len(sys.argv) > 2:	
-		if sys.argv[1] == "NDEF":
-	   		path = "/test/ndef/agent"
-			object = NDEFAgent(bus, path)
-			rec_type = sys.argv[2].replace("Type=", "", 1)			
+	path = "/test/ndef/agent"
+	object = NDEFAgent(bus, path)
+	rec_type = sys.argv[1].replace("Type=", "", 1)
 
-			manager.RegisterNDEFAgent(path, rec_type)
+	manager.RegisterNDEFAgent(path, rec_type)
 
-			mainloop = gobject.MainLoop()
-			mainloop.run()
+	mainloop = gobject.MainLoop()
+	mainloop.run()
