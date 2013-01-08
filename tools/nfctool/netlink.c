@@ -19,15 +19,45 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <errno.h>
 #include <sys/socket.h>
 #include <linux/nfc.h>
+
+#include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
+#include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
+
 #include <glib.h>
 
 #include "nfctool.h"
 #include "netlink.h"
+
+#ifdef NEED_LIBNL_COMPAT
+#define nl_sock nl_handle
+
+static inline struct nl_handle *nl_socket_alloc(void)
+{
+	return nl_handle_alloc();
+}
+
+static inline void nl_socket_free(struct nl_sock *h)
+{
+	nl_handle_destroy(h);
+}
+
+#define NLE_MISSING_ATTR	14
+
+static inline void __nl_perror(int error, const char *s)
+{
+	nl_perror(s);
+}
+#define nl_perror __nl_perror
+#endif
 
 struct handler_args {
 	const char *group;
