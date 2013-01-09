@@ -68,6 +68,12 @@ struct near_ndef_record_header {
 	uint32_t header_len;
 };
 
+struct near_ndef_text_payload {
+	char *encoding;
+	char *language_code;
+	char *data;
+};
+
 struct near_ndef_uri_payload {
 	uint8_t identifier;
 
@@ -97,6 +103,10 @@ struct near_ndef_record {
 static uint8_t uri[] = {0xd1, 0x1, 0xa, 0x55,
 			0x1, 0x69, 0x6e, 0x74,
 			0x65, 0x6c, 0x2e, 0x63, 0x6f, 0x6d};
+
+/* 'hello' - UTF-8 - en-US Text NDEF */
+static uint8_t text[] = {0xd1, 0x1, 0xb, 0x54, 0x5,  0x65, 0x6e, 0x2d,
+			 0x55, 0x53, 0x68, 0x65, 0x6c, 0x6c, 0x6f};
 
 static void test_ndef_free_record(struct near_ndef_record *record)
 {
@@ -133,11 +143,44 @@ static void test_ndef_uri(void)
 	test_ndef_free_record(record);
 }
 
+static void test_ndef_text(void)
+{
+	GList *records;
+	struct near_ndef_record *record;
+
+	records = near_ndef_parse_msg(text, sizeof(text), NULL);
+
+	g_assert(records);
+	g_assert(g_list_length(records) == 1);
+
+	record = (struct near_ndef_record *)(records->data);
+
+	g_assert(record->header->rec_type == RECORD_TYPE_WKT_TEXT);
+	g_assert(record->header->mb == 1);
+	g_assert(record->header->me == 1);
+
+	g_assert(record->text);
+	g_assert(strcmp(record->text->data, "hello") == 0);
+	g_assert(strcmp(record->text->encoding, "UTF-8") == 0);
+	g_assert(strcmp(record->text->language_code, "en-US") == 0);
+
+	g_print("NDEF Text data: %s\n", record->text->data);
+	g_print("NDEF Text Encoding: %s\n", record->text->encoding);
+	g_print("NDEF Text Language: %s\n", record->text->language_code);
+
+	g_free(record->text->data);
+	g_free(record->text->encoding);
+	g_free(record->text->language_code);
+	g_free(record->text);
+	test_ndef_free_record(record);
+}
+
 int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
 
 	g_test_add_func("/testndef/Test URI NDEF", test_ndef_uri);
+	g_test_add_func("/testndef/Test Text NDEF", test_ndef_text);
 
 	return g_test_run();
 }
