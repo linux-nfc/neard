@@ -40,8 +40,8 @@ struct near_p2p_driver {
 int npp_init(void);
 void npp_exit(void);
 
-int snep_init(void);
-void snep_exit(void);
+int snep_core_init(void);
+void snep_core_exit(void);
 
 int handover_init(void);
 void handover_exit(void);

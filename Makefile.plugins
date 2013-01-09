@@ -25,6 +25,8 @@ endif
 
 if P2P
 builtin_modules += p2p
-builtin_sources += plugins/p2p.c plugins/npp.c plugins/snep.c \
+builtin_sources += plugins/p2p.c plugins/npp.c \
+				plugins/snep-core.c plugins/snep-core.h \
+				plugins/snep.c \
 				plugins/handover.c plugins/p2p.h
 endif
