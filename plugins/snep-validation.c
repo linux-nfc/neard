@@ -1,0 +1,262 @@
+/*
+ *
+ *  neard - Near Field Communication manager
+ *
+ *  Copyright (C) 2012  Intel Corporation. All rights reserved.
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2 as
+ *  published by the Free Software Foundation.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <stdint.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/socket.h>
+
+#include <linux/socket.h>
+#include <linux/nfc.h>
+
+#include <near/plugin.h>
+#include <near/log.h>
+#include <near/types.h>
+#include <near/adapter.h>
+#include <near/device.h>
+#include <near/ndef.h>
+#include <near/tlv.h>
+
+#include "p2p.h"
+#include "snep-core.h"
+
+/* Would store incoming ndefs per client */
+static GHashTable *snep_validation_hash = NULL;
+
+/* Callback: free validation data */
+static void free_snep_validation_client(gpointer data)
+{
+	GList *old_ndefs = data;
+
+	if (old_ndefs != NULL)
+		g_list_free(old_ndefs);
+}
+
+/* Validation Server REQ_PUT function
+ * The validation server shall accept PUT and GET requests. A PUT request shall
+ * cause the server to store the ndef message transmitted with the request.
+ * */
+static near_bool_t snep_validation_server_req_put(int client_fd, void *data)
+{
+	struct p2p_snep_data *snep_data = data;
+	GList *records;
+	struct near_ndef_record *recd;
+	GList *incoming_ndefs;
+
+	DBG("");
+
+	if (snep_data->nfc_data == NULL)
+		goto error;
+
+	/*
+	 * We received a ndef, parse it, check if there's only
+	 * 1 record (a mime type !) with an ID
+	 */
+	records = near_ndef_parse_msg(snep_data->nfc_data,
+					snep_data->nfc_data_length, NULL);
+
+	if (g_list_length(records) != 1) {
+		DBG("records number mismatch");
+		goto error;
+	}
+
+	recd = records->data;
+
+	if (recd == NULL) {
+		g_list_free(records);
+		goto error;
+	}
+
+	/* Save the record but look if there are some incoming ndef stored */
+	incoming_ndefs = g_hash_table_lookup(snep_validation_hash,
+						GINT_TO_POINTER(client_fd));
+
+	incoming_ndefs = g_list_append(incoming_ndefs, recd);
+
+	/* remove existing one silently */
+	g_hash_table_steal(snep_validation_hash, GINT_TO_POINTER(client_fd));
+	/* push the new one */
+	g_hash_table_insert(snep_validation_hash, GINT_TO_POINTER(client_fd),
+							incoming_ndefs);
+
+
+	snep_core_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
+
+	return TRUE;
+
+error:
+	snep_core_response_noinfo(client_fd, SNEP_RESP_REJECT);
+
+	return TRUE;
+}
+
+/*
+ * Validation Server REQ_GET function
+ * The validation server shall accept PUT and GET requests. A GET request shall
+ * cause the server to return a previously stored NDEF message of the same NDEF
+ * message type and identifier as transmitted with the request.
+ * */
+static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
+{
+	struct p2p_snep_data *snep_data = data;
+	struct near_ndef_record *recd, *rec_store;
+	uint32_t acceptable_length;
+	GList *records;
+	GList *iter;
+	GList *incoming_ndefs;
+
+	DBG("");
+
+	/*
+	 * We received a ndef, parse it, check if there's only
+	 * 1 record (a mime type !) with an ID
+	 */
+	records = near_ndef_parse_msg(snep_data->nfc_data +
+			SNEP_ACC_LENGTH_SIZE,
+			snep_data->nfc_data_length - SNEP_ACC_LENGTH_SIZE,
+			NULL);
+
+	if (g_list_length(records) != 1) {
+		DBG("records number mismatch");
+		goto error;
+	}
+
+	recd = records->data;
+	if (recd == NULL) {
+		g_list_free(records);
+		goto error;
+	}
+
+	/* check if the acceptable length is higher than the data_len
+	 * otherwise returns a SNEP_RESP_EXCESS
+	 */
+	acceptable_length = GUINT32_FROM_BE(*(uint32_t *)snep_data->nfc_data);
+
+	/* Look if there are some incoming ndef stored */
+	incoming_ndefs = g_hash_table_lookup(snep_validation_hash,
+						GINT_TO_POINTER(client_fd));
+
+	if (incoming_ndefs == NULL)
+		goto done;
+
+	/* Now, loop to find the the associated record */
+	for (iter = incoming_ndefs; iter; iter = iter->next) {
+
+		rec_store = iter->data;
+		/* Same mime type and same id ?*/
+
+		if (near_ndef_record_cmp_id(recd, rec_store) == FALSE)
+			continue;
+
+		if (near_ndef_record_cmp_mime(recd, rec_store) == FALSE)
+			continue;
+
+		/* Found a record, check the length */
+		if (acceptable_length >= near_ndef_data_length(rec_store)) {
+			snep_core_response_with_info(client_fd,
+					SNEP_RESP_SUCCESS,
+					near_ndef_data_ptr(rec_store),
+					near_ndef_data_length(rec_store));
+
+			incoming_ndefs = g_list_remove(incoming_ndefs,
+								iter->data);
+			/* remove existing one silently */
+			g_hash_table_steal(snep_validation_hash,
+						GINT_TO_POINTER(client_fd));
+			/* push the new one */
+			g_hash_table_insert(snep_validation_hash,
+						GINT_TO_POINTER(client_fd),
+							incoming_ndefs);
+
+		} else
+			snep_core_response_noinfo(client_fd, SNEP_RESP_EXCESS);
+
+		return TRUE;
+	}
+
+done:
+	/* If not found */
+	snep_core_response_noinfo(client_fd, SNEP_RESP_NOT_FOUND);
+	return TRUE;
+
+error:
+	 /* Not found */
+	snep_core_response_noinfo(client_fd, SNEP_RESP_REJECT);
+	return FALSE;
+}
+
+/* This function is a wrapper to push post processing read functions */
+static near_bool_t snep_validation_read(int client_fd, uint32_t adapter_idx,
+							uint32_t target_idx,
+							near_tag_io_cb cb)
+{
+	DBG("");
+
+	return snep_core_read(client_fd, adapter_idx, target_idx, cb,
+						snep_validation_server_req_get,
+						snep_validation_server_req_put);
+
+}
+
+static void snep_validation_close(int client_fd, int err)
+{
+	DBG("");
+
+	g_hash_table_remove(snep_validation_hash, GINT_TO_POINTER(client_fd));
+
+	/* Call core server close */
+	snep_core_close(client_fd, err);
+}
+
+struct near_p2p_driver validation_snep_driver = {
+	.name = "VALIDATION_SNEP",
+	.service_name = "urn:nfc:xsn:nfc-forum.org:snep-validation",
+	.fallback_service_name = NULL,
+	.read = snep_validation_read,
+	.push = snep_core_push,
+	.close = snep_validation_close,
+};
+
+int snep_validation_init(void)
+{
+	DBG("");
+
+	/* Would store incoming ndefs per client */
+	snep_validation_hash = g_hash_table_new_full(g_direct_hash,
+						g_direct_equal, NULL,
+						free_snep_validation_client);
+
+	return near_p2p_register(&validation_snep_driver);
+}
+
+void snep_validation_exit(void)
+{
+	DBG("");
+
+	near_p2p_unregister(&validation_snep_driver);
+
+	g_hash_table_destroy(snep_validation_hash);
+	snep_validation_hash = NULL;
+}

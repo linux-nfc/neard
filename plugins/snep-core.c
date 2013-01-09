@@ -818,12 +818,15 @@ int snep_core_init(void)
 							g_direct_equal, NULL,
 							free_snep_core_client);
 	snep_init();
+	snep_validation_init();
 
 	return 0;
 }
 
 void snep_core_exit(void)
 {
+	snep_validation_exit();
+
 	g_hash_table_destroy(snep_client_hash);
 	snep_client_hash = NULL;
 }
