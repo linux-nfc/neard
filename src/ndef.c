@@ -2252,6 +2252,80 @@ int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 	return 0;
 }
 
+/*
+ * These functions parse a specific type record (id or mime) to find the
+ * associated string.
+ */
+near_bool_t near_ndef_record_cmp_id(struct near_ndef_record *rec1,
+						struct near_ndef_record *rec2)
+{
+	DBG("");
+
+	if ((rec1 == NULL) || (rec2 == NULL))
+		return FALSE;
+
+	if ((rec1->header == NULL) || (rec2->header == NULL))
+		return FALSE;
+
+	/* usual checks */
+	if ((rec1->header->il_field == NULL) ||
+			(rec2->header->il_field == NULL))
+		return FALSE;
+
+	if (memcmp(rec1->header->il_field, rec2->header->il_field,
+		(rec1->header->il_length) > (rec2->header->il_length)
+					? (rec1->header->il_length) :
+					(rec2->header->il_length)) != 0)
+		return FALSE;
+
+	return TRUE;
+}
+
+near_bool_t near_ndef_record_cmp_mime(struct near_ndef_record *rec1,
+					struct near_ndef_record *rec2)
+{
+
+	DBG("");
+
+	if ((rec1 == NULL) || (rec2 == NULL))
+		return FALSE;
+
+	if ((rec1->header == NULL) || (rec2->header == NULL))
+		return FALSE;
+	/* usual checks */
+	if ((rec1->mime == NULL) || (rec2->mime == NULL))
+		return FALSE;
+
+	if ((rec1->mime->type == NULL) || (rec2->mime->type == NULL))
+		return FALSE;
+
+	if (strlen(rec1->mime->type) != strlen(rec2->mime->type))
+		return FALSE;
+
+	if ((g_strcmp0(rec1->mime->type, rec2->mime->type) != 0))
+		return FALSE;
+
+	return TRUE;
+}
+
+/* helper to get the record data length */
+size_t near_ndef_data_length(struct near_ndef_record *rec)
+{
+	if (rec == NULL)
+		return 0;
+	else
+		return rec->data_len;
+}
+
+/* helper to get the record data pointer */
+uint8_t *near_ndef_data_ptr(struct near_ndef_record *rec)
+{
+	if (rec == NULL)
+		return NULL;
+	else
+		return rec->data;
+}
+
 /**
  * @brief Parse message represented by bytes block
 GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length,

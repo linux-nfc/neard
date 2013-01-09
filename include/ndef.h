@@ -65,4 +65,13 @@ near_ndef_prepare_smartposter_record(uint8_t uri_identifier,
 					uint32_t uri_field_length,
 					uint8_t *uri_field);
 
+near_bool_t near_ndef_record_cmp_id(struct near_ndef_record *rec1,
+						struct near_ndef_record *rec2);
+near_bool_t near_ndef_record_cmp_mime(struct near_ndef_record *rec1,
+						struct near_ndef_record *rec2);
+
+
+size_t near_ndef_data_length(struct near_ndef_record *data);
+uint8_t *near_ndef_data_ptr(struct near_ndef_record *data);
+
 #endif
