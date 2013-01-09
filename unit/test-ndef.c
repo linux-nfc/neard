@@ -81,6 +81,17 @@ struct near_ndef_uri_payload {
 	uint8_t  *field;
 };
 
+struct near_ndef_sp_payload {
+	struct near_ndef_uri_payload *uri;
+
+	uint8_t number_of_title_records;
+	struct near_ndef_text_payload **title_records;
+
+	uint32_t size; /* from Size record*/
+	char *type;    /* from Type record*/
+	char *action;
+};
+
 struct near_ndef_record {
 	char *path;
 
@@ -100,13 +111,17 @@ struct near_ndef_record {
 };
 
 /* http://www.intel.com URI NDEF */
-static uint8_t uri[] = {0xd1, 0x1, 0xa, 0x55,
-			0x1, 0x69, 0x6e, 0x74,
+static uint8_t uri[] = {0xd1, 0x1, 0xa, 0x55, 0x1, 0x69, 0x6e, 0x74,
 			0x65, 0x6c, 0x2e, 0x63, 0x6f, 0x6d};
 
 /* 'hello' - UTF-8 - en-US Text NDEF */
 static uint8_t text[] = {0xd1, 0x1, 0xb, 0x54, 0x5,  0x65, 0x6e, 0x2d,
 			 0x55, 0x53, 0x68, 0x65, 0x6c, 0x6c, 0x6f};
+
+/* Smart poster with a http://intel.com URI record */
+static uint8_t single_sp[] = {0xd1, 0x2, 0xe, 0x53, 0x70, 0xd1, 0x1, 0xa,
+			      0x55, 0x3, 0x69, 0x6e, 0x74, 0x65, 0x6c, 0x2e,
+			      0x63, 0x6f, 0x6d};
 
 static void test_ndef_free_record(struct near_ndef_record *record)
 {
@@ -175,12 +190,53 @@ static void test_ndef_text(void)
 	test_ndef_free_record(record);
 }
 
+static void test_ndef_single_sp(void)
+{
+	GList *records;
+	struct near_ndef_record *record;
+	struct near_ndef_uri_payload *uri;
+
+	records = near_ndef_parse_msg(single_sp, sizeof(single_sp), NULL);
+
+	g_assert(records);
+	g_assert(g_list_length(records) == 1);
+
+	record = (struct near_ndef_record *) records->data;
+
+	g_assert(record->header->rec_type == RECORD_TYPE_WKT_SMART_POSTER);
+	g_assert(record->header->mb == 1);
+	g_assert(record->header->me == 1);
+
+	g_assert(record->sp);
+	g_assert(record->sp->number_of_title_records == 0);
+	g_assert(record->sp->type == NULL);
+	g_assert(record->sp->action == NULL);
+	g_assert(record->sp->size == 0);
+	g_assert(record->sp->uri);
+
+	uri = (struct near_ndef_uri_payload *) record->sp->uri;
+
+	g_assert(uri->field_length == strlen("intel.com"));
+	g_assert(strncmp((char *) uri->field, "intel.com",
+					uri->field_length) == 0);
+
+	g_print("NDEF SP URI field: %.*s\n", uri->field_length,
+						(char *) uri->field);
+
+	g_free(uri->field);
+	g_free(uri);
+	g_free(record->sp);
+	test_ndef_free_record(record);
+}
+
 int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
 
 	g_test_add_func("/testndef/Test URI NDEF", test_ndef_uri);
 	g_test_add_func("/testndef/Test Text NDEF", test_ndef_text);
+	g_test_add_func("/testndef/Test Single record SmartPoster NDEF",
+							test_ndef_single_sp);
 
 	return g_test_run();
 }
