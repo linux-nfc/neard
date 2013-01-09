@@ -642,8 +642,8 @@ static int snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 
 	/* if GET, we add the Acceptable length */
 	if (header.request == SNEP_REQ_GET)
-		*(uint32_t *)(fragment->data + SNEP_REQ_PUT_HEADER_LENGTH)  =
-					GUINT32_TO_BE(snep_req_header_length);
+		near_put_be32(snep_req_header_length,
+				fragment->data + SNEP_REQ_PUT_HEADER_LENGTH);
 
 	if (fragmenting == TRUE) {
 		memcpy(fragment->data + snep_req_header_length, ndef->data,

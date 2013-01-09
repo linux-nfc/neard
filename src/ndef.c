@@ -907,8 +907,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		rec_header->payload_len = rec[offset++];
 		header_len++;
 	} else {
-		rec_header->payload_len =
-			g_ntohl(*((uint32_t *)(rec + offset)));
+		rec_header->payload_len = near_get_be32(rec + offset);
 		offset += 4;
 		header_len += 4;
 
@@ -1260,8 +1259,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 			if (rec_header->payload_len != 4)
 				goto fail;
 
-			sp_payload->size =
-				g_ntohl(*((uint32_t *)(payload + offset)));
+			sp_payload->size = near_get_be32(payload + offset);
 			break;
 
 		case RECORD_TYPE_WKT_TYPE:
@@ -1716,7 +1714,7 @@ static struct near_ndef_message *near_ndef_prepare_cr_message(uint16_t cr_id)
 		return NULL;
 
 	/* Prepare ac message */
-	*(uint16_t *)(cr_msg->data + cr_msg->offset) = g_htons(cr_id);
+	near_put_be16(cr_id, cr_msg->data + cr_msg->offset);
 
 	return cr_msg;
 }
@@ -2177,7 +2175,8 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 			}
 
 			ho_payload->collision_record =
-				g_ntohs(*((uint16_t *)(payload + offset)));
+					near_get_be16(payload + offset);
+
 			break;
 
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
@@ -2526,7 +2525,7 @@ int near_ndef_record_length(uint8_t *ndef_in, size_t ndef_in_length)
 	if (RECORD_SR_BIT(hdr) == 1) {
 		ndef_size += ndef_in[offset++];
 	} else {
-		ndef_size += g_ntohl(*((uint32_t *)(ndef_in + offset)));
+		ndef_size += near_get_be32(ndef_in + offset);
 		offset += 4;
 
 		if (offset >= ndef_in_length)

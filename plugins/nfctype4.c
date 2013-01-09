@@ -74,7 +74,7 @@
 #define T4_ALL_ACCESS		0x00
 #define T4_READ_ONLY		0xFF
 
-#define APDU_STATUS(a) (g_ntohs(*((uint16_t *)(a))))
+#define APDU_STATUS(a) near_get_be16(a)
 
 /* Tag Type 4 version ID */
 static uint8_t iso_appname_v1[] = { 0xd2, 0x76, 0x0, 0x0, 0x85, 0x01, 0x0 };
@@ -365,7 +365,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 
 	/* Add data to the tag */
 	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx, NULL,
-				g_ntohs(*((uint16_t *)(resp + NFC_STATUS_BYTE_LEN))));
+				near_get_be16(resp + NFC_STATUS_BYTE_LEN));
 	if (err < 0)
 		return t4_cookie_release(err, cookie);
 

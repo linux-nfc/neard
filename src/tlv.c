@@ -32,7 +32,7 @@ uint16_t near_tlv_length(uint8_t *tlv)
 	if (tlv[0] == TLV_NULL || tlv[0] == TLV_END)
 		length = 0;
 	else if (tlv[1] == 0xff)
-		length = g_ntohs(*(uint16_t *)(tlv + 2));
+		length = near_get_be16(tlv + 2);
 	else
 		length = tlv[1];
 
