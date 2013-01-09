@@ -149,7 +149,9 @@ static void test_ndef_uri(void)
 	g_assert(record->header->me == 1);
 
 	g_assert(record->uri);
-	g_assert(strcmp((char *)record->uri->field, "intel.com") == 0);
+	g_assert(record->uri->field_length == strlen("intel.com"));
+	g_assert(strncmp((char *) record->uri->field, "intel.com",
+					record->uri->field_length) == 0);
 
 	g_print("NDEF URI field: %s\n", record->uri->field);
 
