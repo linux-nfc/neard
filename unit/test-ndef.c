@@ -123,6 +123,12 @@ static uint8_t single_sp[] = {0xd1, 0x2, 0xe, 0x53, 0x70, 0xd1, 0x1, 0xa,
 			      0x55, 0x3, 0x69, 0x6e, 0x74, 0x65, 0x6c, 0x2e,
 			      0x63, 0x6f, 0x6d};
 
+/* Smart poster with a http://intel.com URI record and a 'Intel' title */
+static uint8_t title_sp[] = {0xd1, 0x2, 0x1a, 0x53, 0x70, 0x91, 0x1, 0xa,
+			     0x55, 0x3, 0x69, 0x6e, 0x74, 0x65, 0x6c, 0x2e,
+			     0x63, 0x6f, 0x6d, 0x51, 0x1, 0x8, 0x54, 0x2,
+			     0x65, 0x6e, 0x49, 0x6e, 0x74, 0x65, 0x6c};
+
 static void test_ndef_free_record(struct near_ndef_record *record)
 {
 	g_free(record->header);
@@ -231,6 +237,64 @@ static void test_ndef_single_sp(void)
 	test_ndef_free_record(record);
 }
 
+static void test_ndef_title_sp(void)
+{
+	GList *records;
+	struct near_ndef_record *record;
+	struct near_ndef_uri_payload *uri;
+	struct near_ndef_text_payload *text;
+
+
+	records = near_ndef_parse_msg(title_sp, sizeof(title_sp), NULL);
+
+	g_assert(records);
+	g_assert(g_list_length(records) == 1);
+
+	record = (struct near_ndef_record *) records->data;
+
+	g_assert(record->header->rec_type == RECORD_TYPE_WKT_SMART_POSTER);
+	g_assert(record->header->mb == 1);
+	g_assert(record->header->me == 1);
+
+	g_assert(record->sp);
+	g_assert(record->sp->number_of_title_records == 1);
+	g_assert(record->sp->type == NULL);
+	g_assert(record->sp->action == NULL);
+	g_assert(record->sp->size == 0);
+	g_assert(record->sp->uri);
+	g_assert(record->sp->title_records[0]);
+
+	uri = (struct near_ndef_uri_payload *) record->sp->uri;
+	text = (struct near_ndef_text_payload *) record->sp->title_records[0];
+
+	g_assert(uri->field_length == strlen("intel.com"));
+	g_assert(strncmp((char *) uri->field, "intel.com",
+					uri->field_length) == 0);
+
+	g_print("NDEF SP URI field: %.*s\n", uri->field_length,
+						(char *) uri->field);
+
+	g_assert(strcmp(text->data, "Intel") == 0);
+	g_assert(strcmp(text->encoding, "UTF-8") == 0);
+	g_assert(strcmp(text->language_code, "en") == 0);
+
+	g_print("NDEF SP Title data: %s\n", text->data);
+	g_print("NDEF SP Title Encoding: %s\n", text->encoding);
+	g_print("NDEF SP Title Language: %s\n", text->language_code);
+
+
+	g_free(uri->field);
+	g_free(uri);
+
+	g_free(text->data);
+	g_free(text->encoding);
+	g_free(text->language_code);
+	g_free(text);
+
+	g_free(record->sp);
+	test_ndef_free_record(record);
+}
+
 int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
@@ -239,6 +303,8 @@ int main(int argc, char **argv)
 	g_test_add_func("/testndef/Test Text NDEF", test_ndef_text);
 	g_test_add_func("/testndef/Test Single record SmartPoster NDEF",
 							test_ndef_single_sp);
+	g_test_add_func("/testndef/Test Title record SmartPoster NDEF",
+							test_ndef_title_sp);
 
 	return g_test_run();
 }
