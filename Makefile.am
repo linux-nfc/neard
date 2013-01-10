@@ -47,7 +47,7 @@ AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ @NETLINK_CFLAGS@ $(builtin_cflags) \
 					-DPLUGINDIR=\""$(plugindir)"\" \
 					-DCONFIGDIR=\""$(configdir)\""
 
-INCLUDES = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+AM_CPPFLAGS = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 
 CLEANFILES = src/builtin.h $(local_headers)
 
