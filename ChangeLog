@@ -1,3 +1,12 @@
+ver 0.9
+	Added NDEF unit tests.
+	Added SNEP validation server support.
+	Added nfctool command line uility.
+	Added Bluetooth handover agent implementation.
+	Fixed build for several architectures.
+	Fixed p2p fallback mechanism.
+	Fixed Type3 tag reading default behaviour.
+
 ver 0.8
 	Added raw NDEF push through the NDEF agent API.
 	Fixed a couple of p2p file descriptor leaks.
