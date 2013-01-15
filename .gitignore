@@ -33,3 +33,4 @@ src/builtin.h
 src/neard
 tools/snep-send
 tools/nfctool/nfctool
+unit/test-ndef
