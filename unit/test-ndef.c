@@ -159,7 +159,8 @@ static void test_ndef_uri(void)
 	g_assert(strncmp((char *) record->uri->field, "intel.com",
 					record->uri->field_length) == 0);
 
-	g_print("NDEF URI field: %s\n", record->uri->field);
+	if (g_test_verbose())
+		g_print("NDEF URI field: %s\n", record->uri->field);
 
 	g_free(record->uri->field);
 	g_free(record->uri);
@@ -187,9 +188,12 @@ static void test_ndef_text(void)
 	g_assert(strcmp(record->text->encoding, "UTF-8") == 0);
 	g_assert(strcmp(record->text->language_code, "en-US") == 0);
 
-	g_print("NDEF Text data: %s\n", record->text->data);
-	g_print("NDEF Text Encoding: %s\n", record->text->encoding);
-	g_print("NDEF Text Language: %s\n", record->text->language_code);
+	if (g_test_verbose()) {
+		g_print("NDEF Text data: %s\n", record->text->data);
+		g_print("NDEF Text Encoding: %s\n", record->text->encoding);
+		g_print("NDEF Text Language: %s\n",
+						record->text->language_code);
+	}
 
 	g_free(record->text->data);
 	g_free(record->text->encoding);
@@ -228,8 +232,9 @@ static void test_ndef_single_sp(void)
 	g_assert(strncmp((char *) uri->field, "intel.com",
 					uri->field_length) == 0);
 
-	g_print("NDEF SP URI field: %.*s\n", uri->field_length,
-						(char *) uri->field);
+	if (g_test_verbose())
+		g_print("NDEF SP URI field: %.*s\n", uri->field_length,
+							(char *) uri->field);
 
 	g_free(uri->field);
 	g_free(uri);
@@ -271,17 +276,19 @@ static void test_ndef_title_sp(void)
 	g_assert(strncmp((char *) uri->field, "intel.com",
 					uri->field_length) == 0);
 
-	g_print("NDEF SP URI field: %.*s\n", uri->field_length,
-						(char *) uri->field);
+	if (g_test_verbose())
+		g_print("NDEF SP URI field: %.*s\n", uri->field_length,
+							(char *) uri->field);
 
 	g_assert(strcmp(text->data, "Intel") == 0);
 	g_assert(strcmp(text->encoding, "UTF-8") == 0);
 	g_assert(strcmp(text->language_code, "en") == 0);
 
-	g_print("NDEF SP Title data: %s\n", text->data);
-	g_print("NDEF SP Title Encoding: %s\n", text->encoding);
-	g_print("NDEF SP Title Language: %s\n", text->language_code);
-
+	if (g_test_verbose()) {
+		g_print("NDEF SP Title data: %s\n", text->data);
+		g_print("NDEF SP Title Encoding: %s\n", text->encoding);
+		g_print("NDEF SP Title Language: %s\n", text->language_code);
+	}
 
 	g_free(uri->field);
 	g_free(uri);
