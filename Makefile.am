@@ -121,11 +121,7 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = neard.pc
 
-DISTCHECK_CONFIGURE_FLAGS = --enable-nfctype1 \
-			    --enable-nfctype2 \
-			    --enable-nfctype3 \
-			    --enable-nfctype4 \
-		            --enable-p2p
+DISTCHECK_CONFIGURE_FLAGS = --enable-tools
 
 DISTCLEANFILES = $(pkgconfig_DATA)
 
