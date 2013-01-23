@@ -128,7 +128,7 @@ void snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
 	 * Bugfix Android: Fix 'cr' instead of 'Hr'
 	 * Bug is in Google:HandoverManager.java:645
 	 */
-	if (strncmp((char *)(ndef + 9), "Hr", 2) == 0) {
+	if (nfc_data_length > 9 && strncmp((char *)(ndef + 9), "Hr", 2) == 0) {
 		DBG("Android 4.1.1 found !!!");
 		*(ndef + 9) = 'c';
 	}
