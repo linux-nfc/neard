@@ -23,8 +23,9 @@
 #include <errno.h>
 #include <string.h>
 #include <netdb.h>
-#include <linux/nfc.h>
 #include <sys/time.h>
+
+#include <near/nfc_copy.h>
 
 #include "nfctool.h"
 #include "sniffer.h"

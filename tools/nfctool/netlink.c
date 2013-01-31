@@ -25,7 +25,6 @@
 
 #include <errno.h>
 #include <sys/socket.h>
-#include <linux/nfc.h>
 
 #include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
@@ -33,6 +32,8 @@
 #include <netlink/genl/ctrl.h>
 
 #include <glib.h>
+
+#include <near/nfc_copy.h>
 
 #include "nfctool.h"
 #include "netlink.h"

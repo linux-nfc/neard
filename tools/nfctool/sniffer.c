@@ -32,9 +32,10 @@
 #include <arpa/inet.h>
 #include <linux/tcp.h>
 #include <linux/ip.h>
-#include <linux/nfc.h>
 #include <errno.h>
 #include <glib.h>
+
+#include <near/nfc_copy.h>
 
 #include "nfctool.h"
 #include "llcp-decode.h"

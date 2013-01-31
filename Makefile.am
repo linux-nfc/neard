@@ -5,7 +5,8 @@ includedir = @includedir@/near
 
 include_HEADERS = include/types.h include/log.h include/plugin.h \
 			include/tag.h include/adapter.h include/ndef.h \
-			include/tlv.h include/setting.h include/device.h
+			include/tlv.h include/setting.h include/device.h \
+			include/nfc_copy.h
 
 nodist_include_HEADERS = include/version.h
 

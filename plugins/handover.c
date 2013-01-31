@@ -29,8 +29,8 @@
 #include <sys/socket.h>
 
 #include <linux/socket.h>
-#include <linux/nfc.h>
 
+#include <near/nfc_copy.h>
 #include <near/types.h>
 #include <near/log.h>
 #include <near/adapter.h>
