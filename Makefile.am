@@ -101,12 +101,12 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 
 tools_nfctool_nfctool_LDADD = @GLIB_LIBS@ @NETLINK_LIBS@
 
-unit_tests = unit/test-ndef unit/test-ndef-build
+unit_tests = unit/test-ndef-parse unit/test-ndef-build
 
-unit_test_ndef_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
+unit_test_ndef_parse_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/agent.c src/bluetooth.c \
-					src/ndef.c unit/test-ndef.c
-unit_test_ndef_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+					src/ndef.c unit/test-ndef-parse.c
+unit_test_ndef_parse_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 unit_test_ndef_build_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/agent.c src/bluetooth.c \
