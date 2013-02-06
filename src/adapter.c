@@ -789,7 +789,15 @@ static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 		return err;
 	}
 
-	return __near_tag_read(tag, tag_read_cb);
+	err = __near_tag_read(tag, tag_read_cb);
+	if (err < 0) {
+		near_error("Could not read the tag");
+
+		near_adapter_disconnect(adapter->idx);
+		__near_adapter_remove_target(adapter->idx, target_idx);
+	}
+
+	return err;
 }
 
 static int adapter_add_device(struct near_adapter *adapter,
