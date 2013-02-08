@@ -1338,7 +1338,7 @@ fail:
 	return NULL;
 }
 
-static void correct_eir_len(struct bt_data *data)
+static void correct_eir_len(struct carrier_data *data)
 {
 	/*
 	 * Android 4.1 BUG - OOB EIR length should be in LE, but is in BE.
@@ -1369,7 +1369,7 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 {
 	struct near_ndef_mime_payload *mime = NULL;
 	int err = 0;
-	struct bt_data data;
+	struct carrier_data data;
 
 	DBG("");
 
@@ -1810,9 +1810,9 @@ static uint16_t near_get_carrier_properties(struct near_ndef_record *record,
 struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 					struct near_ndef_record *record,
 					uint8_t carriers,
-					struct bt_data *remote)
+					struct carrier_data *remote)
 {
-	struct bt_data *local = NULL;
+	struct carrier_data *local = NULL;
 	struct near_ndef_message *hs_msg = NULL;
 	struct near_ndef_message *ac_msg = NULL;
 	struct near_ndef_message *cr_msg = NULL;

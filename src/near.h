@@ -178,7 +178,7 @@ void __near_plugin_cleanup(void);
 #define OOB_PROPS_COD		0x08
 #define OOB_PROPS_SP		(OOB_PROPS_SP_HASH | OOB_PROPS_SP_RANDOM)
 
-struct bt_data {
+struct carrier_data {
 	uint8_t type;
 	uint8_t size;
 	enum carrier_power_state state;
@@ -189,10 +189,10 @@ int __near_bluetooth_init(void);
 void __near_bluetooth_cleanup(void);
 void __near_bluetooth_legacy_start(void);
 void __near_bluetooth_legacy_stop(void);
-int __near_bluetooth_parse_oob_record(struct bt_data *data,
+int __near_bluetooth_parse_oob_record(struct carrier_data *data,
 					uint16_t *properties, near_bool_t pair);
 int __near_bluetooth_pair(void *data);
-struct bt_data *__near_bluetooth_local_get_properties(uint16_t mime_props);
+struct carrier_data *__near_bluetooth_local_get_properties(uint16_t mime_props);
 
 void __near_agent_ndef_parse_records(GList *records);
 int __near_agent_ndef_register(const char *sender, const char *path,
@@ -203,8 +203,9 @@ int __near_agent_handover_register(const char *sender, const char *path);
 int __near_agent_handover_unregister(const char *sender, const char *path);
 near_bool_t __near_agent_handover_registered(void);
 
-struct bt_data *__near_agent_handover_request_data(struct bt_data *data);
-int __near_agent_handover_push_data(struct bt_data *data);
+struct carrier_data *__near_agent_handover_request_data(
+					struct carrier_data *data);
+int __near_agent_handover_push_data(struct carrier_data *data);
 
 int __near_agent_init(void);
 void __near_agent_cleanup(void);

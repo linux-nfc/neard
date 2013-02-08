@@ -241,17 +241,17 @@ static enum carrier_power_state string2cps(const char *state)
 	return CPS_UNKNOWN;
 }
 
-static struct bt_data *parse_reply(DBusMessage *reply)
+static struct carrier_data *parse_reply(DBusMessage *reply)
 {
 	DBusMessageIter args;
 	DBusMessageIter data;
-	struct bt_data *bt_data;
+	struct carrier_data *c_data;
 
-	bt_data = g_try_new0(struct bt_data, 1);
-	if (bt_data == NULL)
+	c_data = g_try_new0(struct carrier_data, 1);
+	if (c_data == NULL)
 		return NULL;
 
-	bt_data->state = CPS_UNKNOWN;
+	c_data->state = CPS_UNKNOWN;
 
 	dbus_message_iter_init(reply, &args);
 	dbus_message_iter_recurse(&args, &data);
@@ -279,8 +279,8 @@ static struct bt_data *parse_reply(DBusMessage *reply)
 
 			dbus_message_iter_get_basic(&value, &state);
 
-			bt_data->state = string2cps(state);
-			if (bt_data->state == CPS_UNKNOWN)
+			c_data->state = string2cps(state);
+			if (c_data->state == CPS_UNKNOWN)
 				goto failed;
 		} else if (strcasecmp(key, "EIR") == 0) {
 			int size;
@@ -296,15 +296,15 @@ static struct bt_data *parse_reply(DBusMessage *reply)
 			if (size > UINT8_MAX || size < 8)
 				goto failed;
 
-			memcpy(bt_data->data, oob_data, size);
-			bt_data->size = size;
-			bt_data->type = BT_MIME_V2_1;
+			memcpy(c_data->data, oob_data, size);
+			c_data->size = size;
+			c_data->type = BT_MIME_V2_1;
 		} else if (strcasecmp(key, "nokia.com:bt") == 0) {
 			int size;
 			void *oob_data;
 
 			/* prefer EIR over nokia.com:bt */
-			if (bt_data->type == BT_MIME_V2_1)
+			if (c_data->type == BT_MIME_V2_1)
 				continue;
 
 			dbus_message_iter_recurse(&value, &array);
@@ -314,22 +314,22 @@ static struct bt_data *parse_reply(DBusMessage *reply)
 			if (size > UINT8_MAX || size < 8)
 				goto failed;
 
-			memcpy(bt_data->data, oob_data, size);
-			bt_data->size = size;
-			bt_data->type = BT_MIME_V2_1;
+			memcpy(c_data->data, oob_data, size);
+			c_data->size = size;
+			c_data->type = BT_MIME_V2_1;
 		}
 
 		dbus_message_iter_next(&data);
 	}
 
 	/* State can be present only if EIR or nokia.com:bt is also present */
-	if (bt_data->state != CPS_UNKNOWN && bt_data->size == 0)
+	if (c_data->state != CPS_UNKNOWN && c_data->size == 0)
 		goto failed;
 
-	return bt_data;
+	return c_data;
 
 failed:
-	g_free(bt_data);
+	g_free(c_data);
 	return NULL;
 }
 
@@ -339,7 +339,7 @@ static const char *cps2string[] = {
 	"activating",
 };
 
-static void prepare_bt_data(DBusMessage *message, struct bt_data *data)
+static void prepare_bt_data(DBusMessage *message, struct carrier_data *data)
 {
 	DBusMessageIter iter;
 	DBusMessageIter dict;
@@ -373,12 +373,13 @@ static void prepare_bt_data(DBusMessage *message, struct bt_data *data)
 	near_dbus_dict_close(&iter, &dict);
 }
 
-struct bt_data *__near_agent_handover_request_data(struct bt_data *data)
+struct carrier_data *__near_agent_handover_request_data(
+					struct carrier_data *data)
 {
 	DBusMessage *message;
 	DBusMessage *reply;
 	DBusError error;
-	struct bt_data *bt_data_reply;
+	struct carrier_data *data_reply;
 
 	DBG("agent %s", handover_agent_path ? : "not present");
 
@@ -410,16 +411,16 @@ struct bt_data *__near_agent_handover_request_data(struct bt_data *data)
 		return NULL;
 	}
 
-	bt_data_reply = parse_reply(reply);
+	data_reply = parse_reply(reply);
 
 	dbus_message_unref(reply);
 
-	DBG("OOB data %p", bt_data_reply);
+	DBG("OOB data %p", data_reply);
 
-	return bt_data_reply;
+	return data_reply;
 }
 
-int __near_agent_handover_push_data(struct bt_data *data)
+int __near_agent_handover_push_data(struct carrier_data *data)
 {
 	DBusMessage *message;
 	DBusMessage *reply;

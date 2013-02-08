@@ -25,7 +25,7 @@
 #include <near/tag.h>
 
 struct near_ndef_record;
-struct bt_data;
+struct carrier_data;
 
 struct near_ndef_message {
 	size_t length;
@@ -65,7 +65,7 @@ struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 struct near_ndef_message *near_ndef_prepare_handover_record(char* type_name,
 					struct near_ndef_record *record,
 					uint8_t carriers,
-					struct bt_data *remote);
+					struct carrier_data *remote);
 
 struct near_ndef_message *
 near_ndef_prepare_smartposter_record(uint8_t uri_identifier,

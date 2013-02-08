@@ -678,7 +678,7 @@ static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
  * mime_properties is a bitmask and should reflect the fields found in
  * the incoming oob.
  */
-int __near_bluetooth_parse_oob_record(struct bt_data *data,
+int __near_bluetooth_parse_oob_record(struct carrier_data *data,
 						uint16_t *mime_properties,
 						near_bool_t pair)
 {
@@ -846,9 +846,9 @@ done:
  * mime_props is a bitmask we use to add or not specific fields in the
  * oob frame (e.g.: OOB keys)
  * */
-struct bt_data *__near_bluetooth_local_get_properties(uint16_t mime_props)
+struct carrier_data *__near_bluetooth_local_get_properties(uint16_t mime_props)
 {
-	struct bt_data *data = NULL;
+	struct carrier_data *data = NULL;
 	uint8_t offset;
 
 	char hash[OOB_SP_SIZE];
