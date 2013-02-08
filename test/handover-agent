@@ -77,13 +77,14 @@ if __name__ == '__main__':
 							'org.neard.Manager')
 
 	path = '/test/handover/agent'
+	carrier = 'bluetooth'
 	object = HOAgent(bus, path)
 
-	manager.RegisterHandoverAgent(path)
+	manager.RegisterHandoverAgent(path, carrier)
 
 	mainloop = gobject.MainLoop()
 
 	try:
 		mainloop.run()
 	except (KeyboardInterrupt):
-		manager.UnregisterHandoverAgent(path)
+		manager.UnregisterHandoverAgent(path, carrier)
