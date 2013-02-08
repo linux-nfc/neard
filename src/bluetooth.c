@@ -1051,7 +1051,7 @@ static void bt_connect(DBusConnection *conn, void *data)
 {
 	DBG("connection %p with %p", conn, data);
 
-	if (__near_agent_handover_registered() == TRUE) {
+	if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE) {
 		DBG("Agent already registered");
 		return;
 	}
@@ -1089,7 +1089,7 @@ static void bt_disconnect(DBusConnection *conn, void *user_data)
 
 static int bt_prepare_handlers(DBusConnection *conn)
 {
-	if (__near_agent_handover_registered() == TRUE)
+	if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE)
 		return 0;
 
 	watch = g_dbus_add_service_watch(bt_conn, BLUEZ_SERVICE,

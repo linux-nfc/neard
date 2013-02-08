@@ -33,19 +33,6 @@ struct near_ndef_message {
 	uint8_t *data;
 };
 
-/* near_ndef_handover_carrier*/
-#define		NEAR_CARRIER_EMPTY	0x00
-#define		NEAR_CARRIER_BLUETOOTH	0x01	/* bit 0 */
-#define		NEAR_CARRIER_WIFI	0x02	/* bit 1 */
-#define		NEAR_CARRIER_UNKNOWN	0x80	/* Bit 7 */
-
-enum carrier_power_state {
-	CPS_INACTIVE	= 0x00,
-	CPS_ACTIVE	= 0x01,
-	CPS_ACTIVATING	= 0x02,
-	CPS_UNKNOWN	= 0x03,
-};
-
 int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 						uint8_t record_type);
 

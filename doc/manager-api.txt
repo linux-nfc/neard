@@ -21,13 +21,17 @@ Methods		dict GetProperties()
 			Possible Errors: org.neard.Error.DoesNotExist
 					 org.neard.Error.InvalidArguments
 
-		void RegisterHandoverAgent(object path)
+		void RegisterHandoverAgent(object path, string carrier)
 
 			Register new handover agent.
 
-			Possible Errors: org.neard.Error.InvalidArguments
+			Supported carriers are: 'bluetooth', 'wifi'.
+			Only one registration will be accepted per carrier.
 
-		void UnregisterHandoverAgent(object path)
+			Possible Errors: org.neard.Error.InvalidArguments
+					 org.neard.Error.AlreadyExists.
+
+		void UnregisterHandoverAgent(object path, string carrier)
 
 			Unregister an existing handover agent.
 

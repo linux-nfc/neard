@@ -178,6 +178,29 @@ void __near_plugin_cleanup(void);
 #define OOB_PROPS_COD		0x08
 #define OOB_PROPS_SP		(OOB_PROPS_SP_HASH | OOB_PROPS_SP_RANDOM)
 
+/* Handover Agent Carrier Types */
+#define NEAR_HANDOVER_AGENT_BLUETOOTH	"bluetooth"
+#define NEAR_HANDOVER_AGENT_WIFI		"wifi"
+
+/* near_ndef_handover_carrier*/
+#define NEAR_CARRIER_EMPTY      0x00
+#define NEAR_CARRIER_BLUETOOTH  0x01    /* bit 0 */
+#define NEAR_CARRIER_WIFI       0x02    /* bit 1 */
+#define NEAR_CARRIER_UNKNOWN    0x80    /* Bit 7 */
+
+enum carrier_power_state {
+	CPS_INACTIVE    = 0x00,
+	CPS_ACTIVE      = 0x01,
+	CPS_ACTIVATING  = 0x02,
+	CPS_UNKNOWN     = 0x03,
+};
+
+enum ho_agent_carrier {
+	HO_AGENT_BT	= 0x00,
+	HO_AGENT_WIFI	= 0x01,
+	HO_AGENT_UNKNOWN = 0xFF
+};
+
 struct carrier_data {
 	uint8_t type;
 	uint8_t size;
@@ -199,13 +222,17 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 						const char *record_type);
 int __near_agent_ndef_unregister(const char *sender, const char *path,
 						const char *record_type);
-int __near_agent_handover_register(const char *sender, const char *path);
-int __near_agent_handover_unregister(const char *sender, const char *path);
-near_bool_t __near_agent_handover_registered(void);
+int __near_agent_handover_register(const char *sender, const char *path,
+					const char *carrier);
+int __near_agent_handover_unregister(const char *sender, const char *path,
+					const char *carrier);
+near_bool_t __near_agent_handover_registered(enum ho_agent_carrier carrier);
 
 struct carrier_data *__near_agent_handover_request_data(
+					enum ho_agent_carrier carrier,
 					struct carrier_data *data);
-int __near_agent_handover_push_data(struct carrier_data *data);
+int __near_agent_handover_push_data(enum ho_agent_carrier carrier,
+					struct carrier_data *data);
 
 int __near_agent_init(void);
 void __near_agent_cleanup(void);

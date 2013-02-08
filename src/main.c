@@ -208,8 +208,8 @@ int main(int argc, char *argv[])
 	__near_adapter_init();
 	__near_ndef_init();
 	__near_manager_init(conn);
-	__near_bluetooth_init();
 	__near_agent_init();
+	__near_bluetooth_init();
 
 	__near_plugin_init(option_plugin, option_noplugin);
 

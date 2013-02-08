@@ -136,17 +136,29 @@ void __near_manager_adapter_remove(uint32_t idx)
 static DBusMessage *register_handover_agent(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
-	const char *sender, *path;
+	DBusMessageIter iter;
+	const char *sender, *path, *carrier;
 	int err;
 
 	DBG("conn %p", conn);
 
 	sender = dbus_message_get_sender(msg);
 
-	dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
-							DBUS_TYPE_INVALID);
+	if (dbus_message_iter_init(msg, &iter) == FALSE)
+		return __near_error_invalid_arguments(msg);
 
-	err = __near_agent_handover_register(sender, path);
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &carrier);
+
+	err = __near_agent_handover_register(sender, path, carrier);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
 
@@ -156,17 +168,29 @@ static DBusMessage *register_handover_agent(DBusConnection *conn,
 static DBusMessage *unregister_handover_agent(DBusConnection *conn,
 					DBusMessage *msg, void *data)
 {
-	const char *sender, *path;
+	DBusMessageIter iter;
+	const char *sender, *path, *carrier;
 	int err;
 
 	DBG("conn %p", conn);
 
 	sender = dbus_message_get_sender(msg);
 
-	dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
-							DBUS_TYPE_INVALID);
+	if (dbus_message_iter_init(msg, &iter) == FALSE)
+		return __near_error_invalid_arguments(msg);
 
-	err = __near_agent_handover_unregister(sender, path);
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &carrier);
+
+	err = __near_agent_handover_unregister(sender, path, carrier);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
 
@@ -245,11 +269,11 @@ static const GDBusMethodTable manager_methods[] = {
 				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
 				NULL, set_property) },
 	{ GDBUS_METHOD("RegisterHandoverAgent",
-			GDBUS_ARGS({ "path", "o" }), NULL,
-			register_handover_agent) },
+			GDBUS_ARGS({ "path", "o" }, { "type", "s"}),
+			NULL, register_handover_agent) },
 	{ GDBUS_METHOD("UnregisterHandoverAgent",
-			GDBUS_ARGS({ "path", "o" }), NULL,
-			unregister_handover_agent) },
+			GDBUS_ARGS({ "path", "o" }, { "type", "s"}),
+			NULL, unregister_handover_agent) },
 	{ GDBUS_METHOD("RegisterNDEFAgent",
 			GDBUS_ARGS({"path", "o"}, {"type", "s"}),
 			NULL, register_ndef_agent) },

@@ -1414,9 +1414,10 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 	else
 		data.state = CPS_UNKNOWN;
 
-	if (__near_agent_handover_registered() == TRUE) {
+	if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE) {
 		if (action == TRUE) {
-			err = __near_agent_handover_push_data(&data);
+			err = __near_agent_handover_push_data(HO_AGENT_BT,
+								&data);
 		} else if (reply != NULL) {
 			*reply = near_ndef_prepare_handover_record("Hs",
 					record, NEAR_CARRIER_BLUETOOTH, &data);
@@ -1855,8 +1856,9 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 	}
 
 	if (carriers & NEAR_CARRIER_BLUETOOTH) {
-		if (__near_agent_handover_registered() == TRUE) {
-			local = __near_agent_handover_request_data(remote);
+		if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE) {
+			local = __near_agent_handover_request_data(HO_AGENT_BT,
+									remote);
 		} else {
 			/* Retrieve the bluetooth settings */
 			uint16_t props = near_get_carrier_properties(record,

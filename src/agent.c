@@ -40,12 +40,20 @@
 
 static DBusConnection *connection = NULL;
 static GHashTable *ndef_app_hash;
+static GHashTable *ho_agent_hash;
 
 struct near_ndef_agent {
 	char *sender;
 	char *path;
 	char *record_type;
 	guint watch;
+};
+
+struct near_handover_agent {
+	enum ho_agent_carrier carrier;
+	guint watch;
+	char *sender;
+	char *path;
 };
 
 static void ndef_agent_free(gpointer data)
@@ -223,10 +231,6 @@ int __near_agent_ndef_unregister(const char *sender, const char *path,
 	return 0;
 }
 
-static guint handover_agent_watch = 0;
-static gchar *handover_agent_path = NULL;
-static gchar *handover_agent_sender = NULL;
-
 static enum carrier_power_state string2cps(const char *state)
 {
 	if (strcasecmp(state, "active") == 0)
@@ -239,6 +243,17 @@ static enum carrier_power_state string2cps(const char *state)
 		return CPS_ACTIVATING;
 
 	return CPS_UNKNOWN;
+}
+
+static enum ho_agent_carrier string2carrier(const char *carrier)
+{
+	if (strcasecmp(carrier, NEAR_HANDOVER_AGENT_BLUETOOTH) == 0)
+		return HO_AGENT_BT;
+
+	if (strcasecmp(carrier, NEAR_HANDOVER_AGENT_WIFI) == 0)
+		return HO_AGENT_WIFI;
+
+	return HO_AGENT_UNKNOWN;
 }
 
 static struct carrier_data *parse_reply(DBusMessage *reply)
@@ -374,20 +389,22 @@ static void prepare_bt_data(DBusMessage *message, struct carrier_data *data)
 }
 
 struct carrier_data *__near_agent_handover_request_data(
+					enum ho_agent_carrier carrier,
 					struct carrier_data *data)
 {
 	DBusMessage *message;
 	DBusMessage *reply;
 	DBusError error;
 	struct carrier_data *data_reply;
+	struct near_handover_agent *agent = NULL;
 
-	DBG("agent %s", handover_agent_path ? : "not present");
-
-	if (handover_agent_path == NULL)
+	agent = g_hash_table_lookup(ho_agent_hash,
+				GINT_TO_POINTER(carrier));
+	if (agent == NULL)
 		return NULL;
 
-	message = dbus_message_new_method_call(handover_agent_sender,
-			handover_agent_path, NFC_HANDOVER_AGENT_INTERFACE,
+	message = dbus_message_new_method_call(agent->sender,
+			agent->path, NFC_HANDOVER_AGENT_INTERFACE,
 			"RequestOOB");
 	if (message == NULL)
 		return NULL;
@@ -420,19 +437,20 @@ struct carrier_data *__near_agent_handover_request_data(
 	return data_reply;
 }
 
-int __near_agent_handover_push_data(struct carrier_data *data)
+int __near_agent_handover_push_data(enum ho_agent_carrier carrier,
+					struct carrier_data *data)
 {
 	DBusMessage *message;
 	DBusMessage *reply;
 	DBusError error;
+	struct near_handover_agent *agent = NULL;
 
-	DBG("agent %s", handover_agent_path ? : "not present");
-
-	if (handover_agent_path == NULL)
+	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(carrier));
+	if (agent == NULL)
 		return -ESRCH;
 
-	message = dbus_message_new_method_call(handover_agent_sender,
-			handover_agent_path, NFC_HANDOVER_AGENT_INTERFACE,
+	message = dbus_message_new_method_call(agent->sender,
+			agent->path, NFC_HANDOVER_AGENT_INTERFACE,
 			"PushOOB");
 	if (message == NULL)
 		return -ENOMEM;
@@ -461,88 +479,147 @@ int __near_agent_handover_push_data(struct carrier_data *data)
 	return -EIO;
 }
 
-static void handover_agent_free(void)
+static void handover_agent_free(gpointer data)
 {
-	if (handover_agent_watch > 0) {
-		g_dbus_remove_watch(connection, handover_agent_watch);
-		handover_agent_watch = 0;
-	}
+	struct near_handover_agent *agent = data;
 
-	g_free(handover_agent_sender);
-	handover_agent_sender = NULL;
+	if (agent == NULL)
+		return;
 
-	g_free(handover_agent_path);
-	handover_agent_path = NULL;
+	g_free(agent->sender);
+	agent->sender = NULL;
+
+	g_free(agent->path);
+	agent->path = NULL;
+
+	if (agent->watch == 0)
+		return;
+
+	g_dbus_remove_watch(connection, agent->watch);
+	agent->watch = 0;
 }
 
 static void handover_agent_disconnect(DBusConnection *conn, void *data)
 {
+	struct near_handover_agent *agent = data;
+
 	DBG("data %p", data);
 
-	handover_agent_watch = 0;
-
-	handover_agent_free();
-
-	/* start watching for legacy bluez */
-	__near_bluetooth_legacy_start();
-}
-
-static void handover_agent_release(void)
-{
-	DBusMessage *message;
-
-	if (handover_agent_watch == 0)
+	if (agent == NULL)
 		return;
 
-	message = dbus_message_new_method_call(handover_agent_sender,
-						handover_agent_path,
-						"org.neard.HandoverAgent",
-						"Release");
+	switch (agent->carrier) {
+	case HO_AGENT_BT:
+		/* start watching for legacy bluez */
+		__near_bluetooth_legacy_start();
+		break;
+
+	case HO_AGENT_WIFI:
+	case HO_AGENT_UNKNOWN:
+		break;
+	}
+
+	handover_agent_free(agent);
+}
+
+static void handover_agent_release(gpointer key, gpointer data,
+					gpointer user_data)
+{
+	struct near_handover_agent *agent = data;
+	DBusMessage *message;
+
+	if (agent == NULL || agent->watch == 0)
+		return;
+
+	message = dbus_message_new_method_call(agent->sender, agent->path,
+					"org.neard.HandoverAgent",
+					"Release");
 	if (message != NULL)
 		g_dbus_send_message(connection, message);
-
-	handover_agent_free();
 }
 
-int __near_agent_handover_register(const char *sender, const char *path)
+static int create_handover_agent(const char *sender, const char *path,
+					enum ho_agent_carrier carrier)
 {
-	DBG("sender %s path %s", sender, path);
+	struct near_handover_agent *agent;
 
-	if (handover_agent_path != NULL)
-		return -EEXIST;
-
-	handover_agent_watch = g_dbus_add_disconnect_watch(connection, sender,
-					handover_agent_disconnect, NULL, NULL);
-	if (handover_agent_watch == 0)
+	agent = g_try_malloc0(sizeof(struct near_handover_agent));
+	if (agent == NULL)
 		return -ENOMEM;
 
-	handover_agent_sender = g_strdup(sender);
-	handover_agent_path = g_strdup(path);
+	agent->sender = g_strdup(sender);
+	agent->path = g_strdup(path);
+	agent->carrier = carrier;
+	agent->watch = g_dbus_add_disconnect_watch(connection, sender,
+				 handover_agent_disconnect, agent, NULL);
 
-	/* stop watching for legacy bluez */
-	__near_bluetooth_legacy_stop();
+	g_hash_table_insert(ho_agent_hash, GINT_TO_POINTER(carrier), agent);
+
+	DBG("handover agent registered");
+
+	switch (agent->carrier) {
+	case HO_AGENT_BT:
+		/* stop watching for legacy bluez */
+		__near_bluetooth_legacy_stop();
+		break;
+
+	case HO_AGENT_WIFI:
+	case HO_AGENT_UNKNOWN:
+		break;
+	}
 
 	return 0;
 }
 
-int __near_agent_handover_unregister(const char *sender, const char *path)
+int __near_agent_handover_register(const char *sender, const char *path,
+						const char *carrier)
 {
-	DBG("sender %s path %s", sender, path);
+	struct near_handover_agent *agent;
+	enum ho_agent_carrier ho_carrier;
 
-	if (handover_agent_path == NULL)
+	DBG("sender %s path %s carrier %s", sender, path, carrier);
+
+	ho_carrier = string2carrier(carrier);
+
+	if (ho_carrier == HO_AGENT_UNKNOWN)
+		return -EINVAL;
+
+	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(ho_carrier));
+	if (agent != NULL)
+		return -EEXIST;
+
+	return create_handover_agent(sender, path, ho_carrier);
+}
+
+int __near_agent_handover_unregister(const char *sender, const char *path,
+						const char *carrier)
+{
+	struct near_handover_agent *agent;
+	enum ho_agent_carrier ho_carrier;
+
+	DBG("sender %s path %s carrier %s", sender, path, carrier);
+
+	ho_carrier = string2carrier(carrier);
+	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(ho_carrier));
+	if (agent == NULL)
 		return -ESRCH;
 
-	handover_agent_free();
+	if (strcmp(agent->path, path) != 0 ||
+			strcmp(agent->sender, sender) != 0)
+		return -ESRCH;
 
-	/* start watching for legacy bluez */
-	__near_bluetooth_legacy_start();
+	g_hash_table_remove(ho_agent_hash, GINT_TO_POINTER(ho_carrier));
 
 	return 0;
 }
 
-near_bool_t __near_agent_handover_registered(void)
+near_bool_t __near_agent_handover_registered(enum ho_agent_carrier carrier)
 {
-	return handover_agent_path != NULL ? TRUE : FALSE;
+	struct near_handove_agent *agent = NULL;
+
+	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(carrier));
+
+	return agent != NULL ? TRUE : FALSE;
 }
 
 int __near_agent_init(void)
@@ -556,6 +633,9 @@ int __near_agent_init(void)
 	ndef_app_hash = g_hash_table_new_full(g_str_hash, g_str_equal,
 						g_free, ndef_agent_free);
 
+	ho_agent_hash = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+						NULL, handover_agent_free);
+
 	return 0;
 }
 
@@ -566,7 +646,9 @@ void __near_agent_cleanup(void)
 	g_hash_table_destroy(ndef_app_hash);
 	ndef_app_hash = NULL;
 
-	handover_agent_release();
+	g_hash_table_foreach(ho_agent_hash, handover_agent_release, NULL);
+	g_hash_table_destroy(ho_agent_hash);
+	ho_agent_hash = NULL;
 
 	dbus_connection_unref(connection);
 }
