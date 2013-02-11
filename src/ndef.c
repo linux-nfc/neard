@@ -1427,7 +1427,7 @@ parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
 	} else {
 		err = __near_bluetooth_parse_oob_record(&data,
 					&mime->handover.properties, action);
-		if (err == 0 && reply != NULL) {
+		if (err == 0 && reply != NULL && action == FALSE) {
 			*reply = near_ndef_prepare_handover_record("Hs",
 					record, NEAR_CARRIER_BLUETOOTH, NULL);
 			if (*reply == NULL)
