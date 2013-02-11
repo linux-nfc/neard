@@ -225,7 +225,9 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 	if (ndef->missing_bytes)
 		return TRUE;	/* more bytes to come... */
 
-	ndef->extra_ndef_count--;
+	if (ndef->extra_ndef_count > 0)
+		ndef->extra_ndef_count--;
+
 	ndef->in_extra_read = TRUE;
 
 	if (ndef->extra_ndef_count == 0) {
