@@ -92,8 +92,13 @@ static near_bool_t snep_default_server_req_get(int client_fd, void *data)
 
 	DBG("");
 
-	/* Check if this is a handover request or not ... */
-	if (*(snep_data->nfc_data + 4 + 9) != 'H') {
+	/*
+	 * Check if this is a handover request or not ...
+	 * snep_data->nfc_data points to the acceptable length field (4 bytes)
+	 * and we check the 3 byte in the NDEF message
+	 * */
+
+	if (*(snep_data->nfc_data + SNEP_REQ_ANDROID) != 'H') {
 		snep_core_response_noinfo(client_fd, SNEP_RESP_NOT_IMPL);
 	} else {
 		snep_core_parse_handover_record(client_fd, snep_data->nfc_data +

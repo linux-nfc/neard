@@ -44,8 +44,12 @@
 
 #define SNEP_REQ_PUT_HEADER_LENGTH	6
 #define SNEP_REQ_GET_HEADER_LENGTH	10
+
 /* Default SNEP Resp message header length: Version + code + len */
 #define SNEP_RESP_HEADER_LENGTH		(1 + 1 + 4)
+
+/* Offset of 'H' in Android frame: 3 is the offset in NDEF */
+#define SNEP_REQ_ANDROID		(SNEP_ACC_LENGTH_SIZE + 3)
 
 
 /* TODO: Right now it is dummy, need to get correct value
