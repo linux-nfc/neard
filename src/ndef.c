@@ -2127,9 +2127,21 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
 		case RECORD_TYPE_WKT_HANDOVER_SELECT:
 		case RECORD_TYPE_WKT_ERROR:
-		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
 			break;
+
+		case RECORD_TYPE_UNKNOWN:
+			/*
+			 * If there's something we don't understand, we must
+			 * return an empty Hs
+			 */
+			g_slist_free(mimes);
+			g_slist_free(acs);
+
+			mimes = NULL;
+			acs = NULL;
+
+			goto empty_hs;
 
 		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
 			DBG("HANDOVER_CARRIER");
