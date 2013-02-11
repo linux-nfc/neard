@@ -2096,7 +2096,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	    HANDOVER_MAJOR(HANDOVER_VERSION)) {
 		near_error("Unsupported version (%d)", ho_payload->version);
 		/* Skip parsing and return an empty record */
-		return ho_payload;
+		goto empty_hs;
 	}
 
 	offset = offset + 1;
@@ -2224,6 +2224,21 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 		trec->header = NULL;
 
 		g_free(trec);
+	}
+
+empty_hs:
+	/*
+	 * If there's no ac AND mimes BUT a reply ptr
+	 * we have to fill the reply with a message containing
+	 * zero alternative carriers.
+	 */
+	if ((acs == NULL) && (mimes == NULL)) {
+		if (reply != NULL) {
+			struct near_ndef_record rec;
+			rec.ho = ho_payload;
+			*reply = near_ndef_prepare_handover_record("Hs",
+					&rec, NEAR_CARRIER_EMPTY, NULL);
+		}
 	}
 
 	if ((acs == NULL) || (mimes == NULL))
