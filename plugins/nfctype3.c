@@ -749,7 +749,7 @@ static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
 	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
 
 out_err:
-	if (cb != NULL)
+	if (cb != NULL && err < 0)
 		cb(adapter_idx, target_idx, err);
 
 	return err;
