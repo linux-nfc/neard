@@ -776,6 +776,11 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 
 	__near_agent_ndef_parse_records(tag->records);
 
+	near_dbus_property_changed_array(tag->path,
+					NFC_TAG_INTERFACE, "Records",
+					DBUS_TYPE_OBJECT_PATH, append_records,
+					tag);
+
 	if (cb != NULL)
 		cb(tag->adapter_idx, tag->target_idx, status);
 
