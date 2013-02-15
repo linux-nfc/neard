@@ -342,6 +342,9 @@ int near_device_add_records(struct near_device *device, GList *records,
 
 	DBG("records %p", records);
 
+	near_ndef_records_free(device->records);
+	device->records = NULL;
+
 	for (list = records; list; list = list->next) {
 		record = list->data;
 
@@ -359,6 +362,11 @@ int near_device_add_records(struct near_device *device, GList *records,
 	}
 
 	__near_agent_ndef_parse_records(device->records);
+
+	near_dbus_property_changed_array(device->path,
+					NFC_DEVICE_INTERFACE, "Records",
+					DBUS_TYPE_OBJECT_PATH, append_records,
+					device);
 
 	if (cb != NULL)
 		cb(device->adapter_idx, device->target_idx, status);
