@@ -270,14 +270,19 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 
 static int p2p_listen(uint32_t adapter_idx, near_device_io_cb cb)
 {
-	int err = -1;
+	int err = -1, bind_err;
 	GSList *list;
 
 	for (list = driver_list; list != NULL; list = list->next) {
 		struct near_p2p_driver *driver = list->data;
 
-		if (p2p_bind(driver, adapter_idx, cb) == 0)
+		bind_err = p2p_bind(driver, adapter_idx, cb);
+		if (bind_err == 0) {
 			err = 0;
+		} else if (bind_err == -EPROTONOSUPPORT) {
+			near_error("LLCP is not supported");
+			return bind_err;
+		}
 	}
 
 	return err;
