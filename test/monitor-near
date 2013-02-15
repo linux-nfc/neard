@@ -22,6 +22,20 @@ def extract_bool(b):
 	return val	
 
 
+def property_changed_tag(name, value, path):
+    tag = path[path.rfind("/") + 1:]
+    if name in ["Records"]:
+	    val = extract_list(value)
+
+    print "[Tag] [%s] %s = %s" % (tag, name, val)
+
+def property_changed_device(name, value, path):
+    device = path[path.rfind("/") + 1:]
+    if name in ["Records"]:
+	    val = extract_list(value)
+
+    print "[Device] [%s] %s = %s" % (device, name, val)
+
 def property_changed_adapter(name, value, path):
     adapter = path[path.rfind("/") + 1:]
     if name in ["Polling"]:
@@ -55,6 +69,18 @@ if __name__ == '__main__':
 	bus.add_signal_receiver(property_changed_adapter,
 				bus_name="org.neard",
 				dbus_interface="org.neard.Adapter",
+				signal_name = "PropertyChanged",
+				path_keyword="path")
+
+	bus.add_signal_receiver(property_changed_tag,
+				bus_name="org.neard",
+				dbus_interface="org.neard.Tag",
+				signal_name = "PropertyChanged",
+				path_keyword="path")
+
+	bus.add_signal_receiver(property_changed_device,
+				bus_name="org.neard",
+				dbus_interface="org.neard.Device",
 				signal_name = "PropertyChanged",
 				path_keyword="path")
 
