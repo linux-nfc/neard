@@ -61,15 +61,10 @@ static GSList *driver_list = NULL;
 static void free_device(gpointer data)
 {
 	struct near_device *device = data;
-	GList *list;
 
 	DBG("device %p", device);
 
-	for (list = device->records; list; list = list->next) {
-		struct near_ndef_record *record = list->data;
-
-		__near_ndef_record_free(record);
-	}
+	near_ndef_records_free(device->records);
 
 	g_list_free(device->records);
 	g_free(device->path);
