@@ -66,7 +66,6 @@ static void free_device(gpointer data)
 
 	near_ndef_records_free(device->records);
 
-	g_list_free(device->records);
 	g_free(device->path);
 	g_free(device->data);
 	g_free(device);
