@@ -241,8 +241,6 @@ struct near_p2p_driver validation_snep_driver = {
 
 int snep_validation_init(void)
 {
-	DBG("");
-
 	/* Would store incoming ndefs per client */
 	snep_validation_hash = g_hash_table_new_full(g_direct_hash,
 						g_direct_equal, NULL,
@@ -253,8 +251,6 @@ int snep_validation_init(void)
 
 void snep_validation_exit(void)
 {
-	DBG("");
-
 	near_p2p_unregister(&validation_snep_driver);
 
 	g_hash_table_destroy(snep_validation_hash);
