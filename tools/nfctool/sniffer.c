@@ -50,6 +50,7 @@
 #define SNAP_LEN 1024
 
 static GIOChannel *gio_channel = NULL;
+guint watch = 0;
 
 static FILE *pcap_file = NULL;
 static guint8 *buffer;
@@ -222,8 +223,16 @@ static gboolean gio_handler(GIOChannel *channel,
 	struct cmsghdr *cmsg;
 	struct timeval msg_timestamp;
 
-	if (cond & (G_IO_NVAL | G_IO_HUP | G_IO_ERR))
+	if (cond & (G_IO_NVAL | G_IO_HUP | G_IO_ERR)) {
+		print_error("Sniffer IO error 0x%x\n", cond);
+
+		if (watch > 0)
+			g_source_remove(watch);
+		watch = 0;
+		gio_channel = NULL;
+
 		return FALSE;
+	}
 
 	sock = g_io_channel_unix_get_fd(channel);
 
@@ -314,9 +323,11 @@ int sniffer_init(void)
 	g_io_channel_set_encoding(gio_channel, NULL, NULL);
 	g_io_channel_set_buffered(gio_channel, FALSE);
 
-	g_io_add_watch(gio_channel,
+	watch = g_io_add_watch(gio_channel,
 		       G_IO_IN | G_IO_NVAL | G_IO_HUP | G_IO_ERR,
 		       gio_handler, NULL);
+
+	g_io_channel_unref(gio_channel);
 
 	if (opts.pcap_filename != NULL) {
 		err = pcap_file_init(opts.pcap_filename);
