@@ -53,6 +53,7 @@ struct p2p_data {
 	near_device_io_cb cb;
 	int fd;
 	guint watch;
+	struct p2p_data *server;
 
 	GList *client_list;
 };
@@ -67,6 +68,7 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
 		int err;
+		struct p2p_data *server_data = client_data->server;
 
 		if (client_data->watch > 0)
 			g_source_remove(client_data->watch);
@@ -82,6 +84,13 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 
 		near_error("%s client channel closed",
 					client_data->driver->name);
+
+		if (server_data)
+			server_data->client_list =
+				g_list_remove(server_data->client_list,
+								client_data);
+
+		g_free(client_data);
 
 		return FALSE;
 	}
@@ -183,6 +192,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 	client_data->target_idx = client_addr.target_idx;
 	client_data->fd = client_fd;
 	client_data->cb = server_data->cb;
+	client_data->server = server_data;
 
 	client_channel = g_io_channel_unix_new(client_fd);
 	g_io_channel_set_close_on_unref(client_channel, TRUE);
