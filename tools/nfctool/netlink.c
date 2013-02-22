@@ -37,6 +37,7 @@
 
 #include "nfctool.h"
 #include "netlink.h"
+#include "adapter.h"
 
 #ifdef NEED_LIBNL_COMPAT
 #define nl_sock nl_handle
@@ -77,20 +78,6 @@ static struct nlnfc_state *nfc_state = NULL;
 static GIOChannel *nl_gio_channel = NULL;
 
 static nfc_event_cb_t nfc_event_cb = NULL;
-
-static void adapter_add_target(struct nfc_adapter *adapter,
-				guint8 type, guint32 idx)
-{
-	DBG("adapter_idx: %d, target_type: %d, target_idx: %d", adapter->idx,
-								type, idx);
-
-	if (type == TARGET_TYPE_TAG)
-		adapter->tags = g_slist_append(adapter->tags,
-					       GINT_TO_POINTER(idx));
-	else
-		adapter->devices = g_slist_append(adapter->devices,
-						  GINT_TO_POINTER(idx));
-}
 
 static int nl_error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
 			 void *arg)
@@ -428,7 +415,6 @@ static int nl_get_devices_handler(struct nl_msg *n, void *arg)
 	guint32 idx, protocols = 0;
 	guint8 powered = 0;
 	guint8 rf_mode = NFC_RF_NONE;
-	struct nfc_adapter *adapter;
 
 	DBG("");
 
@@ -450,17 +436,7 @@ static int nl_get_devices_handler(struct nl_msg *n, void *arg)
 	if (attrs[NFC_ATTR_DEVICE_POWERED] != NULL)
 		powered = nla_get_u8(attrs[NFC_ATTR_DEVICE_POWERED]);
 
-	adapter = g_malloc0(sizeof(struct nfc_adapter));
-
-	adapter->idx = idx;
-	adapter->protocols = protocols;
-	adapter->powered = powered;
-	adapter->rf_mode = rf_mode;
-
-	if (rf_mode == NFC_RF_TARGET)
-		adapter_add_target(adapter, TARGET_TYPE_DEVICE, 0);
-
-	adapters = g_slist_append(adapters, adapter);
+	adapter_add(idx, protocols, powered, rf_mode);
 
 	return NL_SKIP;
 }

@@ -43,24 +43,6 @@
 #define SNIFFER_SHOW_TIMESTAMP_DELTA	1
 #define SNIFFER_SHOW_TIMESTAMP_ABS	2
 
-struct nfc_target {
-	guint32 idx;
-	guint8 type;
-};
-
-struct nfc_adapter {
-	guint32 idx;
-	guint32 protocols;
-	guint8 powered;
-	guint8 polling;
-	guint8 rf_mode;
-	GSList *tags;
-	GSList *devices;
-	gint32 param_lto;
-	gint32 param_rw;
-	gint32 param_miux;
-};
-
 struct nfctool_options {
 	gboolean list;
 	gboolean poll;
@@ -81,6 +63,5 @@ struct nfctool_options {
 
 extern struct nfctool_options opts;
 
-extern GSList *adapters;
 
 #endif /* __NFCTOOL_H */

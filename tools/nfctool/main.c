@@ -29,6 +29,7 @@
 #include <near/nfc_copy.h>
 
 #include "nfctool.h"
+#include "adapter.h"
 #include "netlink.h"
 #include "sniffer.h"
 
@@ -36,121 +37,7 @@
 #define LLCP_MAX_RW   0x0f
 #define LLCP_MAX_MIUX 0x7ff
 
-GSList *adapters = NULL;
-
 static GMainLoop *main_loop = NULL;
-
-static gint nfctool_compare_adapter_idx(struct nfc_adapter *adapter,
-								guint32 idx)
-{
-	if (adapter->idx < idx)
-		return -1;
-
-	if (adapter->idx > idx)
-		return 1;
-
-	return 0;
-}
-
-static struct nfc_adapter *nfctool_find_adapter(guint32 adapter_idx)
-{
-	GSList *elem;
-
-	elem = g_slist_find_custom(adapters, GINT_TO_POINTER(adapter_idx),
-				(GCompareFunc)nfctool_compare_adapter_idx);
-
-	if (elem)
-		return elem->data;
-
-	return NULL;
-}
-
-static void nfctool_print_target(guint32 idx, gchar *type)
-{
-	printf("%s%d ", type, idx);
-}
-
-static void nfctool_print_targets(struct nfc_adapter *adapter, gchar *prefix)
-{
-	printf("%sTags: [ ", prefix);
-
-	g_slist_foreach(adapter->tags, (GFunc)nfctool_print_target, "tag");
-
-	printf("]\n");
-
-	printf("%sDevices: [ ", prefix);
-
-	g_slist_foreach(adapter->devices,
-			(GFunc)nfctool_print_target, "device");
-
-	printf("]\n");
-}
-
-static void nfctool_print_adapter_info(struct nfc_adapter *adapter)
-{
-	gchar *rf_mode_str;
-
-	printf("nfc%d:\n", adapter->idx);
-
-	nfctool_print_targets(adapter, "          ");
-
-	printf("          Protocols: [ ");
-
-	if (adapter->protocols & NFC_PROTO_FELICA_MASK)
-		printf("Felica ");
-
-	if (adapter->protocols & NFC_PROTO_MIFARE_MASK)
-		printf("MIFARE ");
-
-	if (adapter->protocols & NFC_PROTO_JEWEL_MASK)
-		printf("Jewel ");
-
-	if (adapter->protocols & NFC_PROTO_ISO14443_MASK)
-		printf("ISO-DEP ");
-
-	if (adapter->protocols & NFC_PROTO_NFC_DEP_MASK)
-		printf("NFC-DEP ");
-
-	printf("]\n");
-
-	printf("          Powered: %s\n",
-		adapter->powered ? "Yes" : "No");
-
-	if (adapter->rf_mode == NFC_RF_INITIATOR)
-		rf_mode_str = "Initiator";
-	else if (adapter->rf_mode == NFC_RF_TARGET)
-		rf_mode_str = "Target";
-	else
-		rf_mode_str = "None";
-
-	printf("          RF Mode: %s\n", rf_mode_str);
-
-	printf("          lto: %d\n", adapter->param_lto);
-	printf("          rw: %d\n", adapter->param_rw);
-	printf("          miux: %d\n", adapter->param_miux);
-
-	printf("\n");
-}
-
-static void nfctool_list_adapter(struct nfc_adapter *adapter, guint32 idx)
-{
-	if (idx == INVALID_ADAPTER_IDX || idx == adapter->idx)
-		nfctool_print_adapter_info(adapter);
-}
-
-static void nfctool_list_adapters(void)
-{
-	g_slist_foreach(adapters, (GFunc)nfctool_list_adapter,
-					GINT_TO_POINTER(opts.adapter_idx));
-}
-
-static void nfctool_adapter_free(struct nfc_adapter *adapter)
-{
-	g_slist_free(adapter->tags);
-	g_slist_free(adapter->devices);
-
-	g_free(adapter);
-}
 
 static gchar *nfctool_poll_mode_str(int mode)
 {
@@ -169,7 +56,7 @@ static int nfctool_start_poll(void)
 
 	struct nfc_adapter *adapter;
 
-	adapter = nfctool_find_adapter(opts.adapter_idx);
+	adapter = adapter_get(opts.adapter_idx);
 
 	if (adapter == NULL) {
 		print_error("Invalid adapter index: %d", opts.adapter_idx);
@@ -196,33 +83,12 @@ static int nfctool_start_poll(void)
 	return err;
 }
 
-static void nfctool_get_device(struct nfc_adapter *adapter)
-{
-	if (adapter->rf_mode == NFC_RF_INITIATOR)
-		nl_get_targets(adapter);
-
-	nl_get_params(adapter);
-}
-
-static int nfctool_get_devices(void)
-{
-	int err;
-
-	err = nl_get_devices();
-	if (err)
-		return err;
-
-	g_slist_foreach(adapters, (GFunc)nfctool_get_device, NULL);
-
-	return 0;
-}
-
 static int nfctool_set_params(void)
 {
 	struct nfc_adapter *adapter;
 	int err;
 
-	adapter = nfctool_find_adapter(opts.adapter_idx);
+	adapter = adapter_get(opts.adapter_idx);
 	if (!adapter)
 		return -ENODEV;
 
@@ -234,7 +100,7 @@ static int nfctool_set_params(void)
 
 	nl_get_params(adapter);
 
-	nfctool_print_adapter_info(adapter);
+	adapter_print_info(adapter);
 
 exit:
 	return err;
@@ -265,7 +131,7 @@ static int nfctool_targets_found(guint32 adapter_idx)
 	if (adapter_idx == INVALID_ADAPTER_IDX)
 		return -ENODEV;
 
-	adapter = nfctool_find_adapter(adapter_idx);
+	adapter = adapter_get(adapter_idx);
 
 	if (adapter == NULL)
 		return -ENODEV;
@@ -277,7 +143,7 @@ static int nfctool_targets_found(guint32 adapter_idx)
 	}
 
 	printf("Targets found for nfc%d\n", adapter_idx);
-	nfctool_print_targets(adapter, "  ");
+	adpater_print_targets(adapter, "  ");
 
 	if (adapter->polling) {
 		g_slist_foreach(adapter->devices,
@@ -575,17 +441,19 @@ int main(int argc, char **argv)
 	if (err)
 		goto exit_err;
 
+	adapter_init();
+
 	if (opts.need_netlink) {
 		err = nl_init(nfc_event_cb);
 		if (err)
 			goto exit_err;
 
-		err = nfctool_get_devices();
+		err = adapter_all_get_devices();
 		if (err)
 			goto exit_err;
 
 		if (opts.list && !opts.set_param)
-			nfctool_list_adapters();
+			adapter_idx_print_info(opts.adapter_idx);
 
 		if (opts.set_param) {
 			err = nfctool_set_params();
@@ -618,7 +486,7 @@ int main(int argc, char **argv)
 exit_err:
 	nfctool_main_loop_clean();
 
-	g_slist_free_full(adapters, (GDestroyNotify)nfctool_adapter_free);
+	adapter_cleanup();
 
 	nl_cleanup();
 

@@ -92,6 +92,8 @@ tools_snep_send_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 					tools/nfctool/nfctool.h \
+					tools/nfctool/adapter.h \
+					tools/nfctool/adapter.c \
 					tools/nfctool/netlink.h \
 					tools/nfctool/netlink.c \
 					tools/nfctool/sniffer.h \
