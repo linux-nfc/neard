@@ -157,7 +157,7 @@ static int bt_generic_call(DBusConnection *conn,
 
 	if (msg == NULL) {
 		near_error("Unable to allocate new D-Bus %s message", method);
-		err = -ENOMEM;
+		return -ENOMEM;
 	}
 
 	va_start(args, type);
