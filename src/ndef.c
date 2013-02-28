@@ -1984,6 +1984,67 @@ fail:
 	return NULL;
 }
 
+static struct near_ndef_message *prepare_handover_message_header(char *type,
+					uint32_t msg_len, uint32_t payload_len)
+{
+	struct near_ndef_message *ho_msg;
+
+	ho_msg = ndef_message_alloc(type, msg_len);
+	if (ho_msg == NULL)
+		return NULL;
+
+	/*
+	 * The handover payload length is not the *real* length.
+	 * The PL refers to the NDEF record, not the extra ones.
+	 * So, we have to fix the payload length in the header.
+	 */
+	ho_msg->data[NDEF_PAYLOAD_LENGTH_OFFSET] = payload_len;
+	near_ndef_set_mb_me(ho_msg->data, TRUE, FALSE);
+
+	/* Add version */
+	ho_msg->data[ho_msg->offset++] = HANDOVER_VERSION;
+
+	return ho_msg;
+}
+
+static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
+{
+	struct near_ndef_message *hs_msg;
+	struct near_ndef_message *ac_msg;
+	char cdr = 0x00;
+	uint32_t hs_length;
+
+	DBG("");
+
+	ac_msg = near_ndef_prepare_ac_message(CPS_UNKNOWN, cdr);
+	if (ac_msg == NULL)
+		return NULL;
+
+	hs_length = 1;
+	hs_length += ac_msg->length;
+
+	hs_msg = prepare_handover_message_header("Hs", hs_length, hs_length);
+	if (hs_msg == NULL)
+		goto fail;
+
+	near_ndef_set_mb_me(hs_msg->data, TRUE, TRUE);
+	memcpy(hs_msg->data + hs_msg->offset, ac_msg->data, ac_msg->length);
+	hs_msg->offset += ac_msg->length;
+
+	if (hs_msg->offset > hs_msg->length)
+		goto fail;
+
+	free_ndef_message(ac_msg);
+
+	return hs_msg;
+
+fail:
+	free_ndef_message(ac_msg);
+	free_ndef_message(hs_msg);
+
+	return NULL;
+}
+
 /* Code to fill hr record structure from acs and mimes lists */
 static int near_fill_ho_payload(struct near_ndef_ho_payload *ho,
 					GSList *acs, GSList *mimes)
@@ -2073,7 +2134,10 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	    HANDOVER_MAJOR(HANDOVER_VERSION)) {
 		near_error("Unsupported version (%d)", ho_payload->version);
 		/* Skip parsing and return an empty record */
-		goto empty_hs;
+		if (reply != NULL)
+			*reply = near_ndef_prepare_empty_hs_message();
+
+		return ho_payload;
 	}
 
 	offset = offset + 1;
