@@ -1986,7 +1986,6 @@ fail:
 	return NULL;
 }
 
-__unused
 static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 					uint8_t *data, int data_len,
 					char cdr, uint8_t cdr_len)
@@ -2013,7 +2012,6 @@ static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
  * Prepare alternative carrier and configuration records
  * (e.g. bluetooth or wifi or Hc)
  */
-__unused
 static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 					struct near_ndef_message **ac,
 					struct near_ndef_message **cfg,
@@ -2094,7 +2092,7 @@ fail:
 	return err;
 }
 
-__unused static void free_ndef_list(gpointer data)
+static void free_ndef_list(gpointer data)
 {
 	struct near_ndef_message *msg = data;
 
@@ -2124,7 +2122,7 @@ static struct near_ndef_message *prepare_handover_message_header(char *type,
 	return ho_msg;
 }
 
-__unused static uint32_t ndef_message_list_length(GList *list)
+static uint32_t ndef_message_list_length(GList *list)
 {
 	struct near_ndef_message *msg;
 	uint32_t length = 0;
@@ -2141,7 +2139,7 @@ __unused static uint32_t ndef_message_list_length(GList *list)
 	return length;
 }
 
-__unused static void copy_ac_records(struct near_ndef_message *ho, GList *acs)
+static void copy_ac_records(struct near_ndef_message *ho, GList *acs)
 {
 	GList *temp = acs;
 	struct near_ndef_message *ac;
@@ -2161,7 +2159,7 @@ __unused static void copy_ac_records(struct near_ndef_message *ho, GList *acs)
 	}
 }
 
-__unused static void copy_cfg_records(struct near_ndef_message *ho, GList *cfgs)
+static void copy_cfg_records(struct near_ndef_message *ho, GList *cfgs)
 {
 	GList *temp = cfgs;
 	struct near_ndef_message *cfg;
@@ -2185,7 +2183,7 @@ __unused static void copy_cfg_records(struct near_ndef_message *ho, GList *cfgs)
 	}
 }
 
-__unused static void set_mb_me_to_false(gpointer data, gpointer user_data)
+static void set_mb_me_to_false(gpointer data, gpointer user_data)
 {
 	struct near_ndef_message *msg = data;
 
@@ -2225,6 +2223,123 @@ static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
 
 fail:
 	free_ndef_message(ac_msg);
+	free_ndef_message(hs_msg);
+
+	return NULL;
+}
+
+__unused
+static struct near_ndef_message *near_ndef_prepare_hs_message(
+					GSList *remote_mimes,
+					GSList *remote_cfgs)
+{
+	struct near_ndef_message *hs_msg = NULL;
+	struct near_ndef_message *ac_msg;
+	struct near_ndef_message *cfg_msg;
+	struct near_ndef_mime_payload *remote_mime;
+	struct carrier_data *remote_cfg;
+	GList *ac_msgs = NULL, *cfg_msgs = NULL, *temp;
+	GSList *mime_iter, *cfg_iter;
+	uint8_t hs_length, hs_pl_length, num_of_carriers;
+	int ret = -EINVAL;
+
+	DBG("");
+
+	/*
+	 * Preparing empty Hs message incase remote devices has zero
+	 * alternative carries or unknown mime types or unknown
+	 * configuration data.
+	 */
+	if ((remote_mimes == NULL || remote_cfgs == NULL))
+		return near_ndef_prepare_empty_hs_message();
+
+	mime_iter = remote_mimes;
+	cfg_iter  = remote_cfgs;
+
+	while (mime_iter) {
+		remote_mime = mime_iter->data;
+		remote_cfg  = cfg_iter->data;
+		if (remote_mime == NULL || remote_cfg == NULL)
+			goto fail;
+
+		ret = near_ndef_prepare_ac_and_cfg_records(
+					remote_mime->handover.carrier_type,
+					&ac_msg, &cfg_msg,
+					remote_mime, remote_cfg);
+		if (ret == 0) {
+			ac_msgs  = g_list_append(ac_msgs, ac_msg);
+			cfg_msgs = g_list_append(cfg_msgs, cfg_msg);
+		}
+
+		mime_iter = mime_iter->next;
+		cfg_iter  = cfg_iter->next;
+	}
+
+	if (g_list_length(ac_msgs) == 0) {
+		DBG("no alterative carriers, so preparing empty Hs message");
+		return near_ndef_prepare_empty_hs_message();
+	}
+
+	/* Prepare Hs message */
+	hs_pl_length = 1;
+	/* Alternative carriers are part of handover record payload length */
+	hs_pl_length += ndef_message_list_length(ac_msgs);
+
+	hs_length = hs_pl_length;
+	/* Configuration records are part of handover message length */
+	hs_length += ndef_message_list_length(cfg_msgs);
+
+	hs_msg = prepare_handover_message_header("Hs", hs_length, hs_pl_length);
+	if (hs_msg == NULL)
+		goto fail;
+
+	num_of_carriers = g_list_length(ac_msgs);
+
+	if (num_of_carriers == 1) {
+		/* only one message */
+		ac_msg = ac_msgs->data;
+		near_ndef_set_mb_me(ac_msg->data, TRUE, TRUE);
+	} else if (num_of_carriers > 1) {
+		g_list_foreach(ac_msgs, set_mb_me_to_false, NULL);
+		/* first message */
+		temp = g_list_first(ac_msgs);
+		ac_msg = temp->data;
+		near_ndef_set_mb_me(ac_msg->data, TRUE, FALSE);
+		/* last message */
+		temp = g_list_last(ac_msgs);
+		ac_msg = temp->data;
+		near_ndef_set_mb_me(ac_msg->data, FALSE, TRUE);
+	}
+
+	g_list_foreach(cfg_msgs, set_mb_me_to_false, NULL);
+	temp = g_list_last(cfg_msgs);
+	cfg_msg = temp->data;
+	near_ndef_set_mb_me(cfg_msg->data, FALSE, TRUE);
+
+	/* copy acs */
+	copy_ac_records(hs_msg, ac_msgs);
+	if (hs_msg->offset > hs_msg->length)
+		goto fail;
+
+	/*
+	 * copy cfgs, cfg (associated to the ac) records length
+	 * (bt or wifi) is not part of Hs initial size.
+	 */
+	copy_cfg_records(hs_msg, cfg_msgs);
+
+	DBG("Hs message preparation is done");
+
+	g_list_free_full(ac_msgs, free_ndef_list);
+	g_list_free_full(cfg_msgs, free_ndef_list);
+
+	return hs_msg;
+
+fail:
+	near_error("handover Hs message preparation failed");
+
+	g_list_free_full(ac_msgs, free_ndef_list);
+	g_list_free_full(cfg_msgs, free_ndef_list);
+
 	free_ndef_message(hs_msg);
 
 	return NULL;
