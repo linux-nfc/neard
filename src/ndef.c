@@ -646,6 +646,15 @@ static void free_ndef_record(struct near_ndef_record *record)
 	g_free(record);
 }
 
+static void free_ndef_message(struct near_ndef_message *msg)
+{
+	if (msg == NULL)
+		return;
+
+	g_free(msg->data);
+	g_free(msg);
+}
+
 void __near_ndef_record_free(struct near_ndef_record *record)
 {
 	g_dbus_unregister_interface(connection, record->path,
@@ -1605,8 +1614,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 
 fail:
 	near_error("ndef message struct allocation failed");
-	g_free(msg->data);
-	g_free(msg);
+	free_ndef_message(msg);
 
 	return NULL;
 }
@@ -1754,10 +1762,7 @@ static struct near_ndef_message *near_ndef_prepare_bt_message(uint8_t *bt_data,
 	return bt_msg;
 
 fail:
-	if (bt_msg != NULL)
-		g_free(bt_msg->data);
-
-	g_free(bt_msg);
+	free_ndef_message(bt_msg);
 
 	return NULL;
 }
@@ -1958,21 +1963,9 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 		memcpy(hs_msg->data + hs_msg->offset, bt_msg->data,
 							bt_msg->length);
 
-	if (ac_msg != NULL) {
-		g_free(ac_msg->data);
-		g_free(ac_msg);
-	}
-
-	if (cr_msg != NULL) {
-		g_free(cr_msg->data);
-		g_free(cr_msg);
-	}
-
-	if (bt_msg != NULL) {
-		g_free(bt_msg->data);
-		g_free(bt_msg);
-	}
-
+	free_ndef_message(ac_msg);
+	free_ndef_message(cr_msg);
+	free_ndef_message(bt_msg);
 	g_free(local);
 
 	DBG("Hs NDEF done");
@@ -1982,26 +1975,10 @@ struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
 fail:
 	near_error("handover %s record preparation failed", type_name);
 
-	if (ac_msg != NULL) {
-		g_free(ac_msg->data);
-		g_free(ac_msg);
-	}
-
-	if (cr_msg != NULL) {
-		g_free(cr_msg->data);
-		g_free(cr_msg);
-	}
-
-	if (hs_msg != NULL) {
-		g_free(hs_msg->data);
-		g_free(hs_msg);
-	}
-
-	if (bt_msg != NULL) {
-		g_free(bt_msg->data);
-		g_free(bt_msg);
-	}
-
+	free_ndef_message(ac_msg);
+	free_ndef_message(cr_msg);
+	free_ndef_message(bt_msg);
+	free_ndef_message(hs_msg);
 	g_free(local);
 
 	return NULL;
@@ -2714,8 +2691,7 @@ struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 
 fail:
 	near_error("text record preparation failed");
-	g_free(msg->data);
-	g_free(msg);
+	free_ndef_message(msg);
 
 	return NULL;
 }
@@ -2771,8 +2747,7 @@ struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 
 fail:
 	near_error("uri record preparation failed");
-	g_free(msg->data);
-	g_free(msg);
+	free_ndef_message(msg);
 
 	return NULL;
 }
@@ -2818,25 +2793,15 @@ near_ndef_prepare_smartposter_record(uint8_t uri_identifier,
 	if (msg->offset > msg->length)
 		goto fail;
 
-	if (uri != NULL) {
-		g_free(uri->data);
-		g_free(uri);
-	}
+	free_ndef_message(uri);
 
 	return msg;
 
 fail:
 	near_error("smartposter record preparation failed");
 
-	if (uri != NULL) {
-		g_free(uri->data);
-		g_free(uri);
-	}
-
-	if (msg != NULL) {
-		g_free(msg->data);
-		g_free(msg);
-	}
+	free_ndef_message(uri);
+	free_ndef_message(msg);
 
 	return NULL;
 }
