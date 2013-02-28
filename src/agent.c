@@ -332,6 +332,19 @@ static struct carrier_data *parse_reply(DBusMessage *reply)
 			memcpy(c_data->data, oob_data, size);
 			c_data->size = size;
 			c_data->type = BT_MIME_V2_1;
+		} else if (strcasecmp(key, "WSC") == 0) {
+			int size;
+			void *oob_data;
+
+			if (var != DBUS_TYPE_ARRAY)
+				goto failed;
+
+			dbus_message_iter_recurse(&value, &array);
+			dbus_message_iter_get_fixed_array(&array, &oob_data,
+									&size);
+			memcpy(c_data->data, oob_data, size);
+			c_data->size = size;
+			c_data->type = WIFI_WSC_MIME;
 		}
 
 		dbus_message_iter_next(&data);
@@ -354,11 +367,11 @@ static const char *cps2string[] = {
 	"activating",
 };
 
-static void prepare_bt_data(DBusMessage *message, struct carrier_data *data)
+static void prepare_data(DBusMessage *message, struct carrier_data *data)
 {
 	DBusMessageIter iter;
 	DBusMessageIter dict;
-	char *name;
+	char *name = NULL;
 
 	DBG("data %p", data);
 
@@ -369,10 +382,19 @@ static void prepare_bt_data(DBusMessage *message, struct carrier_data *data)
 	if (data != NULL) {
 		void *pdata = data->data;
 
-		if (data->type == BT_MIME_V2_1)
+		switch (data->type) {
+		case BT_MIME_V2_1:
 			name = "EIR";
-		else
+			break;
+
+		case BT_MIME_V2_0:
 			name = "nokia.com:bt";
+			break;
+
+		case WIFI_WSC_MIME:
+			name = "WSC";
+			break;
+		}
 
 		near_dbus_dict_append_fixed_array(&dict, name, DBUS_TYPE_BYTE,
 							&pdata, data->size);
@@ -409,7 +431,7 @@ struct carrier_data *__near_agent_handover_request_data(
 	if (message == NULL)
 		return NULL;
 
-	prepare_bt_data(message, data);
+	prepare_data(message, data);
 
 	dbus_error_init(&error);
 
@@ -455,7 +477,7 @@ int __near_agent_handover_push_data(enum ho_agent_carrier carrier,
 	if (message == NULL)
 		return -ENOMEM;
 
-	prepare_bt_data(message, data);
+	prepare_data(message, data);
 
 	dbus_error_init(&error);
 

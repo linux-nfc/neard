@@ -70,6 +70,12 @@ Fields		array{byte} EIR
 			This is a proprietary extension blob used by some
 			Nokia Bluetooth 2.0 devices.
 
+		array{byte} WSC
+
+			This is a WiFi blob as described in WiFi Simple
+			Configuration Technical Specification v2.0.2.1-rev4.
+			(Annex L - Data Element Definitions)
+
 		string State
 
 			Carrier power state. This is a hint for handover agent
