@@ -166,9 +166,10 @@ void __near_plugin_cleanup(void);
 /* NFC Bluetooth Secure Simple Pairing */
 #define BT_MIME_V2_0		0
 #define BT_MIME_V2_1		1
+#define WIFI_WSC_MIME		2
 #define BT_MIME_STRING_2_0	"nokia.com:bt"
 #define BT_MIME_STRING_2_1	"application/vnd.bluetooth.ep.oob"
-#define WIFI_MIME_STRING	"application/vnd.wfa.wsc"
+#define WIFI_WSC_MIME_STRING	"application/vnd.wfa.wsc"
 
 /* Mime specific properties */
 #define OOB_PROPS_EMPTY		0x00
@@ -183,10 +184,12 @@ void __near_plugin_cleanup(void);
 #define NEAR_HANDOVER_AGENT_WIFI		"wifi"
 
 /* near_ndef_handover_carrier*/
-#define NEAR_CARRIER_EMPTY      0x00
-#define NEAR_CARRIER_BLUETOOTH  0x01    /* bit 0 */
-#define NEAR_CARRIER_WIFI       0x02    /* bit 1 */
-#define NEAR_CARRIER_UNKNOWN    0x80    /* Bit 7 */
+enum handover_carrier {
+	NEAR_CARRIER_EMPTY =  0x00,
+	NEAR_CARRIER_BLUETOOTH = 0x01,	/* bit 0 */
+	NEAR_CARRIER_WIFI      = 0x02,	/* bit 1 */
+	NEAR_CARRIER_UNKNOWN   = 0x80,	/* Bit 7 */
+};
 
 enum carrier_power_state {
 	CPS_INACTIVE    = 0x00,

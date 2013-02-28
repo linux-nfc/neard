@@ -77,6 +77,8 @@ enum record_tnf {
 
 #define AC_CPS_MASK 0x03
 
+#define __unused __attribute__ ((unused))
+
 enum record_type {
 	RECORD_TYPE_WKT_SMART_POSTER          =   0x01,
 	RECORD_TYPE_WKT_URI                   =   0x02,
@@ -144,7 +146,7 @@ struct near_ndef_mime_payload {
 	char *type;
 
 	struct {
-		uint8_t carrier_type;
+		enum handover_carrier carrier_type;
 		uint16_t properties;	/* e.g.: NO_PAIRING_KEY */
 	} handover;
 };
@@ -1984,6 +1986,121 @@ fail:
 	return NULL;
 }
 
+__unused
+static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
+					uint8_t *data, int data_len,
+					char cdr, uint8_t cdr_len)
+{
+	struct near_ndef_message *msg = NULL;
+
+	DBG(" %s", mime_type);
+
+	if (mime_type == NULL || data == NULL || data_len <= 0)
+		return NULL;
+
+	msg = ndef_message_alloc_complete(mime_type, data_len, &cdr, cdr_len,
+						RECORD_TNF_MIME, TRUE, TRUE);
+	if (msg == NULL)
+		return NULL;
+
+	/* store data */
+	memcpy(msg->data + msg->offset, data, data_len);
+
+	return msg;
+}
+
+/*
+ * Prepare alternative carrier and configuration records
+ * (e.g. bluetooth or wifi or Hc)
+ */
+__unused
+static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
+					struct near_ndef_message **ac,
+					struct near_ndef_message **cfg,
+					struct near_ndef_mime_payload *mime,
+					struct carrier_data *remote_carrier)
+{
+	struct carrier_data *local_carrier = NULL;
+	char cdr;
+	char *mime_type;
+	uint16_t prop;
+	int err;
+
+	DBG("");
+
+	if (ac == NULL || cfg == NULL)
+		return -EINVAL;
+
+	/* to be safe side */
+	*ac = NULL;
+	*cfg = NULL;
+
+	switch (carrier) {
+	case NEAR_CARRIER_BLUETOOTH:
+		cdr = '0';
+		mime_type = BT_MIME_STRING_2_1;
+		local_carrier = __near_agent_handover_request_data(
+					HO_AGENT_BT, remote_carrier);
+		if (local_carrier != NULL)
+			break;
+
+		prop = (mime != NULL) ? mime->handover.properties :
+							OOB_PROPS_EMPTY;
+		local_carrier = __near_bluetooth_local_get_properties(prop);
+
+		break;
+
+	case NEAR_CARRIER_WIFI:
+		cdr = '1';
+		mime_type = WIFI_WSC_MIME_STRING;
+		local_carrier = __near_agent_handover_request_data(
+						HO_AGENT_WIFI, remote_carrier);
+		break;
+
+	case NEAR_CARRIER_EMPTY:
+	case NEAR_CARRIER_UNKNOWN:
+		err = -EINVAL;
+		goto fail;
+	}
+
+	if (local_carrier == NULL) {
+		DBG("Unable to retrieve local carrier bluetooth data");
+		err = -ESRCH;
+		goto fail;
+	}
+
+	*cfg = near_ndef_prepare_cfg_message(mime_type, local_carrier->data,
+						local_carrier->size, cdr, 1);
+	if (*cfg == NULL) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	*ac = near_ndef_prepare_ac_message(local_carrier->state, cdr);
+	if (*ac == NULL) {
+		err = -EINVAL;
+		goto fail;
+	}
+
+	g_free(local_carrier);
+
+	return 0;
+
+fail:
+	g_free(local_carrier);
+	free_ndef_message(*ac);
+	free_ndef_message(*cfg);
+
+	return err;
+}
+
+__unused static void free_ndef_list(gpointer data)
+{
+	struct near_ndef_message *msg = data;
+
+	free_ndef_message(msg);
+}
+
 static struct near_ndef_message *prepare_handover_message_header(char *type,
 					uint32_t msg_len, uint32_t payload_len)
 {
@@ -2005,6 +2122,74 @@ static struct near_ndef_message *prepare_handover_message_header(char *type,
 	ho_msg->data[ho_msg->offset++] = HANDOVER_VERSION;
 
 	return ho_msg;
+}
+
+__unused static uint32_t ndef_message_list_length(GList *list)
+{
+	struct near_ndef_message *msg;
+	uint32_t length = 0;
+
+	if (list == NULL)
+		return 0;
+
+	while (list) {
+		msg = list->data;
+		length += msg->length;
+		list = list->next;
+	}
+
+	return length;
+}
+
+__unused static void copy_ac_records(struct near_ndef_message *ho, GList *acs)
+{
+	GList *temp = acs;
+	struct near_ndef_message *ac;
+
+	if (ho == NULL || temp == NULL)
+		return;
+
+	while (temp) {
+		ac = temp->data;
+		memcpy(ho->data + ho->offset, ac->data, ac->length);
+		/*
+		 * AC records are part of handover message payoad,
+		 * so modifying offset.
+		 */
+		ho->offset += ac->length;
+		temp = temp->next;
+	}
+}
+
+__unused static void copy_cfg_records(struct near_ndef_message *ho, GList *cfgs)
+{
+	GList *temp = cfgs;
+	struct near_ndef_message *cfg;
+	uint32_t offset;
+
+	if (ho == NULL || temp == NULL)
+		return;
+
+	offset = ho->offset;
+
+	while (temp) {
+		cfg = temp->data;
+		memcpy(ho->data + offset, cfg->data, cfg->length);
+		/*
+		 * Configuration records (e.g. bt or wifi) records are not part
+		 * of handover payoad, they are consecutive ndef msgs. So
+		 * here we are not modifying ho->offset.
+		 */
+		offset += cfg->length;
+		temp = temp->next;
+	}
+}
+
+__unused static void set_mb_me_to_false(gpointer data, gpointer user_data)
+{
+	struct near_ndef_message *msg = data;
+
+	near_ndef_set_mb_me(msg->data, FALSE, FALSE);
 }
 
 static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
