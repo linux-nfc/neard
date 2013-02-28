@@ -3327,9 +3327,28 @@ static inline char *get_uri_field(DBusMessage *msg)
 	return get_text_field(msg, "URI");
 }
 
-static inline char *get_carrier_field(DBusMessage *msg)
+static GSList *get_carrier_field(DBusMessage *msg)
 {
-	return get_text_field(msg, "Carrier");
+	char *carrier;
+	char **arr;
+	GSList *carriers = NULL;
+	uint8_t num_of_carriers, i;
+
+	DBG("");
+
+	carrier = get_text_field(msg, "Carrier");
+	if (carrier == NULL)
+		return NULL;
+
+	arr = g_strsplit(carrier, ",", NEAR_CARRIER_MAX);
+	num_of_carriers = g_strv_length(arr);
+
+	for (i = 0; i < num_of_carriers; i++)
+		carriers = g_slist_append(carriers, g_strdup(arr[i]));
+
+	g_strfreev(arr);
+
+	return carriers;
 }
 
 static struct near_ndef_message *build_text_record(DBusMessage *msg)
@@ -3443,49 +3462,14 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 
 static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 {
-	char *carrier_type = NULL;
-	uint8_t carrier;
-	struct near_ndef_record record;
-	struct near_ndef_message *ho = NULL;
+	struct near_ndef_message *ho;
+	GSList *carriers;
 
 	DBG("");
 
-	carrier_type = get_carrier_field(msg);
-	if (carrier_type == NULL) {
-		DBG("Empty carrier name");
-		return NULL;
-	}
-
-	carrier = NEAR_CARRIER_EMPTY;
-	if (g_strcmp0(carrier_type, "bluetooth") == 0)
-		carrier |= NEAR_CARRIER_BLUETOOTH;
-	if (g_strcmp0(carrier_type, "wifi") == 0)
-		carrier |= NEAR_CARRIER_WIFI;
-
-	if (carrier == NEAR_CARRIER_EMPTY) {
-		DBG("Invalid carrier name");
-		return NULL;
-	}
-
-	/* Build local record */
-	memset(&record, 0, sizeof(record));
-
-	/* Do a Ho */
-	record.ho = g_try_malloc0(sizeof(struct near_ndef_ho_payload));
-	if (record.ho == NULL)
-		return NULL;
-
-	/* fill the Ho */
-	record.ho->version = HANDOVER_VERSION;
-
-	/* Generate random number for Collision Resolution Record */
-	record.ho->collision_record = GUINT16_TO_BE(
-				g_random_int_range(0, G_MAXUINT16 + 1));
-	record.ho->err_record = NULL;
-
-	ho = near_ndef_prepare_handover_record("Hr", &record, carrier, NULL);
-
-	free_ho_payload(record.ho);
+	carriers = get_carrier_field(msg);
+	ho = near_ndef_prepare_hr_message(carriers);
+	g_slist_free_full(carriers, g_free);
 
 	return ho;
 }

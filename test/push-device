@@ -12,7 +12,7 @@ def help_text():
 	print "e.g. < %s /org/neard/nfc0/device0 Text UTF-8 en-US hello,Type2! >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/device0 URI http://www.nfc-forum.com >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/device0 SmartPoster http://www.nfc-forum.com >" % (sys.argv[0])
-	print "e.g. < %s /org/neard/nfc0/device0 Handover bluetooth >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/device0 Handover bluetooth,wifi >" % (sys.argv[0])
 	sys.exit(1)
 
 if len(sys.argv) < 2:

@@ -183,6 +183,8 @@ void __near_plugin_cleanup(void);
 #define NEAR_HANDOVER_AGENT_BLUETOOTH	"bluetooth"
 #define NEAR_HANDOVER_AGENT_WIFI		"wifi"
 
+#define NEAR_CARRIER_MAX	2
+
 /* near_ndef_handover_carrier*/
 enum handover_carrier {
 	NEAR_CARRIER_EMPTY =  0x00,
