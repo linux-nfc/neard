@@ -12,6 +12,12 @@ eir_test_data = [0x16,0x00\
 		,0x08,0x09,0x41,0x72,0x72,0x61,0x6b,0x69,0x73\
 		,0x04,0x0d,0x6e,0x01,0x00]
 
+wsc_test_data = [0x10,0x4A,0x00,0x01,0x10\
+		,0x10,0x45,0x00,0x08\
+		,0x74,0x65,0x73,0x74,0x73,0x73,0x69,0x64\
+		,0x10,0x27,0x00,0x06\
+		,0x62,0x6C,0x61,0x62,0x6C,0x61]
+
 power_state = None
 
 def print_fields(fields):
@@ -26,7 +32,11 @@ def print_fields(fields):
 	if 'State' in fields:
 		print '  State: %s' % fields['State']
 
-class HOAgent(dbus.service.Object):
+	if 'WSC' in fields:
+		s = ' '.join('{:#02x}'.format(i) for i in fields['WSC'])
+		print '  WSC:  %s' % s
+
+class BTHOAgent(dbus.service.Object):
 
 	@dbus.service.method('org.neard.HandoverAgent',
 					in_signature='',
@@ -60,6 +70,40 @@ class HOAgent(dbus.service.Object):
 		else:
 			return {'EIR' : eir_test_data}
 
+class WiFiHOAgent(dbus.service.Object):
+
+	@dbus.service.method('org.neard.HandoverAgent',
+					in_signature='',
+					out_signature='')
+	def Release(self):
+		print 'Release'
+		mainloop.quit()
+
+	@dbus.service.method('org.neard.HandoverAgent',
+					in_signature='a{sv}',
+					out_signature='')
+	def PushOOB(self, fields):
+		print 'PushOOB'
+		print_fields(fields)
+
+	@dbus.service.method('org.neard.HandoverAgent',
+					in_signature='a{sv}',
+					out_signature='a{sv}')
+
+	def RequestOOB(self, fields):
+		print 'RequestOOB'
+		print_fields(fields)
+
+		print '  Replying with'
+		s = ' '.join('{:#02x}'.format(i) for i in wsc_test_data)
+		print '    WSC: %s' % s
+
+		if power_state != 'unknown':
+			print '    State: %s' % power_state
+			return {'WSC' : wsc_test_data, 'State' : power_state}
+		else:
+			return {'WSC' : wsc_test_data}
+
 if __name__ == '__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
@@ -76,15 +120,21 @@ if __name__ == '__main__':
 	manager = dbus.Interface(bus.get_object('org.neard', '/'),
 							'org.neard.Manager')
 
-	path = '/test/handover/agent'
-	carrier = 'bluetooth'
-	object = HOAgent(bus, path)
+	btpath = '/test/handover/bt/agent'
+	btcarrier = 'bluetooth'
+	btobject = BTHOAgent(bus, btpath)
 
-	manager.RegisterHandoverAgent(path, carrier)
+	wifipath = '/test/handover/wifi/agent'
+	wificarrier = 'wifi'
+	wifiobject = WiFiHOAgent(bus, wifipath)
+
+	manager.RegisterHandoverAgent(btpath, btcarrier)
+	manager.RegisterHandoverAgent(wifipath, wificarrier)
 
 	mainloop = gobject.MainLoop()
 
 	try:
 		mainloop.run()
 	except (KeyboardInterrupt):
-		manager.UnregisterHandoverAgent(path, carrier)
+		manager.UnregisterHandoverAgent(btpath, btcarrier)
+		manager.UnregisterHandoverAgent(wifipath, wificarrier)
