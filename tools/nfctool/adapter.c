@@ -24,8 +24,9 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <linux/nfc.h>
 #include <glib.h>
+
+#include <near/nfc_copy.h>
 
 #include "adapter.h"
 #include "nfctool.h"
