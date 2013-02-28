@@ -202,7 +202,9 @@ int main(int argc, char *argv[])
 
 	parse_config(config);
 
-	__near_netlink_init();
+	if (__near_netlink_init() < 0)
+		exit(1);
+
 	__near_tag_init();
 	__near_device_init();
 	__near_adapter_init();
