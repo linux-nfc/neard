@@ -826,6 +826,7 @@ int snep_core_init(void)
 void snep_core_exit(void)
 {
 	snep_validation_exit();
+	snep_exit();
 
 	g_hash_table_destroy(snep_client_hash);
 	snep_client_hash = NULL;
