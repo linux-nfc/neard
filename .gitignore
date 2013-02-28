@@ -34,3 +34,5 @@ src/neard
 tools/snep-send
 tools/nfctool/nfctool
 unit/test-ndef
+unit/test-ndef-parse
+unit/test-ndef-build
