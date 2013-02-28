@@ -477,7 +477,6 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 	struct t3_cookie *cookie = data;
 	int err = 0;
 	struct type3_cmd cmd;
-	uint16_t system_code;
 
 	DBG("length: %d", length);
 
@@ -492,8 +491,6 @@ static int receive_system_code(uint8_t *resp, int length, void *data)
 
 	cookie->ic_type = resp[IC_TYPE_OFFSET];
 	memcpy(cookie->IDm, resp + OFS_IDM, LEN_ID);
-	system_code = ((uint16_t) (resp[length - 2])) << 8;
-	system_code |= resp[length - 1];
 
 	switch (resp[IC_TYPE_OFFSET]) {
 	case FELICA_LITE_IC_TYPE:
