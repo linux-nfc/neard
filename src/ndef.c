@@ -77,8 +77,6 @@ enum record_tnf {
 
 #define AC_CPS_MASK 0x03
 
-#define __unused __attribute__ ((unused))
-
 enum record_type {
 	RECORD_TYPE_WKT_SMART_POSTER          =   0x01,
 	RECORD_TYPE_WKT_URI                   =   0x02,
@@ -1372,87 +1370,90 @@ static void correct_eir_len(struct carrier_data *data)
 	}
 }
 
-static struct near_ndef_mime_payload *
-parse_mime_type(struct near_ndef_record *record, uint8_t *ndef_data,
-		size_t ndef_length, size_t offset, uint32_t payload_length,
-		near_bool_t action, struct near_ndef_ac_payload *ac,
-		struct near_ndef_message **reply)
+static int process_mime_type(struct near_ndef_mime_payload *mime,
+					struct carrier_data *c_data)
 {
-	struct near_ndef_mime_payload *mime = NULL;
-	int err = 0;
-	struct carrier_data data;
+	int err = -EINVAL;
 
 	DBG("");
 
-	memset(&data, 0, sizeof(data));
+	if (mime == NULL || c_data == NULL)
+		return -EINVAL;
 
-	if ((ndef_data == NULL) || ((offset + payload_length) > ndef_length))
+	switch (mime->handover.carrier_type) {
+	case NEAR_CARRIER_BLUETOOTH:
+		err = __near_agent_handover_push_data(HO_AGENT_BT, c_data);
+		if (err == -ESRCH)
+			err = __near_bluetooth_parse_oob_record(c_data,
+					&mime->handover.properties, TRUE);
+		break;
+
+	case NEAR_CARRIER_WIFI:
+		err = __near_agent_handover_push_data(HO_AGENT_WIFI, c_data);
+		break;
+
+	case NEAR_CARRIER_EMPTY:
+	case NEAR_CARRIER_UNKNOWN:
+		break;
+	}
+
+	return err;
+}
+
+static struct near_ndef_mime_payload *parse_mime_type(
+			struct near_ndef_record *record, uint8_t *ndef_data,
+			size_t ndef_length, size_t offset,
+			uint32_t payload_length, struct carrier_data **c_data)
+{
+	struct near_ndef_mime_payload *mime;
+	struct carrier_data *c_temp;
+
+	DBG("");
+
+	if (c_data == NULL || ndef_data == NULL ||
+			((offset + payload_length) > ndef_length))
 		return NULL;
 
 	mime = g_try_malloc0(sizeof(struct near_ndef_mime_payload));
 	if (mime == NULL)
 		return NULL;
 
-	mime->type = g_strdup(record->header->type_name);
-
-	DBG("MIME Type  '%s' action: %d", mime->type, action);
-	if (strcmp(mime->type, BT_MIME_STRING_2_1) == 0) {
-		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
-		data.type = BT_MIME_V2_1;
-		data.size = record->header->payload_len;
-		memcpy(data.data, ndef_data + offset, data.size);
-
-		correct_eir_len(&data);
-	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
-		/* support this only for static handover */
-		if (action == TRUE) {
-			mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
-			data.type = BT_MIME_V2_0;
-			data.size = record->header->payload_len;
-			memcpy(data.data, ndef_data + offset, data.size);
-		}
-	}
-
-	if (data.size == 0)
-		goto done;
-
-	/*
-	 * ac might be NULL if not present eg. in simplified tag format for
-	 * a single BT carrier.
-	 */
-	if (ac != NULL)
-		data.state = ac->cps;
-	else
-		data.state = CPS_UNKNOWN;
-
-	if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE) {
-		if (action == TRUE) {
-			err = __near_agent_handover_push_data(HO_AGENT_BT,
-								&data);
-		} else if (reply != NULL) {
-			*reply = near_ndef_prepare_handover_record("Hs",
-					record, NEAR_CARRIER_BLUETOOTH, &data);
-			if (*reply == NULL)
-				err = -ENOMEM;
-		}
-	} else {
-		err = __near_bluetooth_parse_oob_record(&data,
-					&mime->handover.properties, action);
-		if (err == 0 && reply != NULL && action == FALSE) {
-			*reply = near_ndef_prepare_handover_record("Hs",
-					record, NEAR_CARRIER_BLUETOOTH, NULL);
-			if (*reply == NULL)
-				err = -ENOMEM;
-		}
-	}
-
-done:
-	if (err < 0) {
-		DBG("Parsing mime error %d", err);
-		g_free(mime->type);
+	c_temp = g_try_malloc0(sizeof(struct carrier_data));
+	if (c_temp == NULL) {
 		g_free(mime);
 		return NULL;
 	}
+
+	mime->type = g_strdup(record->header->type_name);
+
+	DBG("MIME Type '%s'", mime->type);
+	if (strcmp(mime->type, BT_MIME_STRING_2_1) == 0) {
+		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
+		c_temp->type = BT_MIME_V2_1;
+		c_temp->size = record->header->payload_len;
+		memcpy(c_temp->data, ndef_data + offset, c_temp->size);
+		correct_eir_len(c_temp);
+	} else if (strcmp(mime->type, BT_MIME_STRING_2_0) == 0) {
+		mime->handover.carrier_type = NEAR_CARRIER_BLUETOOTH;
+		c_temp->type = BT_MIME_V2_0;
+		c_temp->size = record->header->payload_len;
+		memcpy(c_temp->data, ndef_data + offset, c_temp->size);
+	} else if (strcmp(mime->type, WIFI_WSC_MIME_STRING) == 0) {
+		mime->handover.carrier_type = NEAR_CARRIER_WIFI;
+		c_temp->type = WIFI_WSC_MIME;
+		c_temp->size = record->header->payload_len;
+		memcpy(c_temp->data, ndef_data + offset, c_temp->size);
+	} else {
+		g_free(mime->type);
+		g_free(mime);
+		g_free(c_temp);
+		mime = NULL;
+		c_temp = NULL;
+		*c_data = NULL;
+		return NULL;
+	}
+
+	*c_data = c_temp;
 
 	return mime;
 }
@@ -1743,249 +1744,6 @@ static struct near_ndef_message *near_ndef_prepare_cr_message(uint16_t cr_id)
 	return cr_msg;
 }
 
-/* Prepare the bluetooth data record */
-static struct near_ndef_message *near_ndef_prepare_bt_message(uint8_t *bt_data,
-			int bt_data_len, char cdr, uint8_t cdr_len)
-{
-	struct near_ndef_message *bt_msg = NULL;
-
-	if (bt_data == NULL)
-		goto fail;
-
-	bt_msg = ndef_message_alloc_complete(BT_MIME_STRING_2_1, bt_data_len,
-					&cdr, cdr_len, RECORD_TNF_MIME,
-					TRUE, TRUE);
-	if (bt_msg == NULL)
-		goto fail;
-
-	/* store data */
-	memcpy(bt_msg->data + bt_msg->offset, bt_data, bt_data_len);
-
-	return bt_msg;
-
-fail:
-	free_ndef_message(bt_msg);
-
-	return NULL;
-}
-
-/*
- * Walk thru the cfgs list and set the carriers bitfield
- */
-static uint8_t near_get_carriers_list(struct near_ndef_record *record)
-{
-	struct near_ndef_ho_payload *ho = record->ho;
-	uint8_t carriers;
-	int i;
-
-	carriers = 0;
-
-	for (i = 0; i < ho->number_of_cfg_payloads; i++) {
-		struct near_ndef_mime_payload *rec = ho->cfg_payloads[i];
-
-		carriers |= rec->handover.carrier_type;
-	}
-
-	return carriers;
-}
-
-/*
- * Walk thru the cfgs list and get the properties corresponding
- * to the carrier bit.
- */
-static uint16_t near_get_carrier_properties(struct near_ndef_record *record,
-						uint8_t carrier_bit)
-{
-	struct near_ndef_ho_payload *ho = record->ho;
-	int i;
-
-	for (i = 0; i < ho->number_of_cfg_payloads; i++) {
-		struct near_ndef_mime_payload *rec = ho->cfg_payloads[i];
-
-		if ((rec->handover.carrier_type & carrier_bit) != 0)
-			return rec->handover.properties;
-	}
-
-	return OOB_PROPS_EMPTY;
-}
-
-/*
- * @brief Prepare Handover select record with mandatory fields.
- *
- * TODO: only mime (BT) are supported now... Wifi will come soon...
- * Only 1 ac record + 1 collision record+ Hr header
- */
-struct near_ndef_message *near_ndef_prepare_handover_record(char *type_name,
-					struct near_ndef_record *record,
-					uint8_t carriers,
-					struct carrier_data *remote)
-{
-	struct carrier_data *local = NULL;
-	struct near_ndef_message *hs_msg = NULL;
-	struct near_ndef_message *ac_msg = NULL;
-	struct near_ndef_message *cr_msg = NULL;
-	struct near_ndef_message *bt_msg = NULL;
-	uint16_t collision;
-	uint8_t hs_length;
-	near_bool_t mb, me;
-	char cdr = '0';			/* Carrier data reference */
-
-	if (record->ho == NULL)
-		goto fail;
-
-	collision = record->ho->collision_record;
-
-	/* no cr on Hs */
-	if (strncmp((char *) type_name, "Hs", 2) == 0)
-		collision = 0;
-
-	/* Walk the cfg list to get the carriers */
-	if (carriers == NEAR_CARRIER_UNKNOWN)
-		carriers = near_get_carriers_list(record);
-
-	/*
-	 * Prepare records to be added
-	 * now prepare the cr message: MB=1 ME=0
-	 */
-	if (collision != 0) {
-		cr_msg = near_ndef_prepare_cr_message(collision);
-		if (cr_msg == NULL)
-			goto fail;
-	}
-
-	/* If there's no carrier, we create en empty ac record */
-	if (carriers == NEAR_CARRIER_EMPTY) {
-		cdr = 0x00;
-
-		ac_msg = near_ndef_prepare_ac_message(CPS_ACTIVE, cdr);
-		if (ac_msg == NULL)
-			goto fail;
-	}
-
-	if (carriers & NEAR_CARRIER_BLUETOOTH) {
-		if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE) {
-			local = __near_agent_handover_request_data(HO_AGENT_BT,
-									remote);
-		} else {
-			/* Retrieve the bluetooth settings */
-			uint16_t props = near_get_carrier_properties(record,
-							NEAR_CARRIER_BLUETOOTH);
-
-			local = __near_bluetooth_local_get_properties(props);
-		}
-
-		if (local == NULL) {
-			near_error("Getting Bluetooth OOB data failed");
-			goto fail;
-		}
-
-		bt_msg = near_ndef_prepare_bt_message(local->data, local->size,
-								cdr, 1);
-		if (bt_msg == NULL)
-			goto fail;
-
-		ac_msg = near_ndef_prepare_ac_message(local->state, cdr);
-		if (ac_msg == NULL)
-			goto fail;
-
-		near_ndef_set_mb_me(bt_msg->data, FALSE, TRUE);
-	}
-
-	if (carriers & NEAR_CARRIER_WIFI) {
-		/* TODO LATER */
-		goto fail;
-	}
-
-	/*
-	 * Build the complete handover frame
-	 * Prepare Hs or Hr message (1 for version)
-	 */
-	hs_length = 1 + ac_msg->length;
-	if (cr_msg != NULL)
-		hs_length += cr_msg->length;
-
-	if (bt_msg != NULL)
-		hs_msg = ndef_message_alloc(type_name, hs_length +
-								bt_msg->length);
-	else
-		hs_msg = ndef_message_alloc(type_name, hs_length);
-	if (hs_msg == NULL)
-		goto fail;
-
-	/*
-	 * The handover payload length is not the *real* length.
-	 * The PL refers to the NDEF record, not the extra ones.
-	 * So, we have to fix the payload length in the header.
-	 */
-	hs_msg->data[NDEF_PAYLOAD_LENGTH_OFFSET] = hs_length;
-
-	near_ndef_set_mb_me(hs_msg->data, TRUE, TRUE);
-
-	if ((carriers != NEAR_CARRIER_EMPTY) || (cr_msg != NULL))
-		near_ndef_set_me(hs_msg->data, FALSE);
-
-	/* Add version */
-	hs_msg->data[hs_msg->offset++] = HANDOVER_VERSION;
-
-	/* Prepare MB / ME flags */
-	/* cr */
-	mb = TRUE;
-	me = TRUE;
-	if (cr_msg != NULL) {
-		near_ndef_set_mb_me(cr_msg->data, mb, me);
-		if (ac_msg->length != 0)
-			near_ndef_set_me(cr_msg->data, FALSE);
-		mb = FALSE;
-	}
-
-	/* ac */
-	if (ac_msg->length != 0)
-		near_ndef_set_mb_me(ac_msg->data, mb, TRUE); /* xxx, TRUE */
-
-	/* Now, copy the datas */
-	/* copy cr */
-	if (cr_msg != NULL) {
-		memcpy(hs_msg->data + hs_msg->offset, cr_msg->data,
-				cr_msg->length);
-		hs_msg->offset += cr_msg->length;
-	}
-
-	/* copy ac */
-	memcpy(hs_msg->data + hs_msg->offset, ac_msg->data, ac_msg->length);
-	hs_msg->offset += ac_msg->length;
-
-	if (hs_msg->offset > hs_msg->length)
-		goto fail;
-
-	/*
-	 * Additional NDEF (associated to the ac records)
-	 * Add the BT record which is not part in hs initial size
-	 */
-	if (bt_msg != NULL)
-		memcpy(hs_msg->data + hs_msg->offset, bt_msg->data,
-							bt_msg->length);
-
-	free_ndef_message(ac_msg);
-	free_ndef_message(cr_msg);
-	free_ndef_message(bt_msg);
-	g_free(local);
-
-	DBG("Hs NDEF done");
-
-	return hs_msg;
-
-fail:
-	near_error("handover %s record preparation failed", type_name);
-
-	free_ndef_message(ac_msg);
-	free_ndef_message(cr_msg);
-	free_ndef_message(bt_msg);
-	free_ndef_message(hs_msg);
-	g_free(local);
-
-	return NULL;
-}
-
 static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 					uint8_t *data, int data_len,
 					char cdr, uint8_t cdr_len)
@@ -2228,7 +1986,6 @@ fail:
 	return NULL;
 }
 
-__unused
 static struct near_ndef_message *near_ndef_prepare_hs_message(
 					GSList *remote_mimes,
 					GSList *remote_cfgs)
@@ -2356,7 +2113,6 @@ static enum handover_carrier string2carrier(char *carrier)
 	return NEAR_CARRIER_UNKNOWN;
 }
 
-__unused
 static struct near_ndef_message *near_ndef_prepare_hr_message(GSList *carriers)
 {
 	struct near_ndef_message *hr_msg = NULL;
@@ -2522,12 +2278,13 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	struct near_ndef_ho_payload *ho_payload = NULL;
 	struct near_ndef_ac_payload *ac = NULL;
 	struct near_ndef_mime_payload *mime = NULL;
+	struct carrier_data *c_data;
 	struct near_ndef_record *trec = NULL;
-	GSList *acs = NULL, *mimes = NULL;
-	uint8_t mb = 0, me = 0;
+	GSList *acs = NULL, *mimes = NULL, *c_datas = NULL;
+	uint8_t mb = 0, me = 0, i;
 	uint32_t offset;
 	int16_t count_ac = 0;
-	near_bool_t bt_pair;
+	near_bool_t action = FALSE, status;
 
 	DBG("");
 
@@ -2582,21 +2339,9 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
 		case RECORD_TYPE_WKT_HANDOVER_SELECT:
 		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
 			break;
-
-		case RECORD_TYPE_UNKNOWN:
-			/*
-			 * If there's something we don't understand, we must
-			 * return an empty Hs
-			 */
-			g_slist_free(mimes);
-			g_slist_free(acs);
-
-			mimes = NULL;
-			acs = NULL;
-
-			goto empty_hs;
 
 		case RECORD_TYPE_WKT_HANDOVER_CARRIER:
 			DBG("HANDOVER_CARRIER");
@@ -2618,30 +2363,31 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 
 			/*
 			 * In Handover, the mime type gives bluetooth handover
-			 * configuration datas.
+			 * or WiFi configuration data.
 			 * If we initiated the session, the received Hs frame
 			 * is the signal to launch the pairing.
 			 */
 			if (rec_type == RECORD_TYPE_WKT_HANDOVER_SELECT)
-				bt_pair = TRUE;
+				action = TRUE;
 			else
-				bt_pair = FALSE;
+				action = FALSE;
 
 			/* HO payload for reply creation */
 			trec->ho = ho_payload;
 
 			mime = parse_mime_type(trec, payload, frame_length,
-						offset,
-						trec->header->payload_len,
-						bt_pair, ac, reply);
-
+					offset, trec->header->payload_len,
+					&c_data);
 			trec->ho = NULL;
 
-			if (mime == NULL)
+			if (mime == NULL || c_data == NULL)
 				goto fail;
 
 			/* add the mime to the list */
 			mimes = g_slist_append(mimes, mime);
+			/* add the carrier data to the list */
+			c_datas = g_slist_append(c_datas, c_data);
+
 			count_ac--;
 			if (count_ac == 0)
 				offset = ho_length;
@@ -2691,20 +2437,35 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 		trec->header = NULL;
 
 		g_free(trec);
+		trec = NULL;
 	}
 
-empty_hs:
 	/*
-	 * If there's no ac AND mimes BUT a reply ptr
-	 * we have to fill the reply with a message containing
-	 * zero alternative carriers.
+	 * Incase of multiple carriers, handover with any carrier
+	 * gets done then leave the loop.
 	 */
-	if ((acs == NULL) && (mimes == NULL)) {
-		if (reply != NULL) {
-			struct near_ndef_record rec;
-			rec.ho = ho_payload;
-			*reply = near_ndef_prepare_handover_record("Hs",
-					&rec, NEAR_CARRIER_EMPTY, NULL);
+	if (action == TRUE) {
+		status = FALSE;
+		count_ac = g_slist_length(mimes);
+
+		for (i = 0; i < count_ac; i++) {
+			if (process_mime_type(g_slist_nth_data(mimes, i),
+					g_slist_nth_data(c_datas, i)) == 0) {
+				status = TRUE;
+				break;
+			}
+		}
+
+		if (status == FALSE) {
+			DBG("could not process alternative carriers");
+			goto fail;
+		}
+	} else if (reply != NULL) {
+		/* Prepare Hs, it depends upon Hr message carrier types */
+		*reply = near_ndef_prepare_hs_message(mimes, c_datas);
+		if (*reply == NULL) {
+			DBG("error in preparing in HS record");
+			goto fail;
 		}
 	}
 
@@ -2716,6 +2477,8 @@ empty_hs:
 		goto fail;
 
 	DBG("handover payload parsing complete");
+
+	g_slist_free_full(c_datas, g_free);
 
 	return ho_payload;
 
@@ -2731,6 +2494,7 @@ fail:
 		g_free(trec);
 	}
 
+	g_slist_free_full(c_datas, g_free);
 	free_ho_payload(ho_payload);
 
 	return NULL;
@@ -2840,6 +2604,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 	uint8_t p_mb = 0, p_me = 0, *record_start;
 	size_t offset = 0;
 	struct near_ndef_record *record = NULL;
+	struct carrier_data *c_data;
 
 	DBG("");
 
@@ -2937,12 +2702,18 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 			record->mime = parse_mime_type(record, ndef_data,
 						ndef_length, offset,
 						record->header->payload_len,
-						TRUE, NULL, reply);
-
-
-			if (record->mime == NULL)
+						&c_data);
+			if (record->mime == NULL || c_data == NULL)
 				goto fail;
 
+			if (process_mime_type(record->mime, c_data) < 0) {
+				g_free(c_data);
+				c_data = NULL;
+				goto fail;
+			}
+
+			g_free(c_data);
+			c_data = NULL;
 			break;
 		}
 
