@@ -202,8 +202,10 @@ int main(int argc, char *argv[])
 
 	parse_config(config);
 
-	if (__near_netlink_init() < 0)
+	if (__near_netlink_init() < 0) {
+		near_error("*** NETLINK INITIALIZATION FAILED ***");
 		exit(1);
+	}
 
 	__near_tag_init();
 	__near_device_init();
