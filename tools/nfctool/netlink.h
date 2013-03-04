@@ -44,4 +44,6 @@ int nl_set_params(struct nfc_adapter *adapter, gint32 lto, gint32 rw,
 
 int nl_get_params(struct nfc_adapter *adapter);
 
+int nl_send_sdreq(struct nfc_adapter *adapter, GSList *uris);
+
 #endif /* __NETLINK_H */

@@ -40,6 +40,7 @@
 static GMainLoop *main_loop = NULL;
 
 static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data);
+static int nfctool_snl_cb(guint8 cmd, guint32 idx, gpointer data);
 
 static void nfctool_quit(gboolean force);
 
@@ -87,6 +88,10 @@ static int nfctool_start_poll(void)
 	else
 		printf("nfc%d already activated\n\n", adapter->idx);
 
+	/* Don't fail if there is a pending SNL request */
+	if (opts.snl)
+		return 0;
+
 	return err;
 }
 
@@ -111,6 +116,81 @@ static int nfctool_set_params(void)
 
 exit:
 	return err;
+}
+
+static int nfctool_snl_send_request(struct nfc_adapter *adapter)
+{
+	int err;
+
+	nl_add_event_handler(NFC_EVENT_LLC_SDRES, nfctool_snl_cb);
+
+	err = nl_send_sdreq(adapter, opts.snl_list);
+	if (err)
+		print_error("Can't send SNL request: %s", strerror(-err));
+
+	return err;
+}
+
+static int nfctool_dep_link_up_cb(guint8 cmd, guint32 idx, gpointer data)
+{
+	struct nfc_adapter *adapter;
+
+	printf("Link is UP for adapter nfc%d\n\n", idx);
+
+	if (idx != opts.adapter_idx)
+		return -ENODEV;
+
+	adapter = adapter_get(idx);
+	if (!adapter)
+		return -ENODEV;
+
+	nfctool_snl_send_request(adapter);
+
+	return 0;
+}
+
+static int nfctool_dep_link_down_cb(guint8 cmd, guint32 idx, gpointer data)
+{
+	if (idx != opts.adapter_idx)
+		return -ENODEV;
+
+	printf("Link is DOWN for adapter nfc%d\n\n", idx);
+
+	opts.snl = FALSE;
+
+	nfctool_quit(FALSE);
+
+	return 0;
+}
+
+static int nfctool_snl(void)
+{
+	struct nfc_adapter *adapter;
+
+	adapter = adapter_get(opts.adapter_idx);
+	if (!adapter)
+		return -ENODEV;
+
+	if (adapter->polling) {
+		/* Delay netlink message until the link is established */
+		nl_add_event_handler(NFC_CMD_DEP_LINK_UP,
+						nfctool_dep_link_up_cb);
+
+		nl_add_event_handler(NFC_CMD_DEP_LINK_DOWN,
+						nfctool_dep_link_down_cb);
+
+		return 0;
+	}
+
+	if (adapter->rf_mode == NFC_RF_NONE) {
+		print_error("Can't send SNL request: No active link");
+
+		opts.snl = FALSE;
+
+		return -ENOLINK;
+	}
+
+	return nfctool_snl_send_request(adapter);
 }
 
 static void nfctool_send_dep_link_up(guint32 target_idx, guint32 adapter_idx)
@@ -141,6 +221,7 @@ static int nfctool_targets_found(guint32 adapter_idx)
 
 	printf("Targets found for nfc%d\n", adapter_idx);
 	adpater_print_targets(adapter, "  ");
+	printf("\n");
 
 	if (adapter->polling) {
 		g_slist_foreach(adapter->devices,
@@ -174,6 +255,65 @@ static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data)
 	return err;
 }
 
+static void nfctool_print_and_remove_snl(struct nfc_snl *sdres,
+					 guint32 adapter_idx)
+{
+	GSList *elem;
+
+	printf(" uri: %s - sap: %d\n", sdres->uri, sdres->sap);
+
+	if (adapter_idx == opts.adapter_idx) {
+		elem = g_slist_find_custom(opts.snl_list, sdres->uri,
+					   (GCompareFunc)g_strcmp0);
+
+		if (elem != NULL) {
+			g_free(elem->data);
+			opts.snl_list = g_slist_delete_link(opts.snl_list,
+							    elem);
+		}
+	}
+}
+
+static int nfctool_snl_cb(guint8 cmd, guint32 idx, gpointer data)
+{
+	GSList *sdres_list = (GSList *)data;
+
+	printf("nfc%d: Service Name lookup:\n", idx);
+
+	g_slist_foreach(sdres_list, (GFunc)nfctool_print_and_remove_snl,
+			GINT_TO_POINTER(idx));
+
+	printf("\n");
+
+	if (opts.snl_list == NULL) {
+		opts.snl = FALSE;
+		nfctool_quit(FALSE);
+	}
+
+	return 0;
+}
+
+struct nfc_snl *nfctool_snl_alloc(gsize uri_size)
+{
+	struct nfc_snl *snl;
+
+	snl = g_malloc(sizeof(struct nfc_snl));
+
+	snl->uri = g_malloc0(uri_size);
+	snl->uri_size = uri_size;
+	snl->sap = 0;
+
+	return snl;
+}
+
+void nfctool_sdres_free(struct nfc_snl *snl)
+{
+	if (snl->uri_size)
+		g_free(snl->uri);
+
+	g_free(snl);
+}
+
 static volatile sig_atomic_t __terminated = 0;
 
 static void sig_term(int sig)
@@ -199,6 +339,8 @@ struct nfctool_options opts = {
 	.rw = -1,
 	.miux = -1,
 	.need_netlink = FALSE,
+	.snl = FALSE,
+	.snl_list = NULL,
 	.sniff = FALSE,
 	.snap_len = 0,
 	.dump_symm = FALSE,
@@ -313,6 +455,20 @@ static gboolean opt_parse_show_timestamp_arg(const gchar *option_name,
 	return TRUE;
 }
 
+static gboolean opt_parse_snl_arg(const gchar *option_name, const gchar *value,
+				  gpointer data, GError **error)
+{
+	gchar *uri;
+
+	opts.snl = TRUE;
+
+	uri = g_strdup(value);
+
+	opts.snl_list = g_slist_prepend(opts.snl_list, uri);
+
+	return TRUE;
+}
+
 static GOptionEntry option_entries[] = {
 	{ "list", 'l', 0, G_OPTION_ARG_NONE, &opts.list,
 	  "list attached NFC devices", NULL },
@@ -323,6 +479,8 @@ static GOptionEntry option_entries[] = {
 	  "default mode is initiator", "[Initiator|Target|Both]" },
 	{ "set-param", 's', 0, G_OPTION_ARG_CALLBACK, opt_parse_set_param_arg,
 	  "set lto, rw, and/or miux parameters", "lto=150,rw=1,miux=100" },
+	{ "snl", 'k', 0, G_OPTION_ARG_CALLBACK, &opt_parse_snl_arg,
+	  "Send a Service Name Lookup request", "urn:nfc:sn:snep"},
 	{ "sniff", 'n', 0, G_OPTION_ARG_NONE, &opts.sniff,
 	  "start LLCP sniffer on the specified device", NULL },
 	{ "snapshot-len", 'a', 0, G_OPTION_ARG_INT, &opts.snap_len,
@@ -377,7 +535,8 @@ static int nfctool_options_parse(int argc, char **argv)
 		}
 	}
 
-	opts.need_netlink = opts.list || opts.poll || opts.set_param;
+	opts.need_netlink = opts.list || opts.poll ||
+			    opts.set_param || opts.snl;
 
 	if (!opts.need_netlink && !opts.sniff) {
 		printf("%s", g_option_context_get_help(context, TRUE, NULL));
@@ -385,7 +544,7 @@ static int nfctool_options_parse(int argc, char **argv)
 		goto exit;
 	}
 
-	if ((opts.poll || opts.set_param || opts.sniff) &&
+	if ((opts.poll || opts.set_param || opts.sniff || opts.snl) &&
 	    opts.adapter_idx == INVALID_ADAPTER_IDX) {
 		print_error("Please specify a device with -d nfcX option");
 
@@ -421,6 +580,8 @@ static void nfctool_options_cleanup(void)
 
 	if (opts.pcap_filename != NULL)
 		g_free(opts.pcap_filename);
+
+	g_slist_free_full(opts.snl_list, g_free);
 }
 
 static void nfctool_main_loop_clean(void)
@@ -431,7 +592,7 @@ static void nfctool_main_loop_clean(void)
 
 static void nfctool_quit(gboolean force)
 {
-	if (force || !opts.sniff)
+	if (force || (!opts.sniff && !opts.snl))
 		g_main_loop_quit(main_loop);
 }
 
@@ -453,25 +614,6 @@ int main(int argc, char **argv)
 		err = adapter_all_get_devices();
 		if (err)
 			goto exit_err;
-
-		if (opts.list && !opts.set_param)
-			adapter_idx_print_info(opts.adapter_idx);
-
-		if (opts.set_param) {
-			err = nfctool_set_params();
-			if (err)
-				goto exit_err;
-		}
-
-		if (opts.poll) {
-			err = nfctool_start_poll();
-
-			if (err == -EBUSY && opts.sniff)
-				err = 0;
-
-			if (err)
-				goto exit_err;
-		}
 	}
 
 	if (opts.sniff) {
@@ -480,7 +622,29 @@ int main(int argc, char **argv)
 			goto exit_err;
 	}
 
-	if (opts.poll || opts.sniff)
+	if (opts.list && !opts.set_param)
+		adapter_idx_print_info(opts.adapter_idx);
+
+	if (opts.set_param) {
+		err = nfctool_set_params();
+		if (err)
+			goto exit_err;
+	}
+
+	if (opts.poll) {
+		err = nfctool_start_poll();
+
+		if (err == -EBUSY && opts.sniff)
+			err = 0;
+
+		if (err)
+			goto exit_err;
+	}
+
+	if (opts.snl)
+		nfctool_snl();
+
+	if (opts.poll || opts.sniff || opts.snl)
 		nfctool_main_loop_start();
 
 	err = 0;

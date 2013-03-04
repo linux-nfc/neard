@@ -54,12 +54,24 @@ struct nfctool_options {
 	gint32 rw;
 	gint32 miux;
 	gboolean need_netlink;
+	gboolean snl;
+	GSList *snl_list;
 	gboolean sniff;
 	gsize snap_len;
 	gboolean dump_symm;
 	guint8 show_timestamp;
 	gchar *pcap_filename;
 };
+
+struct nfc_snl {
+	gchar *uri;
+	gsize uri_size;
+	guint8 sap;
+};
+
+struct nfc_snl *nfctool_snl_alloc(gsize uri_size);
+
+void nfctool_sdres_free(struct nfc_snl *snl);
 
 extern struct nfctool_options opts;
 

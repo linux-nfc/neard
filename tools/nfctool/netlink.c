@@ -556,6 +556,116 @@ nla_put_failure:
 	return err;
 }
 
+int nl_send_sdreq(struct nfc_adapter *adapter, GSList *uris)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	GSList *uri;
+	struct nlattr *sdp_attr, *uri_attr;
+	int err = 0, i;
+
+	DBG("");
+
+	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+		return -ENODEV;
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		return -ENOMEM;
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
+			  NLM_F_REQUEST, NFC_CMD_LLC_SDREQ, NFC_GENL_VERSION);
+	if (hdr == NULL) {
+		err = -EINVAL;
+		goto nla_put_failure;
+	}
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter->idx);
+
+	sdp_attr = nla_nest_start(msg, NFC_ATTR_LLC_SDP);
+	if (sdp_attr == NULL) {
+		err = -ENOMEM;
+		goto nla_put_failure;
+	}
+
+	i = 1;
+	uri = uris;
+	while (uri != NULL) {
+		uri_attr = nla_nest_start(msg, i);
+
+		if (uri_attr == NULL) {
+			err = -ENOMEM;
+			goto nla_put_failure;
+		}
+
+		NLA_PUT_STRING(msg, NFC_SDP_ATTR_URI, uri->data);
+
+		nla_nest_end(msg, uri_attr);
+
+		uri = g_slist_next(uri);
+
+		i++;
+	}
+
+	nla_nest_end(msg, sdp_attr);
+
+	err = nl_send_msg(nfc_state->event_sock, msg, NULL, NULL);
+
+	DBG("nl_send_msg returns %d", err);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
+static int nl_nfc_send_sdres_event(guint32 idx, struct nlattr *sdres_attr,
+							nfc_event_cb_t handler)
+{
+	GSList *sdres_list = NULL;
+	struct nfc_snl *sdres;
+	struct nlattr *attr;
+	struct nlattr *sdp_attrs[NFC_SDP_ATTR_MAX + 1];
+	int rem, err = 0;
+	size_t uri_len;
+
+	nla_for_each_nested(attr, sdres_attr, rem) {
+		err = nla_parse_nested(sdp_attrs, NFC_SDP_ATTR_MAX,
+					attr, NULL);
+
+		if (err != 0) {
+			DBG("nla_parse_nested returned %d\n", err);
+			continue;
+		}
+
+		if (sdp_attrs[NFC_SDP_ATTR_URI] == NULL ||
+		    sdp_attrs[NFC_SDP_ATTR_SAP] == NULL) {
+			print_error("Missing attribute in reply");
+			continue;
+		}
+
+		uri_len = nla_strlcpy(NULL, sdp_attrs[NFC_SDP_ATTR_URI], 0);
+
+		uri_len++;
+
+		sdres = nfctool_snl_alloc(uri_len);
+
+		nla_strlcpy(sdres->uri, sdp_attrs[NFC_SDP_ATTR_URI], uri_len);
+
+		sdres->sap = nla_get_u8(sdp_attrs[NFC_SDP_ATTR_SAP]);
+
+		DBG("URI: %s, sap: %d\n", sdres->uri, sdres->sap);
+
+		sdres_list = g_slist_append(sdres_list, sdres);
+	}
+
+	handler(NFC_EVENT_LLC_SDRES, idx, sdres_list);
+
+	g_slist_free_full(sdres_list, (GDestroyNotify)nfctool_sdres_free);
+
+	return err;
+}
+
 static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 {
 	guint32 idx = INVALID_ADAPTER_IDX;
@@ -574,8 +684,19 @@ static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 	if (handlers != NULL)
 		cb = g_hash_table_lookup(handlers, GINT_TO_POINTER(gnlh->cmd));
 
-	if (cb != NULL)
+	if (cb == NULL)
+		return NL_SKIP;
+
+	switch (gnlh->cmd) {
+	case NFC_EVENT_LLC_SDRES:
+		DBG("Received NFC_EVENT_LLC_SDRES\n");
+		nl_nfc_send_sdres_event(idx, attr[NFC_ATTR_LLC_SDP], cb);
+		break;
+
+	default:
 		cb(gnlh->cmd, idx, NULL);
+		break;
+	}
 
 	return NL_SKIP;
 }
