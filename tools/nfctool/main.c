@@ -39,6 +39,10 @@
 
 static GMainLoop *main_loop = NULL;
 
+static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data);
+
+static void nfctool_quit(gboolean force);
+
 static gchar *nfctool_poll_mode_str(int mode)
 {
 	if (mode == POLLING_MODE_TARGET)
@@ -63,6 +67,9 @@ static int nfctool_start_poll(void)
 
 		return -ENODEV;
 	}
+
+	nl_add_event_handler(NFC_EVENT_TARGETS_FOUND, nfctool_poll_cb);
+	nl_add_event_handler(NFC_EVENT_TM_ACTIVATED, nfctool_poll_cb);
 
 	err = nl_start_poll(adapter, opts.poll_mode);
 
@@ -106,16 +113,6 @@ exit:
 	return err;
 }
 
-static int nfctool_tm_activated(void)
-{
-	printf("Target mode activated\n");
-
-	if (!opts.sniff)
-		g_main_loop_quit(main_loop);
-
-	return 0;
-}
-
 static void nfctool_send_dep_link_up(guint32 target_idx, guint32 adapter_idx)
 {
 	nl_send_dep_link_up(adapter_idx, target_idx);
@@ -154,26 +151,25 @@ static int nfctool_targets_found(guint32 adapter_idx)
 	}
 
 exit:
-	if (!opts.sniff)
-		g_main_loop_quit(main_loop);
-
 	return err;
 }
 
-static int nfc_event_cb(guint8 cmd, guint32 idx)
+static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data)
 {
 	int err = 0;
 
+	DBG("cmd: %d, idx: %d", cmd, idx);
+
 	switch (cmd) {
 	case NFC_EVENT_TARGETS_FOUND:
-		DBG("Targets found");
 		err = nfctool_targets_found(idx);
 		break;
 	case NFC_EVENT_TM_ACTIVATED:
-		DBG("Target mode activated");
-		err = nfctool_tm_activated();
+		printf("Target mode activated\n");
 		break;
 	}
+
+	nfctool_quit(FALSE);
 
 	return err;
 }
@@ -189,7 +185,7 @@ static void sig_term(int sig)
 
 	DBG("Terminating");
 
-	g_main_loop_quit(main_loop);
+	nfctool_quit(TRUE);
 }
 
 struct nfctool_options opts = {
@@ -433,6 +429,12 @@ static void nfctool_main_loop_clean(void)
 		g_main_loop_unref(main_loop);
 }
 
+static void nfctool_quit(gboolean force)
+{
+	if (force || !opts.sniff)
+		g_main_loop_quit(main_loop);
+}
+
 int main(int argc, char **argv)
 {
 	int err;
@@ -444,7 +446,7 @@ int main(int argc, char **argv)
 	adapter_init();
 
 	if (opts.need_netlink) {
-		err = nl_init(nfc_event_cb);
+		err = nl_init();
 		if (err)
 			goto exit_err;
 

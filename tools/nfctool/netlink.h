@@ -21,13 +21,15 @@
 #ifndef __NETLINK_H
 #define __NETLINK_H
 
-typedef int (*nfc_event_cb_t)(guint8 cmd, guint32 adapter_idx);
+typedef int (*nfc_event_cb_t)(guint8 cmd, guint32 adapter_idx, gpointer data);
 
 struct nfc_adapter;
 
-int nl_init(nfc_event_cb_t cb);
+int nl_init(void);
 
 void nl_cleanup(void);
+
+void nl_add_event_handler(guint8 cmd, nfc_event_cb_t cb);
 
 int nl_get_devices(void);
 

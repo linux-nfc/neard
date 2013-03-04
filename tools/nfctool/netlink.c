@@ -77,7 +77,7 @@ static struct nlnfc_state *nfc_state = NULL;
 
 static GIOChannel *nl_gio_channel = NULL;
 
-static nfc_event_cb_t nfc_event_cb = NULL;
+static GHashTable *handlers = NULL;
 
 static int nl_error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
 			 void *arg)
@@ -561,9 +561,9 @@ static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 	guint32 idx = INVALID_ADAPTER_IDX;
 	struct nlattr *attr[NFC_ATTR_MAX + 1];
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
+	nfc_event_cb_t cb = NULL;
 
-	if (nfc_event_cb == NULL)
-		return NL_SKIP;
+	DBG("Received cmd %d", gnlh->cmd);
 
 	nla_parse(attr, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		genlmsg_attrlen(gnlh, 0), NULL);
@@ -571,7 +571,11 @@ static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 	if (attr[NFC_ATTR_DEVICE_INDEX] != NULL)
 		idx = nla_get_u32(attr[NFC_ATTR_DEVICE_INDEX]);
 
-	nfc_event_cb(gnlh->cmd, idx);
+	if (handlers != NULL)
+		cb = g_hash_table_lookup(handlers, GINT_TO_POINTER(gnlh->cmd));
+
+	if (cb != NULL)
+		cb(gnlh->cmd, idx, NULL);
 
 	return NL_SKIP;
 }
@@ -599,6 +603,12 @@ static gboolean nl_gio_handler(GIOChannel *channel,
 	return TRUE;
 }
 
+void nl_add_event_handler(guint8 cmd, nfc_event_cb_t cb)
+{
+	if (handlers != NULL)
+		g_hash_table_replace(handlers, GINT_TO_POINTER(cmd), cb);
+}
+
 void nl_cleanup(void)
 {
 	if (nl_gio_channel) {
@@ -617,9 +627,12 @@ void nl_cleanup(void)
 		g_free(nfc_state);
 		nfc_state = NULL;
 	}
+
+	if (handlers != NULL)
+		g_hash_table_remove_all(handlers);
 }
 
-int nl_init(nfc_event_cb_t cb)
+int nl_init(void)
 {
 	int err;
 	int fd;
@@ -676,6 +689,8 @@ int nl_init(nfc_event_cb_t cb)
 		goto exit_err;
 	}
 
+	handlers = g_hash_table_new(g_direct_hash, g_direct_equal);
+
 	fd = nl_socket_get_fd(nfc_state->event_sock);
 	nl_gio_channel = g_io_channel_unix_new(fd);
 	g_io_channel_set_close_on_unref(nl_gio_channel, TRUE);
@@ -686,8 +701,6 @@ int nl_init(nfc_event_cb_t cb)
 	g_io_add_watch(nl_gio_channel,
 		       G_IO_IN | G_IO_NVAL | G_IO_HUP | G_IO_ERR,
 		       nl_gio_handler, nfc_state);
-
-	nfc_event_cb = cb;
 
 	return 0;
 
