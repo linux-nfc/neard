@@ -29,7 +29,8 @@ builtin_sources =
 builtin_cflags =
 builtin_libadd =
 
-sbin_PROGRAMS = src/neard
+libexecdir = @libexecdir@/nfc
+libexec_PROGRAMS = src/neard
 
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/main.c src/error.c src/near.h src/log.c \
