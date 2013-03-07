@@ -69,7 +69,8 @@ else
 build_plugindir = $(plugindir)
 endif
 
-doc_files = doc/manager-api.txt doc/tag-api.txt doc/device-api.txt doc/adapter-api.txt
+doc_files = doc/manager-api.txt doc/tag-api.txt doc/device-api.txt \
+		doc/adapter-api.txt doc/agent-api.txt
 
 EXTRA_DIST = src/genbuiltin $(doc_files)
 
