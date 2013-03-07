@@ -1,0 +1,39 @@
+.\" neard.conf(5) manual page
+.\"
+.\" Copyright (C) 2013 Intel Corporation
+.\"
+.TH "neard.conf" "5" "7 March 2013" ""
+.SH NAME
+main.conf \- neard configuration file
+.SH SYNOPSIS
+/etc/neard/main.conf
+.br
+or
+.br
+\fI<SYSCONFDIR>\fP/neard/main.conf
+.br
+where <SYSCONFDIR> depends on your distribution or build.
+.SH DESCRIPTION
+.P
+.I main.conf
+is a configuration file for \fBneard\fP (8). The configuration file is
+optional but it can be used to set up various aspects of neard's
+behavior.
+.SH "FILE FORMAT"
+.P
+The configuration file format is key file format.
+It consists of sections (groups) of key-value pairs.
+Lines beginning with a '#' and blank lines are considered comments.
+Sections are started by a header line containing the section enclosed
+in '[' and ']', and ended implicitly by the start of the next section
+or the end of the file. Each key-value pair must be contained in a section.
+.P
+Description of sections and available keys follows:
+.SS [General]
+This section is the only mandatory section of the configuration file.
+.TP
+.B ConstantPoll=\fPtrue|false\fP
+Enable constant polling. Default is false. Constant polling will force neard
+into starting a new polling cycle whenever a target or a device are lost.
+.SH "SEE ALSO"
+.BR neard (8)

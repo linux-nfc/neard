@@ -1,0 +1,52 @@
+.\" neard(8) manual page
+.\"
+.\" Copyright (C) 2013 Intel Corporation
+.\"
+.TH NEARD "8" "7 March 2013"
+.SH NAME
+neard \- Near Field Communication daemon
+.SH SYNOPSIS
+.B neard [\-\-version] | [\-\-help]
+.PP
+.B neard [\-\-debug=<file1>:<file2>:...] [\-\-plugin=<plugin1>,<plugin2>,...] [\-\-noplugin=<plugin1>,<plugin2>,...] [\-\-nodaemon]
+.SH DESCRIPTION
+\fIneard\fP is an NFC (Near Field Communication) daemon for managing
+NFC operations on devices running the Linux operating system. It relies
+on the Linux kernel NFC socket and generic netlink families, and is a
+fully modular system that can be extended through plug-ins.
+
+It supports all 4 NFC tag types reading and writing, along with NFC LLCP
+(peer to peer mode) in both target and initiator modes. The Simple NDEF
+Exchange Protocol (SNEP), NDEF Push Protocol (NPP) and handover (Wi-Fi and
+Bluetooth) protocols are implemented as separate plugins on top of LLCP sockets.
+.P
+.SH OPTIONS
+The following options are supported:
+.TP
+.I "\-\-version"
+Print the neard software version and exit.
+.TP
+.I "\-\-help"
+Print neard's available options and exit.
+.TP
+.I "\-\-debug=<file1>:<file2>:..."
+Sets how much information neard sends to the log destination (usually
+syslog's "daemon" facility).  If the file options are omitted, then debugging
+information from all the source files are printed. If file options are
+present, then only debug prints from that source file are printed.
+Example: --debug=src/service.c:plugins/wifi.c
+.TP
+.I "\-\-plugin=<plugin1>,<plugin2>,..."
+Load these plugins only. The option can be a pattern containing
+"*" and "?" characters.
+.TP
+.I "\-\-noplugin=<plugin1>,<plugin2>,..."
+Never load these plugins. The option can be a pattern containing
+"*" and "?" characters.
+.TP
+.I "\-\-nodaemon"
+Do not daemonize. This is useful for debugging, and directs log output to
+the controlling terminal in addition to syslog.
+.TP
+.SH SEE ALSO
+.BR neard.conf (5).
