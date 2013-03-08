@@ -1,3 +1,13 @@
+ver 0.10
+	Added initial WiFi handover support.
+	Added Service Name Lookup support to nfctool.
+	Added NDEF building unit tests.
+	Added State support to Bluetooth handover agent.
+	Added neard and neard.conf man pages.
+	Added a copy of the NFC kernel header.
+	Fixed handover validation tests failures.
+	Fixed Tag and Device PropertyChanged signal.
+
 ver 0.9
 	Added NDEF unit tests.
 	Added SNEP validation server support.
