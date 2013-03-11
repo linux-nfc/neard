@@ -1,0 +1,168 @@
+.\" nfctool(1) manual page
+.\"
+.\" Copyright (C) 2013 Intel Corporation
+.\"
+.TH NFCTOOL 1 "February 2013"
+
+.SH NAME
+.B nfctool
+\- a NFC toolbox
+
+.SH SYNOPSIS
+.B nfctool [OPTIONS...]
+
+.SH DESCRIPTION
+.PP
+The \fBnfctool\fR application performs various operations on NFC devices, such
+as:
+.IP \[bu] 2
+list connected devices
+.IP \[bu]
+put device in polling mode
+.IP \[bu]
+get and set parameters for the local LLC
+.IP \[bu]
+send service name lookup request to the remote LLC.
+.IP \[bu]
+dump LLCP link traffic
+
+.SH OPTIONS
+.PP
+\fB\-h\fR, \fB\-\-help\fR
+.RS 4
+Print nfctool's available options and exit.
+.RE
+
+.PP
+\fB\-v\fR, \fB\-\-version\fR
+.RS 4
+Print nfctool's version and exit.
+.RE
+
+.PP
+\fB\-l\fR, \fB\-\-list\fR
+.RS 4
+List attached NFC devices. It also prints information such as remote tags or
+devices, supported protocols, RF mode, and LLC link parameters.
+.RE
+
+.PP
+\fB\-d\fR, \fB\-\-device\fR=\fINFCDEV\fR
+.RS 4
+Specify a nfc device (i.e. nfc0). This is mandatory for all operations except \fB\-l\fR.
+.RE
+
+.PP
+\fB\-p\fR, \fB\-\-poll\fR[=\fIMODE\fR]
+.RS 4
+Start poll on the device specified with \fB\-d\fR. \fIMODE\fR must be one of
+\fBInitiator\fR, \fBTarget\fR, or \fBBoth\fR and it defaults to \fBInitiator\fR
+when unspecified. Passing \fIMODE\fR as \fBi\fR, \fBt\fR, or \fBb\fR for
+respectively \fBInitiator\fR, \fBTarget\fR, or \fBBoth\fR is also accepted.
+.RE
+
+.PP
+\fB\-s\fR, \fB\-\-set\-param\fR=\fIPARAM=VAL\fR[,\fIPARAM=VAL\fR[,...]]
+.RS 4
+Set LLC link parameters. \fIPARAM\fR must be at least one of:
+.PP
+\fBlto\fR=0..255 \- Link TimeOut
+.RS 4
+Specify the maximum time interval between the last received LLC PDU from the
+remote to the local LLC and the first subsequent LLC PDU transmission from the
+local to the remote LLC. The value is expressed in multiples of 10 milliseconds
+and is encoded as a 8-bit unsigned integer.
+.PP
+The LTO parameter must be set before the LLC Link is established.
+.RE
+
+.PP
+\fBrw\fR=0..15 \- Receive Window size
+.RS 4
+Specify the maximum number of I PDUs the local LLC will accept before
+acknowledging them. A RW size of zero indicates that the local LLC will not
+accept I PDUs on that data link connection. A RW size of one indicates that the
+local LLC will acknowledge every I PDU before accepting additional I PDUs. It is
+encoded as a 4-bit unsigned integer.
+.PP
+The RW parameter can be set after the LLC Link is established. The new value
+will apply for subsequent connections.
+.RE
+.PP
+\fBmiux\fR=0..2047 \- Maximum Information Unit Extension
+.RS 4
+Specify the number of octets by which a LLC PDU information field
+may exceed the default maximum size of 128 octets. In other words,
+MIU = MIUX + 128. It is encoded as an 11-bit unsigned integer.
+.PP
+The MIUX parameter can be set after the LLC Link is established. The new value
+will apply for subsequent connections.
+.RE
+.RE
+
+.PP
+\fB\-k\fR, \fB\-\-snl\fR=\fIURN\fR
+.RS 4
+Send a Service Name Lookup request for \fIURN\fR (i.e. urn:nfc:sn:snep) to the
+remote LLC. Obviously, the LLC link must be up before the request is sent.
+.PP
+The remote should reply by returning the service access point (SAP) number or
+zero if it doesn't support the requested service.
+.PP
+\fBNote\fR: If used with -p, nfctool will wait for the LLC link to be up before
+sending the SNL request.
+.RE
+
+.PP
+\fB\-n\fR, \fB\-\-sniff\fR
+.RS 4
+Start LLCP sniffing on the device specified with \fB-d\fR option.
+
+.PP
+\fBSNIFFER SPECIFIC OPTIONS\fR
+.RS 4
+The folowing options only apply with \fR-n\fB.
+
+.PP
+\fB\-a\fR, \fB\-\-snapshot\-len\fR=\fISNAPLEN\fR
+.RS 4
+Capture \fISNAPLEN\fR bytes from each packet. Default snapshot length is 1024
+bytes.
+.RE
+
+.PP
+\fB\-y\fR, \fB\-\-dump\-symm\fR
+.RS 4
+Dump SYMM packets to stdout. this will generate a \fBLOT\fR of output.
+.PP
+\fBNote\fR: The \fB-y\fR option concerns console output only. SYMM packets are
+always dumped to the pcap file when specified by \fB-f\fR (See below).
+.RE
+
+.PP
+\fB\-t\fR, \fB\-\-show\-timestamp\fR[=\fIMODE\fR]
+.RS 4
+Show packet timestamps. Setting \fIMODE\fR as \fBdelta\fR means the time since
+the first captured frame. \fBabsolute\fR means elapsed time since the Epoch,
+1970-01-01 00:00:00 +0000 (UTC). \fIMODE\fR defaults to \fBdelta\fR when
+unspecified.
+.RE
+
+.PP
+\fB\-f\fR, \fB\-\-pcap\-file\fR=\fIFILENAME\fR
+.RS 4
+Specify a filename to save dumped traffic in pcap format. The generated file can
+be opened with Wireshark (http://www.wireshark.org/) using the wireshark-nfc
+plug-in available at http://code.google.com/p/wireshark-nfc/
+.RE
+
+.RE
+.RE
+
+.SH SEE ALSO
+.PP
+neard (8)
+.PP
+neard.conf (5)
+.PP
+Linux NFC project page at https://01.org/linux-nfc/

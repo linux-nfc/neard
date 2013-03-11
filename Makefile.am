@@ -74,7 +74,7 @@ doc_files = doc/manager-api.txt doc/tag-api.txt doc/device-api.txt \
 
 EXTRA_DIST = src/genbuiltin $(doc_files)
 
-dist_man_MANS = doc/neard.8 doc/neard.conf.5
+dist_man_MANS = doc/neard.8 doc/neard.conf.5 doc/nfctool.1
 
 test_scripts = test/disable-adapter test/enable-adapter test/list-adapters \
 		test/dump-device test/dump-tag test/dump-record \
