@@ -1778,7 +1778,7 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 {
 	struct carrier_data *local_carrier = NULL;
 	char cdr;
-	char *mime_type;
+	char *mime_type, *carrier_string;
 	uint16_t prop;
 	int err;
 
@@ -1790,10 +1790,12 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 	/* to be safe side */
 	*ac = NULL;
 	*cfg = NULL;
+	carrier_string = NULL;
 
 	switch (carrier) {
 	case NEAR_CARRIER_BLUETOOTH:
 		cdr = '0';
+		carrier_string = "Bluetooth";
 		mime_type = BT_MIME_STRING_2_1;
 		local_carrier = __near_agent_handover_request_data(
 					HO_AGENT_BT, remote_carrier);
@@ -1808,6 +1810,7 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 
 	case NEAR_CARRIER_WIFI:
 		cdr = '1';
+		carrier_string = "WiFi-WSC";
 		mime_type = WIFI_WSC_MIME_STRING;
 		local_carrier = __near_agent_handover_request_data(
 						HO_AGENT_WIFI, remote_carrier);
@@ -1815,12 +1818,13 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 
 	case NEAR_CARRIER_EMPTY:
 	case NEAR_CARRIER_UNKNOWN:
+		carrier_string = "Unkknown";
 		err = -EINVAL;
 		goto fail;
 	}
 
 	if (local_carrier == NULL) {
-		DBG("Unable to retrieve local carrier bluetooth data");
+		DBG("Unable to retrieve local carrier %s data", carrier_string);
 		err = -ESRCH;
 		goto fail;
 	}
