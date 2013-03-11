@@ -44,6 +44,7 @@
 #define SNIFFER_SHOW_TIMESTAMP_ABS	2
 
 struct nfctool_options {
+	gboolean show_version;
 	gboolean list;
 	gboolean poll;
 	guint8 poll_mode;

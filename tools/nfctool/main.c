@@ -19,6 +19,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -329,6 +333,7 @@ static void sig_term(int sig)
 }
 
 struct nfctool_options opts = {
+	.show_version = FALSE,
 	.list = FALSE,
 	.poll = FALSE,
 	.poll_mode = POLLING_MODE_INITIATOR,
@@ -470,6 +475,8 @@ static gboolean opt_parse_snl_arg(const gchar *option_name, const gchar *value,
 }
 
 static GOptionEntry option_entries[] = {
+	{ "version", 'v', 0, G_OPTION_ARG_NONE, &opts.show_version,
+	  "show version information and exit" },
 	{ "list", 'l', 0, G_OPTION_ARG_NONE, &opts.list,
 	  "list attached NFC devices", NULL },
 	{ "device", 'd', 0, G_OPTION_ARG_STRING, &opts.device_name,
@@ -517,6 +524,11 @@ static int nfctool_options_parse(int argc, char **argv)
 		goto exit;
 	}
 
+	if (opts.show_version) {
+		printf("%s\n", VERSION);
+		goto done;
+	}
+
 	if (opts.device_name != NULL) {
 		if (strncmp("nfc", opts.device_name, 3) != 0) {
 			print_error("Invalid device name: %s",
@@ -551,6 +563,7 @@ static int nfctool_options_parse(int argc, char **argv)
 		goto exit;
 	}
 
+done:
 	err = 0;
 
 exit:
@@ -604,6 +617,9 @@ int main(int argc, char **argv)
 	if (err)
 		goto exit_err;
 
+	if (opts.show_version)
+		goto done;
+
 	adapter_init();
 
 	if (opts.need_netlink) {
@@ -647,6 +663,7 @@ int main(int argc, char **argv)
 	if (opts.poll || opts.sniff || opts.snl)
 		nfctool_main_loop_start();
 
+done:
 	err = 0;
 
 exit_err:
