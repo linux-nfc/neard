@@ -671,6 +671,7 @@ static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 	guint32 idx = INVALID_ADAPTER_IDX;
 	struct nlattr *attr[NFC_ATTR_MAX + 1];
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
+	guint32 cmd = gnlh->cmd;
 	nfc_event_cb_t cb = NULL;
 
 	DBG("Received cmd %d", gnlh->cmd);
@@ -682,12 +683,12 @@ static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 		idx = nla_get_u32(attr[NFC_ATTR_DEVICE_INDEX]);
 
 	if (handlers != NULL)
-		cb = g_hash_table_lookup(handlers, GINT_TO_POINTER(gnlh->cmd));
+		cb = g_hash_table_lookup(handlers, GINT_TO_POINTER(cmd));
 
 	if (cb == NULL)
 		return NL_SKIP;
 
-	switch (gnlh->cmd) {
+	switch (cmd) {
 	case NFC_EVENT_LLC_SDRES:
 		DBG("Received NFC_EVENT_LLC_SDRES\n");
 		nl_nfc_send_sdres_event(idx, attr[NFC_ATTR_LLC_SDP], cb);
@@ -726,8 +727,10 @@ static gboolean nl_gio_handler(GIOChannel *channel,
 
 void nl_add_event_handler(guint8 cmd, nfc_event_cb_t cb)
 {
+	guint32 c = cmd;
+
 	if (handlers != NULL)
-		g_hash_table_replace(handlers, GINT_TO_POINTER(cmd), cb);
+		g_hash_table_replace(handlers, GINT_TO_POINTER(c), cb);
 }
 
 void nl_cleanup(void)
