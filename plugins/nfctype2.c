@@ -436,8 +436,10 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 		 * including TLV's is NDEF_MAX_SIZE
 		 */
 		if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
-			if ((ndef->length + 3) > NDEF_MAX_SIZE) {
-				near_error("not enough space on tag");
+			if ((ndef->length + 3) > near_tag_get_data_length(tag)) {
+				near_error("Not enough space on tag %zd %zd",
+						ndef->length,
+						near_tag_get_data_length(tag));
 				err = -ENOSPC;
 				goto out_err;
 			}
