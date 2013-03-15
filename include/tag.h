@@ -91,6 +91,7 @@ uint8_t *near_tag_get_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 int near_tag_set_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 					uint8_t *nfcid, size_t nfcid_len);
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length);
+size_t near_tag_get_data_length(struct near_tag *tag);
 uint32_t near_tag_get_adapter_idx(struct near_tag *tag);
 uint32_t near_tag_get_target_idx(struct near_tag *tag);
 int near_tag_add_ndef(struct near_tag *tag, uint8_t *ndef_data, size_t ndef_length);
