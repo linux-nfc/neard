@@ -211,6 +211,7 @@ int main(int argc, char *argv[])
 	__near_device_init();
 	__near_adapter_init();
 	__near_ndef_init();
+	__near_snep_core_init();
 	__near_manager_init(conn);
 	__near_agent_init();
 	__near_bluetooth_init();
@@ -230,6 +231,7 @@ int main(int argc, char *argv[])
 	__near_bluetooth_cleanup();
 	__near_manager_cleanup();
 	__near_ndef_cleanup();
+	__near_snep_core_cleanup();
 	__near_adapter_cleanup();
 	__near_device_cleanup();
 	__near_tag_cleanup();

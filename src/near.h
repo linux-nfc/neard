@@ -111,6 +111,11 @@ void __near_ndef_append_records(DBusMessageIter *iter, GList *record);
 const char *__near_ndef_get_uri_prefix(uint8_t id);
 struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg);
 
+#include <near/snep.h>
+
+int __near_snep_core_init(void);
+void __near_snep_core_cleanup(void);
+
 #include <near/tag.h>
 
 int __near_tag_init(void);

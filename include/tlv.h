@@ -29,6 +29,8 @@
 #define TLV_PROP 0xfd
 #define TLV_END  0xfe
 
+#define TLV_SIZE 2
+
 uint16_t near_tlv_length(uint8_t *tlv);
 uint8_t *near_tlv_next(uint8_t *tlv);
 uint8_t *near_tlv_data(uint8_t *tlv);

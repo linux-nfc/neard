@@ -32,15 +32,14 @@
 
 #include <near/nfc_copy.h>
 #include <near/plugin.h>
-#include <near/log.h>
 #include <near/types.h>
 #include <near/adapter.h>
 #include <near/device.h>
 #include <near/ndef.h>
 #include <near/tlv.h>
+#include <near/snep.h>
 
-#include "p2p.h"
-#include "snep-core.h"
+#include "near.h"
 
 struct snep_fragment {
 	uint32_t len;
@@ -85,13 +84,13 @@ static void free_snep_core_client(gpointer data)
 }
 
 /* Send a short response code */
-void snep_core_response_noinfo(int client_fd, uint8_t response)
+void near_snep_core_response_noinfo(int client_fd, uint8_t response)
 {
 	struct p2p_snep_resp_frame resp;
 
 	DBG("Response 0x%x", response);
 
-	resp.version = SNEP_VERSION;
+	resp.version = NEAR_SNEP_VERSION;
 	resp.response = response;
 	resp.length = 0;
 
@@ -99,7 +98,7 @@ void snep_core_response_noinfo(int client_fd, uint8_t response)
 }
 
 /*
- * snep_core_parse_handover_record
+ * near_snep_core_parse_handover_record
  *
  * The hr frame should be here BUT:
  *	The first 4 bytes are the Max Allowed Length
@@ -115,7 +114,7 @@ void snep_core_response_noinfo(int client_fd, uint8_t response)
  *
  * The hack fixes the first issue (bluetooth.c fixes the second) !
  * */
-void snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
+void near_snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
 		uint32_t nfc_data_length)
 {
 	GList *records;
@@ -145,8 +144,8 @@ void snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
 
 	near_info("Send SNEP / Hs frame");
 
-	snep_core_response_with_info(client_fd, SNEP_RESP_SUCCESS, msg->data,
-								msg->length);
+	near_snep_core_response_with_info(client_fd, NEAR_SNEP_RESP_SUCCESS,
+								msg->data, msg->length);
 
 	g_free(msg->data);
 	g_free(msg);
@@ -189,7 +188,7 @@ static int snep_core_read_ndef(int client_fd,
 
 	if (snep_data->respond_continue == FALSE) {
 		snep_data->respond_continue = TRUE;
-		snep_core_response_noinfo(client_fd, SNEP_RESP_CONTINUE);
+		near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_CONTINUE);
 	}
 
 	return 1;
@@ -277,7 +276,7 @@ static int snep_core_push_response(struct p2p_snep_put_req_data *req)
 
 	DBG("Response 0x%x %p", frame.response, &frame);
 	switch (frame.response) {
-	case SNEP_RESP_CONTINUE:
+	case NEAR_SNEP_RESP_CONTINUE:
 		while (g_slist_length(req->fragments) != 0) {
 			err = snep_core_send_fragment(req);
 			if (err < 0)
@@ -286,7 +285,7 @@ static int snep_core_push_response(struct p2p_snep_put_req_data *req)
 
 		return frame.response;
 
-	case SNEP_RESP_SUCCESS:
+	case NEAR_SNEP_RESP_SUCCESS:
 		if (frame.length == 0)
 			return 0;
 
@@ -308,7 +307,7 @@ static int snep_core_push_response(struct p2p_snep_put_req_data *req)
 			return -EINVAL;
 
 		if (strncmp((char *)(ndef + 3), "Hs", 2) == 0)
-			snep_core_parse_handover_record(req->fd, ndef,
+			near_snep_core_parse_handover_record(req->fd, ndef,
 								ndef_len);
 
 		g_free(ndef);
@@ -353,7 +352,7 @@ static int snep_core_push_prepare_fragments(struct p2p_snep_put_req_data *req,
 
 	DBG("");
 
-	max_fragment_len = SNEP_REQ_MAX_FRAGMENT_LENGTH;
+	max_fragment_len = NEAR_SNEP_REQ_MAX_FRAGMENT_LENGTH;
 
 	while (ndef->offset < ndef->length) {
 
@@ -394,13 +393,13 @@ static near_bool_t snep_core_process_request(int client_fd,
 
 	/* Now, we process the request code */
 	switch (frame->request) {
-	case SNEP_REQ_PUT:
-		DBG("SNEP_REQ_PUT");
+	case NEAR_SNEP_REQ_PUT:
+		DBG("NEAR_SNEP_REQ_PUT");
 		if (req_put != NULL)
 			ret = (*req_put)(client_fd, snep_data);
 		else {
-			snep_core_response_noinfo(client_fd,
-							SNEP_RESP_NOT_IMPL);
+			near_snep_core_response_noinfo(client_fd,
+							NEAR_SNEP_RESP_NOT_IMPL);
 			ret = TRUE;
 		}
 
@@ -409,13 +408,13 @@ static near_bool_t snep_core_process_request(int client_fd,
 						GINT_TO_POINTER(client_fd));
 		break;
 
-	case SNEP_REQ_GET:
-		DBG("SNEP_REQ_GET");
+	case NEAR_SNEP_REQ_GET:
+		DBG("NEAR_SNEP_REQ_GET");
 		if (req_get != NULL)
 			ret =  (*req_get)(client_fd, snep_data);
 		else {
-			snep_core_response_noinfo(client_fd,
-							SNEP_RESP_NOT_IMPL);
+			near_snep_core_response_noinfo(client_fd,
+							NEAR_SNEP_RESP_NOT_IMPL);
 			ret = TRUE;
 		}
 
@@ -428,14 +427,14 @@ static near_bool_t snep_core_process_request(int client_fd,
 		}
 		break;
 
-	case SNEP_REQ_CONTINUE:
+	case NEAR_SNEP_REQ_CONTINUE:
 		/*
-		 * SNEP_REQ_CONTINUE indicates that we have to send the
+		 * NEAR_SNEP_REQ_CONTINUE indicates that we have to send the
 		 * remaining fragments...
 		 */
-		DBG("SNEP_REQ_CONTINUE");
+		DBG("NEAR_SNEP_REQ_CONTINUE");
 		if (snep_data->req->fragments == NULL) {
-			near_error("error: SNEP_REQ_CONTINUE but no fragment");
+			near_error("error: NEAR_SNEP_REQ_CONTINUE but no fragment");
 			ret = FALSE;
 			goto leave_cont;
 		}
@@ -493,7 +492,7 @@ leave_cont:
  *	missing bytes (llcp removes fragmentation issues)
  *
  */
-near_bool_t snep_core_read(int client_fd,
+near_bool_t near_snep_core_read(int client_fd,
 				uint32_t adapter_idx, uint32_t target_idx,
 				near_tag_io_cb cb,
 				near_server_io req_get,
@@ -525,9 +524,9 @@ near_bool_t snep_core_read(int client_fd,
 	}
 
 	/* If major is different, send UNSUPPORTED VERSION */
-	if (SNEP_MAJOR(frame.version) != SNEP_MAJOR(SNEP_VERSION)) {
+	if (NEAR_SNEP_MAJOR(frame.version) != NEAR_SNEP_MAJOR(NEAR_SNEP_VERSION)) {
 		near_error("Unsupported version (%d)", frame.version);
-		snep_core_response_noinfo(client_fd, SNEP_RESP_VERSION);
+		near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_VERSION);
 		return TRUE;
 	}
 
@@ -566,8 +565,8 @@ near_bool_t snep_core_read(int client_fd,
 					GINT_TO_POINTER(client_fd), snep_data);
 
 	if (ndef_length > 0) {
-		if ((frame.request == SNEP_REQ_GET) ||
-				(frame.request == SNEP_REQ_PUT)) {
+		if ((frame.request == NEAR_SNEP_REQ_GET) ||
+				(frame.request == NEAR_SNEP_REQ_PUT)) {
 			/* We should read the missing bytes */
 			snep_core_read_ndef(client_fd, snep_data);
 		}
@@ -589,7 +588,7 @@ jumptocontinue:
  * > 0 if there's still some fragments
  *
  */
-static int snep_core_response(int fd, struct p2p_snep_put_req_data *req,
+static int near_snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 		uint8_t resp_code, struct near_ndef_message *ndef)
 {
 	struct p2p_snep_req_frame header;
@@ -601,14 +600,14 @@ static int snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 
 	DBG("resp: 0x%02X", resp_code);
 
-	max_fragment_len = SNEP_REQ_MAX_FRAGMENT_LENGTH;
-	header.version = SNEP_VERSION;
+	max_fragment_len = NEAR_SNEP_REQ_MAX_FRAGMENT_LENGTH;
+	header.version = NEAR_SNEP_VERSION;
 
-	if (resp_code == SNEP_REQ_GET) {	/* Get for android */
-		snep_req_header_length = SNEP_REQ_GET_HEADER_LENGTH;
+	if (resp_code == NEAR_SNEP_REQ_GET) {	/* Get for android */
+		snep_req_header_length = NEAR_SNEP_REQ_GET_HEADER_LENGTH;
 		snep_additional_length = 4;	/* 4 Acceptable Length */
 	} else {
-		snep_req_header_length = SNEP_REQ_PUT_HEADER_LENGTH;
+		snep_req_header_length = NEAR_SNEP_REQ_PUT_HEADER_LENGTH;
 		snep_additional_length = 0;
 	}
 
@@ -638,12 +637,12 @@ static int snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 	}
 
 	/* Header to data - common header */
-	memcpy(fragment->data, (uint8_t *)&header, SNEP_REQ_PUT_HEADER_LENGTH);
+	memcpy(fragment->data, (uint8_t *)&header, NEAR_SNEP_REQ_PUT_HEADER_LENGTH);
 
 	/* if GET, we add the Acceptable length */
-	if (header.request == SNEP_REQ_GET)
+	if (header.request == NEAR_SNEP_REQ_GET)
 		near_put_be32(snep_req_header_length,
-				fragment->data + SNEP_REQ_PUT_HEADER_LENGTH);
+				fragment->data + NEAR_SNEP_REQ_PUT_HEADER_LENGTH);
 
 	if (fragmenting == TRUE) {
 		memcpy(fragment->data + snep_req_header_length, ndef->data,
@@ -681,7 +680,7 @@ error:
 	return err;
 }
 
-void snep_core_response_with_info(int client_fd, uint8_t response,
+void near_snep_core_response_with_info(int client_fd, uint8_t response,
 				uint8_t *data, int length)
 {
 	struct p2p_snep_data *snep_data;
@@ -734,7 +733,7 @@ void snep_core_response_with_info(int client_fd, uint8_t response,
 	req->cb = snep_data->cb;
 
 	/* send it !*/
-	snep_core_response(client_fd, req, response, ndef);
+	near_snep_core_response(client_fd, req, response, ndef);
 
 done:
 	/* If no fragment, free mem */
@@ -751,7 +750,7 @@ done:
 }
 
 /* SNEP Core: on P2P push */
-int snep_core_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
+int near_snep_core_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 			struct near_ndef_message *ndef,
 			near_device_io_cb cb)
 {
@@ -782,11 +781,11 @@ int snep_core_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 
 	/* Check if Hr or Hs for Handover over SNEP */
 	if (*(char *)(ndef->data + 3) == 'H')
-		resp_code = SNEP_REQ_GET;		/* Get for android */
+		resp_code = NEAR_SNEP_REQ_GET;		/* Get for android */
 	else
-		resp_code = SNEP_REQ_PUT;
+		resp_code = NEAR_SNEP_REQ_PUT;
 
-	return snep_core_response(fd, req, resp_code, ndef);
+	return near_snep_core_response(fd, req, resp_code, ndef);
 
 error:
 	free_snep_core_push_data(req, err);
@@ -796,7 +795,7 @@ error:
 }
 
 /* SNEP core functions: close */
-void snep_core_close(int client_fd, int err)
+void near_snep_core_close(int client_fd, int err)
 {
 	struct p2p_snep_data *snep_data;
 
@@ -812,22 +811,17 @@ void snep_core_close(int client_fd, int err)
 	g_hash_table_remove(snep_client_hash, GINT_TO_POINTER(client_fd));
 }
 
-int snep_core_init(void)
+int __near_snep_core_init(void)
 {
 	snep_client_hash = g_hash_table_new_full(g_direct_hash,
 							g_direct_equal, NULL,
 							free_snep_core_client);
-	snep_init();
-	snep_validation_init();
 
 	return 0;
 }
 
-void snep_core_exit(void)
+void __near_snep_core_cleanup(void)
 {
-	snep_validation_exit();
-	snep_exit();
-
 	g_hash_table_destroy(snep_client_hash);
 	snep_client_hash = NULL;
 }

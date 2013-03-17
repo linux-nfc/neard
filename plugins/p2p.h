@@ -35,16 +35,17 @@ struct near_p2p_driver {
 	void (*close)(int client_fd, int err);
 };
 
-#define TLV_SIZE 2
-
 int npp_init(void);
 void npp_exit(void);
 
-int snep_core_init(void);
-void snep_core_exit(void);
-
 int handover_init(void);
 void handover_exit(void);
+
+int snep_init(void);
+void snep_exit(void);
+
+int snep_validation_init(void);
+void snep_validation_exit(void);
 
 int near_p2p_register(struct near_p2p_driver *driver);
 void near_p2p_unregister(struct near_p2p_driver *driver);

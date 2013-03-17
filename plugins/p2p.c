@@ -396,7 +396,8 @@ static int p2p_init(void)
 	DBG("");
 
 	npp_init();
-	snep_core_init();
+	snep_init();
+	snep_validation_init();
 	handover_init();
 
 	return near_device_driver_register(&p2p_driver);
@@ -408,7 +409,8 @@ static void p2p_exit(void)
 
 	g_list_free_full(server_list, free_server_data);
 
-	snep_core_exit();
+	snep_exit();
+	snep_validation_exit();
 	npp_exit();
 	handover_exit();
 

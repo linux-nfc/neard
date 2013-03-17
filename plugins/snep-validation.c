@@ -38,9 +38,9 @@
 #include <near/device.h>
 #include <near/ndef.h>
 #include <near/tlv.h>
+#include <near/snep.h>
 
 #include "p2p.h"
-#include "snep-core.h"
 
 /* Would store incoming ndefs per client */
 static GHashTable *snep_validation_hash = NULL;
@@ -102,12 +102,12 @@ static near_bool_t snep_validation_server_req_put(int client_fd, void *data)
 							incoming_ndefs);
 
 
-	snep_core_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
+	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_SUCCESS);
 
 	return TRUE;
 
 error:
-	snep_core_response_noinfo(client_fd, SNEP_RESP_REJECT);
+	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_REJECT);
 
 	return TRUE;
 }
@@ -134,8 +134,8 @@ static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
 	 * 1 record (a mime type !) with an ID
 	 */
 	records = near_ndef_parse_msg(snep_data->nfc_data +
-			SNEP_ACC_LENGTH_SIZE,
-			snep_data->nfc_data_length - SNEP_ACC_LENGTH_SIZE,
+			NEAR_SNEP_ACC_LENGTH_SIZE,
+			snep_data->nfc_data_length - NEAR_SNEP_ACC_LENGTH_SIZE,
 			NULL);
 
 	if (g_list_length(records) != 1) {
@@ -150,7 +150,7 @@ static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
 	}
 
 	/* check if the acceptable length is higher than the data_len
-	 * otherwise returns a SNEP_RESP_EXCESS
+	 * otherwise returns a NEAR_SNEP_RESP_EXCESS
 	 */
 	acceptable_length = GUINT32_FROM_BE(*(uint32_t *)snep_data->nfc_data);
 
@@ -175,8 +175,8 @@ static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
 
 		/* Found a record, check the length */
 		if (acceptable_length >= near_ndef_data_length(rec_store)) {
-			snep_core_response_with_info(client_fd,
-					SNEP_RESP_SUCCESS,
+			near_snep_core_response_with_info(client_fd,
+					NEAR_SNEP_RESP_SUCCESS,
 					near_ndef_data_ptr(rec_store),
 					near_ndef_data_length(rec_store));
 
@@ -191,19 +191,19 @@ static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
 							incoming_ndefs);
 
 		} else
-			snep_core_response_noinfo(client_fd, SNEP_RESP_EXCESS);
+			near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_EXCESS);
 
 		return TRUE;
 	}
 
 done:
 	/* If not found */
-	snep_core_response_noinfo(client_fd, SNEP_RESP_NOT_FOUND);
+	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_NOT_FOUND);
 	return TRUE;
 
 error:
 	 /* Not found */
-	snep_core_response_noinfo(client_fd, SNEP_RESP_REJECT);
+	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_REJECT);
 	return FALSE;
 }
 
@@ -214,7 +214,7 @@ static near_bool_t snep_validation_read(int client_fd, uint32_t adapter_idx,
 {
 	DBG("");
 
-	return snep_core_read(client_fd, adapter_idx, target_idx, cb,
+	return near_snep_core_read(client_fd, adapter_idx, target_idx, cb,
 						snep_validation_server_req_get,
 						snep_validation_server_req_put);
 
@@ -227,7 +227,7 @@ static void snep_validation_close(int client_fd, int err)
 	g_hash_table_remove(snep_validation_hash, GINT_TO_POINTER(client_fd));
 
 	/* Call core server close */
-	snep_core_close(client_fd, err);
+	near_snep_core_close(client_fd, err);
 }
 
 struct near_p2p_driver validation_snep_driver = {
@@ -235,7 +235,7 @@ struct near_p2p_driver validation_snep_driver = {
 	.service_name = "urn:nfc:xsn:nfc-forum.org:snep-validation",
 	.fallback_service_name = NULL,
 	.read = snep_validation_read,
-	.push = snep_core_push,
+	.push = near_snep_core_push,
 	.close = snep_validation_close,
 };
 

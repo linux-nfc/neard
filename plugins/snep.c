@@ -38,9 +38,9 @@
 #include <near/device.h>
 #include <near/ndef.h>
 #include <near/tlv.h>
+#include <near/snep.h>
 
 #include "p2p.h"
-#include "snep-core.h"
 
 /*
  * This is the Default server REQ PUT function.
@@ -57,7 +57,7 @@ static near_bool_t snep_default_server_req_put(int client_fd, void *data)
 	DBG("");
 
 	/* The request is ok, so we notify the client */
-	snep_core_response_noinfo(client_fd, SNEP_RESP_SUCCESS);
+	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_SUCCESS);
 
 	/* On PUT request, we add the data */
 	if (near_device_add_data(snep_data->adapter_idx,
@@ -81,7 +81,7 @@ static near_bool_t snep_default_server_req_put(int client_fd, void *data)
 
 /*
  * This is the Default server REQ GET function.
- * On REQ GET, server should return SNEP_RESP_NOT_IMPL.
+ * On REQ GET, server should return NEAR_SNEP_RESP_NOT_IMPL.
  *
  * !!! We check if the incoming NDEF looks like a handover frame,
  * because of Android 4.1.1 ...
@@ -98,13 +98,13 @@ static near_bool_t snep_default_server_req_get(int client_fd, void *data)
 	 * and we check the 3 byte in the NDEF message
 	 * */
 
-	if (*(snep_data->nfc_data + SNEP_REQ_ANDROID) != 'H') {
-		snep_core_response_noinfo(client_fd, SNEP_RESP_NOT_IMPL);
+	if (*(snep_data->nfc_data + NEAR_SNEP_REQ_ANDROID) != 'H') {
+		near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_NOT_IMPL);
 	} else {
-		snep_core_parse_handover_record(client_fd, snep_data->nfc_data +
-						SNEP_ACC_LENGTH_SIZE,
+		near_snep_core_parse_handover_record(client_fd, snep_data->nfc_data +
+						NEAR_SNEP_ACC_LENGTH_SIZE,
 						snep_data->nfc_data_length -
-						SNEP_ACC_LENGTH_SIZE);
+						NEAR_SNEP_ACC_LENGTH_SIZE);
 	}
 
 	return TRUE;
@@ -117,7 +117,7 @@ static near_bool_t snep_default_read(int client_fd, uint32_t adapter_idx,
 {
 	DBG("");
 
-	return snep_core_read(client_fd, adapter_idx, target_idx, cb,
+	return near_snep_core_read(client_fd, adapter_idx, target_idx, cb,
 						snep_default_server_req_get,
 						snep_default_server_req_put);
 
@@ -128,8 +128,8 @@ struct near_p2p_driver snep_driver = {
 	.service_name = NEAR_DEVICE_SN_SNEP,
 	.fallback_service_name = NEAR_DEVICE_SN_NPP,
 	.read = snep_default_read,
-	.push = snep_core_push,
-	.close = snep_core_close,
+	.push = near_snep_core_push,
+	.close = near_snep_core_close,
 };
 
 int snep_init(void)
