@@ -29,6 +29,8 @@ builtin_sources =
 builtin_cflags =
 builtin_libadd =
 
+bin_PROGRAMS =
+
 libexecdir = @libexecdir@/nfc
 libexec_PROGRAMS = src/neard
 
@@ -87,7 +89,9 @@ test_SCRIPTS = $(test_scripts)
 endif
 
 if TOOLS
-noinst_PROGRAMS = tools/snep-send tools/nfctool/nfctool
+bin_PROGRAMS += tools/nfctool/nfctool
+
+noinst_PROGRAMS = tools/snep-send
 
 tools_snep_send_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/bluetooth.c src/ndef.c \
@@ -146,7 +150,7 @@ src/plugin.$(OBJEXT): src/builtin.h
 src/builtin.h: src/genbuiltin $(builtin_sources)
 	$(AM_V_GEN)$(srcdir)/src/genbuiltin $(builtin_modules) > $@
 
-$(src_neard_OBJECTS) $(plugin_objects): $(local_headers)
+$(src_neard_OBJECTS) $(tools_nfctool_nfctool_OBJECTS) $(plugin_objects): $(local_headers)
 
 include/near/version.h: include/version.h
 	$(AM_V_at)$(MKDIR_P) include/near
