@@ -1818,7 +1818,7 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 
 	case NEAR_CARRIER_EMPTY:
 	case NEAR_CARRIER_UNKNOWN:
-		carrier_string = "Unkknown";
+		carrier_string = "Unknown";
 		err = -EINVAL;
 		goto fail;
 	}
