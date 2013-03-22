@@ -7,7 +7,7 @@ plugindir=${libdir}/neard/plugins
 
 Name: neard
 Description: NFC daemon
-Requires: glib-2.0 dbus-1 libnl
+Requires: @GLIB_DEPS@ @DBUS_DEPS@ @NETLINK_DEPS@
 Version: @VERSION@
 Libs: -module -avoid-version -export-symbols-regex neard_plugin_desc
 Cflags: -I${includedir}

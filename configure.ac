@@ -59,34 +59,45 @@ AC_ARG_ENABLE(pie, AC_HELP_STRING([--enable-pie],
 AC_CHECK_LIB(dl, dlopen, dummy=yes,
 			AC_MSG_ERROR(dynamic linking loader is required))
 
-PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.28, dummy=yes,
+GLIB_DEPS="glib-2.0 >= 2.28"
+PKG_CHECK_MODULES(GLIB, [${GLIB_DEPS}], dummy=yes,
 				AC_MSG_ERROR(GLib >= 2.28 is required))
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
+AC_SUBST(GLIB_DEPS)
 
-PKG_CHECK_MODULES(DBUS, dbus-1 >= 1.2, dummy=yes,
+DBUS_DEPS="dbus-1 >= 1.2"
+PKG_CHECK_MODULES(DBUS, [${DBUS_DEPS}], dummy=yes,
 				AC_MSG_ERROR(D-Bus >= 1.2 is required))
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
+AC_SUBST(DBUS_DEPS)
 
-PKG_CHECK_MODULES(LIBNL3, libnl-3.0 libnl-genl-3.0, [
+LIBNL3_DEPS="libnl-3.0 libnl-genl-3.0"
+PKG_CHECK_MODULES(LIBNL3, [${LIBNL3_DEPS}], [
 	NETLINK_CFLAGS=${LIBNL3_CFLAGS}
 	NETLINK_LIBS=${LIBNL3_LIBS}
+	NETLINK_DEPS=${LIBNL3_DEPS}
 ], [
-	PKG_CHECK_MODULES(LIBNL2, libnl-2.0, [
+	LIBNL2_DEPS="libnl-2.0"
+	PKG_CHECK_MODULES(LIBNL2, [${LIBNL2_DEPS}], [
 		NETLINK_CFLAGS=${LIBNL2_CFLAGS}
 		NETLINK_LIBS=${LIBNL2_LIBS}
+		NETLINK_DEPS=${LIBNL2_DEPS}
 	], [
-		PKG_CHECK_MODULES(LIBNL1, libnl-1, dummy=yes,
+		LIBNL1_DEPS="libnl-1"
+		PKG_CHECK_MODULES(LIBNL1, [${LIBNL1_DEPS}], dummy=yes,
 			AC_MSG_ERROR(Netlink library is required))
 		AC_DEFINE(NEED_LIBNL_COMPAT, 1,
 			[Define to 1 if you need libnl-1 compat functions.])
 		NETLINK_CFLAGS=${LIBNL1_CFLAGS}
 		NETLINK_LIBS=${LIBNL1_LIBS}
+		NETLINK_DEPS=${LIBNL1_DEPS}
 	])
 ])
 AC_SUBST(NETLINK_CFLAGS)
 AC_SUBST(NETLINK_LIBS)
+AC_SUBST(NETLINK_DEPS)
 
 AC_ARG_ENABLE(test, AC_HELP_STRING([--enable-test],
 					[enable test/example scripts]),
