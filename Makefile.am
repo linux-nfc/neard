@@ -49,7 +49,6 @@ nodist_src_neard_SOURCES = src/builtin.h
 AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ @NETLINK_CFLAGS@ $(builtin_cflags) \
 					-DNEAR_PLUGIN_BUILTIN \
 					-DPLUGINDIR=\""$(plugindir)"\" \
-					-DSCRIPTDIR=\""$(build_scriptdir)"\" \
 					-DCONFIGDIR=\""$(configdir)\""
 
 AM_CPPFLAGS = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
@@ -57,8 +56,6 @@ AM_CPPFLAGS = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 CLEANFILES = src/builtin.h $(local_headers)
 
 plugindir = $(libdir)/near/plugins
-
-scriptdir = $(libdir)/connman/scripts
 
 configdir = ${sysconfdir}/neard
 
@@ -70,10 +67,8 @@ dist_dbus_DATA = src/org.neard.conf
 
 if MAINTAINER_MODE
 build_plugindir = $(abs_top_srcdir)/plugins/.libs
-build_scriptdir = $(abs_top_srcdir)/scripts
 else
 build_plugindir = $(plugindir)
-build_scriptdir = $(scriptdir)
 endif
 
 doc_files = doc/manager-api.txt doc/tag-api.txt doc/device-api.txt \

@@ -134,4 +134,4 @@ AC_ARG_ENABLE(p2p, AC_HELP_STRING([--disable-p2p],
 				[enable_p2p=${enableval}])
 AM_CONDITIONAL(P2P, test "${enable_p2p}" != "no")
 
-AC_OUTPUT(Makefile include/version.h neard.pc scripts/neard)
+AC_OUTPUT(Makefile include/version.h neard.pc)
