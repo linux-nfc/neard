@@ -523,6 +523,45 @@ static void test_snep_read_get_req_ok(gpointer context, gconstpointer gp)
 }
 
 /*
+ * @brief Test: Confirm that server responds about no support for the
+ * functionality in request message
+ *
+ * Steps:
+ * - Send PUT request with some data
+ * - Send GET request
+ * - Pass NULL GET request handler to the near_snep_core_read
+ * - Verify server responded with NOT IMPLEMENTED
+ */
+static void test_snep_read_get_req_not_impl(gpointer context,
+						gconstpointer gp)
+{
+	struct test_snep_context *ctx = context;
+	struct p2p_snep_req_frame *req;
+	uint32_t frame_len, payload_len;
+	near_bool_t ret;
+
+	/* send some data to the server */
+	test_snep_read_put_req_ok(context, gp);
+
+	payload_len = ctx->req_info_len;
+	frame_len = NEAR_SNEP_REQ_GET_HEADER_LENGTH + payload_len;
+
+	/* build REQ GET frame */
+	req = test_snep_build_req_get_frame(frame_len, NEAR_SNEP_VERSION,
+			NEAR_SNEP_REQ_GET, ctx->req_info_len, ctx->acc_len,
+			ctx->req_info, payload_len);
+
+	/* call snep_core_read with NULL req_get handler */
+	ret = test_snep_read_req_common(req, frame_len, NULL,
+					test_snep_dummy_req_put);
+	g_assert(ret);
+
+	test_snep_read_verify_resp_code(NEAR_SNEP_RESP_NOT_IMPL);
+
+	g_free(req);
+}
+
+/*
  * @brief Test: Confirm that server is able to send simple response
  */
 static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
@@ -559,6 +598,9 @@ int main(int argc, char **argv)
 	g_test_suite_add(ts,
 		g_test_create_case("request ok", fs, short_text,
 			init, test_snep_read_get_req_ok, exit));
+	g_test_suite_add(ts,
+		g_test_create_case("request not impl", fs, short_text,
+			init, test_snep_read_get_req_not_impl, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
