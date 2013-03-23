@@ -278,6 +278,40 @@ static near_bool_t test_snep_read_send_fragment(size_t frag_len,
 }
 
 /*
+ * @brief Utility: Receive remaining fragments and store in \p data_recvd
+ *
+ * @param[in]  frag_len
+ * @param[in]  remaining_bytes
+ * @param[out] data             Must be preallocated
+ */
+static void test_snep_read_recv_fragments(uint32_t frag_len,
+				uint32_t remaining_bytes, void *data_recvd)
+{
+	struct p2p_snep_resp_frame *resp;
+	uint32_t offset = 0;
+	int nbytes;
+
+	g_assert(data_recvd);
+
+	resp = g_try_malloc0(frag_len);
+	g_assert(resp != NULL);
+
+	do {
+		memset(resp, 0, frag_len);
+
+		/* receive remaining fragments */
+		nbytes = recv(sockfd[client], resp, frag_len, 0);
+		g_assert(nbytes > 0); /* TODO use explicit value? */
+
+		/* store received data (no header this time) */
+		memcpy(data_recvd + offset, resp, nbytes);
+		offset += nbytes;
+	} while (offset < remaining_bytes);
+
+	g_free(resp);
+}
+
+/*
  * @brief Utility: Confirm that server didn't send any response
  */
 static void test_snep_read_no_response(void)
@@ -562,6 +596,123 @@ static void test_snep_read_get_req_not_impl(gpointer context,
 }
 
 /*
+ * @brief Test: Confirm that server is able to respond with fragmented message
+ *
+ * Steps:
+ * - Send PUT request with some data
+ * - Send GET request with Acceptable Length less than actual data length
+ * - Verify that server returned with incomplete data
+ * - Send CONTINUE or REJECT request (depending on \p client_resp param)
+ * - If REJECT requested, verify that server didn't respond
+ * - If CONTINUE requested, receive remaining fragments and verify data
+ */
+static void test_snep_read_get_req_frags_client_resp(gpointer context,
+					gconstpointer gp, uint8_t client_resp)
+{
+	struct test_snep_context *ctx = context;
+	struct p2p_snep_req_frame *req;
+	struct p2p_snep_resp_frame *resp;
+	uint32_t frame_len, payload_len;
+	near_bool_t ret;
+	size_t nbytes;
+	uint8_t *data_recvd;
+	uint32_t offset;
+	uint32_t frag_len, info_len;
+
+	/* send some data to the server */
+	test_snep_read_put_req_ok(context, gp);
+
+	payload_len = ctx->req_info_len;
+	frame_len = NEAR_SNEP_REQ_GET_HEADER_LENGTH + payload_len;
+
+	/* force fragmentation */
+	ctx->acc_len = 60;
+	g_assert(ctx->acc_len < ctx->req_info_len);
+	g_assert(NEAR_SNEP_REQ_MAX_FRAGMENT_LENGTH < ctx->req_info_len);
+
+	/* TODO frag_len should be calculated based on SNEP acc_len */
+	TEST_SNEP_LOG("WORKAROUND: SNEP core ignores the acceptable length\n");
+	frag_len = NEAR_SNEP_REQ_MAX_FRAGMENT_LENGTH;
+
+	info_len = ctx->req_info_len + NEAR_SNEP_ACC_LENGTH_SIZE;
+
+	req = test_snep_build_req_get_frame(frame_len, NEAR_SNEP_VERSION,
+				NEAR_SNEP_REQ_GET, info_len,
+				ctx->acc_len, ctx->req_info, payload_len);
+
+	/* send GET request */
+	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
+					test_snep_dummy_req_put);
+	g_assert(ret);
+	g_free(req);
+
+	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + payload_len;
+	resp = test_snep_build_resp_frame(frame_len, 0, 0, 0, NULL);
+
+	/* start receiving fragments */
+	nbytes = recv(sockfd[client], resp, frame_len, 0);
+	g_assert(nbytes == frag_len);
+	g_assert(resp->length == GUINT_TO_BE(ctx->req_info_len));
+	g_assert(resp->info != NULL);
+
+	data_recvd = g_try_malloc0(ctx->req_info_len);
+	g_assert(data_recvd != NULL);
+
+	/* store received info field */
+	memcpy(data_recvd, resp->info, nbytes - NEAR_SNEP_RESP_HEADER_LENGTH);
+	g_free(resp);
+
+	offset = nbytes - NEAR_SNEP_RESP_HEADER_LENGTH;
+
+	/* 1st fragment has been received, so request resp=CONTINUE/REJECT */
+	frame_len = NEAR_SNEP_REQ_PUT_HEADER_LENGTH;
+	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
+					client_resp, 0, NULL, 0);
+
+	ret = test_snep_read_req_common(req, frame_len, NULL, NULL);
+	g_free(req);
+
+	if (client_resp == NEAR_SNEP_REQ_REJECT) {
+		/*
+		 * TODO server shall not send any response:
+		 *      g_assert(ret);
+		 *      test_snep_read_no_response();
+		 */
+
+		TEST_SNEP_LOG("EXPECTED FAIL: REJECT not handled by SNEP\n");
+	} else if (client_resp == NEAR_SNEP_REQ_CONTINUE) {
+		g_assert(ret);
+
+		/* receive remaining fragments */
+		test_snep_read_recv_fragments(frag_len,
+					ctx->req_info_len - offset,
+					data_recvd + offset);
+
+		/* verify data */
+		g_assert(!memcmp(data_recvd, ctx->req_info,
+				ctx->req_info_len));
+	}
+
+	g_free(data_recvd);
+}
+
+/* Refer to the test_snep_read_get_req_frags_client_resp for description */
+static void test_snep_read_get_frags_continue(gpointer context,
+						gconstpointer gp)
+{
+	test_snep_read_get_req_frags_client_resp(context, gp,
+						NEAR_SNEP_REQ_CONTINUE);
+}
+
+/* Refer to the test_snep_read_get_req_frags_client_resp for description */
+static void test_snep_read_get_frags_reject(gpointer context,
+						gconstpointer gp)
+{
+	test_snep_read_get_req_frags_client_resp(context, gp,
+						NEAR_SNEP_REQ_REJECT);
+}
+
+/*
  * @brief Test: Confirm that server is able to send simple response
  */
 static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
@@ -601,6 +752,14 @@ int main(int argc, char **argv)
 	g_test_suite_add(ts,
 		g_test_create_case("request not impl", fs, short_text,
 			init, test_snep_read_get_req_not_impl, exit));
+	g_test_suite_add(ts,
+		g_test_create_case("request fragmented CONTINUE",
+			fs, long_text, init,
+			test_snep_read_get_frags_continue, exit));
+	g_test_suite_add(ts,
+		g_test_create_case("request fragmented REJECT",
+			fs, long_text, init,
+			test_snep_read_get_frags_reject, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
