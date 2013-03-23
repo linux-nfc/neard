@@ -282,6 +282,36 @@ static void test_snep_read_put_req_ok(gpointer context, gconstpointer gp)
 }
 
 /*
+ * @brief Test: Confirm that server checks the version field of the request.
+ *
+ * Steps:
+ * - Send PUT request with incorrect version field
+ * - Verify server responded with UNSUPPORTED VERSION
+ */
+static void test_snep_read_put_req_unsupp_ver(gpointer context,
+						gconstpointer gp)
+{
+	struct test_snep_context *ctx = context;
+	struct p2p_snep_req_frame *req;
+	uint32_t frame_len, payload_len;
+	near_bool_t ret;
+
+	payload_len = ctx->req_info_len;
+	frame_len = NEAR_SNEP_REQ_PUT_HEADER_LENGTH + payload_len;
+
+	req = test_snep_build_req_frame(frame_len, 0xF8, NEAR_SNEP_REQ_PUT,
+				ctx->req_info_len, ctx->req_info, payload_len);
+
+	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
+					test_snep_dummy_req_put);
+	g_assert(ret);
+
+	test_snep_read_verify_resp_code(NEAR_SNEP_RESP_VERSION);
+
+	g_free(req);
+}
+
+/*
  * @brief Test: Confirm that server is able to send simple response
  */
 static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
@@ -318,6 +348,9 @@ int main(int argc, char **argv)
 	g_test_suite_add(ts,
 		g_test_create_case("request ok", fs, short_text,
 			init, test_snep_read_put_req_ok, exit));
+	g_test_suite_add(ts,
+		g_test_create_case("request unsupported ver", fs, short_text,
+			init, test_snep_read_put_req_unsupp_ver, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
