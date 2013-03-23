@@ -59,6 +59,10 @@ static const char *long_text = "The Linux NFC project aims to provide a " \
 	"either touch or are momentarily held close together. NFC is an open "\
 	"technology standardized by the NFC Forum. It is based on RFID. ";
 
+/* 'neard' - UTF-8 - en-US Text NDEF */
+static uint8_t text[] = { 0xd1, 0x1, 0xb, 0x54, 0x5, 0x65, 0x6e,
+			0x2d, 0x55, 0x53, 0x6e, 0x65, 0x61, 0x72, 0x64 };
+
 /* sockets */
 static int sockfd[2];
 static int client;
@@ -729,6 +733,77 @@ static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
 	g_assert(resp.length == 0);
 }
 
+/*
+ * @brief Test: Confirm that server is able to communicate with the client
+ */
+static void test_snep_response_put_get_ndef(gpointer context,
+						gconstpointer gp)
+{
+	size_t nbytes;
+
+	struct p2p_snep_req_frame *req;
+	struct p2p_snep_resp_frame *resp;
+	struct near_ndef_message *ndef;
+
+	near_bool_t ret;
+	uint frame_len;
+
+	ndef = near_ndef_prepare_text_record("UTF-8", "en-US", "neard");
+	g_assert(ndef);
+	g_assert(ndef->data);
+	g_assert(ndef->length > 0);
+
+	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + ndef->length;
+
+	req = g_try_malloc0(frame_len);
+	g_assert(req);
+
+	req->version = 0x10;
+	req->request = NEAR_SNEP_REQ_PUT;
+	req->length = GUINT_TO_BE(ndef->length);
+	memcpy(req->ndef, ndef->data, ndef->length);
+
+	/* Send PUT request with text record */
+	nbytes = send(sockfd[server], req, frame_len, 0);
+	g_assert(nbytes == frame_len);
+
+	/* UUT */
+	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
+			test_snep_dummy_req_get, test_snep_dummy_req_put);
+	g_assert(ret != FALSE);
+
+	resp = g_try_malloc0(frame_len);
+	g_assert(resp);
+
+	/* Get response from server */
+	nbytes = recv(sockfd[server], resp, frame_len, 0);
+	g_assert(nbytes > 0);
+	g_assert(resp->response == NEAR_SNEP_RESP_SUCCESS);
+
+	/* Send GET request to retrieve a record */
+	req->request = NEAR_SNEP_REQ_GET;
+	req->length = 0;
+	nbytes = send(sockfd[server], req, NEAR_SNEP_RESP_HEADER_LENGTH, 0);
+	g_assert(nbytes > 0);
+
+	/* UUT */
+	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
+			test_snep_dummy_req_get, test_snep_dummy_req_put);
+	g_assert(ret != FALSE);
+
+	/* Get response and verify */
+	nbytes = recv(sockfd[server], resp, frame_len, 0);
+	g_assert(nbytes > 0);
+	g_assert(resp->response == NEAR_SNEP_RESP_SUCCESS);
+	g_assert(resp->length == GUINT_TO_BE(ndef->length));
+	g_assert(!memcmp(resp->info, text, ndef->length));
+
+	g_free(req);
+	g_free(resp);
+	g_free(ndef->data);
+	g_free(ndef);
+}
+
 int main(int argc, char **argv)
 {
 	GTestSuite *ts;
@@ -776,6 +851,14 @@ int main(int argc, char **argv)
 	g_test_suite_add(ts,
 		g_test_create_case("request fragmented", fs, long_text,
 			init, test_snep_read_put_req_fragmented, exit));
+
+	g_test_suite_add_suite(g_test_get_root(), ts);
+
+	ts = g_test_create_suite("SNEP various");
+	g_test_suite_add(ts,
+		g_test_create_case("PUT and GET request NDEF",
+			fs, short_text, init,
+			test_snep_response_put_get_ndef, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
