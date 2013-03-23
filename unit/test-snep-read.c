@@ -312,6 +312,39 @@ static void test_snep_read_put_req_unsupp_ver(gpointer context,
 }
 
 /*
+ * @brief Test: Confirm that server responds about no support for the
+ * functionality in request message
+ *
+ * Steps:
+ * - Send PUT request
+ * - Pass NULL PUT request handler to the near_snep_core_read
+ * - Verify server responded with NOT IMPLEMENTED
+ */
+static void test_snep_read_put_req_not_impl(gpointer context,
+						gconstpointer gp)
+{
+	struct test_snep_context *ctx = context;
+	struct p2p_snep_req_frame *req;
+	uint32_t frame_len, payload_len;
+	near_bool_t ret;
+
+	payload_len = ctx->req_info_len;
+	frame_len = NEAR_SNEP_REQ_PUT_HEADER_LENGTH + payload_len;
+
+	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
+					NEAR_SNEP_REQ_PUT, ctx->req_info_len,
+					ctx->req_info, payload_len);
+
+	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
+					NULL);
+	g_assert(ret);
+
+	test_snep_read_verify_resp_code(NEAR_SNEP_RESP_NOT_IMPL);
+
+	g_free(req);
+}
+
+/*
  * @brief Test: Confirm that server is able to send simple response
  */
 static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
@@ -351,6 +384,9 @@ int main(int argc, char **argv)
 	g_test_suite_add(ts,
 		g_test_create_case("request unsupported ver", fs, short_text,
 			init, test_snep_read_put_req_unsupp_ver, exit));
+	g_test_suite_add(ts,
+		g_test_create_case("request not impl", fs, short_text,
+			init, test_snep_read_put_req_not_impl, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
