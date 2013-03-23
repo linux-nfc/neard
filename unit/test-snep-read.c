@@ -165,6 +165,38 @@ static struct p2p_snep_req_frame *test_snep_build_req_frame(
 }
 
 /*
+ * @brief Utility: Allocate and build SNEP GET request frame.
+ *
+ * @param[in] frame_len   Size of the entire frame
+ * @param[in] ver         SNEP protocol version field
+ * @param[in] resp_type   SNEP response code field
+ * @param[in] info_len    SNEP info length field
+ * @param[in] data        SNEP info field
+ * @param[in] acc_len     SNEP acceptable length field
+ * @param[in] payload_len Size of the payload to be inserted
+ * @return p2p_snep_resp_frame
+ */
+static struct p2p_snep_req_frame *test_snep_build_req_get_frame(
+			size_t frame_len, uint8_t ver, uint8_t req_type,
+			uint32_t info_len, uint32_t acc_len, uint8_t *data,
+			uint32_t payload_len)
+{
+	struct p2p_snep_req_frame *req;
+	uint32_t acc_len_be = GUINT_TO_BE(acc_len);
+
+	req = g_try_malloc0(frame_len);
+	g_assert(req != NULL);
+
+	req->version = ver;
+	req->request = req_type;
+	req->length = GUINT_TO_BE(info_len);
+	memcpy(req->ndef, &acc_len_be, sizeof(acc_len_be));
+	memcpy(req->ndef + sizeof(acc_len_be), data, payload_len);
+
+	return req;
+}
+
+/*
  * @brief Utility: Allocate and build SNEP response frame.
  *
  * @param[in] frame_len   Size of the entire frame
@@ -454,6 +486,43 @@ static void test_snep_read_put_req_fragmented(gpointer context,
 }
 
 /*
+ * @brief Test: Confirm that server is able to handle GET request
+ *
+ * Steps:
+ * - Send PUT request with some data
+ * - Send GET request
+ * - Verify server responded with SUCCESS and correct data
+ */
+static void test_snep_read_get_req_ok(gpointer context, gconstpointer gp)
+{
+	struct test_snep_context *ctx = context;
+	struct p2p_snep_req_frame *req;
+	uint32_t frame_len, payload_len, info_len;
+	near_bool_t ret;
+
+	/* send some data to the server */
+	test_snep_read_put_req_ok(context, gp);
+
+	info_len = ctx->req_info_len + NEAR_SNEP_ACC_LENGTH_SIZE;
+	payload_len = ctx->req_info_len;
+
+	frame_len = NEAR_SNEP_REQ_GET_HEADER_LENGTH + payload_len;
+
+	req = test_snep_build_req_get_frame(frame_len, NEAR_SNEP_VERSION,
+				NEAR_SNEP_REQ_GET, info_len,
+				ctx->acc_len, ctx->req_info, payload_len);
+
+	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
+					test_snep_dummy_req_put);
+	g_assert(ret);
+
+	test_snep_read_verify_resp(NEAR_SNEP_RESP_SUCCESS, ctx->req_info_len,
+				ctx->req_info);
+
+	g_free(req);
+}
+
+/*
  * @brief Test: Confirm that server is able to send simple response
  */
 static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
@@ -483,6 +552,13 @@ int main(int argc, char **argv)
 	g_test_suite_add(ts,
 		g_test_create_case("noinfo", fs, short_text,
 			init, test_snep_response_noinfo, exit));
+
+	g_test_suite_add_suite(g_test_get_root(), ts);
+
+	ts = g_test_create_suite("SNEP read GET");
+	g_test_suite_add(ts,
+		g_test_create_case("request ok", fs, short_text,
+			init, test_snep_read_get_req_ok, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
