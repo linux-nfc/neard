@@ -111,7 +111,7 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 
 tools_nfctool_nfctool_LDADD = @GLIB_LIBS@ @NETLINK_LIBS@
 
-unit_tests = unit/test-ndef-parse unit/test-ndef-build
+unit_tests = unit/test-ndef-parse unit/test-ndef-build unit/test-snep-read
 
 unit_test_ndef_parse_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/agent.c src/bluetooth.c \
@@ -122,6 +122,13 @@ unit_test_ndef_build_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/agent.c src/bluetooth.c \
 					src/ndef.c unit/test-ndef-build.c
 unit_test_ndef_build_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+
+unit_test_snep_read_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
+					src/agent.c src/bluetooth.c \
+					src/ndef.c src/snep.c \
+					unit/test-snep-read.c unit/test-utils.c \
+					unit/test-utils.h
+unit_test_snep_read_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 noinst_PROGRAMS += $(unit_tests)
 
