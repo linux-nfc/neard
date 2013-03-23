@@ -51,6 +51,14 @@ static near_bool_t test_snep_dummy_req_put(int fd, void *data);
 
 static const char *short_text = "neard";
 
+static const char *long_text = "The Linux NFC project aims to provide a " \
+	"full NFC support for Linux. It is based on the neard NFC user space "\
+	"stack running on top of the Linux kernel NFC subsystem. NFC stands " \
+	"Near Field Communication. It is a short-range (a few centimeters)"\
+	"radio technology that enables communication between devices that " \
+	"either touch or are momentarily held close together. NFC is an open "\
+	"technology standardized by the NFC Forum. It is based on RFID. ";
+
 /* sockets */
 static int sockfd[2];
 static int client;
@@ -211,6 +219,51 @@ static near_bool_t test_snep_read_req_common(
 }
 
 /*
+ * @brief Utility: Send \p frame_len bytes of the fragment \p data
+ * to the socket and call near_snep_core_read
+ *
+ * @param[in] frag_len
+ * @param[in] data
+ * @return near_bool_t returned by near_snep_core_read
+ *
+ * @note does not call near_snep_core_read for now, since it can't handle
+ * frame without SNEP header
+ */
+static near_bool_t test_snep_read_send_fragment(size_t frag_len,
+						uint8_t *data)
+{
+	size_t nbytes;
+
+	nbytes = send(sockfd[client], data, frag_len, 0);
+	g_assert(nbytes == frag_len);
+
+	/*
+	 * TODO fragment has no SNEP header. snep_core_read will fail:
+	 *      ret = near_snep_core_read(sockfd[server], 0, 0, NULL,
+	 *               test_snep_dummy_req_get, test_snep_dummy_req_put);
+	 */
+	return TRUE;
+}
+
+/*
+ * @brief Utility: Confirm that server didn't send any response
+ */
+static void test_snep_read_no_response(void)
+{
+	struct p2p_snep_resp_frame *resp;
+	int nbytes;
+
+	resp = g_try_malloc0(sizeof(*resp));
+	g_assert(resp != NULL);
+
+	nbytes = recv(sockfd[client], resp, sizeof(*resp), MSG_DONTWAIT);
+	g_assert(nbytes < 0);
+	g_assert(errno == EAGAIN);
+
+	g_free(resp);
+}
+
+/*
  * @brief Utility: Verify response sent by the server
  *
  * @param[in] exp_resp_code      Expected response code
@@ -345,6 +398,62 @@ static void test_snep_read_put_req_not_impl(gpointer context,
 }
 
 /*
+ * @brief Test: Confirm that server is able to receive fragmented request msg
+ *
+ * Steps:
+ * - Send PUT request with incomplete data
+ * - Verify server responded with CONTINUE
+ * - Send second fragment of the message
+ * - Verify server didn't respond
+ * - Send last fragment of the message
+ * - Verify server responded with SUCCESS
+ */
+static void test_snep_read_put_req_fragmented(gpointer context,
+						gconstpointer gp)
+{
+	struct test_snep_context *ctx = context;
+	struct p2p_snep_req_frame *req;
+	uint32_t frame_len, payload_len;
+	near_bool_t ret;
+
+	payload_len = ctx->req_info_len / 3;
+	frame_len = NEAR_SNEP_REQ_PUT_HEADER_LENGTH + payload_len;
+
+	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
+					NEAR_SNEP_REQ_PUT, ctx->req_info_len,
+					ctx->req_info, payload_len);
+
+	/* send 1st fragment within PUT request */
+	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
+					test_snep_dummy_req_put);
+	g_assert(ret);
+
+	test_snep_read_verify_resp_code(NEAR_SNEP_RESP_CONTINUE);
+
+	/* send 2nd fragment */
+	ret = test_snep_read_send_fragment(payload_len,
+					ctx->req_info + payload_len);
+	g_assert(ret);
+
+	/* do not expect a response */
+	test_snep_read_no_response();
+
+	/* send last fragment */
+	ret = test_snep_read_send_fragment(ctx->req_info_len - 2 * payload_len,
+					ctx->req_info + 2 * payload_len);
+	g_assert(ret);
+
+	/*
+	 * TODO expected SUCCESS response:
+	 *     test_snep_read_verify_resp_code(NEAR_SNEP_RESP_SUCCESS);
+	 */
+
+	TEST_SNEP_LOG("EXPECTED FAIL: fragments are not received by SNEP\n");
+
+	g_free(req);
+}
+
+/*
  * @brief Test: Confirm that server is able to send simple response
  */
 static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
@@ -387,6 +496,9 @@ int main(int argc, char **argv)
 	g_test_suite_add(ts,
 		g_test_create_case("request not impl", fs, short_text,
 			init, test_snep_read_put_req_not_impl, exit));
+	g_test_suite_add(ts,
+		g_test_create_case("request fragmented", fs, long_text,
+			init, test_snep_read_put_req_fragmented, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
