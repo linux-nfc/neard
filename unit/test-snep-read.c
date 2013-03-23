@@ -37,6 +37,10 @@
 
 #include "test-utils.h"
 
+/* GET/PUT server functions */
+static near_bool_t test_snep_dummy_req_get(int fd, void *data);
+static near_bool_t test_snep_dummy_req_put(int fd, void *data);
+
 #define TEST_SNEP_LOG(fmt, ...) do { \
 	if (g_test_verbose()) {\
 		g_printf("[SNEP unit] " fmt, ##__VA_ARGS__); \
@@ -125,6 +129,159 @@ static void test_snep_cleanup(gpointer context, gconstpointer data)
 }
 
 /*
+ * @brief Utility: Allocate and build SNEP request frame.
+ *
+ * @param[in] frame_len   Size of the entire frame
+ * @param[in] ver         SNEP protocol version field
+ * @param[in] resp_type   SNEP response code field
+ * @param[in] info_len    SNEP info length field
+ * @param[in] data        SNEP info field
+ * @param[in] payload_len Size of the payload to be inserted
+ * @return p2p_snep_resp_frame
+ */
+static struct p2p_snep_req_frame *test_snep_build_req_frame(
+		size_t frame_len, uint8_t ver, uint8_t req_type,
+		uint32_t info_len, uint8_t *data, uint32_t payload_len)
+{
+	struct p2p_snep_req_frame *req;
+
+	req = g_try_malloc0(frame_len);
+	g_assert(req != NULL);
+
+	req->version = ver;
+	req->request = req_type;
+	req->length = GUINT_TO_BE(info_len);
+	memcpy(req->ndef, data, payload_len);
+
+	return req;
+}
+
+/*
+ * @brief Utility: Allocate and build SNEP response frame.
+ *
+ * @param[in] frame_len   Size of the entire frame
+ * @param[in] ver         SNEP protocol version field
+ * @param[in] resp_type   SNEP response code field
+ * @param[in] info_len    SNEP info length field
+ * @param[in] data        SNEP info field
+ * @return p2p_snep_resp_frame
+ */
+static struct p2p_snep_resp_frame *test_snep_build_resp_frame(
+			size_t frame_len, uint8_t ver, uint8_t resp_type,
+			uint32_t info_len, uint8_t *data)
+{
+	struct p2p_snep_resp_frame *resp;
+
+	resp = g_try_malloc0(frame_len);
+	g_assert(resp != NULL);
+
+	resp->version = ver;
+	resp->response = resp_type;
+	resp->length = GUINT_TO_BE(info_len);
+	memcpy(resp->info, data, info_len);
+
+	return resp;
+}
+
+/*
+ * @brief Utility: Send the \p req frame to the socket and call
+ * near_snep_core_read
+ *
+ * @param[in] req        Request frame to send
+ * @param[in] frame_len  Size of the frame
+ * @param[in] req_get    GET server function
+ * @param[in] req_put    PUT server function
+ * @return near_bool_t returned by near_snep_core_read
+ */
+static near_bool_t test_snep_read_req_common(
+			struct p2p_snep_req_frame *req, size_t frame_len,
+			near_server_io req_get, near_server_io req_put)
+{
+	near_bool_t ret;
+	size_t nbytes;
+
+	nbytes = send(sockfd[client], req, frame_len, 0);
+	g_assert(nbytes == frame_len);
+
+	TEST_SNEP_LOG("sent 0x%02X request\n", req->request);
+
+	ret = near_snep_core_read(sockfd[server], 0, 0, NULL, req_get, req_put);
+
+	return ret;
+}
+
+/*
+ * @brief Utility: Verify response sent by the server
+ *
+ * @param[in] exp_resp_code      Expected response code
+ * @param[in] exp_resp_info_len  Expected response info length
+ * @param[in] exp_resp_info      Expected response info
+ */
+static void test_snep_read_verify_resp(int exp_resp_code,
+		uint32_t exp_resp_info_len, uint8_t *exp_resp_info)
+{
+	struct p2p_snep_resp_frame *resp;
+	size_t nbytes, frame_len;
+
+	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + exp_resp_info_len;
+	resp = test_snep_build_resp_frame(frame_len, 0, 0, 0, NULL);
+	g_assert(resp != NULL);
+
+	nbytes = recv(sockfd[client], resp, frame_len, 0);
+	g_assert(nbytes == frame_len);
+
+	TEST_SNEP_LOG("received response = 0x%02X, exp = 0x%02X\n",
+			resp->response, exp_resp_code);
+
+	g_assert(resp->version == NEAR_SNEP_VERSION);
+	g_assert(resp->response == exp_resp_code);
+	g_assert(resp->length == GUINT_TO_BE(exp_resp_info_len));
+	g_assert(!memcmp(resp->info, exp_resp_info, exp_resp_info_len));
+
+	g_free(resp);
+}
+
+/*
+ * @brief Utility: Verify code of the response sent by the server
+ *
+ * @param[in] exp_resp_code  Expected response code
+ */
+static void test_snep_read_verify_resp_code(int exp_resp_code)
+{
+	test_snep_read_verify_resp(exp_resp_code, 0, NULL);
+}
+
+/*
+ * @brief Test: Confirm that server is able to handle PUT request
+ *
+ * Steps:
+ * - Send well-formed PUT request
+ * - Verify server responded with SUCCESS
+ */
+static void test_snep_read_put_req_ok(gpointer context, gconstpointer gp)
+{
+	struct test_snep_context *ctx = context;
+	struct p2p_snep_req_frame *req;
+	uint32_t frame_len, payload_len;
+	near_bool_t ret;
+
+	payload_len = ctx->req_info_len;
+	frame_len = NEAR_SNEP_REQ_PUT_HEADER_LENGTH + payload_len;
+
+	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
+					NEAR_SNEP_REQ_PUT, ctx->req_info_len,
+					ctx->req_info, payload_len);
+
+	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
+					test_snep_dummy_req_put);
+	g_assert(ret);
+
+	test_snep_read_verify_resp_code(NEAR_SNEP_RESP_SUCCESS);
+
+	g_free(req);
+}
+
+/*
  * @brief Test: Confirm that server is able to send simple response
  */
 static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
@@ -157,5 +314,109 @@ int main(int argc, char **argv)
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
+	ts = g_test_create_suite("SNEP read PUT");
+	g_test_suite_add(ts,
+		g_test_create_case("request ok", fs, short_text,
+			init, test_snep_read_put_req_ok, exit));
+
+	g_test_suite_add_suite(g_test_get_root(), ts);
+
 	return g_test_run();
+}
+
+/*
+ * @brief Utility: Dummy PUT request handler
+ */
+static near_bool_t test_snep_dummy_req_put(int fd, void *data)
+{
+	struct p2p_snep_data *snep_data = data;
+	GList *records;
+	uint8_t *nfc_data;
+	uint32_t nfc_data_length;
+	uint32_t offset = 0;
+
+	TEST_SNEP_LOG(">> dummy_req_put entry %p\n", data);
+
+	if (snep_data == NULL)
+		goto error;
+
+	if (stored_recd)
+		TEST_SNEP_LOG("\tdummy_req_put already stored record\n");
+
+	test_fragments = g_slist_append(test_fragments, snep_data);
+
+	if (snep_data->nfc_data_length > snep_data->nfc_data_current_length)
+		return TRUE;
+
+	nfc_data_length = 0;
+	nfc_data = g_try_malloc0(snep_data->nfc_data_length);
+	g_assert(nfc_data != NULL);
+
+	while (g_slist_length(test_fragments) > 0) {
+		static int frag_cnt;
+		struct p2p_snep_data *fragment = test_fragments->data;
+
+		TEST_SNEP_LOG("\tdummy_req_put frag=%d, len=%d, current=%d\n",
+				frag_cnt, fragment->nfc_data_length,
+				fragment->nfc_data_current_length);
+		test_fragments = g_slist_remove(test_fragments, fragment);
+
+		memcpy(nfc_data + offset, fragment->nfc_data,
+			fragment->nfc_data_current_length - nfc_data_length);
+
+		offset += fragment->nfc_data_current_length - nfc_data_length;
+		nfc_data_length = offset;
+
+		frag_cnt++;
+	}
+
+	records = near_ndef_parse_msg(nfc_data, nfc_data_length, NULL);
+	if (records == NULL) {
+		TEST_SNEP_LOG("\tdummy_req_put parsing ndef failed\n");
+		goto error;
+	}
+
+	if (g_list_length(records) != 1) {
+		TEST_SNEP_LOG("\tdummy_req_put records number mismatch");
+		goto error;
+	}
+
+	g_free(nfc_data);
+
+	stored_recd = records->data;
+
+	TEST_SNEP_LOG("\t\tdummy_req_put STORED REC data=%p length=%zu\n",
+			stored_recd->data, stored_recd->data_len);
+
+	near_snep_core_response_noinfo(fd, NEAR_SNEP_RESP_SUCCESS);
+	return TRUE;
+
+error:
+	TEST_SNEP_LOG("\tdummy_req_put error!!!\n");
+	return FALSE;
+}
+
+/*
+ * @brief Utility: Dummy GET request handler
+ */
+static near_bool_t test_snep_dummy_req_get(int fd, void *data)
+{
+	struct p2p_snep_data *snep_data = data;
+
+	TEST_SNEP_LOG(">> dummy_req_get entry %p\n", data);
+
+	if (snep_data == NULL)
+		goto error;
+
+	TEST_SNEP_LOG("\t\tdummy_req_get STORED REC data=%p length=%zu\n",
+			stored_recd->data, stored_recd->data_len);
+
+	near_snep_core_response_with_info(fd, NEAR_SNEP_RESP_SUCCESS,
+					near_ndef_data_ptr(stored_recd),
+					near_ndef_data_length(stored_recd));
+	return TRUE;
+
+error:
+	TEST_SNEP_LOG("\tdummy_req_get error!!!\n");
+	return FALSE;
 }
