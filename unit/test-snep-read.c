@@ -37,10 +37,6 @@
 
 #include "test-utils.h"
 
-/* GET/PUT server functions */
-static near_bool_t test_snep_dummy_req_get(int fd, void *data);
-static near_bool_t test_snep_dummy_req_put(int fd, void *data);
-
 #define TEST_SNEP_LOG(fmt, ...) do { \
 	if (g_test_verbose()) {\
 		g_printf("[SNEP unit] " fmt, ##__VA_ARGS__); \
@@ -83,6 +79,105 @@ struct test_snep_context {
 static struct test_snep_context *gcontext;
 static struct near_ndef_record *stored_recd;
 static GSList *test_fragments;
+
+/* GET/PUT server functions */
+
+/*
+ * @brief Utility: Dummy PUT request handler
+ */
+static near_bool_t test_snep_dummy_req_put(int fd, void *data)
+{
+	struct p2p_snep_data *snep_data = data;
+	GList *records;
+	uint8_t *nfc_data;
+	uint32_t nfc_data_length;
+	uint32_t offset = 0;
+
+	TEST_SNEP_LOG(">> dummy_req_put entry %p\n", data);
+
+	if (snep_data == NULL)
+		goto error;
+
+	if (stored_recd)
+		TEST_SNEP_LOG("\tdummy_req_put already stored record\n");
+
+	test_fragments = g_slist_append(test_fragments, snep_data);
+
+	if (snep_data->nfc_data_length > snep_data->nfc_data_current_length)
+		return TRUE;
+
+	nfc_data_length = 0;
+	nfc_data = g_try_malloc0(snep_data->nfc_data_length);
+	g_assert(nfc_data != NULL);
+
+	while (g_slist_length(test_fragments) > 0) {
+		static int frag_cnt;
+		struct p2p_snep_data *fragment = test_fragments->data;
+
+		TEST_SNEP_LOG("\tdummy_req_put frag=%d, len=%d, current=%d\n",
+				frag_cnt, fragment->nfc_data_length,
+				fragment->nfc_data_current_length);
+		test_fragments = g_slist_remove(test_fragments, fragment);
+
+		memcpy(nfc_data + offset, fragment->nfc_data,
+			fragment->nfc_data_current_length - nfc_data_length);
+
+		offset += fragment->nfc_data_current_length - nfc_data_length;
+		nfc_data_length = offset;
+
+		frag_cnt++;
+	}
+
+	records = near_ndef_parse_msg(nfc_data, nfc_data_length, NULL);
+	if (records == NULL) {
+		TEST_SNEP_LOG("\tdummy_req_put parsing ndef failed\n");
+		goto error;
+	}
+
+	if (g_list_length(records) != 1) {
+		TEST_SNEP_LOG("\tdummy_req_put records number mismatch");
+		goto error;
+	}
+
+	g_free(nfc_data);
+
+	stored_recd = records->data;
+
+	TEST_SNEP_LOG("\t\tdummy_req_put STORED REC data=%p length=%zu\n",
+			stored_recd->data, stored_recd->data_len);
+
+	near_snep_core_response_noinfo(fd, NEAR_SNEP_RESP_SUCCESS);
+	return TRUE;
+
+error:
+	TEST_SNEP_LOG("\tdummy_req_put error!!!\n");
+	return FALSE;
+}
+
+/*
+ * @brief Utility: Dummy GET request handler
+ */
+static near_bool_t test_snep_dummy_req_get(int fd, void *data)
+{
+	struct p2p_snep_data *snep_data = data;
+
+	TEST_SNEP_LOG(">> dummy_req_get entry %p\n", data);
+
+	if (snep_data == NULL)
+		goto error;
+
+	TEST_SNEP_LOG("\t\tdummy_req_get STORED REC data=%p length=%zu\n",
+			stored_recd->data, stored_recd->data_len);
+
+	near_snep_core_response_with_info(fd, NEAR_SNEP_RESP_SUCCESS,
+					near_ndef_data_ptr(stored_recd),
+					near_ndef_data_length(stored_recd));
+	return TRUE;
+
+error:
+	TEST_SNEP_LOG("\tdummy_req_get error!!!\n");
+	return FALSE;
+}
 
 static void test_snep_init(gpointer context, gconstpointer data)
 {
@@ -863,101 +958,4 @@ int main(int argc, char **argv)
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
 	return g_test_run();
-}
-
-/*
- * @brief Utility: Dummy PUT request handler
- */
-static near_bool_t test_snep_dummy_req_put(int fd, void *data)
-{
-	struct p2p_snep_data *snep_data = data;
-	GList *records;
-	uint8_t *nfc_data;
-	uint32_t nfc_data_length;
-	uint32_t offset = 0;
-
-	TEST_SNEP_LOG(">> dummy_req_put entry %p\n", data);
-
-	if (snep_data == NULL)
-		goto error;
-
-	if (stored_recd)
-		TEST_SNEP_LOG("\tdummy_req_put already stored record\n");
-
-	test_fragments = g_slist_append(test_fragments, snep_data);
-
-	if (snep_data->nfc_data_length > snep_data->nfc_data_current_length)
-		return TRUE;
-
-	nfc_data_length = 0;
-	nfc_data = g_try_malloc0(snep_data->nfc_data_length);
-	g_assert(nfc_data != NULL);
-
-	while (g_slist_length(test_fragments) > 0) {
-		static int frag_cnt;
-		struct p2p_snep_data *fragment = test_fragments->data;
-
-		TEST_SNEP_LOG("\tdummy_req_put frag=%d, len=%d, current=%d\n",
-				frag_cnt, fragment->nfc_data_length,
-				fragment->nfc_data_current_length);
-		test_fragments = g_slist_remove(test_fragments, fragment);
-
-		memcpy(nfc_data + offset, fragment->nfc_data,
-			fragment->nfc_data_current_length - nfc_data_length);
-
-		offset += fragment->nfc_data_current_length - nfc_data_length;
-		nfc_data_length = offset;
-
-		frag_cnt++;
-	}
-
-	records = near_ndef_parse_msg(nfc_data, nfc_data_length, NULL);
-	if (records == NULL) {
-		TEST_SNEP_LOG("\tdummy_req_put parsing ndef failed\n");
-		goto error;
-	}
-
-	if (g_list_length(records) != 1) {
-		TEST_SNEP_LOG("\tdummy_req_put records number mismatch");
-		goto error;
-	}
-
-	g_free(nfc_data);
-
-	stored_recd = records->data;
-
-	TEST_SNEP_LOG("\t\tdummy_req_put STORED REC data=%p length=%zu\n",
-			stored_recd->data, stored_recd->data_len);
-
-	near_snep_core_response_noinfo(fd, NEAR_SNEP_RESP_SUCCESS);
-	return TRUE;
-
-error:
-	TEST_SNEP_LOG("\tdummy_req_put error!!!\n");
-	return FALSE;
-}
-
-/*
- * @brief Utility: Dummy GET request handler
- */
-static near_bool_t test_snep_dummy_req_get(int fd, void *data)
-{
-	struct p2p_snep_data *snep_data = data;
-
-	TEST_SNEP_LOG(">> dummy_req_get entry %p\n", data);
-
-	if (snep_data == NULL)
-		goto error;
-
-	TEST_SNEP_LOG("\t\tdummy_req_get STORED REC data=%p length=%zu\n",
-			stored_recd->data, stored_recd->data_len);
-
-	near_snep_core_response_with_info(fd, NEAR_SNEP_RESP_SUCCESS,
-					near_ndef_data_ptr(stored_recd),
-					near_ndef_data_length(stored_recd));
-	return TRUE;
-
-error:
-	TEST_SNEP_LOG("\tdummy_req_get error!!!\n");
-	return FALSE;
 }
