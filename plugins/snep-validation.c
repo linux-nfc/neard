@@ -152,7 +152,7 @@ static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
 	/* check if the acceptable length is higher than the data_len
 	 * otherwise returns a NEAR_SNEP_RESP_EXCESS
 	 */
-	acceptable_length = GUINT32_FROM_BE(*(uint32_t *)snep_data->nfc_data);
+	acceptable_length = near_get_be32(snep_data->nfc_data);
 
 	/* Look if there are some incoming ndef stored */
 	incoming_ndefs = g_hash_table_lookup(snep_validation_hash,
