@@ -908,48 +908,48 @@ int main(int argc, char **argv)
 
 	g_test_init(&argc, &argv, NULL);
 
-	ts = g_test_create_suite("SNEP responses");
+	ts = g_test_create_suite("testSNEP-response");
 	g_test_suite_add(ts,
 		g_test_create_case("noinfo", fs, short_text,
 			init, test_snep_response_noinfo, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
-	ts = g_test_create_suite("SNEP read GET");
+	ts = g_test_create_suite("testSNEP-readGET");
 	g_test_suite_add(ts,
-		g_test_create_case("request ok", fs, short_text,
+		g_test_create_case("Request ok", fs, short_text,
 			init, test_snep_read_get_req_ok, exit));
 	g_test_suite_add(ts,
-		g_test_create_case("request not impl", fs, short_text,
+		g_test_create_case("Request not implemented", fs, short_text,
 			init, test_snep_read_get_req_not_impl, exit));
 	g_test_suite_add(ts,
-		g_test_create_case("request fragmented CONTINUE",
+		g_test_create_case("Request fragmented CONTINUE",
 			fs, long_text, init,
 			test_snep_read_get_frags_continue, exit));
 	g_test_suite_add(ts,
-		g_test_create_case("request fragmented REJECT",
+		g_test_create_case("Request fragmented REJECT",
 			fs, long_text, init,
 			test_snep_read_get_frags_reject, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
-	ts = g_test_create_suite("SNEP read PUT");
+	ts = g_test_create_suite("testSNEP-readPUT");
 	g_test_suite_add(ts,
-		g_test_create_case("request ok", fs, short_text,
+		g_test_create_case("Request ok", fs, short_text,
 			init, test_snep_read_put_req_ok, exit));
 	g_test_suite_add(ts,
-		g_test_create_case("request unsupported ver", fs, short_text,
+		g_test_create_case("Request unsupported ver", fs, short_text,
 			init, test_snep_read_put_req_unsupp_ver, exit));
 	g_test_suite_add(ts,
-		g_test_create_case("request not impl", fs, short_text,
+		g_test_create_case("Request not implemented", fs, short_text,
 			init, test_snep_read_put_req_not_impl, exit));
 	g_test_suite_add(ts,
-		g_test_create_case("request fragmented", fs, long_text,
+		g_test_create_case("Request fragmented", fs, long_text,
 			init, test_snep_read_put_req_fragmented, exit));
 
 	g_test_suite_add_suite(g_test_get_root(), ts);
 
-	ts = g_test_create_suite("SNEP various");
+	ts = g_test_create_suite("testSNEP-misc");
 	g_test_suite_add(ts,
 		g_test_create_case("PUT and GET request NDEF",
 			fs, short_text, init,
