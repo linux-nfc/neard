@@ -306,11 +306,11 @@ int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
 
-	g_test_add_func("/testndefparse/Test URI NDEF", test_ndef_uri);
-	g_test_add_func("/testndefparse/Test Text NDEF", test_ndef_text);
-	g_test_add_func("/testndefparse/Test Single record SmartPoster NDEF",
+	g_test_add_func("/testNDEF-parse/Test URI NDEF", test_ndef_uri);
+	g_test_add_func("/testNDEF-parse/Test Text NDEF", test_ndef_text);
+	g_test_add_func("/testNDEF-parse/Test Single record SmartPoster NDEF",
 							test_ndef_single_sp);
-	g_test_add_func("/testndefparse/Test Title record SmartPoster NDEF",
+	g_test_add_func("/testNDEF-parse/Test Title record SmartPoster NDEF",
 							test_ndef_title_sp);
 
 	return g_test_run();

@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
 
-	g_test_add_func("/testndefbuild/Test Text NDEF", test_ndef_text_build);
+	g_test_add_func("/testNDEF-build/Test Text NDEF", test_ndef_text_build);
 
 	return g_test_run();
 }
