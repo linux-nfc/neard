@@ -387,7 +387,7 @@ static int llcp_print_i(guint8 *data, guint32 data_len)
 	if (llcp_print_sequence(data, data_len))
 		return -EINVAL;
 
-	sniffer_print_hexdump(stdout, data + 1, data_len - 1, "  ");
+	sniffer_print_hexdump(stdout, data + 1, data_len - 1, "  ", TRUE);
 
 	return 0;
 }
@@ -500,7 +500,8 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 		break;
 
 	default:
-		sniffer_print_hexdump(stdout, llcp.data, llcp.data_len, "  ");
+		sniffer_print_hexdump(stdout, llcp.data, llcp.data_len, "  ",
+				      TRUE);
 		break;
 	}
 

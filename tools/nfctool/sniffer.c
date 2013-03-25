@@ -158,7 +158,7 @@ static void pcap_file_cleanup(void)
  *
  */
 void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
-							gchar *line_prefix)
+			   gchar *line_prefix, gboolean print_len)
 {
 	guint8 digits;
 	guint32 offset;
@@ -172,6 +172,13 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	offset = 0;
 	digits = 0;
 	total = 0;
+
+	if (print_len) {
+		if (line_prefix)
+			fprintf(file, "%s", line_prefix);
+
+		fprintf(file, "Total length: %u bytes\n", len);
+	}
 
 	while (total < len) {
 		if (digits == 0) {

@@ -31,6 +31,6 @@ int sniffer_init(void);
 void sniffer_cleanup(void);
 
 void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
-							gchar *line_prefix);
+			   gchar *line_prefix, gboolean print_len);
 
 #endif /* __SNIFFER_H */
