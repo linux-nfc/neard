@@ -1776,21 +1776,15 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 					struct near_ndef_mime_payload *mime,
 					struct carrier_data *remote_carrier)
 {
-	struct carrier_data *local_carrier = NULL;
+	struct carrier_data *local_carrier;
 	char cdr;
 	char *mime_type, *carrier_string;
 	uint16_t prop;
-	int err;
 
 	DBG("");
 
 	if (ac == NULL || cfg == NULL)
 		return -EINVAL;
-
-	/* to be safe side */
-	*ac = NULL;
-	*cfg = NULL;
-	carrier_string = NULL;
 
 	switch (carrier) {
 	case NEAR_CARRIER_BLUETOOTH:
@@ -1818,40 +1812,29 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 
 	case NEAR_CARRIER_EMPTY:
 	case NEAR_CARRIER_UNKNOWN:
-		carrier_string = "Unknown";
-		err = -EINVAL;
-		goto fail;
+	default:
+		return -EINVAL;
 	}
 
 	if (local_carrier == NULL) {
 		DBG("Unable to retrieve local carrier %s data", carrier_string);
-		err = -ESRCH;
-		goto fail;
+		return -ESRCH;
 	}
 
 	*cfg = near_ndef_prepare_cfg_message(mime_type, local_carrier->data,
 						local_carrier->size, cdr, 1);
-	if (*cfg == NULL) {
-		err = -ENOMEM;
-		goto fail;
-	}
-
 	*ac = near_ndef_prepare_ac_message(local_carrier->state, cdr);
-	if (*ac == NULL) {
-		err = -EINVAL;
-		goto fail;
-	}
 
 	g_free(local_carrier);
+
+	if (*cfg == NULL || *ac == NULL) {
+		free_ndef_message(*ac);
+		free_ndef_message(*cfg);
+
+		return -ENOMEM;
+	}
 
 	return 0;
-
-fail:
-	g_free(local_carrier);
-	free_ndef_message(*ac);
-	free_ndef_message(*cfg);
-
-	return err;
 }
 
 static void free_ndef_list(gpointer data)
