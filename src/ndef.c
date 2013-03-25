@@ -695,7 +695,7 @@ static enum record_type get_external_record_type(uint8_t *type,
 	DBG("");
 
 	if (strncmp((char *) type, BT_MIME_STRING_2_0,
-					strlen(BT_MIME_STRING_2_0)) == 0)
+					sizeof(BT_MIME_STRING_2_0) - 1) == 0)
 		return RECORD_TYPE_MIME_TYPE;
 	else
 		return RECORD_TYPE_UNKNOWN;
