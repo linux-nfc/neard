@@ -2576,8 +2576,6 @@ uint8_t *near_ndef_data_ptr(struct near_ndef_record *rec)
 
 /**
  * @brief Parse message represented by bytes block
-GList *near_ndef_parse(uint8_t *ndef_data, size_t ndef_length,
-					struct near_ndef_message **reply)
  *
  * @param[in] ndef_data   pointer on data representing ndef message
  * @param[in] ndef_length size of ndef_data
