@@ -172,13 +172,6 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	if (option_detach == TRUE) {
-		if (daemon(0, 0)) {
-			perror("Can't start daemon");
-			exit(1);
-		}
-	}
-
 	main_loop = g_main_loop_new(NULL, FALSE);
 
 	dbus_error_init(&err);
@@ -217,6 +210,13 @@ int main(int argc, char *argv[])
 	__near_bluetooth_init();
 
 	__near_plugin_init(option_plugin, option_noplugin);
+
+	if (option_detach == TRUE) {
+		if (daemon(0, 0)) {
+			perror("Can't start daemon");
+			exit(1);
+		}
+	}
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sig_term;
