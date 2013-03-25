@@ -275,28 +275,63 @@ static int llcp_print_sequence(guint8 *data, guint32 data_len)
 	return 0;
 }
 
-static int llcp_print_agf(guint8 *data, guint8 data_len,
-			  struct timeval *timestamp)
+static int llcp_print_agf(guint8 *data, guint32 data_len, guint adapter_idx,
+			  guint8 direction, struct timeval *timestamp)
 {
-	guint16 len;
-	guint16 offset = 0;
+	guint8 *pdu;
+	gsize pdu_size;
+	gsize size;
+	guint16 offset;
+	guint16 count;
+	int err;
 
-	if (data_len < 2)
+	if (data_len < 2) {
+		print_error("Error parsing AGF PDU");
 		return -EINVAL;
-
-	while (offset < data_len - 2) {
-		len = (data[offset] << 8) | data[offset + 1];
-		offset += 2;
-
-		if (offset + len > data_len)
-			return -EINVAL;
-
-		llcp_print_pdu(data + offset, len, timestamp);
-
-		offset += len;
 	}
 
-	return 0;
+	printf("\n");
+
+	pdu = NULL;
+	pdu_size = 0;
+	offset = 0;
+	count = 0;
+
+	while (offset < data_len - 2) {
+		size = (data[offset] << 8) | data[offset + 1];
+
+		offset += 2;
+
+		if (size == 0 || offset + size > data_len) {
+			print_error("Error parsing AGF PDU");
+			err = -EINVAL;
+			goto exit;
+		}
+
+		if (size + NFC_LLCP_RAW_HEADER_SIZE > pdu_size) {
+			pdu_size = size + NFC_LLCP_RAW_HEADER_SIZE;
+			pdu = g_realloc(pdu, pdu_size);
+
+			pdu[0] = adapter_idx;
+			pdu[1] = direction;
+		}
+
+		memcpy(pdu + NFC_LLCP_RAW_HEADER_SIZE, data + offset, size);
+
+		printf("-- AGF LLC PDU %02u:\n", count++);
+
+		llcp_print_pdu(pdu, size + NFC_LLCP_RAW_HEADER_SIZE, timestamp);
+
+		offset += size;
+	}
+
+	printf("-- End of AGF LLC PDUs\n");
+
+	err = 0;
+exit:
+	g_free(pdu);
+
+	return err;
 }
 
 static int llcp_print_dm(guint8 *data, guint8 data_len)
@@ -436,8 +471,8 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 
 	switch (llcp.ptype) {
 	case LLCP_PTYPE_AGF:
-		llcp_print_agf(llcp.data, llcp.data_len, timestamp);
-		printf("  End of AGF frame\n");
+		llcp_print_agf(llcp.data, llcp.data_len,
+			       adapter_idx, direction, timestamp);
 		break;
 
 	case LLCP_PTYPE_I:
