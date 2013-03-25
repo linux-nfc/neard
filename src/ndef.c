@@ -1896,7 +1896,7 @@ static void copy_ac_records(struct near_ndef_message *ho, GList *acs)
 		ac = temp->data;
 		memcpy(ho->data + ho->offset, ac->data, ac->length);
 		/*
-		 * AC records are part of handover message payoad,
+		 * AC records are part of handover message payload,
 		 * so modifying offset.
 		 */
 		ho->offset += ac->length;
@@ -1920,7 +1920,7 @@ static void copy_cfg_records(struct near_ndef_message *ho, GList *cfgs)
 		memcpy(ho->data + offset, cfg->data, cfg->length);
 		/*
 		 * Configuration records (e.g. bt or wifi) records are not part
-		 * of handover payoad, they are consecutive ndef msgs. So
+		 * of handover payload, they are consecutive ndef msgs. So
 		 * here we are not modifying ho->offset.
 		 */
 		offset += cfg->length;
@@ -1990,7 +1990,7 @@ static struct near_ndef_message *near_ndef_prepare_hs_message(
 	DBG("");
 
 	/*
-	 * Preparing empty Hs message incase remote devices has zero
+	 * Preparing empty Hs message in case remote devices has zero
 	 * alternative carries or unknown mime types or unknown
 	 * configuration data.
 	 */
@@ -2020,7 +2020,7 @@ static struct near_ndef_message *near_ndef_prepare_hs_message(
 	}
 
 	if (g_list_length(ac_msgs) == 0) {
-		DBG("no alterative carriers, so preparing empty Hs message");
+		DBG("no alternative carriers, so preparing empty Hs message");
 		return near_ndef_prepare_empty_hs_message();
 	}
 
@@ -2113,7 +2113,7 @@ static struct near_ndef_message *near_ndef_prepare_hr_message(GSList *carriers)
 
 	DBG("");
 
-	/* Hr message should have atleast one carrier */
+	/* Hr message should have at least one carrier */
 	while (carriers) {
 		ret = near_ndef_prepare_ac_and_cfg_records(
 				string2carrier(carriers->data),
@@ -2127,7 +2127,7 @@ static struct near_ndef_message *near_ndef_prepare_hr_message(GSList *carriers)
 	}
 
 	if (g_list_length(ac_msgs) == 0) {
-		DBG("no alterative carriers to prepare Hr message");
+		DBG("no alternative carriers to prepare Hr message");
 		goto fail;
 	}
 
@@ -2428,7 +2428,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	}
 
 	/*
-	 * Incase of multiple carriers, handover with any carrier
+	 * In case of multiple carriers, handover with any carrier
 	 * gets done then leave the loop.
 	 */
 	if (action == TRUE) {
