@@ -30,7 +30,7 @@ int sniffer_init(void);
 
 void sniffer_cleanup(void);
 
-void sniffer_print_hexdump(FILE *file, unsigned char *data, int len,
-							char *line_prefix);
+void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
+							gchar *line_prefix);
 
 #endif /* __SNIFFER_H */

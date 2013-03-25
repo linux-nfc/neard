@@ -157,14 +157,14 @@ static void pcap_file_cleanup(void)
  * 00000000: 01 01 43 20 30 70 72 6F 70 65 72 74 69 65 73 20  |..C 0properties |
  *
  */
-void sniffer_print_hexdump(FILE *file, unsigned char *data, int len,
-							char *line_prefix)
+void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
+							gchar *line_prefix)
 {
-	int digits;
-	int offset;
-	int total;
-	char line[LINE_SIZE];
-	char *hexa = NULL, *human = NULL;
+	guint8 digits;
+	guint32 offset;
+	guint32 total;
+	gchar line[LINE_SIZE];
+	gchar *hexa = NULL, *human = NULL;
 
 	if (len <= 0)
 		return;

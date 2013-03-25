@@ -334,7 +334,7 @@ exit:
 	return err;
 }
 
-static int llcp_print_dm(guint8 *data, guint8 data_len)
+static int llcp_print_dm(guint8 *data, guint32 data_len)
 {
 	gchar *reason;
 
@@ -382,7 +382,7 @@ static int llcp_print_dm(guint8 *data, guint8 data_len)
 	return 0;
 }
 
-static int llcp_print_i(guint8 *data, guint8 data_len)
+static int llcp_print_i(guint8 *data, guint32 data_len)
 {
 	if (llcp_print_sequence(data, data_len))
 		return -EINVAL;
@@ -392,7 +392,7 @@ static int llcp_print_i(guint8 *data, guint8 data_len)
 	return 0;
 }
 
-static int llcp_print_frmr(guint8 *data, guint8 data_len)
+static int llcp_print_frmr(guint8 *data, guint32 data_len)
 {
 	guint8 val;
 
