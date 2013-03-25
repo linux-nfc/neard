@@ -58,6 +58,57 @@ struct p2p_data {
 	GList *client_list;
 };
 
+static int __p2p_bind(struct p2p_data *server_data, GIOFunc listener)
+{
+	int err, fd = server_data->fd;
+	struct sockaddr_nfc_llcp addr;
+	GIOChannel *channel;
+	struct near_p2p_driver *driver = server_data->driver;
+
+	DBG("Binding %s", driver->name);
+
+	memset(&addr, 0, sizeof(struct sockaddr_nfc_llcp));
+	addr.sa_family = AF_NFC;
+	addr.dev_idx = server_data->adapter_idx;
+	addr.nfc_protocol = NFC_PROTO_NFC_DEP;
+	addr.service_name_len = strlen(driver->service_name);
+	strcpy(addr.service_name, driver->service_name);
+
+	err = bind(fd, (struct sockaddr *) &addr,
+			sizeof(struct sockaddr_nfc_llcp));
+	if (err < 0) {
+		if (errno == EADDRINUSE) {
+			DBG("%s is already bound", driver->name);
+			close(fd);
+			return 0;
+		}
+
+		near_error("%s bind failed %d %d", driver->name, err, errno);
+		close(fd);
+		return err;
+	}
+
+	err = listen(fd, 10);
+	if (err < 0) {
+		near_error("%s listen failed %d", driver->name, err);
+		close(fd);
+		return err;
+	}
+
+	channel = g_io_channel_unix_new(fd);
+	g_io_channel_set_close_on_unref(channel, TRUE);
+
+	server_data->watch = g_io_add_watch(channel,
+				G_IO_IN | G_IO_HUP | G_IO_NVAL | G_IO_ERR,
+				listener, (gpointer) server_data);
+	g_io_channel_unref(channel);
+
+	return 0;
+}
+
+static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
+				   gpointer user_data);
+
 static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 							gpointer user_data)
 {
@@ -89,6 +140,13 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 			server_data->client_list =
 				g_list_remove(server_data->client_list,
 								client_data);
+
+		if (client_data->driver->single_connection) {
+			server_data->fd = socket(AF_NFC, SOCK_STREAM,
+							NFC_SOCKPROTO_LLCP);
+			if (server_data->fd > 0)
+				__p2p_bind(server_data, p2p_listener_event);
+		}
 
 		g_free(client_data);
 
@@ -206,52 +264,18 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 
 	server_data->client_list = g_list_append(server_data->client_list, client_data);
 
-	return TRUE;
+	return !driver->single_connection;
 }
 
 static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 							near_device_io_cb cb)
 {
 	int err, fd;
-	struct sockaddr_nfc_llcp addr;
-	GIOChannel *channel;
 	struct p2p_data *server_data;
-
-	DBG("Binding %s", driver->name);
 
 	fd = socket(AF_NFC, SOCK_STREAM, NFC_SOCKPROTO_LLCP);
 	if (fd < 0)
 		return -errno;
-
-	memset(&addr, 0, sizeof(struct sockaddr_nfc_llcp));
-	addr.sa_family = AF_NFC;
-	addr.dev_idx = adapter_idx;
-	addr.nfc_protocol = NFC_PROTO_NFC_DEP;
-	addr.service_name_len = strlen(driver->service_name);
-	strcpy(addr.service_name, driver->service_name);
-
-	err = bind(fd, (struct sockaddr *) &addr,
-			sizeof(struct sockaddr_nfc_llcp));
-	if (err < 0) {
-		if (errno == EADDRINUSE) {
-			DBG("%s is already bound", driver->name);
-			close(fd);
-			return 0;
-		}
-
-		near_error("%s bind failed %d %d", driver->name, err, errno);
-
-		close(fd);
-		return err;
-	}
-
-	err = listen(fd, 10);
-	if (err < 0) {
-		near_error("%s listen failed %d", driver->name, err);
-
-		close(fd);
-		return err;
-	}
 
 	server_data = g_try_malloc0(sizeof(struct p2p_data));
 	if (server_data == NULL) {
@@ -264,14 +288,11 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 	server_data->fd = fd;
 	server_data->cb = cb;
 
-	channel = g_io_channel_unix_new(fd);
-	g_io_channel_set_close_on_unref(channel, TRUE);
-
-	server_data->watch = g_io_add_watch(channel,
-				G_IO_IN | G_IO_HUP | G_IO_NVAL | G_IO_ERR,
-				p2p_listener_event,
-				(gpointer) server_data);
-	g_io_channel_unref(channel);
+	err = __p2p_bind(server_data, p2p_listener_event);
+	if (err < 0) {
+		g_free(server_data);
+		return err;
+	}
 
 	server_list = g_list_append(server_list, server_data);
 
