@@ -386,8 +386,6 @@ static near_bool_t snep_core_process_request(int client_fd,
 					near_server_io req_get,
 					near_server_io req_put)
 {
-	struct snep_fragment *fragment;
-	GSList *iter;
 	near_bool_t ret;
 	int err;
 
@@ -399,7 +397,7 @@ static near_bool_t snep_core_process_request(int client_fd,
 			ret = (*req_put)(client_fd, snep_data);
 		else {
 			near_snep_core_response_noinfo(client_fd,
-							NEAR_SNEP_RESP_NOT_IMPL);
+						NEAR_SNEP_RESP_NOT_IMPL);
 			ret = TRUE;
 		}
 
@@ -414,7 +412,7 @@ static near_bool_t snep_core_process_request(int client_fd,
 			ret =  (*req_get)(client_fd, snep_data);
 		else {
 			near_snep_core_response_noinfo(client_fd,
-							NEAR_SNEP_RESP_NOT_IMPL);
+						NEAR_SNEP_RESP_NOT_IMPL);
 			ret = TRUE;
 		}
 
@@ -452,15 +450,9 @@ static near_bool_t snep_core_process_request(int client_fd,
 
 leave_cont:
 		/* No more fragment to send, clean memory */
-		if (g_slist_length(snep_data->req->fragments) == 0) {
-			for (iter = snep_data->req->fragments; iter;
-							iter = iter->next) {
-				fragment = iter->data;
-				g_free(fragment->data);
-				g_free(fragment);
-			}
-			g_slist_free(snep_data->req->fragments);
-		}
+		g_slist_free_full(snep_data->req->fragments,
+						free_snep_core_fragment);
+		g_slist_free(snep_data->req->fragments);
 
 		g_hash_table_remove(snep_client_hash,
 						GINT_TO_POINTER(client_fd));
