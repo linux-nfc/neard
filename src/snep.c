@@ -425,6 +425,25 @@ static near_bool_t snep_core_process_request(int client_fd,
 		}
 		break;
 
+	case NEAR_SNEP_REQ_REJECT:
+		DBG("NEAR_SNEP_REQ_REJECT");
+		if (snep_data->req->fragments == NULL) {
+			near_error("error: NEAR_SNEP_REQ_REJECT but no fragment");
+			ret = FALSE;
+		}
+		else {
+			ret = TRUE;
+		}
+
+		g_slist_free_full(snep_data->req->fragments,
+						free_snep_core_fragment);
+		g_slist_free(snep_data->req->fragments);
+
+		g_hash_table_remove(snep_client_hash,
+						GINT_TO_POINTER(client_fd));
+
+		break;
+
 	case NEAR_SNEP_REQ_CONTINUE:
 		/*
 		 * NEAR_SNEP_REQ_CONTINUE indicates that we have to send the

@@ -772,13 +772,8 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 	g_free(req);
 
 	if (client_resp == NEAR_SNEP_REQ_REJECT) {
-		/*
-		 * TODO server shall not send any response:
-		 *      g_assert(ret);
-		 *      test_snep_read_no_response();
-		 */
-
-		TEST_SNEP_LOG("EXPECTED FAIL: REJECT not handled by SNEP\n");
+		g_assert(ret);
+		test_snep_read_no_response();
 	} else if (client_resp == NEAR_SNEP_REQ_CONTINUE) {
 		g_assert(ret);
 
