@@ -190,6 +190,14 @@ void __near_plugin_cleanup(void);
 
 #define NEAR_CARRIER_MAX	2
 
+#define WIFI_WSC_ID_SSID        0x1045
+#define WIFI_WSC_ID_AUTH_TYPE   0x1003
+#define WIFI_WSC_ID_KEY         0x1027
+#define WIFI_WSC_KEY_OPEN       0x0001
+#define WIFI_WSC_KEY_PSK        0x0022
+#define WIFI_WSC_ID_LENGTH      2
+#define WIFI_WSC_ID_DATA_LENGTH 2
+
 /* near_ndef_handover_carrier*/
 enum handover_carrier {
 	NEAR_CARRIER_EMPTY =  0x00,

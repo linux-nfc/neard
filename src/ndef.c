@@ -3067,6 +3067,166 @@ static struct near_ndef_message *build_ho_record(DBusMessage *msg)
 	return ho;
 }
 
+static int fill_wifi_wsc_data(uint8_t *tlv, uint16_t id,
+				uint16_t data_len, uint8_t *data)
+{
+	int offset = 0;
+
+	if (tlv == NULL || data == NULL)
+		return 0;
+
+	fillb16(tlv, id);
+	offset += WIFI_WSC_ID_LENGTH;
+
+	fillb16(tlv + offset, data_len);
+	offset += WIFI_WSC_ID_DATA_LENGTH;
+
+	memcpy(tlv + offset, data, data_len);
+	offset += data_len;
+
+	return offset;
+}
+
+static void get_wsc_data(DBusMessageIter iter, char **ssid, char **pass)
+{
+	DBG("");
+
+	while (dbus_message_iter_get_arg_type(&iter) !=
+					DBUS_TYPE_INVALID) {
+		const char *key;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		switch (dbus_message_iter_get_arg_type(&var_iter)) {
+		case DBUS_TYPE_STRING:
+			if (g_strcmp0(key, "SSID") == 0)
+				dbus_message_iter_get_basic(&var_iter, ssid);
+			else if (g_strcmp0(key, "Passphrase") == 0)
+				dbus_message_iter_get_basic(&var_iter, pass);
+
+			break;
+		}
+
+		dbus_message_iter_next(&iter);
+	}
+}
+
+static struct near_ndef_message *build_mime_wifi_wsc(DBusMessageIter iter)
+{
+	char *ssid = NULL, *pass = NULL;
+	uint16_t ssid_len, pass_len, key_type;
+	uint8_t temp_key[2];
+	uint8_t *tlv;
+	uint32_t tlv_len, offset;
+	struct near_ndef_message *mime;
+
+	get_wsc_data(iter, &ssid, &pass);
+
+	/* At least SSID is required in case of open network */
+	if (ssid == NULL)
+		return NULL;
+
+	DBG("SSID %s Passphrase %s", ssid, pass);
+
+	/* Prepare TLV from ssid and passphrasse */
+	ssid_len = strlen(ssid);
+
+	if (pass != NULL) {
+		pass_len = strlen(pass);
+		key_type = WIFI_WSC_KEY_PSK;
+	} else {
+		pass_len = 0;
+		key_type = WIFI_WSC_KEY_OPEN;
+	}
+
+	/* add ssid length */
+	tlv_len = WIFI_WSC_ID_LENGTH + WIFI_WSC_ID_DATA_LENGTH + ssid_len;
+	/* add authentication type length */
+	tlv_len += WIFI_WSC_ID_LENGTH + WIFI_WSC_ID_DATA_LENGTH + 2;
+	/* add network key length */
+	if (pass != NULL)
+		tlv_len += WIFI_WSC_ID_LENGTH +
+				WIFI_WSC_ID_DATA_LENGTH + pass_len;
+
+	tlv = g_try_malloc0(tlv_len);
+	if (tlv ==  NULL)
+		return NULL;
+
+	offset = 0;
+	/* copy SSID */
+	offset += fill_wifi_wsc_data(tlv, WIFI_WSC_ID_SSID,
+					ssid_len, (uint8_t *) ssid);
+
+	/*
+	 * copy authentication type
+	 * copy key type to temp key array to maintain endianess
+	 * and fill wsc data
+	 */
+	fillb16(temp_key, key_type);
+	offset += fill_wifi_wsc_data(tlv + offset, WIFI_WSC_ID_AUTH_TYPE,
+						WIFI_WSC_ID_DATA_LENGTH,
+						(uint8_t *) temp_key);
+
+	/* copy Network Key */
+	if (pass != NULL)
+		offset += fill_wifi_wsc_data(tlv + offset, WIFI_WSC_ID_KEY,
+						pass_len, (uint8_t *) pass);
+
+	mime = ndef_message_alloc_complete(WIFI_WSC_MIME_STRING, tlv_len, NULL,
+						0, RECORD_TNF_MIME, TRUE, TRUE);
+	if (mime == NULL) {
+		g_free(tlv);
+		return NULL;
+	}
+
+	memcpy(mime->data + mime->offset, tlv, tlv_len);
+	g_free(tlv);
+
+	for (offset = 0; offset < mime->length; offset++)
+		DBG("%02X", mime->data[offset]);
+
+	return mime;
+}
+
+static struct near_ndef_message *build_mime_record(DBusMessage *msg)
+{
+	DBusMessageIter iter, arr_iter;
+	char *key, *mime_str;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &arr_iter);
+
+	while (dbus_message_iter_get_arg_type(&arr_iter) !=
+					DBUS_TYPE_INVALID) {
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+
+		dbus_message_iter_recurse(&arr_iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+
+		if (g_strcmp0(key, "MIME") == 0) {
+			dbus_message_iter_next(&ent_iter);
+			dbus_message_iter_recurse(&ent_iter, &var_iter);
+			dbus_message_iter_get_basic(&var_iter, &mime_str);
+
+			if (g_strcmp0(mime_str, WIFI_WSC_MIME_STRING) == 0)
+				return build_mime_wifi_wsc(arr_iter);
+
+		}
+
+		dbus_message_iter_next(&arr_iter);
+	}
+
+	return NULL;
+}
+
 struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 {
 	DBusMessageIter iter;
@@ -3112,6 +3272,9 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 				break;
 			} else if (g_strcmp0(value, "Handover") == 0) {
 				ndef = build_ho_record(msg);
+				break;
+			} else if (g_strcmp0(value, "MIME") == 0) {
+				ndef = build_mime_record(msg);
 				break;
 			} else {
 				near_error("%s not supported", value);
