@@ -10,11 +10,18 @@ def help_text():
 	print "		If type is SmartPoster, parameters are <uri>"
 	print "		If type is SMS, parameters are <phone number> <text>"
 	print "		If type is E-Mail, parameters are <e-mail address>"
+	print "		If type is MIME, and WiFi AP is passphrase protected"
+	print "		   Type is MIME, parameters are wifi_wsc <ssid> <passphrase>"
+	print "		If type is MIME, and WiFi AP is open network"
+	print "		   Type is MIME, parameters are wifi_wsc <ssid>"
 	print "e.g. < %s /org/neard/nfc0/tag0 Text UTF-8 en-US hello,NFC! >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/tag0 URI http://www.nfc-forum.com >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/tag0 SmartPoster http://www.nfc-forum.com >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/tag0 SMS 0102030405 YourSMSMessage >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/tag0 E-Mail test@test.com >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 MIME wifi_wsc YourAPname passphrase >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 MIME wifi_wsc YourAPname >" % (sys.argv[0])
+
 	sys.exit(1)
 
 if len(sys.argv) < 2:
@@ -48,6 +55,22 @@ elif sys.argv[2] in ["E-Mail"]:
         URI = "mailto:"+sys.argv[3]
 	tag.Write(({ "Type" : "URI",
 			"URI" : URI }))
+
+elif sys.argv[2] in ["MIME"]:
+	if len(sys.argv) == 5:
+		if sys.argv[3] in ["wifi_wsc"]:
+			tag.Write(({ "Type" : "MIME",
+				"MIME" : "application/vnd.wfa.wsc",
+				"SSID" : sys.argv[4] }))
+
+	elif len(sys.argv) == 6:
+		if sys.argv[3] in ["wifi_wsc"]:
+			tag.Write(({ "Type" : "MIME",
+				"MIME" : "application/vnd.wfa.wsc",
+				"SSID" : sys.argv[4],
+				"Passphrase" : sys.argv[5] }))
+	else:
+		help_text()
 
 else:
 	help_text()
