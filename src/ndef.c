@@ -3116,28 +3116,26 @@ static void get_wsc_data(DBusMessageIter iter, char **ssid, char **pass)
 	}
 }
 
-static struct near_ndef_message *build_mime_wifi_wsc(DBusMessageIter iter)
+struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
+							char *passphrase)
 {
-	char *ssid = NULL, *pass = NULL;
 	uint16_t ssid_len, pass_len, key_type;
 	uint8_t temp_key[2];
 	uint8_t *tlv;
 	uint32_t tlv_len, offset;
 	struct near_ndef_message *mime;
 
-	get_wsc_data(iter, &ssid, &pass);
-
 	/* At least SSID is required in case of open network */
 	if (ssid == NULL)
 		return NULL;
 
-	DBG("SSID %s Passphrase %s", ssid, pass);
+	DBG("SSID %s Passphrase %s", ssid, passphrase);
 
 	/* Prepare TLV from ssid and passphrasse */
 	ssid_len = strlen(ssid);
 
-	if (pass != NULL) {
-		pass_len = strlen(pass);
+	if (passphrase != NULL) {
+		pass_len = strlen(passphrase);
 		key_type = WIFI_WSC_KEY_PSK;
 	} else {
 		pass_len = 0;
@@ -3149,7 +3147,7 @@ static struct near_ndef_message *build_mime_wifi_wsc(DBusMessageIter iter)
 	/* add authentication type length */
 	tlv_len += WIFI_WSC_ID_LENGTH + WIFI_WSC_ID_DATA_LENGTH + 2;
 	/* add network key length */
-	if (pass != NULL)
+	if (passphrase != NULL)
 		tlv_len += WIFI_WSC_ID_LENGTH +
 				WIFI_WSC_ID_DATA_LENGTH + pass_len;
 
@@ -3173,9 +3171,10 @@ static struct near_ndef_message *build_mime_wifi_wsc(DBusMessageIter iter)
 						(uint8_t *) temp_key);
 
 	/* copy Network Key */
-	if (pass != NULL)
+	if (passphrase != NULL)
 		offset += fill_wifi_wsc_data(tlv + offset, WIFI_WSC_ID_KEY,
-						pass_len, (uint8_t *) pass);
+						pass_len,
+						(uint8_t *) passphrase);
 
 	mime = ndef_message_alloc_complete(WIFI_WSC_MIME_STRING, tlv_len, NULL,
 						0, RECORD_TNF_MIME, TRUE, TRUE);
@@ -3193,7 +3192,7 @@ static struct near_ndef_message *build_mime_wifi_wsc(DBusMessageIter iter)
 static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 {
 	DBusMessageIter iter, arr_iter;
-	char *key, *mime_str;
+	char *key, *mime_str, *ssid, *passphrase;
 
 	DBG("");
 
@@ -3213,8 +3212,11 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 			dbus_message_iter_recurse(&ent_iter, &var_iter);
 			dbus_message_iter_get_basic(&var_iter, &mime_str);
 
-			if (g_strcmp0(mime_str, WIFI_WSC_MIME_STRING) == 0)
-				return build_mime_wifi_wsc(arr_iter);
+			if (g_strcmp0(mime_str, WIFI_WSC_MIME_STRING) == 0) {
+				get_wsc_data(arr_iter, &ssid, &passphrase);
+				return near_ndef_prepare_wsc_record(ssid,
+								passphrase);
+			}
 
 		}
 

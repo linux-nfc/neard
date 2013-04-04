@@ -68,4 +68,7 @@ near_bool_t near_ndef_record_cmp_mime(struct near_ndef_record *rec1,
 size_t near_ndef_data_length(struct near_ndef_record *data);
 uint8_t *near_ndef_data_ptr(struct near_ndef_record *data);
 
+struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
+							char *passphrase);
+
 #endif
