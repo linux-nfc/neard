@@ -49,5 +49,8 @@ void snep_exit(void);
 int snep_validation_init(void);
 void snep_validation_exit(void);
 
+int llcp_validation_init(void);
+void llcp_validation_exit(void);
+
 int near_p2p_register(struct near_p2p_driver *driver);
 void near_p2p_unregister(struct near_p2p_driver *driver);

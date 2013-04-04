@@ -439,6 +439,7 @@ static int p2p_init(void)
 	npp_init();
 	snep_init();
 	snep_validation_init();
+	llcp_validation_init();
 	handover_init();
 
 	return near_device_driver_register(&p2p_driver);
@@ -450,6 +451,7 @@ static void p2p_exit(void)
 
 	g_list_free_full(server_list, free_server_data);
 
+	llcp_validation_exit();
 	snep_exit();
 	snep_validation_exit();
 	npp_exit();
