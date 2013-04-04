@@ -3187,9 +3187,6 @@ static struct near_ndef_message *build_mime_wifi_wsc(DBusMessageIter iter)
 	memcpy(mime->data + mime->offset, tlv, tlv_len);
 	g_free(tlv);
 
-	for (offset = 0; offset < mime->length; offset++)
-		DBG("%02X", mime->data[offset]);
-
 	return mime;
 }
 
