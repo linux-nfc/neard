@@ -234,6 +234,7 @@ struct near_p2p_driver validation_snep_driver = {
 	.name = "VALIDATION_SNEP",
 	.service_name = "urn:nfc:xsn:nfc-forum.org:snep-validation",
 	.fallback_service_name = NULL,
+	.sock_type = SOCK_STREAM,
 	.read = snep_validation_read,
 	.push = near_snep_core_push,
 	.close = snep_validation_close,

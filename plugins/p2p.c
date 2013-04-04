@@ -58,6 +58,7 @@ struct p2p_data {
 	GList *client_list;
 };
 
+/* common function for socket binding */
 static int __p2p_bind(struct p2p_data *server_data, GIOFunc listener)
 {
 	int err, fd = server_data->fd;
@@ -79,20 +80,20 @@ static int __p2p_bind(struct p2p_data *server_data, GIOFunc listener)
 	if (err < 0) {
 		if (errno == EADDRINUSE) {
 			DBG("%s is already bound", driver->name);
-			close(fd);
-			return 0;
+			err = 0;
+			goto out_err;
 		}
 
 		near_error("%s bind failed %d %d", driver->name, err, errno);
-		close(fd);
-		return err;
+		goto out_err;
 	}
 
-	err = listen(fd, 10);
-	if (err < 0) {
-		near_error("%s listen failed %d", driver->name, err);
-		close(fd);
-		return err;
+	if (server_data->driver->sock_type == SOCK_STREAM) {
+		err = listen(fd, 10);
+		if (err < 0) {
+			near_error("%s listen failed %d", driver->name, err);
+			goto out_err;
+		}
 	}
 
 	channel = g_io_channel_unix_new(fd);
@@ -104,6 +105,10 @@ static int __p2p_bind(struct p2p_data *server_data, GIOFunc listener)
 	g_io_channel_unref(channel);
 
 	return 0;
+
+out_err:
+	close(fd);
+	return err;
 }
 
 static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
@@ -148,7 +153,8 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 				__p2p_bind(server_data, p2p_listener_event);
 		}
 
-		g_free(client_data);
+		if (client_data->driver->sock_type == SOCK_STREAM)
+			g_free(client_data);
 
 		return FALSE;
 	}
@@ -272,8 +278,22 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 {
 	int err, fd;
 	struct p2p_data *server_data;
+	GIOFunc g_func;
 
-	fd = socket(AF_NFC, SOCK_STREAM, NFC_SOCKPROTO_LLCP);
+	DBG("");
+
+	if (driver->sock_type == SOCK_DGRAM)
+		g_func = p2p_client_event;
+	else
+		g_func = p2p_listener_event;
+
+	if (driver->sock_type != SOCK_DGRAM &&
+					driver->sock_type != SOCK_STREAM) {
+		near_error("Undefined socket type for %s ", driver->name);
+		return -EINVAL;
+	}
+
+	fd = socket(AF_NFC, driver->sock_type, NFC_SOCKPROTO_LLCP);
 	if (fd < 0)
 		return -errno;
 
@@ -288,7 +308,7 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 	server_data->fd = fd;
 	server_data->cb = cb;
 
-	err = __p2p_bind(server_data, p2p_listener_event);
+	err = __p2p_bind(server_data, g_func);
 	if (err < 0) {
 		g_free(server_data);
 		return err;

@@ -127,6 +127,7 @@ struct near_p2p_driver snep_driver = {
 	.name = "SNEP",
 	.service_name = NEAR_DEVICE_SN_SNEP,
 	.fallback_service_name = NEAR_DEVICE_SN_NPP,
+	.sock_type = SOCK_STREAM,
 	.read = snep_default_read,
 	.push = near_snep_core_push,
 	.close = near_snep_core_close,

@@ -145,6 +145,7 @@ struct near_p2p_driver npp_driver = {
 	.name = "NPP",
 	.service_name = NEAR_DEVICE_SN_NPP,
 	.fallback_service_name = NULL,
+	.sock_type = SOCK_STREAM,
 	.read = npp_read,
 };
 
