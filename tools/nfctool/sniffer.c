@@ -47,7 +47,7 @@
 #define PCAP_SNAP_LEN 0xFFFF
 #define PCAP_NETWORK 0xF5
 
-#define SNAP_LEN 1024
+#define BUFFER_LEN 0x8FF
 
 static GIOChannel *gio_channel = NULL;
 guint watch = 0;
@@ -251,7 +251,7 @@ static gboolean gio_handler(GIOChannel *channel,
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	iov.iov_base = buffer;
-	iov.iov_len = opts.snap_len;
+	iov.iov_len = BUFFER_LEN;
 
 	len = recvmsg(sock, &msg, 0);
 	if (len < 0) {
@@ -295,10 +295,7 @@ int sniffer_init(void)
 	int err;
 	int one = 1;
 
-	if (opts.snap_len < SNAP_LEN)
-		opts.snap_len = SNAP_LEN;
-
-	buffer = g_malloc(opts.snap_len);
+	buffer = g_malloc(BUFFER_LEN);
 
 	sock = socket(AF_NFC, SOCK_RAW, NFC_SOCKPROTO_LLCP);
 
