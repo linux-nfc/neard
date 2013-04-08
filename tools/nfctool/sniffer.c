@@ -163,6 +163,7 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	guint8 digits;
 	guint32 offset;
 	guint32 total;
+	guint32 output_len;
 	gchar line[LINE_SIZE];
 	gchar *hexa = NULL, *human = NULL;
 
@@ -173,6 +174,11 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	digits = 0;
 	total = 0;
 
+	if (opts.snap_len && len > opts.snap_len)
+		output_len = opts.snap_len;
+	else
+		output_len = len;
+
 	if (print_len) {
 		if (line_prefix)
 			fprintf(file, "%s", line_prefix);
@@ -180,7 +186,7 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 		fprintf(file, "Total length: %u bytes\n", len);
 	}
 
-	while (total < len) {
+	while (total < output_len) {
 		if (digits == 0) {
 			memset(line, ' ', HUMAN_READABLE_OFFSET);
 
@@ -210,12 +216,18 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 		total++;
 	}
 
-	if ((len & 0xF) != 0) {
+	if ((output_len & 0xF) != 0) {
 		*hexa = ' ';
 		strcpy(human, "|");
 		if (line_prefix)
 			fprintf(file, "%s", line_prefix);
 		fprintf(file, "%s\n", line);
+	}
+
+	if (output_len != len) {
+		if (line_prefix)
+			fprintf(file, "%s", line_prefix);
+		fprintf(file, "--- truncated ---\n");
 	}
 }
 
