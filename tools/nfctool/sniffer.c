@@ -167,7 +167,7 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	gchar line[LINE_SIZE];
 	gchar *hexa = NULL, *human = NULL;
 
-	if (len <= 0)
+	if (len == 0)
 		return;
 
 	offset = 0;
