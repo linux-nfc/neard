@@ -597,6 +597,7 @@ struct near_adapter *__near_adapter_create(uint32_t idx,
 		const char *name, uint32_t protocols, near_bool_t powered)
 {
 	struct near_adapter *adapter;
+	near_bool_t powered_setting;
 
 	adapter = g_try_malloc0(sizeof(struct near_adapter));
 	if (adapter == NULL)
@@ -607,6 +608,14 @@ struct near_adapter *__near_adapter_create(uint32_t idx,
 		g_free(adapter);
 		return NULL;
 	}
+
+	powered_setting = near_setting_get_bool("DefaultPowered");
+	if (powered_setting == TRUE && powered == FALSE &&
+	    !__near_netlink_adapter_enable(adapter->idx, powered_setting))
+			powered = TRUE;
+
+	DBG("Powered %d", powered);
+
 	adapter->idx = idx;
 	adapter->protocols = protocols;
 	adapter->powered = powered;

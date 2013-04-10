@@ -35,8 +35,10 @@
 
 static struct {
 	near_bool_t constant_poll;
+	near_bool_t default_powered;
 } near_settings  = {
 	.constant_poll = FALSE,
+	.default_powered = FALSE,
 };
 
 static GKeyFile *load_config(const char *file)
@@ -76,6 +78,11 @@ static void parse_config(GKeyFile *config)
 						"ConstantPoll", &error);
 	if (error == NULL)
 		near_settings.constant_poll = boolean;
+
+	boolean = g_key_file_get_boolean(config, "General",
+						"DefaultPowered", &error);
+	if (error == NULL)
+		near_settings.default_powered = boolean;
 
 	g_clear_error(&error);
 }
@@ -140,6 +147,9 @@ near_bool_t near_setting_get_bool(const char *key)
 {
 	if (g_str_equal(key, "ConstantPoll") == TRUE)
 		return near_settings.constant_poll;
+
+	if (g_str_equal(key, "DefaultPowered") == TRUE)
+		return near_settings.default_powered;
 
 	return FALSE;
 }
