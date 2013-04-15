@@ -101,10 +101,10 @@ static near_bool_t test_snep_dummy_req_put(int fd, void *data)
 	if (stored_recd)
 		TEST_SNEP_LOG("\tdummy_req_put already stored record\n");
 
-	test_fragments = g_slist_append(test_fragments, snep_data);
-
 	if (snep_data->nfc_data_length > snep_data->nfc_data_current_length)
 		return TRUE;
+
+	test_fragments = g_slist_append(test_fragments, snep_data);
 
 	nfc_data_length = 0;
 	nfc_data = g_try_malloc0(snep_data->nfc_data_length);
