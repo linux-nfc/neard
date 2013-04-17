@@ -1,3 +1,13 @@
+ver 0.11
+	Added LLCP validation server support.
+	Added SNEP unit tests.
+	Added nfctool man page.
+	Added WiFi WSC NDEF building support.
+	Fixed AGF nfctool support.
+	Fixed type2 tag data length handling.
+	Fixed pkg-config libnl dependencies.
+	Fixed SNEP validation code for ARM.
+
 ver 0.10
 	Added initial WiFi handover support.
 	Added Service Name Lookup support to nfctool.
