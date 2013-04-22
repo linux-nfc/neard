@@ -370,7 +370,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 	 * As reading isn't complete,
 	 * callback shouldn't be called while freeing the cookie
 	 */
-	if (err == 0)
+	if (err >= 0)
 		cookie->cb = NULL;
 
 out_err:
