@@ -442,7 +442,7 @@ static gboolean bt_adapter_property_changed(DBusConnection *conn,
 		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_STRING)
 			return TRUE;
 
-		dbus_message_iter_get_basic(&iter, &name);
+		dbus_message_iter_get_basic(&var, &name);
 
 		g_free(bt_def_oob_data.bt_name);
 		bt_def_oob_data.bt_name = g_strdup(name);
