@@ -29,6 +29,7 @@
 
 #include "nfctool.h"
 #include "sniffer.h"
+#include "snep-decode.h"
 #include "llcp-decode.h"
 
 /* Raw socket + LLCP headers */
@@ -393,7 +394,18 @@ static int llcp_print_i(struct sniffer_packet *packet)
 {
 	llcp_print_sequence(packet);
 
-	sniffer_print_hexdump(stdout, packet->llcp.data, packet->llcp.data_len,
+	if (packet->llcp.local_sap == opts.snep_sap ||
+	    packet->llcp.remote_sap == opts.snep_sap) {
+		int err;
+
+		err = snep_print_pdu(packet);
+		if (err != 0)
+			printf("    Error decoding SNEP frame\n");
+
+		return err;
+	}
+
+	sniffer_print_hexdump(stdout, packet->llcp.data,  packet->llcp.data_len,
 				"  ", TRUE);
 
 	return 0;
@@ -517,11 +529,17 @@ exit:
 void llcp_decode_cleanup(void)
 {
 	timerclear(&start_timestamp);
+
+	snep_decode_cleanup();
 }
 
 int llcp_decode_init(void)
 {
+	int err;
+
 	timerclear(&start_timestamp);
 
-	return 0;
+	err = snep_decode_init();
+
+	return err;
 }

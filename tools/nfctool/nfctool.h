@@ -61,6 +61,7 @@ struct nfctool_options {
 	gsize snap_len;
 	gboolean dump_symm;
 	guint8 show_timestamp;
+	guint8 snep_sap;
 	gchar *pcap_filename;
 };
 

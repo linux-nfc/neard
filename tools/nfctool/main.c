@@ -350,6 +350,7 @@ struct nfctool_options opts = {
 	.snap_len = 0,
 	.dump_symm = FALSE,
 	.show_timestamp = SNIFFER_SHOW_TIMESTAMP_NONE,
+	.snep_sap = 0x04,
 	.pcap_filename = NULL,
 };
 
@@ -495,6 +496,9 @@ static GOptionEntry option_entries[] = {
 	{ "dump-symm", 'y', 0, G_OPTION_ARG_NONE, &opts.dump_symm,
 	  "dump SYMM packets to stdout (flooding); only relevant with -n",
 	  NULL },
+	{ "snep-sap", 'e', 0, G_OPTION_ARG_INT, &opts.snep_sap,
+	  "Specify the sap number to be used for snep decoding; "
+	  "only relevant with -n", "0x04" },
 	{ "show-timestamp", 't', G_OPTION_FLAG_OPTIONAL_ARG,
 	  G_OPTION_ARG_CALLBACK, opt_parse_show_timestamp_arg,
 	  "show packet timestamp as the delta from first frame (default) "

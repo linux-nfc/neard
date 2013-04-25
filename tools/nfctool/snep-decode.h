@@ -2,7 +2,7 @@
  *
  *  Near Field Communication nfctool
  *
- *  Copyright (C) 2012  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2013  Intel Corporation. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -18,48 +18,13 @@
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
+#ifndef __SNEP_DECODE_H
+#define __SNEP_DECODE_H
 
-#ifndef __SNIFFER_H
-#define __SNIFFER_H
+int snep_decode_init(void);
 
-#ifndef AF_NFC
-#define AF_NFC 39
-#endif
+void snep_decode_cleanup(void);
 
-struct sniffer_packet {
-	guint8 adapter_idx;
-	guint8 direction;
+int snep_print_pdu(struct sniffer_packet *packet);
 
-	struct {
-		guint8 ptype;
-		guint8 local_sap;
-		guint8 remote_sap;
-
-		guint8 send_seq;
-		guint8 recv_seq;
-
-		guint8 *data;
-		guint32 data_len;
-	} llcp;
-
-	struct {
-		guint8 version;
-
-		guint8 rcode;
-
-		guint32 acceptable_len;
-
-		guint8 *data;
-		guint32 data_len;
-		guint32 real_len;
-	} snep;
-};
-
-int sniffer_init(void);
-
-void sniffer_cleanup(void);
-
-void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
-			   gchar *line_prefix, gboolean print_len);
-
-#endif /* __SNIFFER_H */
+#endif /* __SNEP_DECODE_H */
