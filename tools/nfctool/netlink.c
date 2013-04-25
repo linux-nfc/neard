@@ -753,7 +753,7 @@ void nl_cleanup(void)
 	}
 
 	if (handlers != NULL)
-		g_hash_table_remove_all(handlers);
+		g_hash_table_destroy(handlers);
 }
 
 int nl_init(void)
