@@ -243,8 +243,14 @@ static int llcp_decode_packet(guint8 *data, guint32 data_len,
 	packet->direction = data[1] & 0x01;
 
 	/* LLCP header */
-	packet->llcp.dsap = (data[2] & 0xFC) >> 2;
-	packet->llcp.ssap = data[3] & 0x3F;
+	if (packet->direction == NFC_LLCP_DIRECTION_TX) {
+		packet->llcp.remote_sap = (data[2] & 0xFC) >> 2;
+		packet->llcp.local_sap = data[3] & 0x3F;
+	} else {
+		packet->llcp.remote_sap = data[3] & 0x3F;
+		packet->llcp.local_sap = (data[2] & 0xFC) >> 2;
+	}
+
 	packet->llcp.ptype = ((data[2] & 0x03) << 2) | ((data[3] & 0xC0) >> 6);
 
 	if (packet->llcp.ptype >= ARRAY_SIZE(llcp_ptype_str))
@@ -445,7 +451,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 
 	printf("%s nfc%d: local:0x%02x remote:0x%02x",
 		direction_str, packet.adapter_idx,
-		packet.llcp.ssap, packet.llcp.dsap);
+		packet.llcp.local_sap, packet.llcp.remote_sap);
 
 	if (opts.show_timestamp != SNIFFER_SHOW_TIMESTAMP_NONE) {
 		printf(" time: ");

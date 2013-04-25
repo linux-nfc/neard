@@ -32,8 +32,8 @@ struct sniffer_packet {
 
 	struct {
 		guint8 ptype;
-		guint8 ssap;
-		guint8 dsap;
+		guint8 local_sap;
+		guint8 remote_sap;
 
 		guint8 send_seq;
 		guint8 recv_seq;
