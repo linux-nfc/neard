@@ -26,6 +26,23 @@
 #define AF_NFC 39
 #endif
 
+struct sniffer_packet {
+	guint8 adapter_idx;
+	guint8 direction;
+
+	struct {
+		guint8 ptype;
+		guint8 ssap;
+		guint8 dsap;
+
+		guint8 send_seq;
+		guint8 recv_seq;
+
+		guint8 *data;
+		guint32 data_len;
+	} llcp;
+};
+
 int sniffer_init(void);
 
 void sniffer_cleanup(void);
