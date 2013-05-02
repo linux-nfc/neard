@@ -440,7 +440,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 {
 	struct timeval msg_timestamp;
 	struct sniffer_packet packet;
-	gchar *direction_str;
+	gchar *direction_str, time_str[32];
 	int err;
 
 	if (timestamp == NULL)
@@ -461,25 +461,24 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 	else
 		direction_str = "<<";
 
-	printf("%s nfc%d: local:0x%02x remote:0x%02x",
-		direction_str, packet.adapter_idx,
-		packet.llcp.local_sap, packet.llcp.remote_sap);
-
 	if (opts.show_timestamp != SNIFFER_SHOW_TIMESTAMP_NONE) {
-		printf(" time: ");
+		char prefix = ' ';
 
 		if (opts.show_timestamp == SNIFFER_SHOW_TIMESTAMP_ABS) {
+			printf("ABSOLUTE\n");
 			msg_timestamp = *timestamp;
 		} else {
 			timersub(timestamp, &start_timestamp, &msg_timestamp);
-			printf("+");
+			prefix = '+';
 		}
 
-		printf("%lu.%06lu", msg_timestamp.tv_sec,
+		sprintf(time_str,  "%c%lu.%06lus", prefix, msg_timestamp.tv_sec,
 							msg_timestamp.tv_usec);
 	}
 
-	printf("\n");
+	printf("%s nfc%d: local:0x%02x remote:0x%02x %s\n",
+		direction_str, packet.adapter_idx,
+	       packet.llcp.local_sap, packet.llcp.remote_sap, time_str);
 
 	printf("  %s\n", llcp_ptype_str[packet.llcp.ptype]);
 
