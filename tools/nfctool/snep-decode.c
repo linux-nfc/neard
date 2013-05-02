@@ -244,7 +244,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 	guint32 frag_index;
 	struct snep_frag *frag;
 
-	printf(HEADER_INDENT "Simple NDEF Messaging Protocol\n");
+	printf(HEADER_INDENT "Simple NDEF Exchange Protocol (SNEP)\n");
 
 	frag_index = snep_get_frag_index(packet);
 
