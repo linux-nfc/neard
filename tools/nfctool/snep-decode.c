@@ -29,6 +29,7 @@
 
 #include "nfctool.h"
 #include "sniffer.h"
+#include "ndef-decode.h"
 #include "snep-decode.h"
 
 #define SNEP_HEADER_LEN 6
@@ -111,6 +112,8 @@ static void snep_frag_rejected(struct sniffer_packet *packet)
 static int snep_frag_append(struct snep_frag *frag,
 			    struct sniffer_packet *packet)
 {
+	int err = 0;
+
 	snep_printf_msg("Ongoing fragmented message");
 
 	if (frag->received + packet->llcp.data_len > frag->buffer_size) {
@@ -132,25 +135,26 @@ static int snep_frag_append(struct snep_frag *frag,
 	if (frag->received == frag->buffer_size) {
 		snep_printf_msg("End of fragmented message");
 
-		sniffer_print_hexdump(stdout, frag->buffer, frag->buffer_size,
-				      6, TRUE);
+		err = ndef_print_records(packet->snep.data,
+					 packet->snep.data_len);
 
 		snep_frag_delete(frag->index);
 	}
 
-	return 0;
+	return err;
 }
 
 static int snep_decode_info(struct sniffer_packet *packet)
 {
 	struct snep_frag *frag;
+	int err;
 
 	if (packet->snep.data_len <= packet->snep.real_len) {
 		/* Message is not fragmented */
-		sniffer_print_hexdump(stdout, packet->snep.data,
-				      packet->snep.data_len, 6, TRUE);
+		err = ndef_print_records(packet->snep.data,
+					 packet->snep.data_len);
 
-		return 0;
+		return err;
 	}
 
 	frag = g_malloc(sizeof(struct snep_frag));

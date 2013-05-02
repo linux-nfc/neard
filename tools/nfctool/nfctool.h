@@ -38,6 +38,11 @@
 #define SNEP_HEADER_INDENT 4
 #define SNEP_MSG_INDENT    6
 
+#define NDEF_COLOR COLOR_BLUE
+#define NDEF_HEADER_INDENT 6
+#define NDEF_MSG_INDENT    8
+#define NDEF_HEX_INDENT    9
+
 #define print_error(fmt, ...) fprintf(stderr, fmt"\n", ## __VA_ARGS__)
 
 #define POLLING_MODE_INITIATOR	0x01

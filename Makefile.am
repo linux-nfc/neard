@@ -110,6 +110,8 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 					tools/nfctool/llcp-decode.c \
 					tools/nfctool/snep-decode.h \
 					tools/nfctool/snep-decode.c \
+					tools/nfctool/ndef-decode.h \
+					tools/nfctool/ndef-decode.c \
 					tools/nfctool/display.h \
 					tools/nfctool/display.c
 
