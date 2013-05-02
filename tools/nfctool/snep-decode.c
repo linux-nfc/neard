@@ -63,6 +63,9 @@
 #define snep_printf_msg(fmt, ...) print_indent(SNEP_MSG_INDENT, \
 					       SNEP_COLOR, fmt, ## __VA_ARGS__)
 
+#define snep_printf_error(fmt, ...) print_indent(SNEP_MSG_INDENT, COLOR_ERROR, \
+						 fmt, ## __VA_ARGS__)
+
 struct snep_frag {
 	guint32 index;
 	guint16 count;
@@ -111,7 +114,7 @@ static int snep_frag_append(struct snep_frag *frag,
 	snep_printf_msg("Ongoing fragmented message");
 
 	if (frag->received + packet->llcp.data_len > frag->buffer_size) {
-		snep_printf_msg("Too many bytes received");
+		snep_printf_error("Too many bytes received");
 		return -EINVAL;
 	}
 
@@ -256,7 +259,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 		err = snep_frag_append(frag, packet);
 
 		if (err != 0) {
-			snep_printf_msg("Error receiving fragmented message");
+			snep_printf_error("Error receiving fragmented message");
 
 			snep_frag_delete(frag_index);
 		}
@@ -266,7 +269,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 
 	err = snep_decode_header(packet);
 	if (err != 0) {
-		snep_printf_msg("Error decoding message header");
+		snep_printf_error("Error decoding message header");
 
 		goto exit;
 	}
@@ -341,7 +344,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 		break;
 
 	default:
-		snep_printf_msg("Invalid request or response code: %d",
+		snep_printf_error("Invalid request or response code: %d",
 			    packet->snep.rcode);
 		break;
 	}
