@@ -129,7 +129,7 @@ static int snep_frag_append(struct snep_frag *frag,
 		snep_printf("End of fragmented message\n");
 
 		sniffer_print_hexdump(stdout, frag->buffer, frag->buffer_size,
-				      MSG_INDENT, TRUE);
+				      6, TRUE);
 
 		snep_frag_delete(frag->index);
 	}
@@ -144,7 +144,7 @@ static int snep_decode_info(struct sniffer_packet *packet)
 	if (packet->snep.data_len <= packet->snep.real_len) {
 		/* Message is not fragmented */
 		sniffer_print_hexdump(stdout, packet->snep.data,
-				      packet->snep.data_len, MSG_INDENT, TRUE);
+				      packet->snep.data_len, 6, TRUE);
 
 		return 0;
 	}

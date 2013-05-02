@@ -406,7 +406,7 @@ static int llcp_print_i(struct sniffer_packet *packet)
 	}
 
 	sniffer_print_hexdump(stdout, packet->llcp.data,  packet->llcp.data_len,
-				"  ", TRUE);
+				2, TRUE);
 
 	return 0;
 }
@@ -514,7 +514,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 
 	default:
 		sniffer_print_hexdump(stdout, packet.llcp.data,
-				      packet.llcp.data_len, "  ", TRUE);
+				      packet.llcp.data_len, 2, TRUE);
 		break;
 	}
 

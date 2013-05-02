@@ -158,7 +158,7 @@ static void pcap_file_cleanup(void)
  *
  */
 void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
-			   gchar *line_prefix, gboolean print_len)
+			   guint8 indent, gboolean print_len)
 {
 	guint8 digits;
 	guint32 offset;
@@ -180,8 +180,8 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 		output_len = len;
 
 	if (print_len) {
-		if (line_prefix)
-			fprintf(file, "%s", line_prefix);
+		if (indent)
+			fprintf(file, "%*c", indent, ' ');
 
 		fprintf(file, "Total length: %u bytes\n", len);
 	}
@@ -206,8 +206,8 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 		if (++digits >= 16) {
 			*hexa = ' ';
 			strcpy(human, "|");
-			if (line_prefix)
-				fprintf(file, "%s", line_prefix);
+			if (indent)
+				fprintf(file, "%*c", indent, ' ');
 			fprintf(file, "%s\n", line);
 
 			digits = 0;
@@ -219,14 +219,14 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	if ((output_len & 0xF) != 0) {
 		*hexa = ' ';
 		strcpy(human, "|");
-		if (line_prefix)
-			fprintf(file, "%s", line_prefix);
+		if (indent)
+			fprintf(file, "%*c", indent, ' ');
 		fprintf(file, "%s\n", line);
 	}
 
 	if (output_len != len) {
-		if (line_prefix)
-			fprintf(file, "%s", line_prefix);
+		if (indent)
+			fprintf(file, "%*c", indent, ' ');
 		fprintf(file, "--- truncated ---\n");
 	}
 }
