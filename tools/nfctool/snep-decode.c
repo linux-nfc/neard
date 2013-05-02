@@ -31,9 +31,6 @@
 #include "sniffer.h"
 #include "snep-decode.h"
 
-#define HEADER_INDENT	"    "
-#define MSG_INDENT	"      "
-
 #define SNEP_HEADER_LEN 6
 
 #define SNEP_REQUEST_CONTINUE	0x00
@@ -60,7 +57,11 @@
 		snep_make_frag_index((p)->adapter_idx, (p)->direction, \
 				     (p)->llcp.local_sap, (p)->llcp.remote_sap)
 
-#define snep_printf(fmt, ...) printf(MSG_INDENT fmt, ## __VA_ARGS__)
+#define snep_printf_header(fmt, ...) print_indent(SNEP_HEADER_INDENT, \
+					       SNEP_COLOR, fmt, ## __VA_ARGS__)
+
+#define snep_printf_msg(fmt, ...) print_indent(SNEP_MSG_INDENT, \
+					       SNEP_COLOR, fmt, ## __VA_ARGS__)
 
 struct snep_frag {
 	guint32 index;
@@ -107,10 +108,10 @@ static void snep_frag_rejected(struct sniffer_packet *packet)
 static int snep_frag_append(struct snep_frag *frag,
 			    struct sniffer_packet *packet)
 {
-	snep_printf("Ongoing fragmented message\n");
+	snep_printf_msg("Ongoing fragmented message");
 
 	if (frag->received + packet->llcp.data_len > frag->buffer_size) {
-		snep_printf("Too many bytes received\n");
+		snep_printf_msg("Too many bytes received\n");
 		return -EINVAL;
 	}
 
@@ -121,12 +122,12 @@ static int snep_frag_append(struct snep_frag *frag,
 
 	frag->count++;
 
-	snep_printf("Received fragment #%hu of %u bytes (total %u/%u)\n",
+	snep_printf_msg("Received fragment #%hu of %u bytes (total %u/%u)\n",
 		    frag->count, packet->llcp.data_len,
 		    frag->received, frag->buffer_size);
 
 	if (frag->received == frag->buffer_size) {
-		snep_printf("End of fragmented message\n");
+		snep_printf_msg("End of fragmented message\n");
 
 		sniffer_print_hexdump(stdout, frag->buffer, frag->buffer_size,
 				      6, TRUE);
@@ -163,10 +164,10 @@ static int snep_decode_info(struct sniffer_packet *packet)
 
 	frag->index = snep_get_frag_index(packet);
 
-	snep_printf("Start receiving fragmented message of %u bytes\n",
+	snep_printf_msg("Start receiving fragmented message of %u bytes\n",
 		    frag->buffer_size);
 
-	snep_printf("Received fragment #%hu of %u bytes\n", frag->count,
+	snep_printf_msg("Received fragment #%hu of %u bytes\n", frag->count,
 		    frag->received);
 
 	DBG("Adding frag with index 0x%x", frag->index);
@@ -220,7 +221,7 @@ static int snep_decode_header(struct sniffer_packet *packet)
 
 static void snep_print_version(struct sniffer_packet *packet)
 {
-	snep_printf("Version: %d.%d\n", (packet->snep.version & 0xF0) >> 4,
+	snep_printf_msg("Version: %d.%d", (packet->snep.version & 0xF0) >> 4,
 		    packet->snep.version & 0x0F);
 }
 
@@ -228,14 +229,14 @@ static void print_request(struct sniffer_packet *packet, gchar *msg)
 {
 	snep_print_version(packet);
 
-	snep_printf("Request: %s\n", msg);
+	snep_printf_msg("Request: %s", msg);
 }
 
 static void snep_print_response(struct sniffer_packet *packet, gchar *msg)
 {
 	snep_print_version(packet);
 
-	snep_printf("Response: %s\n", msg);
+	snep_printf_msg("Response: %s", msg);
 }
 
 int snep_print_pdu(struct sniffer_packet *packet)
@@ -244,7 +245,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 	guint32 frag_index;
 	struct snep_frag *frag;
 
-	printf(HEADER_INDENT "Simple NDEF Exchange Protocol (SNEP)\n");
+	snep_printf_header("Simple NDEF Exchange Protocol (SNEP)");
 
 	frag_index = snep_get_frag_index(packet);
 
@@ -255,7 +256,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 		err = snep_frag_append(frag, packet);
 
 		if (err != 0) {
-			snep_printf("Error receiving fragmented message\n");
+			snep_printf_msg("Error receiving fragmented message\n");
 
 			snep_frag_delete(frag_index);
 		}
@@ -265,7 +266,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 
 	err = snep_decode_header(packet);
 	if (err != 0) {
-		snep_printf("Error decoding message header\n");
+		snep_printf_msg("Error decoding message header\n");
 
 		goto exit;
 	}
@@ -283,7 +284,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 		if (err != 0)
 			goto exit;
 
-		snep_printf("Acceptable length: %u\n",
+		snep_printf_msg("Acceptable length: %u\n",
 			    packet->snep.acceptable_len);
 
 		snep_decode_info(packet);
@@ -340,7 +341,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 		break;
 
 	default:
-		snep_printf("Invalid request or response code: %d\n",
+		snep_printf_msg("Invalid request or response code: %d\n",
 			    packet->snep.rcode);
 		break;
 	}

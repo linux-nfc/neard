@@ -22,11 +22,17 @@
 #ifndef __NFCTOOL_H
 #define __NFCTOOL_H
 
+#include "display.h"
+
 #ifdef DEBUG
 #define DBG(fmt, ...) fprintf(stdout, "%s: " fmt "\n", __func__, ## __VA_ARGS__)
 #else
 #define DBG(fmt, ...)
 #endif
+
+#define SNEP_COLOR COLOR_YELLOW
+#define SNEP_HEADER_INDENT 4
+#define SNEP_MSG_INDENT    6
 
 #define print_error(fmt, ...) fprintf(stderr, fmt"\n", ## __VA_ARGS__)
 

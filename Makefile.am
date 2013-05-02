@@ -109,7 +109,9 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 					tools/nfctool/llcp-decode.h \
 					tools/nfctool/llcp-decode.c \
 					tools/nfctool/snep-decode.h \
-					tools/nfctool/snep-decode.c
+					tools/nfctool/snep-decode.c \
+					tools/nfctool/display.h \
+					tools/nfctool/display.c
 
 tools_nfctool_nfctool_LDADD = @GLIB_LIBS@ @NETLINK_LIBS@
 
