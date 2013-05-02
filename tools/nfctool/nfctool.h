@@ -30,6 +30,10 @@
 #define DBG(fmt, ...)
 #endif
 
+#define LLCP_COLOR COLOR_CYAN
+#define LLCP_HEADER_INDENT 0
+#define LLCP_MSG_INDENT    4
+
 #define SNEP_COLOR COLOR_YELLOW
 #define SNEP_HEADER_INDENT 4
 #define SNEP_MSG_INDENT    6

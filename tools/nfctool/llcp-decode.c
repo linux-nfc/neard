@@ -139,6 +139,16 @@ static const gchar *llcp_param_str[] = {
 	"Service Discovery Response"
 };
 
+#define llcp_printf_header(prefix, color, fmt, ...) print_indent_prefix(LLCP_HEADER_INDENT, \
+						color, prefix, \
+						LLCP_COLOR, fmt, ## __VA_ARGS__)
+
+#define llcp_printf_msg(fmt, ...) print_indent(LLCP_MSG_INDENT, \
+						LLCP_COLOR, fmt, ## __VA_ARGS__)
+
+#define llcp_printf_error(fmt, ...) print_indent(LLCP_MSG_INDENT, \
+						COLOR_ERROR, fmt, ## __VA_ARGS__)
+
 #define llcp_get_param_str(param_type) llcp_param_str[param_type]
 
 #define llcp_get_param_len(param_type) llcp_param_length[param_type]
@@ -155,14 +165,14 @@ static void llcp_print_params(struct sniffer_packet *packet)
 	guint32 rmng;
 	guint8 *param;
 	guint8 param_len;
-	gchar *sn;
+	gchar *sn, param_str[64];
 
 	while (packet->llcp.data_len - offset >= 3) {
 		param = packet->llcp.data + offset;
 		rmng = packet->llcp.data_len - offset;
 
 		if (param[0] < LLCP_PARAM_MIN || param[0] > LLCP_PARAM_MAX) {
-			print_error("Error decoding params");
+			llcp_printf_error("Error decoding params");
 			return;
 		}
 
@@ -172,60 +182,59 @@ static void llcp_print_params(struct sniffer_packet *packet)
 			param_len = param[1];
 
 		if (param_len != param[1] || rmng < 2u + param_len) {
-			print_error("Error decoding params");
+			llcp_printf_error("Error decoding params");
 			return;
 		}
-
-		printf("    %s: ", llcp_get_param_str(param[0]));
 
 		switch ((enum llcp_param_t)param[0]) {
 		case LLCP_PARAM_VERSION:
 			major = (param[2] & 0xF0) >> 4;
 			minor = param[2] & 0x0F;
-			printf("%d.%d", major, minor);
+			sprintf(param_str, "%d.%d", major, minor);
 			break;
 
 		case LLCP_PARAM_MIUX:
 			miux = ((param[2] & 0x07) << 8) | param[3];
-			printf("%d", miux);
+			sprintf(param_str, "%d", miux);
 			break;
 
 		case LLCP_PARAM_WKS:
 			wks = (param[2] << 8) | param[3];
-			printf("0x%02hX", wks);
+			sprintf(param_str, "0x%02hX", wks);
 			break;
 
 		case LLCP_PARAM_LTO:
-			printf("%d", param[2]);
+			sprintf(param_str, "%d", param[2]);
 			break;
 
 		case LLCP_PARAM_RW:
-			printf("%d", param[2] & 0x0F);
+			sprintf(param_str, "%d", param[2] & 0x0F);
 			break;
 
 		case LLCP_PARAM_SN:
 			sn = g_strndup((gchar *)param + 2, param_len);
-			printf("%s", sn);
+			sprintf(param_str, "%s", sn);
 			g_free(sn);
 			break;
 
 		case LLCP_PARAM_OPT:
-			printf("0x%X", param[2] & 0x03);
+			sprintf(param_str, "0x%X", param[2] & 0x03);
 			break;
 
 		case LLCP_PARAM_SDREQ:
 			tid = param[2];
 			sn = g_strndup((gchar *)param + 3, param_len - 1);
-			printf("TID:%d, SN:%s", tid, sn);
+			sprintf(param_str, "TID:%d, SN:%s", tid, sn);
 			g_free(sn);
 			break;
 
 		case LLCP_PARAM_SDRES:
-			printf("TID:%d, SAP:%d", param[2], param[3] & 0x3F);
+			sprintf(param_str, "TID:%d, SAP:%d", param[2], param[3] & 0x3F);
 			break;
 		}
 
-		printf("\n");
+		llcp_printf_msg("%s: %s", llcp_get_param_str(param[0]),
+				param_str);
 
 		offset += 2 + param_len;
 	}
@@ -277,8 +286,8 @@ static int llcp_decode_packet(guint8 *data, guint32 data_len,
 
 static void llcp_print_sequence(struct sniffer_packet *packet)
 {
-	printf("    N(S):%d N(R):%d\n",
-		packet->llcp.send_seq, packet->llcp.recv_seq);
+	llcp_printf_msg("N(S):%d N(R):%d",
+			packet->llcp.send_seq, packet->llcp.recv_seq);
 }
 
 static int llcp_print_agf(struct sniffer_packet *packet,
@@ -292,7 +301,7 @@ static int llcp_print_agf(struct sniffer_packet *packet,
 	int err;
 
 	if (packet->llcp.data_len < 2) {
-		print_error("Error parsing AGF PDU");
+		llcp_printf_error("Error parsing AGF PDU");
 		return -EINVAL;
 	}
 
@@ -310,7 +319,7 @@ static int llcp_print_agf(struct sniffer_packet *packet,
 		offset += 2;
 
 		if (size == 0 || offset + size > packet->llcp.data_len) {
-			print_error("Error parsing AGF PDU");
+			llcp_printf_error("Error parsing AGF PDU");
 			err = -EINVAL;
 			goto exit;
 		}
@@ -326,14 +335,14 @@ static int llcp_print_agf(struct sniffer_packet *packet,
 		memcpy(pdu + NFC_LLCP_RAW_HEADER_SIZE,
 			packet->llcp.data + offset, size);
 
-		printf("-- AGF LLC PDU %02u:\n", count++);
+		llcp_printf_msg("-- AGF LLC PDU %02u:", count++);
 
 		llcp_print_pdu(pdu, size + NFC_LLCP_RAW_HEADER_SIZE, timestamp);
 
 		offset += size;
 	}
 
-	printf("-- End of AGF LLC PDUs\n");
+	llcp_printf_msg("-- End of AGF LLC PDUs\n");
 
 	err = 0;
 exit:
@@ -385,7 +394,7 @@ static int llcp_print_dm(struct sniffer_packet *packet)
 		break;
 	}
 
-	printf("    Reason: %d (%s)\n", packet->llcp.data[0], reason);
+	llcp_printf_msg("Reason: %d (%s)", packet->llcp.data[0], reason);
 
 	return 0;
 }
@@ -400,38 +409,38 @@ static int llcp_print_i(struct sniffer_packet *packet)
 
 		err = snep_print_pdu(packet);
 		if (err != 0)
-			printf("    Error decoding SNEP frame\n");
+			llcp_printf_error("Error decoding SNEP frame");
 
 		return err;
 	}
 
 	sniffer_print_hexdump(stdout, packet->llcp.data,  packet->llcp.data_len,
-				2, TRUE);
+				LLCP_MSG_INDENT, TRUE);
 
 	return 0;
 }
 
 static int llcp_print_frmr(struct sniffer_packet *packet)
 {
-	guint8 val;
+	guint8 info, ptype;
 
 	if (packet->llcp.data_len != 4)
 		return -EINVAL;
 
-	val = packet->llcp.data[0];
-	printf("W:%d ", (val & 0x80) >> 7);
-	printf("I:%d ", (val & 0x40) >> 6);
-	printf("R:%d ", (val & 0x20) >> 5);
-	printf("S:%d ", (val & 0x10) >> 4);
-	val = val & 0x0F;
-	if (val >= ARRAY_SIZE(llcp_ptype_str))
-		val = ARRAY_SIZE(llcp_ptype_str) - 1;
-	printf("PTYPE:%s ",   llcp_ptype_short_str[val]);
-	printf("SEQ: %d ",    packet->llcp.data[1]);
-	printf("V(S): %d ",   (packet->llcp.data[2] & 0xF0) >> 4);
-	printf("V(R): %d ",   packet->llcp.data[2] & 0x0F);
-	printf("V(SA): %d ",  (packet->llcp.data[3] & 0xF0) >> 4);
-	printf("V(RA): %d\n", packet->llcp.data[3] & 0x0F);
+	info = packet->llcp.data[0];
+	ptype = info & 0x0F;
+	if (ptype >= ARRAY_SIZE(llcp_ptype_str))
+		ptype = ARRAY_SIZE(llcp_ptype_str) - 1;
+
+	llcp_printf_msg("W:%d I:%d R:%d S:%d PTYPE:%s SEQ: %d V(S):"
+			" %d V(R): %d V(SA): %d V(RA): %d",
+			(info & 0x80) >> 7, (info & 0x40) >> 6,
+			(info & 0x20) >> 5, (info & 0x10) >> 4,
+			llcp_ptype_short_str[ptype], packet->llcp.data[1],
+			(packet->llcp.data[2] & 0xF0) >> 4,
+			packet->llcp.data[2] & 0x0F,
+			(packet->llcp.data[3] & 0xF0) >> 4,
+			packet->llcp.data[3] & 0x0F);
 
 	return 0;
 }
@@ -441,6 +450,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 	struct timeval msg_timestamp;
 	struct sniffer_packet packet;
 	gchar *direction_str, time_str[32];
+	gchar *direction_color;
 	int err;
 
 	if (timestamp == NULL)
@@ -456,16 +466,18 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 	if (!opts.dump_symm && packet.llcp.ptype == LLCP_PTYPE_SYMM)
 		return 0;
 
-	if (packet.direction == NFC_LLCP_DIRECTION_RX)
+	if (packet.direction == NFC_LLCP_DIRECTION_RX) {
 		direction_str = ">>";
-	else
+		direction_color = COLOR_RED;
+	} else {
 		direction_str = "<<";
+		direction_color = COLOR_GREEN;
+	}
 
 	if (opts.show_timestamp != SNIFFER_SHOW_TIMESTAMP_NONE) {
 		char prefix = ' ';
 
 		if (opts.show_timestamp == SNIFFER_SHOW_TIMESTAMP_ABS) {
-			printf("ABSOLUTE\n");
 			msg_timestamp = *timestamp;
 		} else {
 			timersub(timestamp, &start_timestamp, &msg_timestamp);
@@ -476,11 +488,12 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 							msg_timestamp.tv_usec);
 	}
 
-	printf("%s nfc%d: local:0x%02x remote:0x%02x %s\n",
-		direction_str, packet.adapter_idx,
-	       packet.llcp.local_sap, packet.llcp.remote_sap, time_str);
+	llcp_printf_header(direction_str, direction_color,
+				" nfc%d: local:0x%02x remote:0x%02x %s",
+				packet.adapter_idx, packet.llcp.local_sap,
+				packet.llcp.remote_sap, time_str);
 
-	printf("  %s\n", llcp_ptype_str[packet.llcp.ptype]);
+	llcp_printf_msg("%s", llcp_ptype_str[packet.llcp.ptype]);
 
 	switch (packet.llcp.ptype) {
 	case LLCP_PTYPE_AGF:
@@ -513,7 +526,8 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 
 	default:
 		sniffer_print_hexdump(stdout, packet.llcp.data,
-				      packet.llcp.data_len, 2, TRUE);
+					packet.llcp.data_len,
+					LLCP_MSG_INDENT, TRUE);
 		break;
 	}
 
