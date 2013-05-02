@@ -1647,7 +1647,7 @@ static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 
 	DBG(" %s", mime_type);
 
-	if (mime_type == NULL || data == NULL || data_len <= 0)
+	if (mime_type == NULL)
 		return NULL;
 
 	msg = ndef_message_alloc_complete(mime_type, data_len, &cdr, cdr_len,
@@ -1656,7 +1656,8 @@ static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 		return NULL;
 
 	/* store data */
-	memcpy(msg->data + msg->offset, data, data_len);
+	if (data)
+		memcpy(msg->data + msg->offset, data, data_len);
 
 	return msg;
 }
@@ -1665,7 +1666,8 @@ static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
  * Prepare alternative carrier and configuration records
  * (e.g. bluetooth or wifi or Hc)
  */
-static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
+static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
+					enum handover_carrier carrier,
 					struct near_ndef_message **ac,
 					struct near_ndef_message **cfg,
 					struct near_ndef_mime_payload *mime,
@@ -1709,6 +1711,42 @@ static int near_ndef_prepare_ac_and_cfg_records(enum handover_carrier carrier,
 	case NEAR_CARRIER_UNKNOWN:
 	default:
 		return -EINVAL;
+	}
+
+	/*
+	 * WiFi has to be handled a bit differently when we're trying
+	 * to send the first Hr or Hs (i.e. remote_carrier == NULL).
+	 * There are 2 invalid combinations:
+	 *	a) AP mode and sending an Hr, as we won't be able to
+	 *	   initiate the association.
+	 *	b) STA mode and sending an Hs, as the AP won't be able
+	 *	   initiate the association.
+	 *
+	 * a) is detected when local_carrier != NULL and record_type is
+	 * Handover Request.
+	 * b) is detected when local_carrier == NULL and record_type is
+	 * Handover Select.
+	 * In those 2 cases we return an error.
+	 */
+	if (carrier == NEAR_CARRIER_WIFI && remote_carrier == NULL) {
+		if (local_carrier != NULL &&
+				type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
+			g_free(local_carrier);
+			return -EINVAL;
+		}
+
+		if (local_carrier == NULL &&
+				type == RECORD_TYPE_WKT_HANDOVER_SELECT)
+			return -EINVAL;
+
+		if (local_carrier == NULL &&
+				type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
+			*cfg = near_ndef_prepare_cfg_message(mime_type,
+							NULL, 0, cdr, 1);
+			*ac = near_ndef_prepare_ac_message(CPS_UNKNOWN, cdr);
+
+			return 0;
+		}
 	}
 
 	if (local_carrier == NULL) {
@@ -1902,6 +1940,7 @@ static struct near_ndef_message *near_ndef_prepare_hs_reply(
 			goto fail;
 
 		ret = near_ndef_prepare_ac_and_cfg_records(
+					RECORD_TYPE_WKT_HANDOVER_SELECT,
 					remote_mime->handover.carrier_type,
 					&ac_msg, &cfg_msg,
 					remote_mime, remote_cfg);
@@ -2026,6 +2065,7 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 	/* Hr message should have at least one carrier */
 	while (carriers) {
 		ret = near_ndef_prepare_ac_and_cfg_records(
+				type,
 				string2carrier(carriers->data),
 				&ac_msg, &cfg_msg, NULL, NULL);
 		if (ret == 0) {
