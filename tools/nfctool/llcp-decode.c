@@ -342,7 +342,7 @@ static int llcp_print_agf(struct sniffer_packet *packet,
 		offset += size;
 	}
 
-	llcp_printf_msg("-- End of AGF LLC PDUs\n");
+	llcp_printf_msg("-- End of AGF LLC PDUs");
 
 	err = 0;
 exit:
