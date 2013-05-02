@@ -149,7 +149,7 @@ static void pcap_file_cleanup(void)
 
 
 #define LINE_SIZE (10 + 3 * 16 + 2 + 18 + 1)
-#define HUMAN_READABLE_OFFSET 59
+#define HUMAN_READABLE_OFFSET 55
 
 /*
  * Dumps data in Hex+ASCII format as:
@@ -166,6 +166,9 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	guint32 output_len;
 	gchar line[LINE_SIZE];
 	gchar *hexa = NULL, *human = NULL;
+	guint8 offset_len;
+	guint8 human_offset;
+	gchar *fmt;
 
 	if (len == 0)
 		return;
@@ -179,6 +182,16 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	else
 		output_len = len;
 
+	if (output_len > 0xFFFF) {
+		offset_len = 8;
+		human_offset = HUMAN_READABLE_OFFSET + 4;
+		fmt = "%08X: ";
+	} else {
+		offset_len = 4;
+		human_offset = HUMAN_READABLE_OFFSET;
+		fmt = "%04X: ";
+	}
+
 	if (print_len) {
 		if (indent)
 			fprintf(file, "%*c", indent, ' ');
@@ -188,14 +201,15 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 
 	while (total < output_len) {
 		if (digits == 0) {
-			memset(line, ' ', HUMAN_READABLE_OFFSET);
+			memset(line, ' ', human_offset);
 
-			sprintf(line, "%08X: ", offset);
+			sprintf(line, fmt, offset);
+
 			offset += 16;
 
-			hexa = line + 8 + 2;
+			hexa = line + offset_len + 2;
 
-			human = line + HUMAN_READABLE_OFFSET;
+			human = line + human_offset;
 			*human++ = '|';
 		}
 
