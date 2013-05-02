@@ -139,9 +139,10 @@ static const gchar *llcp_param_str[] = {
 	"Service Discovery Response"
 };
 
-#define llcp_printf_header(prefix, color, fmt, ...) print_indent_prefix(LLCP_HEADER_INDENT, \
-						color, prefix, \
-						LLCP_COLOR, fmt, ## __VA_ARGS__)
+#define llcp_printf_header(prefix, color, fmt, ...) \
+				print_indent_prefix( LLCP_HEADER_INDENT,\
+				color, prefix, \
+				LLCP_COLOR, fmt, ## __VA_ARGS__)
 
 #define llcp_printf_msg(fmt, ...) print_indent(LLCP_MSG_INDENT, \
 						LLCP_COLOR, fmt, ## __VA_ARGS__)
