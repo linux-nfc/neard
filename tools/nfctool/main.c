@@ -135,6 +135,23 @@ static int nfctool_snl_send_request(struct nfc_adapter *adapter)
 	return err;
 }
 
+static int nfctool_set_powered(gboolean powered)
+{
+	struct nfc_adapter *adapter;
+	int err;
+
+	adapter = adapter_get(opts.adapter_idx);
+	if (!adapter)
+		return -ENODEV;
+
+	err = nl_set_powered(adapter, powered);
+
+	if (err == 0)
+		adapter->powered = powered;
+
+	return err;
+}
+
 static int nfctool_dep_link_up_cb(guint8 cmd, guint32 idx, gpointer data)
 {
 	struct nfc_adapter *adapter;
@@ -339,6 +356,8 @@ struct nfctool_options opts = {
 	.poll_mode = POLLING_MODE_INITIATOR,
 	.device_name = NULL,
 	.adapter_idx = INVALID_ADAPTER_IDX,
+	.enable_dev = FALSE,
+	.disable_dev = FALSE,
 	.set_param = FALSE,
 	.lto = -1,
 	.rw = -1,
@@ -485,6 +504,10 @@ static GOptionEntry option_entries[] = {
 	{ "poll", 'p', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,
 	  opt_parse_poll_arg, "start polling as initiator, target, or both; "
 	  "default mode is initiator", "[Initiator|Target|Both]" },
+	{ "enable", '1', 0, G_OPTION_ARG_NONE, &opts.enable_dev,
+	  "enable device", NULL },
+	{ "disable", '0', 0, G_OPTION_ARG_NONE, &opts.disable_dev,
+	  "disable device", NULL },
 	{ "set-param", 's', 0, G_OPTION_ARG_CALLBACK, opt_parse_set_param_arg,
 	  "set lto, rw, and/or miux parameters", "lto=150,rw=1,miux=100" },
 	{ "snl", 'k', 0, G_OPTION_ARG_CALLBACK, &opt_parse_snl_arg,
@@ -551,6 +574,9 @@ static int nfctool_options_parse(int argc, char **argv)
 		}
 	}
 
+	if (opts.enable_dev || opts.disable_dev)
+		opts.list = TRUE;
+
 	opts.need_netlink = opts.list || opts.poll ||
 			    opts.set_param || opts.snl;
 
@@ -560,7 +586,8 @@ static int nfctool_options_parse(int argc, char **argv)
 		goto exit;
 	}
 
-	if ((opts.poll || opts.set_param || opts.sniff || opts.snl) &&
+	if ((opts.poll || opts.set_param || opts.sniff || opts.snl ||
+	    opts.enable_dev || opts.disable_dev) &&
 	    opts.adapter_idx == INVALID_ADAPTER_IDX) {
 		print_error("Please specify a device with -d nfcX option");
 
@@ -640,6 +667,15 @@ int main(int argc, char **argv)
 		err = sniffer_init();
 		if (err)
 			goto exit_err;
+	}
+
+	if (opts.enable_dev || opts.disable_dev) {
+		err = nfctool_set_powered(opts.enable_dev);
+
+		if (err && err != -EALREADY)
+			goto exit_err;
+
+		err = 0;
 	}
 
 	if (opts.list && !opts.set_param)

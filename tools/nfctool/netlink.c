@@ -556,6 +556,43 @@ nla_put_failure:
 	return err;
 }
 
+int nl_set_powered(struct nfc_adapter *adapter, gboolean powered)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	int err;
+	uint8_t cmd;
+
+	DBG("");
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		return -ENOMEM;
+
+	if (powered == TRUE)
+		cmd = NFC_CMD_DEV_UP;
+	else
+		cmd = NFC_CMD_DEV_DOWN;
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
+			NLM_F_REQUEST, cmd, NFC_GENL_VERSION);
+	if (hdr == NULL) {
+		err = -EINVAL;
+		goto nla_put_failure;
+	}
+
+	err = -EMSGSIZE;
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter->idx);
+
+	err = nl_send_msg(nfc_state->cmd_sock, msg, NULL, NULL);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
 int nl_send_sdreq(struct nfc_adapter *adapter, GSList *uris)
 {
 	struct nl_msg *msg;

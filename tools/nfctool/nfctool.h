@@ -65,6 +65,8 @@ struct nfctool_options {
 	guint8 poll_mode;
 	gchar *device_name;
 	guint32 adapter_idx;
+	gboolean enable_dev;
+	gboolean disable_dev;
 	gboolean set_param;
 	gint32 lto;
 	gint32 rw;
