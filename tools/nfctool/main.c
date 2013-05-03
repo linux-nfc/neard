@@ -577,6 +577,9 @@ static int nfctool_options_parse(int argc, char **argv)
 	if (opts.enable_dev || opts.disable_dev)
 		opts.list = TRUE;
 
+	if (opts.poll)
+		opts.enable_dev = TRUE;
+
 	opts.need_netlink = opts.list || opts.poll ||
 			    opts.set_param || opts.snl;
 
