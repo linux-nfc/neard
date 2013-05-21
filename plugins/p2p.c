@@ -344,6 +344,7 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 			near_device_io_cb cb,  struct near_p2p_driver *driver)
 {
 	int fd, err = 0;
+	struct timeval timeout;
 	struct sockaddr_nfc_llcp addr;
 
 	DBG("");
@@ -359,6 +360,17 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 	addr.nfc_protocol = NFC_PROTO_NFC_DEP;
 	addr.service_name_len = strlen(driver->service_name);
 	strcpy(addr.service_name, driver->service_name);
+
+	timeout.tv_sec = 8;
+	timeout.tv_usec = 0;
+
+	if (setsockopt (fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+			sizeof(timeout)) < 0)
+		near_error("Could not set the receive timeout\n");
+
+	if (setsockopt (fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+			sizeof(timeout)) < 0)
+		near_error("Could not set the send timeout\n");
 
 	err = connect(fd, (struct sockaddr *) &addr,
 			sizeof(struct sockaddr_nfc_llcp));
