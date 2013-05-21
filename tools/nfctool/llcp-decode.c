@@ -475,6 +475,8 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 		direction_color = COLOR_GREEN;
 	}
 
+	time_str[0] = 0;
+
 	if (opts.show_timestamp != SNIFFER_SHOW_TIMESTAMP_NONE) {
 		char prefix = ' ';
 
