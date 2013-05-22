@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <string.h>
+#include <poll.h>
 #include <sys/socket.h>
 
 #include <linux/socket.h>
@@ -113,6 +114,15 @@ out_err:
 
 static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 				   gpointer user_data);
+
+struct p2p_connect {
+	uint32_t adapter_idx;
+	uint32_t target_idx;
+	guint watch;
+	struct near_p2p_driver *driver;
+	struct near_ndef_message *ndef;
+	near_device_io_cb cb;
+};
 
 static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 							gpointer user_data)
@@ -273,6 +283,67 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 	return !driver->single_connection;
 }
 
+static gboolean check_nval(GIOChannel *io)
+{
+	struct pollfd fds;
+
+	memset(&fds, 0, sizeof(fds));
+	fds.fd = g_io_channel_unix_get_fd(io);
+	fds.events = POLLNVAL;
+
+	if (poll(&fds, 1, 0) > 0 && (fds.revents & POLLNVAL))
+		return TRUE;
+
+	return FALSE;
+}
+
+static gboolean p2p_connect_event(GIOChannel *channel, GIOCondition condition,
+							gpointer user_data)
+{
+	struct p2p_connect *conn = user_data;
+	int err, sk_err, fd;
+	socklen_t len = sizeof(sk_err);
+
+	DBG("condition 0x%x", condition);
+
+	if (conn->driver->push == NULL) {
+		err = -EOPNOTSUPP;
+		goto out;
+	}
+
+	fd = g_io_channel_unix_get_fd(channel);
+
+	if ((condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) ||
+						check_nval(channel)) {
+		near_error("%s connect error", conn->driver->name);
+		err = -EIO;
+		goto out;
+	}
+
+	if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &sk_err, &len) < 0)
+		err = -errno;
+	else
+		err = -sk_err;
+	if (err < 0) {
+		near_error("%s Connection error %d",
+					conn->driver->name, -err);
+		goto out;
+	}
+
+	err = conn->driver->push(fd, conn->adapter_idx, conn->target_idx,
+					conn->ndef, conn->cb);
+
+out:
+	if (err < 0)
+		conn->cb(conn->adapter_idx, conn->target_idx, err);
+
+	g_free(conn->ndef->data);
+	g_free(conn->ndef);
+	g_free(conn);
+
+	return FALSE;
+}
+
 static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 							near_device_io_cb cb)
 {
@@ -346,12 +417,30 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 	int fd, err = 0;
 	struct timeval timeout;
 	struct sockaddr_nfc_llcp addr;
+	GIOChannel *channel;
+	GIOCondition cond;
+	struct p2p_connect *conn;
 
 	DBG("");
 
 	fd = socket(AF_NFC, SOCK_STREAM, NFC_SOCKPROTO_LLCP);
 	if (fd < 0)
 		return -errno;
+
+	conn = g_try_malloc0(sizeof(struct p2p_connect));
+	if (conn == NULL) {
+		close(fd);
+		return -ENOMEM;
+	}
+
+	conn->driver = driver;
+	conn->ndef = ndef;
+	conn->cb = cb;
+	conn->target_idx = target_idx;
+	conn->adapter_idx = adapter_idx;
+
+	channel = g_io_channel_unix_new(fd);
+	g_io_channel_set_flags(channel, G_IO_FLAG_NONBLOCK, NULL);
 
 	memset(&addr, 0, sizeof(struct sockaddr_nfc_llcp));
 	addr.sa_family = AF_NFC;
@@ -374,12 +463,17 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 
 	err = connect(fd, (struct sockaddr *) &addr,
 			sizeof(struct sockaddr_nfc_llcp));
-	if (err < 0) {
-		near_error("Connect failed  %d", err);
+	if (err < 0 && errno != EINPROGRESS) {
+		near_error("Connect failed  %d", errno);
+		g_free(conn);
 		close(fd);
 
 		return err;
 	}
+
+	cond = G_IO_OUT | G_IO_HUP |  G_IO_ERR | G_IO_NVAL;
+	conn->watch = g_io_add_watch(channel, cond, p2p_connect_event, conn);
+	g_io_channel_unref(channel);
 
 	return fd;
 }
@@ -404,18 +498,15 @@ static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
 		 * the handover service and fallback to SNEP on connect fail.
 		 */
 		fd = p2p_connect(adapter_idx, target_idx, ndef, cb, driver);
-		if (fd < 0) {
-			if (driver->fallback_service_name != NULL)
-				return  p2p_push(adapter_idx, target_idx, ndef,
+		if (fd > 0)
+			return fd;
+
+		if (driver->fallback_service_name != NULL)
+			return  p2p_push(adapter_idx, target_idx, ndef,
 					(char *) driver->fallback_service_name,
 					cb);
-			else
-				return -1;
-
-		} else if (driver->push != NULL) {
-			return driver->push(fd, adapter_idx, target_idx,
-					ndef, cb);
-		}
+		else
+			return -1;
 	}
 
 	return -1;

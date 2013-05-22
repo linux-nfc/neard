@@ -277,9 +277,6 @@ static DBusMessage *push_ndef(DBusConnection *conn,
 	if (err < 0)
 		goto error;
 
-	g_free(ndef->data);
-	g_free(ndef);
-
 	return NULL;
 
 error:
