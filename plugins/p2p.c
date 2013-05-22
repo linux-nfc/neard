@@ -283,6 +283,80 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 	return !driver->single_connection;
 }
 
+static int p2p_connect_blocking(uint32_t adapter_idx, uint32_t target_idx,
+				struct near_ndef_message *ndef,
+				near_device_io_cb cb,
+				struct near_p2p_driver *driver)
+{
+	int fd, err = 0;
+	struct timeval timeout;
+	struct sockaddr_nfc_llcp addr;
+
+	DBG("");
+
+	fd = socket(AF_NFC, SOCK_STREAM, NFC_SOCKPROTO_LLCP);
+	if (fd < 0)
+		return -errno;
+
+	memset(&addr, 0, sizeof(struct sockaddr_nfc_llcp));
+	addr.sa_family = AF_NFC;
+	addr.dev_idx = adapter_idx;
+	addr.target_idx = target_idx;
+	addr.nfc_protocol = NFC_PROTO_NFC_DEP;
+	addr.service_name_len = strlen(driver->service_name);
+	strcpy(addr.service_name, driver->service_name);
+
+	timeout.tv_sec = 8;
+	timeout.tv_usec = 0;
+
+	if (setsockopt (fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+			sizeof(timeout)) < 0)
+		near_error("Could not set the receive timeout\n");
+
+	if (setsockopt (fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+			sizeof(timeout)) < 0)
+		near_error("Could not set the send timeout\n");
+
+	err = connect(fd, (struct sockaddr *) &addr,
+			sizeof(struct sockaddr_nfc_llcp));
+	if (err < 0) {
+		near_error("Connect failed  %d", err);
+		close(fd);
+
+		return err;
+	}
+
+	return fd;
+}
+
+static gboolean p2p_push_blocking(gpointer user_data)
+{
+	struct p2p_connect *conn = user_data;
+	int fd, err;
+
+	DBG("");
+
+	fd = p2p_connect_blocking(conn->adapter_idx, conn->target_idx,
+				  conn->ndef, conn->cb, conn->driver);
+	if (fd < 0) {
+		err = fd;
+		goto out;
+	}
+
+	err = conn->driver->push(fd, conn->adapter_idx, conn->target_idx,
+							conn->ndef, conn->cb);
+
+out:
+	if (err < 0)
+		conn->cb(conn->adapter_idx, conn->target_idx, err);
+
+	g_free(conn->ndef->data);
+	g_free(conn->ndef);
+	g_free(conn);
+
+	return FALSE;
+}
+
 static gboolean check_nval(GIOChannel *io)
 {
 	struct pollfd fds;
@@ -316,6 +390,17 @@ static gboolean p2p_connect_event(GIOChannel *channel, GIOCondition condition,
 	if ((condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) ||
 						check_nval(channel)) {
 		near_error("%s connect error", conn->driver->name);
+
+		if (condition & G_IO_HUP) {
+			DBG("Trying a blocking connect");
+
+			close(fd);
+
+			g_timeout_add(300, p2p_push_blocking, conn);
+
+			return FALSE;
+		}
+
 		err = -EIO;
 		goto out;
 	}
