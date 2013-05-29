@@ -86,14 +86,14 @@ static void llcp_free_client(gpointer data)
 	g_free(co_data);
 }
 
-static void llcp_send_data (gpointer data, gpointer user_data)
+static void llcp_send_data(gpointer data, gpointer user_data)
 {
 	struct co_cl_client_data *clt = user_data;
 	struct sdu *i_sdu = data;
 	int err;
 
 	if (i_sdu == NULL)
-		goto out_error;
+		return;
 
 	/* conn less or oriented ? */
 	if (clt->sock_type == SOCK_DGRAM)
@@ -103,16 +103,13 @@ static void llcp_send_data (gpointer data, gpointer user_data)
 	else
 		err = send(clt->fd, i_sdu->data, i_sdu->len, 0);
 
-	if (err < 0) {
+	if (err < 0)
 		near_error("Could not send data to client %d", err);
-		goto out_error;
-	}
 
+	/* free */
 	clt->sdu_list = g_list_remove(clt->sdu_list, i_sdu);
-
 	free_one_sdu(i_sdu);
 
-out_error:
 	return;
 }
 
