@@ -128,7 +128,8 @@ static int snep_frag_append(struct snep_frag *frag,
 
 	frag->count++;
 
-	snep_printf_msg("Received fragment #%hu of %u bytes (total %u/%u)",
+	snep_printf_msg("%s fragment #%hu of %u bytes (total %u/%u)",
+			packet->direction == NFC_LLCP_DIRECTION_RX ? "Received" : "Sent",
 		    frag->count, packet->llcp.data_len,
 		    frag->received, frag->buffer_size);
 
@@ -171,11 +172,13 @@ static int snep_decode_info(struct sniffer_packet *packet)
 
 	frag->index = snep_get_frag_index(packet);
 
-	snep_printf_msg("Start receiving fragmented message of %u bytes",
-		    frag->buffer_size);
+	snep_printf_msg("Start %s fragmented message of %u bytes",
+			packet->direction == NFC_LLCP_DIRECTION_RX ? "Receiving" : "Sending",
+			frag->buffer_size);
 
-	snep_printf_msg("Received fragment #%hu of %u bytes", frag->count,
-		    frag->received);
+	snep_printf_msg("%s fragment #%hu of %u bytes",
+			packet->direction == NFC_LLCP_DIRECTION_RX ? "Received" : "Sent",
+			frag->count, frag->received);
 
 	DBG("Adding frag with index 0x%x", frag->index);
 
