@@ -566,6 +566,10 @@ static void set_tag_type(struct near_tag *tag,
 		tag->type = NFC_PROTO_FELICA;
 		break;
 
+	case NFC_PROTO_ISO14443_B_MASK:
+		tag->type = NFC_PROTO_ISO14443_B;
+		break;
+
 	default:
 		tag->type = NFC_PROTO_MAX;
 		break;
