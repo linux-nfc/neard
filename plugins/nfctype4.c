@@ -1454,8 +1454,17 @@ static int nfctype4_format(uint32_t adapter_idx, uint32_t target_idx,
 	return err;
 }
 
-static struct near_tag_driver type4_driver = {
+static struct near_tag_driver type4a_driver = {
 	.type           = NFC_PROTO_ISO14443,
+	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
+	.read           = nfctype4_read,
+	.write          = nfctype4_write,
+	.check_presence = nfctype4_check_presence,
+	.format		= nfctype4_format,
+};
+
+static struct near_tag_driver type4b_driver = {
+	.type           = NFC_PROTO_ISO14443_B,
 	.priority       = NEAR_TAG_PRIORITY_DEFAULT,
 	.read           = nfctype4_read,
 	.write          = nfctype4_write,
@@ -1465,16 +1474,23 @@ static struct near_tag_driver type4_driver = {
 
 static int nfctype4_init(void)
 {
+	int ret;
+
 	DBG("");
 
-	return near_tag_driver_register(&type4_driver);
+	ret = near_tag_driver_register(&type4b_driver);
+	if (ret < 0)
+		return ret;
+
+	return near_tag_driver_register(&type4a_driver);
 }
 
 static void nfctype4_exit(void)
 {
 	DBG("");
 
-	near_tag_driver_unregister(&type4_driver);
+	near_tag_driver_unregister(&type4a_driver);
+	near_tag_driver_unregister(&type4b_driver);
 }
 
 NEAR_PLUGIN_DEFINE(nfctype4, "NFC Forum Type 4 tags support", VERSION,
