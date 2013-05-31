@@ -97,7 +97,7 @@ Service		unique name
 Interface	org.neard.NDEFAgent
 Object path	freely definable
 
-Methods		dict GetNDEF(dict values) [experimental]
+Methods		void GetNDEF(dict values) [experimental]
 
 			This method gets called when the service daemon
 			found an NDEF matching the registered type.
