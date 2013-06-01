@@ -61,7 +61,7 @@ static near_bool_t npp_read(int client_fd,
 	struct p2p_npp_frame frame;
 	struct p2p_npp_ndef_entry entry;
 	int bytes_recv, n_ndef, i, ndef_length, total_ndef_length, err;
-	uint8_t *ndefs, *current_ndef;
+	uint8_t *ndefs, *new_ndefs, *current_ndef;
 	GList *records;
 
 	ndefs = NULL;
@@ -91,13 +91,14 @@ static near_bool_t npp_read(int client_fd,
 		total_ndef_length += ndef_length + TLV_SIZE;
 		DBG("NDEF %d length %d", i, ndef_length);
 
-		ndefs = g_try_realloc(ndefs, total_ndef_length);
-		if (ndefs == NULL) {
+		new_ndefs = g_try_realloc(ndefs, total_ndef_length);
+		if (new_ndefs == NULL) {
 			near_error("Could not allocate NDEF buffer %d",
 								bytes_recv);
 			err = -ENOMEM;
 			break;
 		}
+		ndefs = new_ndefs;
 
 		current_ndef = ndefs + total_ndef_length
 					- (ndef_length + TLV_SIZE);
