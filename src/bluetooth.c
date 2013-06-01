@@ -756,11 +756,14 @@ int __near_bluetooth_parse_oob_record(struct carrier_data *data,
 		}
 		ptr = ptr + oob->bt_name_len;
 	} else {
+		bt_eir_free(oob);
 		return -EINVAL;
 	}
 
-	if (pair == FALSE)
+	if (pair == FALSE) {
+		bt_eir_free(oob);
 		return 0;
+	}
 
 	/* check and get the default adapter */
 	oob->def_adapter = g_strdup(bt_def_oob_data.def_adapter);
