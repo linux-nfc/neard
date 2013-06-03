@@ -23,6 +23,12 @@
 #define AF_NFC 39
 #endif
 
+#ifndef SOL_NFC
+#define SOL_NFC	280
+#endif
+
+#define LLCP_DEFAULT_MIU 128
+
 struct near_p2p_driver {
 	const char *name;
 	const char *service_name;

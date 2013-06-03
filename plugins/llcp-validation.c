@@ -40,7 +40,6 @@
 
 #include "p2p.h"
 
-#define LLCP_VALID_FRAME_SIZE	128
 #define ECHO_DELAY		2000	/* 2 seconds */
 
 struct co_cl_client_data {
@@ -48,12 +47,15 @@ struct co_cl_client_data {
 	uint8_t buf_count;
 	GList *sdu_list;
 
+	int miu_len;
+	uint8_t *miu_buffer;
+
 	int sock_type;
 	struct sockaddr_nfc_llcp cl_addr;
 };
 
 struct sdu {
-	uint8_t len;
+	int len;
 	uint8_t *data;
 };
 
@@ -80,8 +82,10 @@ static void llcp_free_client(gpointer data)
 
 	DBG("");
 
-	if (co_data)
+	if (co_data) {
 		g_list_free_full(co_data->sdu_list, free_one_sdu);
+		g_free(co_data->miu_buffer);
+	}
 
 	g_free(co_data);
 }
@@ -134,8 +138,7 @@ static gboolean llcp_common_delay_cb(gpointer user_data)
  * If this is the first SDU, we start a 2 secs timer, and be ready for
  * another SDU
  */
-static near_bool_t llcp_add_incoming_sdu(struct co_cl_client_data *clt,
-			uint8_t *temp, int len)
+static near_bool_t llcp_add_incoming_sdu(struct co_cl_client_data *clt, int len)
 {
 	struct sdu *i_sdu;
 
@@ -148,7 +151,7 @@ static near_bool_t llcp_add_incoming_sdu(struct co_cl_client_data *clt,
 		i_sdu->data = g_try_malloc0(len);
 		if (i_sdu->data == NULL)
 			goto out_error;
-		memcpy(i_sdu->data, temp, len);
+		memcpy(i_sdu->data, clt->miu_buffer, len);
 	}
 
 	clt->sdu_list = g_list_append(clt->sdu_list, i_sdu);
@@ -172,7 +175,6 @@ out_error:
  * */
 static near_bool_t llcp_cl_data_recv(struct co_cl_client_data *cl_client)
 {
-	uint8_t temp[LLCP_VALID_FRAME_SIZE];
 	socklen_t addr_len;
 	int len;
 
@@ -180,8 +182,8 @@ static near_bool_t llcp_cl_data_recv(struct co_cl_client_data *cl_client)
 
 	/* retrieve sdu */
 	addr_len = sizeof(struct sockaddr_nfc_llcp);
-	len = recvfrom(cl_client->fd, temp, LLCP_VALID_FRAME_SIZE, 0,
-			(struct sockaddr *) &cl_client->cl_addr, &addr_len);
+	len = recvfrom(cl_client->fd, cl_client->miu_buffer, cl_client->miu_len,
+			0, (struct sockaddr *) &cl_client->cl_addr, &addr_len);
 
 	if (len < 0) {
 		near_error("Could not read data %d %s", len, strerror(errno));
@@ -190,7 +192,7 @@ static near_bool_t llcp_cl_data_recv(struct co_cl_client_data *cl_client)
 
 	/* Two SDUs max, reject the others */
 	if (cl_client->buf_count < 2)
-		return llcp_add_incoming_sdu(cl_client,	temp, len);
+		return llcp_add_incoming_sdu(cl_client,	len);
 	else
 		near_warn("No more than 2 SDU..ignored");
 
@@ -203,16 +205,15 @@ static near_bool_t llcp_cl_data_recv(struct co_cl_client_data *cl_client)
 static near_bool_t llcp_co_data_recv(struct co_cl_client_data *co_client)
 {
 	int len;
-	uint8_t temp[LLCP_VALID_FRAME_SIZE];
 
 	DBG("");
 
-	len = recv(co_client->fd, temp, LLCP_VALID_FRAME_SIZE, 0);
+	len = recv(co_client->fd, co_client->miu_buffer, co_client->miu_len, 0);
 	if (len < 0) {
 		near_error("Could not read data %d %s", len, strerror(errno));
 		return FALSE;
 	}
-	return llcp_add_incoming_sdu(co_client,	temp, len);
+	return llcp_add_incoming_sdu(co_client, len);
 
 }
 
@@ -223,6 +224,7 @@ static near_bool_t llcp_common_read(int client_fd, uint32_t adapter_idx,
 					const int sock_type)
 {
 	struct co_cl_client_data *cx_client = NULL;
+	socklen_t len = sizeof(unsigned int);
 
 	/* Check if this is the 1st call for this client */
 	cx_client = g_hash_table_lookup(llcp_client_hash,
@@ -235,6 +237,21 @@ static near_bool_t llcp_common_read(int client_fd, uint32_t adapter_idx,
 
 		cx_client->fd = client_fd;
 		cx_client->sock_type = sock_type;
+
+		/* get MIU */
+		if (getsockopt(client_fd, SOL_NFC, NFC_LLCP_MIUX,
+						&cx_client->miu_len, &len) == 0)
+			cx_client->miu_len = cx_client->miu_len +
+							LLCP_DEFAULT_MIU;
+		else
+			cx_client->miu_len = LLCP_DEFAULT_MIU;
+
+		cx_client->miu_buffer = g_try_malloc0(cx_client->miu_len);
+		if (cx_client->miu_buffer == NULL) {
+			DBG("Cannot allocate MIU buffer (size: %d)",
+							cx_client->miu_len);
+			goto error;
+		}
 
 		/* Add to the client hash table */
 		g_hash_table_insert(llcp_client_hash,
