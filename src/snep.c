@@ -382,15 +382,16 @@ static int snep_core_push_prepare_fragments(struct p2p_snep_put_req_data *req,
 
 static near_bool_t snep_core_process_request(int client_fd,
 					struct p2p_snep_data *snep_data,
-					struct p2p_snep_req_frame *frame,
 					near_server_io req_get,
 					near_server_io req_put)
 {
 	near_bool_t ret;
 	int err;
 
+	DBG("request %d", snep_data->request);
+
 	/* Now, we process the request code */
-	switch (frame->request) {
+	switch (snep_data->request) {
 	case NEAR_SNEP_REQ_PUT:
 		DBG("NEAR_SNEP_REQ_PUT");
 		if (req_put != NULL)
@@ -449,6 +450,12 @@ static near_bool_t snep_core_process_request(int client_fd,
 		 * NEAR_SNEP_REQ_CONTINUE indicates that we have to send the
 		 * remaining fragments...
 		 */
+
+		if (snep_data->req == NULL) {
+			ret = TRUE;
+			break;
+		}
+
 		DBG("NEAR_SNEP_REQ_CONTINUE");
 		if (snep_data->req->fragments == NULL) {
 			near_error("error: NEAR_SNEP_REQ_CONTINUE but no fragment");
@@ -511,10 +518,28 @@ near_bool_t near_snep_core_read(int client_fd,
 {
 	struct p2p_snep_data *snep_data;
 	struct p2p_snep_req_frame frame;
-	int bytes_recv;
+	int bytes_recv, ret;
 	uint32_t ndef_length;
 
 	DBG("");
+
+	/* Check previous/pending snep_data */
+	snep_data = g_hash_table_lookup(snep_client_hash,
+					GINT_TO_POINTER(client_fd));
+
+	/*
+	 * If snep data is already there, and there are more bytes to read
+	 * we just go ahead and read more fragments from the client.
+	 */
+	if (snep_data != NULL &&
+			snep_data->nfc_data_length !=
+					snep_data->nfc_data_current_length) {
+		ret = snep_core_read_ndef(client_fd, snep_data);
+		if (ret)
+			return ret;
+
+		goto process_request;
+	}
 
 	/*
 	 * We already got something from this client, we should try
@@ -541,14 +566,6 @@ near_bool_t near_snep_core_read(int client_fd,
 		return TRUE;
 	}
 
-	/* Check previous/pending snep_data */
-	snep_data = g_hash_table_lookup(snep_client_hash,
-					GINT_TO_POINTER(client_fd));
-
-	/* Is snep data already there, should be a CONTINUE */
-	if (snep_data != NULL)
-		goto jumptocontinue;
-
 	/* This is a new request from the client */
 	snep_data = g_try_malloc0(sizeof(struct p2p_snep_data));
 	if (snep_data == NULL)
@@ -568,6 +585,7 @@ near_bool_t near_snep_core_read(int client_fd,
 	snep_data->nfc_data_ptr = snep_data->nfc_data;
 	snep_data->adapter_idx = adapter_idx;
 	snep_data->target_idx = target_idx;
+	snep_data->request = frame.request;
 	snep_data->respond_continue = FALSE;
 	snep_data->cb = cb;
 
@@ -579,13 +597,14 @@ near_bool_t near_snep_core_read(int client_fd,
 		if ((frame.request == NEAR_SNEP_REQ_GET) ||
 				(frame.request == NEAR_SNEP_REQ_PUT)) {
 			/* We should read the missing bytes */
-			snep_core_read_ndef(client_fd, snep_data);
+			ret = snep_core_read_ndef(client_fd, snep_data);
+			if (ret)
+				return ret;
 		}
 	}
 
-jumptocontinue:
-
-	return snep_core_process_request(client_fd, snep_data, &frame,
+process_request:
+	return snep_core_process_request(client_fd, snep_data,
 							req_get, req_put);
 
 }

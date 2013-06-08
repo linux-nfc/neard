@@ -76,6 +76,9 @@ static near_bool_t snep_default_server_req_put(int client_fd, void *data)
 
 	near_device_add_records(device, records, snep_data->cb, 0);
 
+	snep_data->nfc_data_length = 0;
+	snep_data->nfc_data = NULL;
+
 	return TRUE;
 }
 

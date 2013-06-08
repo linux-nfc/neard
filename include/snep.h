@@ -72,6 +72,7 @@ struct p2p_snep_data {
 	uint32_t adapter_idx;
 	uint32_t target_idx;
 	gboolean respond_continue;
+	uint8_t request;
 	near_tag_io_cb cb;
 	struct p2p_snep_put_req_data *req;
 };

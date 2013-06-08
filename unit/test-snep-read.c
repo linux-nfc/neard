@@ -368,11 +368,9 @@ static near_bool_t test_snep_read_send_fragment(size_t frag_len,
 	nbytes = send(sockfd[client], data, frag_len, 0);
 	g_assert(nbytes == frag_len);
 
-	/*
-	 * TODO fragment has no SNEP header. snep_core_read will fail:
-	 *      ret = near_snep_core_read(sockfd[server], 0, 0, NULL,
-	 *               test_snep_dummy_req_get, test_snep_dummy_req_put);
-	 */
+	near_snep_core_read(sockfd[server], 0, 0, NULL,
+			test_snep_dummy_req_get, test_snep_dummy_req_put);
+
 	return TRUE;
 }
 
