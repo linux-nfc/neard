@@ -566,6 +566,18 @@ near_bool_t near_snep_core_read(int client_fd,
 		return TRUE;
 	}
 
+	/*
+	 * This is a fragmentation SNEP operation since we have pending
+	 * frames. But the ndef length and the current data length are
+	 * identical. So this is a CONTINUE for a fragmented GET, and
+	 * we should just process a CONTINUE frame and send the fragments
+	 * back to the client. This will be done from snep_core_process_request().
+	 */
+	if (snep_data != NULL) {
+		snep_data->request = frame.request;
+		goto process_request;
+	}
+
 	/* This is a new request from the client */
 	snep_data = g_try_malloc0(sizeof(struct p2p_snep_data));
 	if (snep_data == NULL)
