@@ -611,7 +611,7 @@ struct near_adapter *__near_adapter_create(uint32_t idx,
 
 	powered_setting = near_setting_get_bool("DefaultPowered");
 	if (powered_setting == TRUE && powered == FALSE &&
-	    !__near_netlink_adapter_enable(adapter->idx, powered_setting))
+	    !__near_netlink_adapter_enable(idx, powered_setting))
 			powered = TRUE;
 
 	DBG("Powered %d", powered);
