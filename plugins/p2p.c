@@ -606,10 +606,20 @@ static struct near_device_driver p2p_driver = {
 
 int near_p2p_register(struct near_p2p_driver *driver)
 {
+	struct near_p2p_driver *tmp_driver;
+	GSList *list = NULL;
+
 	DBG("driver %p name %s", driver, driver->name);
 
-	driver_list = g_slist_prepend(driver_list, driver);
+	for (list = driver_list; list; list = list->next) {
+		tmp_driver = list->data;
+		if (g_strcmp0(tmp_driver->name, driver->name) == 0) {
+			near_error("%s already registered", driver->name);
+			return -EALREADY;
+		}
+	}
 
+	driver_list = g_slist_prepend(driver_list, driver);
 	return 0;
 }
 
