@@ -278,7 +278,8 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 
 	g_io_channel_unref(client_channel);
 
-	server_data->client_list = g_list_append(server_data->client_list, client_data);
+	server_data->client_list = g_list_append(server_data->client_list,
+								client_data);
 
 	return !driver->single_connection;
 }
@@ -309,11 +310,11 @@ static int p2p_connect_blocking(uint32_t adapter_idx, uint32_t target_idx,
 	timeout.tv_sec = 8;
 	timeout.tv_usec = 0;
 
-	if (setsockopt (fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
 			sizeof(timeout)) < 0)
 		near_error("Could not set the receive timeout\n");
 
-	if (setsockopt (fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
 			sizeof(timeout)) < 0)
 		near_error("Could not set the send timeout\n");
 
@@ -538,11 +539,11 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 	timeout.tv_sec = 8;
 	timeout.tv_usec = 0;
 
-	if (setsockopt (fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
 			sizeof(timeout)) < 0)
 		near_error("Could not set the receive timeout\n");
 
-	if (setsockopt (fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
 			sizeof(timeout)) < 0)
 		near_error("Could not set the send timeout\n");
 
@@ -602,7 +603,6 @@ static struct near_device_driver p2p_driver = {
 	.listen         = p2p_listen,
 	.push		= p2p_push,
 };
-
 
 int near_p2p_register(struct near_p2p_driver *driver)
 {
