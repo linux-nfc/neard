@@ -20,5 +20,8 @@ properties = record.GetProperties()
 print "[ %s ]" % (sys.argv[1])
 
 for key in properties.keys():
-    val = str(properties[key])
-    print "      %s = %s" % (key, val)
+	if key in ["Representation"]:
+		val = unicode(properties[key])
+	else:
+		val = str(properties[key])
+	print "      %s = %s" % (key, val)
