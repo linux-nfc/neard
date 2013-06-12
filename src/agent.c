@@ -58,15 +58,28 @@ struct near_handover_agent {
 
 static void ndef_agent_free(gpointer data)
 {
-	DBusMessage *message;
 	struct near_ndef_agent *agent = data;
 
 	DBG("");
 
+	if (agent == NULL || agent->watch == 0)
+		return;
+
+	g_dbus_remove_watch(connection, agent->watch);
+
+	g_free(agent->sender);
+	g_free(agent->path);
+}
+
+static void ndef_agent_release(gpointer key, gpointer data, gpointer user_data)
+{
+	struct near_ndef_agent *agent = data;
+	DBusMessage *message;
+
 	if (agent == NULL)
 		return;
 
-	DBG("%s %s %s", agent->sender, agent->path, NFC_NDEF_AGENT_INTERFACE);
+	DBG("%s %s", agent->sender, agent->path);
 
 	message = dbus_message_new_method_call(agent->sender, agent->path,
 					NFC_NDEF_AGENT_INTERFACE, "Release");
@@ -76,11 +89,6 @@ static void ndef_agent_free(gpointer data)
 	dbus_message_set_no_reply(message, TRUE);
 
 	g_dbus_send_message(connection, message);
-
-	g_dbus_remove_watch(connection, agent->watch);
-
-	g_free(agent->sender);
-	g_free(agent->path);
 }
 
 static void ndef_agent_disconnect(DBusConnection *conn, void *user_data)
@@ -665,6 +673,7 @@ void __near_agent_cleanup(void)
 {
 	DBG("");
 
+	g_hash_table_foreach(ndef_app_hash, ndef_agent_release, NULL);
 	g_hash_table_destroy(ndef_app_hash);
 	ndef_app_hash = NULL;
 
