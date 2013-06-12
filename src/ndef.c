@@ -1365,13 +1365,10 @@ static struct near_ndef_mime_payload *parse_mime_type(
 		c_temp->size = record->header->payload_len;
 		memcpy(c_temp->data, ndef_data + offset, c_temp->size);
 	} else {
-		g_free(mime->type);
-		g_free(mime);
 		g_free(c_temp);
-		mime = NULL;
 		c_temp = NULL;
 		*c_data = NULL;
-		return NULL;
+		return mime;
 	}
 
 	*c_data = c_temp;
@@ -2577,8 +2574,12 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 						ndef_length, offset,
 						record->header->payload_len,
 						&c_data);
-			if (record->mime == NULL || c_data == NULL)
+			if (record->mime == NULL)
 				goto fail;
+
+			/* No carrier data, move on */
+			if (c_data == NULL)
+				break;
 
 			if (process_mime_type(record->mime, c_data) < 0) {
 				g_free(c_data);
