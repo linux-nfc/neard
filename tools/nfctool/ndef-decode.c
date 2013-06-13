@@ -60,13 +60,13 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 	guint8 *payload;
 	guint8 id_len;
 	guint8 *id;
-	guint32 offset;
+	guint32 ndef_offset, record_offset;
 	guint8 *record;
 	int err = 0;
 
 #define CHECK_OFFSET(s)							\
 	do {								\
-		if (data_len - offset < (s)) {				\
+		if (data_len - ndef_offset < (s)) {			\
 			ndef_printf_error("Malformed NDEF record");	\
 			sniffer_print_hexdump(stdout, data, data_len,	\
 					      NDEF_HEX_INDENT, TRUE);	\
@@ -75,13 +75,14 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 		}							\
 	} while (0)
 
-	offset = 0;
+	ndef_offset = 0;
 
-	while (offset < data_len) {
+	while (ndef_offset < data_len) {
 
 		ndef_printf_header("NDEF Record");
 
-		record = data + offset;
+		record = data + ndef_offset;
+		record_offset = 0;
 		id_len = 0;
 		type = NULL;
 		id = NULL;
@@ -98,54 +99,54 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 
 		type_len = record[1];
 
-		offset += 2;
+		record_offset += 2;
 
 		if (sr) {
 			CHECK_OFFSET(1);
 
-			payload_len = record[offset];
+			payload_len = record[record_offset];
 
-			offset++;
+			record_offset++;
 		} else {
 			CHECK_OFFSET(4);
 
-			memcpy(&payload_len, record + offset, 4);
+			memcpy(&payload_len, record + record_offset, 4);
 
 			payload_len = GUINT_FROM_BE(payload_len);
 
-			offset += 4;
+			record_offset += 4;
 		}
 
 		if (il) {
 			CHECK_OFFSET(1);
 
-			id_len = record[offset];
+			id_len = record[record_offset];
 
-			offset++;
+			record_offset++;
 		}
 
 		if (type_len > 0) {
 			CHECK_OFFSET(type_len);
 
-			type = record + offset;
+			type = record + record_offset;
 
-			offset += type_len;
+			record_offset += type_len;
 		}
 
 		if (id_len > 0) {
 			CHECK_OFFSET(id_len);
 
-			id = record + offset;
+			id = record + record_offset;
 
-			offset += id_len;
+			record_offset += id_len;
 		}
 
 		if (payload_len) {
 			CHECK_OFFSET(payload_len);
 
-			payload = record + offset;
+			payload = record + record_offset;
 
-			offset += payload_len;
+			record_offset += payload_len;
 		}
 
 		ndef_printf_msg("Message Begin: %s",     bool_str(mb));
@@ -180,6 +181,8 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 			sniffer_print_hexdump(stdout, payload, payload_len,
 					      NDEF_HEX_INDENT, FALSE);
 		}
+
+		ndef_offset += record_offset;
 	}
 
 exit:
