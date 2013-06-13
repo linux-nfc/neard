@@ -95,7 +95,7 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 		cf  = (record[0] & 0x20) != 0;
 		sr  = (record[0] & 0x10) != 0;
 		il  = (record[0] & 0x08) != 0;
-		tnf = (record[0] & 0x07) != 0;
+		tnf = (record[0] & 0x07);
 
 		type_len = record[1];
 
