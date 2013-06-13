@@ -38,6 +38,15 @@
 
 #define ndef_printf_error(fmt, ...) print_indent(NDEF_MSG_INDENT, COLOR_ERROR, \
 						fmt, ## __VA_ARGS__)
+enum record_tnf {
+	RECORD_TNF_EMPTY     = 0x00,
+	RECORD_TNF_WELLKNOWN = 0x01,
+	RECORD_TNF_MIME      = 0x02,
+	RECORD_TNF_URI       = 0x03,
+	RECORD_TNF_EXTERNAL  = 0x04,
+	RECORD_TNF_UNKNOWN   = 0x05,
+	RECORD_TNF_UNCHANGED = 0x06,
+};
 
 static gchar *tnf_str[] = {
 	"Empty (0x00)",
@@ -53,7 +62,8 @@ static gchar *tnf_str[] = {
 int ndef_print_records(guint8 *data, guint32 data_len)
 {
 	gboolean mb, me, cf, sr, il;
-	guint8 tnf;
+	enum record_tnf tnf;
+	char *mime_string;
 	guint8 type_len;
 	guint8 *type;
 	guint32 payload_len;
@@ -162,10 +172,25 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 			ndef_printf_msg("ID Length: %u", id_len);
 
 		if (type) {
-			ndef_printf_msg("Type:");
+			switch (tnf) {
+			case RECORD_TNF_MIME:
+				mime_string = g_try_malloc(type_len + 1);
+				if (mime_string != NULL) {
+					g_snprintf(mime_string,
+						type_len + 1, "%s", type);
 
-			sniffer_print_hexdump(stdout, type, type_len,
-					      NDEF_HEX_INDENT, FALSE);
+					ndef_printf_msg("Type: %s", mime_string);
+					g_free(mime_string);
+					break;
+				}
+
+			default:
+				ndef_printf_msg("Type:");
+				sniffer_print_hexdump(stdout, type, type_len,
+							NDEF_HEX_INDENT, FALSE);
+
+				break;
+			}
 		}
 
 		if (id) {
