@@ -467,6 +467,15 @@ static int llcp_print_i(struct sniffer_packet *packet)
 			llcp_printf_error("Error decoding SNEP frame");
 
 		return err;
+	} else 	if (packet->llcp.local_sap == opts.handover_sap ||
+			packet->llcp.remote_sap == opts.handover_sap) {
+		int err;
+
+		err = ndef_print_records(packet->llcp.data,
+					 packet->llcp.data_len);
+		if (err != 0)
+			llcp_printf_error("Error decoding Handover frame");
+		return err;
 	}
 
 	sniffer_print_hexdump(stdout, packet->llcp.data,  packet->llcp.data_len,
