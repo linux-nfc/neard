@@ -20,9 +20,12 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <glib.h>
 #include <errno.h>
 #include <string.h>
+
+#include <near/types.h>
 
 #include "nfctool.h"
 #include "sniffer.h"
@@ -38,6 +41,17 @@
 
 #define ndef_printf_error(fmt, ...) print_indent(NDEF_MSG_INDENT, COLOR_ERROR, \
 						fmt, ## __VA_ARGS__)
+
+#define ndef_printf_buffer(prefix, buf, buf_len) \
+do { \
+	int i; \
+	printf("%*c%s%s", NDEF_MSG_INDENT, ' ', 		\
+	       use_color() ? NDEF_COLOR : "", (prefix));	\
+	for (i = 0; i < (buf_len); i++)				\
+		printf("%02X ", (buf)[i]);			\
+	printf("\n"); \
+} while(0)
+
 enum record_tnf {
 	RECORD_TNF_EMPTY     = 0x00,
 	RECORD_TNF_WELLKNOWN = 0x01,
@@ -58,6 +72,85 @@ static gchar *tnf_str[] = {
 	"Unchanged (0x06)",
 	"Reserved (0x07)"
 };
+
+/* BT EIR list */
+#define EIR_UUID128_ALL		0x07 /* 128-bit UUID, all listed */
+#define EIR_NAME_SHORT		0x08 /* shortened local name */
+#define EIR_NAME_COMPLETE	0x09 /* complete local name */
+
+/* Specific OOB EIRs */
+#define EIR_CLASS_OF_DEVICE	0x0D  /* class of device */
+#define EIR_SP_HASH		0x0E  /* simple pairing hash C */
+#define EIR_SP_RANDOMIZER	0x0F  /* simple pairing randomizer R */
+/* Optional EIRs */
+#define EIR_DEVICE_ID		0x10  /* device ID */
+#define EIR_SECURITY_MGR_FLAGS	0x11  /* security manager flags */
+
+static void ndef_print_bt_oob(guint8 *oob_data, guint32 oob_length)
+{
+	guint32 offset = 0;
+	guint16 length = near_get_le16(oob_data);
+	guint8 *bdaddr, eir_length, eir_type;
+	char *local_name;
+
+	if (length != oob_length) {
+		ndef_printf_error("Malformed Bluetooth OOB data");
+		return;
+	}
+
+	bdaddr = oob_data + 2;
+	offset = 8;
+
+	ndef_printf_msg("Bluetooth OOB Length: %d", length);
+	ndef_printf_msg("Bluetooth Address: %x:%x:%x:%x:%x:%x",
+			bdaddr[5], bdaddr[4], bdaddr[3],
+			bdaddr[2], bdaddr[1], bdaddr[0]);
+
+	while (offset < length) {
+		eir_length = oob_data[offset];
+		eir_type = oob_data[offset + 1];
+
+		if (eir_length + offset + 1 > length)
+			break;
+
+		switch (eir_type) {
+		case EIR_NAME_SHORT:
+		case EIR_NAME_COMPLETE:
+			local_name = g_try_malloc0(eir_length);
+			if (local_name == NULL)
+				break;
+
+			g_snprintf(local_name, eir_length,
+					"%s", oob_data + offset + 2);
+
+			ndef_printf_msg("Bluetooth local name: %s", local_name);
+			g_free(local_name);
+			break;
+
+		case EIR_CLASS_OF_DEVICE:
+			ndef_printf_msg("Bluetooth CoD: 0x%02x-0x%02x-0x%02x",
+					oob_data[offset + 4],
+					oob_data[offset + 3],
+					oob_data[offset + 2]);
+			break;
+
+		case EIR_SP_HASH:
+			ndef_printf_buffer("Bluetooth Hash: ",
+					oob_data + offset + 2, eir_length - 1);
+			break;
+
+		case EIR_SP_RANDOMIZER:
+			ndef_printf_buffer("Bluetooth Randomizer: ",
+					oob_data + offset + 2, eir_length - 1);
+			break;
+
+		default:
+			break;
+		}
+
+		offset += eir_length + 1;
+	}
+}
 
 int ndef_print_records(guint8 *data, guint32 data_len)
 {
@@ -97,6 +190,7 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 		type = NULL;
 		id = NULL;
 		payload = NULL;
+		mime_string = NULL;
 
 		CHECK_OFFSET(2);
 
@@ -180,7 +274,6 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 						type_len + 1, "%s", type);
 
 					ndef_printf_msg("Type: %s", mime_string);
-					g_free(mime_string);
 					break;
 				}
 
@@ -201,10 +294,18 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 		}
 
 		if (payload) {
-			ndef_printf_msg("Payload:");
+			if (mime_string != NULL) {
+				if (strcmp(mime_string,
+				"application/vnd.bluetooth.ep.oob") == 0)
+					ndef_print_bt_oob(payload, payload_len);
 
-			sniffer_print_hexdump(stdout, payload, payload_len,
-					      NDEF_HEX_INDENT, FALSE);
+				g_free(mime_string);
+			} else {
+				ndef_printf_msg("Payload:");
+
+				sniffer_print_hexdump(stdout, payload,
+					payload_len, NDEF_HEX_INDENT, FALSE);
+			}
 		}
 
 		ndef_offset += record_offset;
