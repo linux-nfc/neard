@@ -29,6 +29,7 @@
 
 #include "nfctool.h"
 #include "sniffer.h"
+#include "ndef-decode.h"
 #include "snep-decode.h"
 #include "llcp-decode.h"
 
@@ -158,6 +159,58 @@ static const gchar *llcp_param_str[] = {
 
 static struct timeval start_timestamp;
 
+static GHashTable *connection_hash;
+
+/* We associate an SN from a CONNECT to its sender */
+static void llcp_add_connection_sn(struct sniffer_packet *packet, gchar *sn)
+{
+	guint8 ssap;
+
+	if (packet->llcp.ptype != LLCP_PTYPE_CONNECT)
+		return;
+
+	/* If we're sending the CONNECT, we use our local SAP*/
+	if (packet->llcp.local_sap != 0x1)
+		ssap = packet->llcp.local_sap;
+	else
+		ssap = packet->llcp.remote_sap;
+
+	g_hash_table_replace(connection_hash,
+			    GINT_TO_POINTER(ssap), g_strdup(sn));
+}
+
+/* Check if there's a pending SN for this dsap */
+static void llcp_check_cc(struct sniffer_packet *packet)
+{
+	guint8 dsap;
+	gchar *sn;
+
+	if (packet->llcp.ptype != LLCP_PTYPE_CC)
+		return;
+
+	/* Find the real destination SAP for this CC */
+	if (packet->direction == NFC_LLCP_DIRECTION_RX)
+		dsap = packet->llcp.local_sap;
+	else
+		dsap = packet->llcp.remote_sap;
+
+	/* Do we have a CONNECT pending for this SAP ?*/
+	sn = g_hash_table_lookup(connection_hash,
+					GINT_TO_POINTER(dsap));
+	if (sn == NULL)
+		return;
+
+	if (strcmp(sn, "urn:nfc:sn:handover") == 0)
+		opts.handover_sap = dsap;
+}
+
+static void free_connection(gpointer data)
+{
+	gchar *sn = data;
+
+	g_free(sn);
+}
+
 static void llcp_print_params(struct sniffer_packet *packet)
 {
 	guint8 major, minor;
@@ -214,6 +267,7 @@ static void llcp_print_params(struct sniffer_packet *packet)
 
 		case LLCP_PARAM_SN:
 			sn = g_strndup((gchar *)param + 2, param_len);
+			llcp_add_connection_sn(packet, sn);
 			sprintf(param_str, "%s", sn);
 			g_free(sn);
 			break;
@@ -516,6 +570,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 	case LLCP_PTYPE_CONNECT:
 	case LLCP_PTYPE_CC:
 	case LLCP_PTYPE_SNL:
+		llcp_check_cc(&packet);
 		llcp_print_params(&packet);
 		break;
 
@@ -547,6 +602,8 @@ void llcp_decode_cleanup(void)
 	timerclear(&start_timestamp);
 
 	snep_decode_cleanup();
+
+	g_hash_table_destroy(connection_hash);
 }
 
 int llcp_decode_init(void)
@@ -554,6 +611,10 @@ int llcp_decode_init(void)
 	int err;
 
 	timerclear(&start_timestamp);
+
+	connection_hash = g_hash_table_new_full(g_direct_hash,
+						g_direct_equal, NULL,
+						free_connection);
 
 	err = snep_decode_init();
 
