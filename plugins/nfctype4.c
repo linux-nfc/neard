@@ -531,7 +531,7 @@ static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 	DBG("%d", length);
 
 	if (length < 0)
-		t4_cookie_release(length, cookie);
+		return t4_cookie_release(length, cookie);
 
 	/* Check for APDU error - Not found */
 	if (APDU_STATUS(resp + STATUS_WORD_1) == APDU_NOT_FOUND) {
