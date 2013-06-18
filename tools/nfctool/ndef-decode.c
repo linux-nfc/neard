@@ -152,6 +152,58 @@ static void ndef_print_bt_oob(guint8 *oob_data, guint32 oob_length)
 	}
 }
 
+#define DE_AUTHENTICATION_TYPE 0x1003
+#define DE_NETWORK_KEY 0x1027
+#define DE_SSID 0x1045
+
+static void ndef_print_wsc_oob(guint8 *oob_data, guint32 oob_length)
+{
+	guint32 offset = 0;
+	guint16 de_length, de_type;
+	guint16 auth_type;
+	char *ssid, *passphrase;
+
+	while (offset < oob_length) {
+		de_type = near_get_be16(oob_data + offset);
+		de_length = near_get_be16(oob_data + offset + 2);
+
+		switch(de_type) {
+		case DE_AUTHENTICATION_TYPE:
+			auth_type = near_get_be16(oob_data + offset + 4);
+			ndef_printf_msg("WSC Authentication Type: 0x%02x",
+								auth_type);
+			break;
+
+		case DE_SSID:
+			ssid = g_try_malloc0(de_length + 1);
+			if (ssid == NULL)
+				break;
+
+			g_snprintf(ssid, de_length + 1,
+					"%s", oob_data + offset + 4);
+
+			ndef_printf_msg("SSID: %s", ssid);
+			g_free(ssid);
+			break;
+
+		case DE_NETWORK_KEY:
+			passphrase = g_try_malloc0(de_length + 1);
+			if (passphrase == NULL)
+				break;
+
+			g_snprintf(passphrase, de_length + 1,
+					"%s", oob_data + offset + 4);
+
+			ndef_printf_msg("Passphrase: %s", passphrase);
+			g_free(passphrase);
+			break;
+
+		}
+
+		offset += 4 + de_length;
+	}
+}
+
 int ndef_print_records(guint8 *data, guint32 data_len)
 {
 	gboolean mb, me, cf, sr, il;
@@ -298,6 +350,9 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 				if (strcmp(mime_string,
 				"application/vnd.bluetooth.ep.oob") == 0)
 					ndef_print_bt_oob(payload, payload_len);
+				else if (strcmp(mime_string,
+						"application/vnd.wfa.wsc") == 0)
+					ndef_print_wsc_oob(payload, payload_len);
 
 				g_free(mime_string);
 			} else {
