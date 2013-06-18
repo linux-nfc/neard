@@ -3092,6 +3092,9 @@ static void get_wsc_data(DBusMessageIter iter, char **ssid, char **pass)
 {
 	DBG("");
 
+	*ssid = NULL;
+	*pass = NULL;
+
 	while (dbus_message_iter_get_arg_type(&iter) !=
 					DBUS_TYPE_INVALID) {
 		const char *key;
@@ -3214,9 +3217,38 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 			dbus_message_iter_get_basic(&var_iter, &mime_str);
 
 			if (g_strcmp0(mime_str, WIFI_WSC_MIME_STRING) == 0) {
+				struct near_ndef_message *mime;
+				struct carrier_data *carrier;
+
 				get_wsc_data(arr_iter, &ssid, &passphrase);
-				return near_ndef_prepare_wsc_record(ssid,
-								passphrase);
+				if (ssid != NULL)
+					return near_ndef_prepare_wsc_record(
+							ssid, passphrase);
+
+				/*
+				 * If we did not get an SSID and optionally
+				 * a passphrase from the DBus message, then
+				 * we try to get one from the WiFi-WSC agent.
+				 */
+				carrier = __near_agent_handover_request_data(
+							HO_AGENT_WIFI, NULL);
+				if (carrier == NULL)
+					return NULL;
+
+				mime = ndef_message_alloc_complete(
+					WIFI_WSC_MIME_STRING, carrier->size,
+					NULL, 0, RECORD_TNF_MIME, TRUE, TRUE);
+				if (mime == NULL) {
+					g_free(carrier);
+					return NULL;
+				}
+
+				memcpy(mime->data + mime->offset,
+					carrier->data, carrier->size);
+
+				g_free(carrier);
+
+				return mime;
 			}
 
 		}
