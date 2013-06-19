@@ -1868,7 +1868,7 @@ fail:
 	return NULL;
 }
 
-static struct near_ndef_message *near_ndef_prepare_hs_message(
+static struct near_ndef_message *near_ndef_prepare_hs_reply(
 					GSList *remote_mimes,
 					GSList *remote_cfgs)
 {
@@ -2343,7 +2343,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 		}
 	} else if (reply != NULL) {
 		/* Prepare Hs, it depends upon Hr message carrier types */
-		*reply = near_ndef_prepare_hs_message(mimes, c_datas);
+		*reply = near_ndef_prepare_hs_reply(mimes, c_datas);
 		if (*reply == NULL) {
 			DBG("error in preparing in HS record");
 			goto fail;
