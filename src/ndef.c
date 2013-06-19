@@ -3054,18 +3054,18 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 						(uint8_t *)(uri + id_len));
 }
 
-static struct near_ndef_message *build_ho_record(DBusMessage *msg)
+static struct near_ndef_message *build_hr_record(DBusMessage *msg)
 {
-	struct near_ndef_message *ho;
+	struct near_ndef_message *hr;
 	GSList *carriers;
 
 	DBG("");
 
 	carriers = get_carrier_field(msg);
-	ho = near_ndef_prepare_hr_message(carriers);
+	hr = near_ndef_prepare_hr_message(carriers);
 	g_slist_free_full(carriers, g_free);
 
-	return ho;
+	return hr;
 }
 
 static int fill_wifi_wsc_data(uint8_t *tlv, uint16_t id,
@@ -3303,7 +3303,7 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 				ndef = build_sp_record(msg);
 				break;
 			} else if (g_strcmp0(value, "Handover") == 0) {
-				ndef = build_ho_record(msg);
+				ndef = build_hr_record(msg);
 				break;
 			} else if (g_strcmp0(value, "MIME") == 0) {
 				ndef = build_mime_record(msg);
