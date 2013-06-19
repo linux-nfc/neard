@@ -198,6 +198,11 @@ static void ndef_print_wsc_oob(guint8 *oob_data, guint32 oob_length)
 			g_free(passphrase);
 			break;
 
+		default:
+			ndef_printf_buffer("Unknown Data Element: ",
+					oob_data + offset + 4, de_length);
+			break;
+
 		}
 
 		offset += 4 + de_length;
