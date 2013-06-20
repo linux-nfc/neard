@@ -65,4 +65,8 @@ if __name__ == '__main__':
 	manager.RegisterNDEFAgent(path, rec_type)
 
 	mainloop = gobject.MainLoop()
-	mainloop.run()
+
+	try:
+		mainloop.run()
+	except (KeyboardInterrupt):
+		manager.UnregisterNDEFAgent(path, rec_type)
