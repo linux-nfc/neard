@@ -63,6 +63,7 @@ DBusMessage *__near_error_operation_aborted(DBusMessage *msg);
 DBusMessage *__near_error_operation_timeout(DBusMessage *msg);
 DBusMessage *__near_error_invalid_service(DBusMessage *msg);
 DBusMessage *__near_error_invalid_property(DBusMessage *msg);
+DBusMessage *__near_error_io_error(DBusMessage *msg);
 
 int __near_manager_adapter_add(uint32_t idx, const char *name,
 			uint32_t protocols, near_bool_t powered);

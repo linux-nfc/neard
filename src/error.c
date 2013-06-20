@@ -45,6 +45,8 @@ DBusMessage *__near_error_failed(DBusMessage *msg, int errnum)
 		return __near_error_already_exists(msg);
 	case EINVAL:
 		return __near_error_invalid_arguments(msg);
+	case EIO:
+		return __near_error_io_error(msg);
 	case ENOSYS:
 		return __near_error_not_implemented(msg);
 	case ENOLINK:
@@ -188,4 +190,10 @@ DBusMessage *__near_error_invalid_property(DBusMessage *msg)
 {
 	return g_dbus_create_error(msg, NFC_ERROR_INTERFACE
 				".InvalidProperty", "Invalid property");
+}
+
+DBusMessage *__near_error_io_error(DBusMessage *msg)
+{
+	return g_dbus_create_error(msg, NFC_ERROR_INTERFACE
+				".IOError", "I/O Error");
 }
