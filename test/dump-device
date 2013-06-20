@@ -3,6 +3,10 @@
 import sys
 import dbus
 
+if len(sys.argv) < 2:
+	print "Usage: %s /org/neard/nfcX" % (sys.argv[0])
+	sys.exit(1)
+
 bus = dbus.SystemBus()
 
 def extract_record(key, list):
