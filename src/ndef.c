@@ -2414,6 +2414,13 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 			goto fail;
 		}
 	} else if (reply != NULL) {
+		/* This is a Hs with no cfg and no Ac: No reply and fail */
+		if (rec_type == RECORD_TYPE_WKT_HANDOVER_SELECT &&
+					g_slist_length(acs) == 0) {
+			*reply = NULL;
+			goto fail;
+		}
+
 		/* Prepare Hs, it depends upon Hr message carrier types */
 		*reply = near_ndef_prepare_hs_reply(mimes, c_datas);
 		if (*reply == NULL) {

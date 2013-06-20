@@ -349,6 +349,11 @@ static near_bool_t handover_read_initialize(int client_fd,
 	ndef->cur_ptr += bytes_recv;
 	ndef->missing_bytes = ndef->cur_record_len - bytes_recv;
 
+	if (ndef->cur_record_len == NDEF_HR_MSG_MIN_LENGTH) {
+		handover_ndef_parse(client_fd, ndef);
+		return FALSE;
+	}
+
 	DBG("Handover frame size is %d", ndef->cur_ptr);
 
 	/* Next prepare read to complete the read */
