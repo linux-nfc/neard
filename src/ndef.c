@@ -1995,18 +1995,33 @@ static enum handover_carrier string2carrier(char *carrier)
 	return NEAR_CARRIER_UNKNOWN;
 }
 
-static struct near_ndef_message *near_ndef_prepare_hr_message(GSList *carriers)
+static struct near_ndef_message *
+near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 {
-	struct near_ndef_message *hr_msg = NULL;
+	struct near_ndef_message *ho_msg = NULL;
 	struct near_ndef_message *cr_msg = NULL;
 	struct near_ndef_message *ac_msg;
 	struct near_ndef_message *cfg_msg;
 	GList *ac_msgs = NULL, *cfg_msgs = NULL, *temp;
 	uint16_t collision;
-	uint8_t hr_length, hr_pl_length;
+	uint8_t ho_length, ho_pl_length;
 	int ret = -EINVAL;
+	char *str_type;
 
 	DBG("");
+
+	switch (type) {
+	case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+		str_type = "Hr";
+		break;
+
+	case RECORD_TYPE_WKT_HANDOVER_SELECT:
+		str_type = "Hs";
+		break;
+
+	default:
+		return NULL;
+	}
 
 	/* Hr message should have at least one carrier */
 	while (carriers) {
@@ -2026,27 +2041,31 @@ static struct near_ndef_message *near_ndef_prepare_hr_message(GSList *carriers)
 		goto fail;
 	}
 
-	/* Prepare collision resolution record MB=1 ME=0 */
-	collision = GUINT16_TO_BE(g_random_int_range(0, G_MAXUINT16 + 1));
-	cr_msg = near_ndef_prepare_cr_message(collision);
-	if (cr_msg == NULL)
-		goto fail;
-
-	near_ndef_set_mb_me(cr_msg->data, TRUE, FALSE);
-
 	/* Prepare Hr message */
-	hr_pl_length = 1;
-	hr_pl_length += cr_msg->length;
+	ho_pl_length = 1;
+
+	/* Prepare collision resolution record MB=1 ME=0, only for Hr */
+	if (type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
+		collision = GUINT16_TO_BE(g_random_int_range(0, G_MAXUINT16 + 1));
+		cr_msg = near_ndef_prepare_cr_message(collision);
+		if (cr_msg == NULL)
+			goto fail;
+
+		near_ndef_set_mb_me(cr_msg->data, TRUE, FALSE);
+
+		ho_pl_length += cr_msg->length;
+	}
 
 	/* Alternative carriers are part of handover record payload length */
-	hr_pl_length += ndef_message_list_length(ac_msgs);
+	ho_pl_length += ndef_message_list_length(ac_msgs);
 
-	hr_length = hr_pl_length;
+	ho_length = ho_pl_length;
 	/* Configuration records are part of handover message length */
-	hr_length += ndef_message_list_length(cfg_msgs);
+	ho_length += ndef_message_list_length(cfg_msgs);
 
-	hr_msg = prepare_handover_message_header("Hr", hr_length, hr_pl_length);
-	if (hr_msg == NULL)
+	ho_msg = prepare_handover_message_header(str_type,
+						ho_length, ho_pl_length);
+	if (ho_msg == NULL)
 		goto fail;
 
 	g_list_foreach(ac_msgs, set_mb_me_to_false, NULL);
@@ -2055,44 +2074,57 @@ static struct near_ndef_message *near_ndef_prepare_hr_message(GSList *carriers)
 	ac_msg = temp->data;
 	near_ndef_set_mb_me(ac_msg->data, FALSE, TRUE);
 
+	/*
+	 * Hs record payloads do not have collision recore, the first record
+	 * will be the first ac record.
+	 */
+	if (type == RECORD_TYPE_WKT_HANDOVER_SELECT) {
+		temp = g_list_first(ac_msgs);
+		ac_msg = temp->data;
+		near_ndef_set_mb_me(ac_msg->data, TRUE, FALSE);
+	}
+
 	g_list_foreach(cfg_msgs, set_mb_me_to_false, NULL);
 	temp = g_list_last(cfg_msgs);
 	cfg_msg = temp->data;
 	near_ndef_set_mb_me(cfg_msg->data, FALSE, TRUE);
 
-	/* copy cr */
-	memcpy(hr_msg->data + hr_msg->offset, cr_msg->data, cr_msg->length);
-	hr_msg->offset += cr_msg->length;
+	if (type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
+		/* copy cr */
+		memcpy(ho_msg->data + ho_msg->offset,
+				cr_msg->data, cr_msg->length);
+		ho_msg->offset += cr_msg->length;
 
-	if (hr_msg->offset > hr_msg->length)
-		goto fail;
+		if (ho_msg->offset > ho_msg->length)
+			goto fail;
+	}
 
 	/* copy acs */
-	copy_ac_records(hr_msg, ac_msgs);
-	if (hr_msg->offset > hr_msg->length)
+	copy_ac_records(ho_msg, ac_msgs);
+	if (ho_msg->offset > ho_msg->length)
 		goto fail;
 
 	/*
 	 * copy cfgs, cfg (associated to the ac) records length
 	 * (bt or wifi) is not part of Hr initial size.
 	 */
-	copy_cfg_records(hr_msg, cfg_msgs);
+	copy_cfg_records(ho_msg, cfg_msgs);
 
-	DBG("Hr message preparation is done");
+	DBG("Handover message preparation is done");
 
 	free_ndef_message(cr_msg);
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
 
-	return hr_msg;
+	return ho_msg;
 
 fail:
-	near_error("handover Hr record preparation failed");
+	near_error("handover record preparation failed");
 
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
 	free_ndef_message(cr_msg);
-	free_ndef_message(hr_msg);
+	free_ndef_message(ho_msg);
 
 	return NULL;
 }
@@ -3054,18 +3086,19 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 						(uint8_t *)(uri + id_len));
 }
 
-static struct near_ndef_message *build_hr_record(DBusMessage *msg)
+static struct near_ndef_message *build_ho_record(enum record_type type,
+							DBusMessage *msg)
 {
-	struct near_ndef_message *hr;
+	struct near_ndef_message *ho;
 	GSList *carriers;
 
 	DBG("");
 
 	carriers = get_carrier_field(msg);
-	hr = near_ndef_prepare_hr_message(carriers);
+	ho = near_ndef_prepare_ho_message(type, carriers);
 	g_slist_free_full(carriers, g_free);
 
-	return hr;
+	return ho;
 }
 
 static int fill_wifi_wsc_data(uint8_t *tlv, uint16_t id,
@@ -3303,7 +3336,8 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 				ndef = build_sp_record(msg);
 				break;
 			} else if (g_strcmp0(value, "Handover") == 0) {
-				ndef = build_hr_record(msg);
+				ndef = build_ho_record(
+					RECORD_TYPE_WKT_HANDOVER_REQUEST, msg);
 				break;
 			} else if (g_strcmp0(value, "MIME") == 0) {
 				ndef = build_mime_record(msg);
