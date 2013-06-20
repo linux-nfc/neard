@@ -3339,6 +3339,10 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 				ndef = build_ho_record(
 					RECORD_TYPE_WKT_HANDOVER_REQUEST, msg);
 				break;
+			} else if (g_strcmp0(value, "StaticHandover") == 0) {
+				ndef = build_ho_record(
+					RECORD_TYPE_WKT_HANDOVER_SELECT, msg);
+				break;
 			} else if (g_strcmp0(value, "MIME") == 0) {
 				ndef = build_mime_record(msg);
 				break;

@@ -9,11 +9,13 @@ def help_text():
 	print "		If type is URI, parameters are <uri>"
 	print "		If type is SmartPoster, parameters are <uri>"
 	print "		If type is Handover, parameters are <carrier>"
+	print "		If type is StaticHandover, parameters are <carrier>"
 	print "		If type is MIME, parameters are <mime_type> (only wifi_wsc)"
 	print "e.g. < %s /org/neard/nfc0/device0 Text UTF-8 en-US hello,Type2! >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/device0 URI http://www.nfc-forum.com >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/device0 SmartPoster http://www.nfc-forum.com >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/device0 Handover bluetooth,wifi >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/device0 StaticHandover bluetooth,wifi >" % (sys.argv[0])
 	print "e.g. < %s /org/neard/nfc0/device0 MIME wifi_wsc>" % (sys.argv[0])
 	sys.exit(1)
 
@@ -43,6 +45,9 @@ elif len(sys.argv) == 4:
 				"URI" : sys.argv[3] }))
 	elif sys.argv[2] in ["Handover"]:
 		device.Push(({ "Type" : "Handover",
+				"Carrier" : sys.argv[3] }))
+	elif sys.argv[2] in ["StaticHandover"]:
+		device.Push(({ "Type" : "StaticHandover",
 				"Carrier" : sys.argv[3] }))
 	elif sys.argv[2] in ["MIME"]:
 		if sys.argv[3] in ["wifi_wsc"]:
