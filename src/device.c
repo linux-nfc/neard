@@ -184,7 +184,7 @@ static void push_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 		return;
 
 	if (status != 0) {
-		reply = __near_error_failed(device->push_msg, EINVAL);
+		reply = __near_error_failed(device->push_msg, -status);
 		if (reply != NULL)
 			g_dbus_send_message(conn, reply);
 	} else {
