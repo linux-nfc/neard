@@ -1,3 +1,16 @@
+ver 0.12
+	Added static handover through LLCP support.
+	Added WiFi configuration handover through SNEP support.
+	Added nfctool SNEP decoding.
+	Added nfctool Handover decoding.
+	Added nfctool output coloring support.
+	Added type4B tag support.
+	Added p2p non blocking client socket support.
+	Fixed SNEP fragmentation support.
+	Fixed a type3 tag crash.
+	Fixed a bluetooth crash.
+	Fixed NFC bugs #45 and #48.
+
 ver 0.11
 	Added LLCP validation server support.
 	Added SNEP unit tests.
