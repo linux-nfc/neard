@@ -226,7 +226,7 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 
 #define CHECK_OFFSET(s)							\
 	do {								\
-		if (data_len - ndef_offset < (s)) {			\
+		if (data_len - (ndef_offset + record_offset) < (s)) {	\
 			ndef_printf_error("Malformed NDEF record");	\
 			sniffer_print_hexdump(stdout, data, data_len,	\
 					      NDEF_HEX_INDENT, TRUE);	\
