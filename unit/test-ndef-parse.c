@@ -47,6 +47,7 @@ enum record_type {
 	RECORD_TYPE_WKT_COLLISION_RESOLUTION  =   0x0b,
 	RECORD_TYPE_WKT_ERROR                 =   0x0c,
 	RECORD_TYPE_MIME_TYPE                 =   0x0d,
+	RECORD_TYPE_EXT_AAR                   =   0x0e,
 	RECORD_TYPE_UNKNOWN                   =   0xfe,
 	RECORD_TYPE_ERROR                     =   0xff
 };
@@ -92,6 +93,10 @@ struct near_ndef_sp_payload {
 	char *action;
 };
 
+struct near_ndef_aar_payload {
+	char *package;
+};
+
 struct near_ndef_record {
 	char *path;
 
@@ -103,6 +108,7 @@ struct near_ndef_record {
 	struct near_ndef_sp_payload   *sp;
  	struct near_ndef_mime_payload *mime;
 	struct near_ndef_ho_payload   *ho;	/* handover payload */
+	struct near_ndef_aar_payload  *aar;
 
 	char *type;
 
@@ -128,6 +134,12 @@ static uint8_t title_sp[] = {0xd1, 0x2, 0x1a, 0x53, 0x70, 0x91, 0x1, 0xa,
 			     0x55, 0x3, 0x69, 0x6e, 0x74, 0x65, 0x6c, 0x2e,
 			     0x63, 0x6f, 0x6d, 0x51, 0x1, 0x8, 0x54, 0x2,
 			     0x65, 0x6e, 0x49, 0x6e, 0x74, 0x65, 0x6c};
+
+/* AAR record with a "com.example.aar" package name */
+static uint8_t aar[] = {0xd4, 0xf, 0xf, 0x61, 0x6e, 0x64, 0x72, 0x6f, 0x69,
+			0x64, 0x2e, 0x63, 0x6f, 0x6d, 0x3a, 0x70, 0x6b, 0x67,
+			0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70,
+			0x6c, 0x65, 0x2e, 0x61, 0x61, 0x72};
 
 static void test_ndef_free_record(struct near_ndef_record *record)
 {
@@ -302,6 +314,35 @@ static void test_ndef_title_sp(void)
 	test_ndef_free_record(record);
 }
 
+static void test_ndef_aar(void)
+{
+	GList *records;
+	struct near_ndef_record *record;
+
+	records = near_ndef_parse_msg(aar, sizeof(aar), NULL);
+
+	g_assert(records);
+	g_assert(g_list_length(records) == 1);
+
+	record = (struct near_ndef_record *)(records->data);
+
+	g_assert(record->header->rec_type == RECORD_TYPE_EXT_AAR);
+	g_assert(record->header->mb == 1);
+	g_assert(record->header->me == 1);
+
+	g_assert(record->aar);
+	g_assert(record->aar->package);
+	g_assert(strcmp((char *) record->aar->package, "com.example.aar") == 0);
+
+
+	if (g_test_verbose())
+		g_print("NDEF AAR package: %s\n", record->aar->package);
+
+	g_free(record->aar->package);
+	g_free(record->aar);
+	test_ndef_free_record(record);
+}
+
 int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
@@ -312,6 +353,8 @@ int main(int argc, char **argv)
 							test_ndef_single_sp);
 	g_test_add_func("/testNDEF-parse/Test Title record SmartPoster NDEF",
 							test_ndef_title_sp);
+	g_test_add_func("/testNDEF-parse/Android Application Record NDEF",
+							test_ndef_aar);
 
 	return g_test_run();
 }
