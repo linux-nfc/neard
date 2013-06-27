@@ -91,12 +91,14 @@ enum record_type {
 	RECORD_TYPE_WKT_COLLISION_RESOLUTION  =   0x0b,
 	RECORD_TYPE_WKT_ERROR                 =   0x0c,
 	RECORD_TYPE_MIME_TYPE                 =   0x0d,
+	RECORD_TYPE_EXT_AAR                   =   0x0e,
 	RECORD_TYPE_UNKNOWN                   =   0xfe,
 	RECORD_TYPE_ERROR                     =   0xff
 };
 
 #define RECORD_TYPE_WKT "urn:nfc:wkt:"
 #define RECORD_TYPE_EXTERNAL "urn:nfc:ext:"
+#define AAR_STRING "android.com:pkg"
 
 struct near_ndef_record_header {
 	uint8_t mb;
@@ -482,6 +484,12 @@ static void append_record(struct near_ndef_record *record,
 					DBUS_TYPE_STRING, &type);
 		append_mime_payload(record->mime, dict);
 		break;
+
+	case RECORD_TYPE_EXT_AAR:
+		type = "Android Application Record (AAR)";
+		near_dbus_dict_append_basic(dict, "Type",
+					DBUS_TYPE_STRING, &type);
+		break;
 	}
 }
 
@@ -613,6 +621,7 @@ static void free_ndef_record(struct near_ndef_record *record)
 		case RECORD_TYPE_WKT_ERROR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
+		case RECORD_TYPE_EXT_AAR:
 			break;
 
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
@@ -686,6 +695,9 @@ static enum record_type get_external_record_type(uint8_t *type,
 	if (strncmp((char *) type, BT_MIME_STRING_2_0,
 					sizeof(BT_MIME_STRING_2_0) - 1) == 0)
 		return RECORD_TYPE_MIME_TYPE;
+	else if (strncmp((char *) type, AAR_STRING,
+					sizeof(AAR_STRING) - 1) == 0)
+		return RECORD_TYPE_EXT_AAR;
 	else
 		return RECORD_TYPE_UNKNOWN;
 }
@@ -1143,6 +1155,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
 		case RECORD_TYPE_MIME_TYPE:
 		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_EXT_AAR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
 			break;
@@ -2292,6 +2305,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
 		case RECORD_TYPE_WKT_HANDOVER_SELECT:
 		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_EXT_AAR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
 			break;
@@ -2595,6 +2609,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
 		case RECORD_TYPE_WKT_ERROR:
+		case RECORD_TYPE_EXT_AAR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
 			break;
