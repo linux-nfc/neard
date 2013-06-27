@@ -612,7 +612,8 @@ void llcp_decode_cleanup(void)
 
 	snep_decode_cleanup();
 
-	g_hash_table_destroy(connection_hash);
+	if (connection_hash)
+		g_hash_table_destroy(connection_hash);
 }
 
 int llcp_decode_init(void)
