@@ -198,6 +198,10 @@ struct near_ndef_ho_payload {
 	struct near_ndef_mime_payload **cfg_payloads;
 };
 
+struct near_ndef_aar_payload {
+	char *package;
+};
+
 struct near_ndef_record {
 	char *path;
 
@@ -209,6 +213,7 @@ struct near_ndef_record {
 	struct near_ndef_sp_payload   *sp;
 	struct near_ndef_mime_payload *mime;
 	struct near_ndef_ho_payload   *ho;	/* handover payload */
+	struct near_ndef_aar_payload  *aar;
 
 	char *type;
 
@@ -295,6 +300,20 @@ static void append_text_payload(struct near_ndef_text_payload *text,
 		near_dbus_dict_append_basic(dict, "Representation",
 						DBUS_TYPE_STRING,
 						&(text->data));
+}
+
+static void append_aar_payload(struct near_ndef_aar_payload *aar,
+					DBusMessageIter *dict)
+{
+	DBG("");
+
+	if (aar == NULL || dict == NULL)
+		return;
+
+	if (aar->package != NULL)
+		near_dbus_dict_append_basic(dict, "AndroidPackage",
+						DBUS_TYPE_STRING,
+						&(aar->package));
 }
 
 static const char *uri_prefixes[NFC_MAX_URI_ID + 1] = {
@@ -489,6 +508,7 @@ static void append_record(struct near_ndef_record *record,
 		type = "Android Application Record (AAR)";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
+		append_aar_payload(record->aar, dict);
 		break;
 	}
 }
@@ -602,6 +622,15 @@ static void free_ho_payload(struct near_ndef_ho_payload *ho)
 	g_free(ho);
 }
 
+static void free_aar_payload(struct near_ndef_aar_payload *aar)
+{
+	if (aar == NULL)
+		return;
+
+	g_free(aar->package);
+	g_free(aar);
+}
+
 static void free_ndef_record(struct near_ndef_record *record)
 {
 	if (record == NULL)
@@ -621,7 +650,6 @@ static void free_ndef_record(struct near_ndef_record *record)
 		case RECORD_TYPE_WKT_ERROR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
-		case RECORD_TYPE_EXT_AAR:
 			break;
 
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
@@ -643,6 +671,11 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 		case RECORD_TYPE_MIME_TYPE:
 			free_mime_payload(record->mime);
+			break;
+
+		case RECORD_TYPE_EXT_AAR:
+			free_aar_payload(record->aar);
+			break;
 		}
 
 		g_free(record->header->il_field);
@@ -2474,6 +2507,30 @@ fail:
 	return NULL;
 }
 
+static struct near_ndef_aar_payload *
+parse_aar_payload(uint8_t *payload, uint32_t length)
+{
+	struct near_ndef_aar_payload *aar_payload = NULL;
+
+	DBG("");
+
+	if (payload == NULL)
+		return NULL;
+
+	aar_payload = g_try_malloc0(sizeof(struct near_ndef_uri_payload));
+	if (aar_payload == NULL)
+		return NULL;
+
+	aar_payload->package = g_strndup((char *)payload, length);
+	if (aar_payload->package == NULL) {
+		near_error("AAR payload parsing failed");
+		free_aar_payload(aar_payload);
+		return NULL;
+	}
+
+	return aar_payload;
+}
+
 int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 {
 	record->path = path;
@@ -2609,7 +2666,6 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 		case RECORD_TYPE_WKT_ALTERNATIVE_CARRIER:
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
 		case RECORD_TYPE_WKT_ERROR:
-		case RECORD_TYPE_EXT_AAR:
 		case RECORD_TYPE_UNKNOWN:
 		case RECORD_TYPE_ERROR:
 			break;
@@ -2683,6 +2739,15 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 
 			g_free(c_data);
 			c_data = NULL;
+			break;
+
+		case RECORD_TYPE_EXT_AAR:
+			record->aar = parse_aar_payload(ndef_data + offset,
+						record->header->payload_len);
+
+			if (record->aar == NULL)
+				goto fail;
+
 			break;
 		}
 

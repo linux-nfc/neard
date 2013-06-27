@@ -149,3 +149,11 @@ Properties	string Type [readonly]
 			"Save" (for example save the URI in the bookmarks
 			folder, or "Edit" (for example open the URI in an URI
 			editor for the user to modify it.
+
+		string AndroidPackage [readonly]
+
+		        This is the Android Package Name contained in an
+			Android Application Record (AAR). It hints the reader
+			towards launching an Android specific application.
+
+			It is only valid for AAR NDEFs.
