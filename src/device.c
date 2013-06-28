@@ -91,21 +91,6 @@ struct near_device *near_device_get_device(uint32_t adapter_idx,
 	return device;
 }
 
-void __near_device_remove(struct near_device *device)
-{
-	char *path = device->path;
-
-	DBG("path %s", device->path);
-
-	if (g_hash_table_lookup(device_hash, device->path) == NULL)
-		return;
-
-	g_dbus_unregister_interface(connection, device->path,
-						NFC_DEVICE_INTERFACE);
-
-	g_hash_table_remove(device_hash, path);
-}
-
 const char *__near_device_get_path(struct near_device *device)
 {
 	return device->path;
@@ -307,6 +292,24 @@ static const GDBusSignalTable device_signals[] = {
 				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
 	{ }
 };
+
+void __near_device_remove(struct near_device *device)
+{
+	char *path = device->path;
+
+	DBG("path %s", device->path);
+
+	if (g_hash_table_lookup(device_hash, device->path) == NULL)
+		return;
+
+	if (device->push_msg != NULL)
+		push_cb(device->adapter_idx, device->target_idx, EIO);
+
+	g_dbus_unregister_interface(connection, device->path,
+						NFC_DEVICE_INTERFACE);
+
+	g_hash_table_remove(device_hash, path);
+}
 
 int near_device_add_data(uint32_t adapter_idx, uint32_t target_idx,
 			uint8_t *data, size_t data_length)
