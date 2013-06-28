@@ -79,6 +79,7 @@ struct near_adapter {
 	GList *ioreq_list;
 
 	guint presence_timeout;
+	guint dep_timer;
 };
 
 struct near_adapter_ioreq {
@@ -100,6 +101,9 @@ static void free_adapter(gpointer data)
 
 	if (adapter->presence_timeout > 0)
 		g_source_remove(adapter->presence_timeout);
+
+	if (adapter->dep_timer > 0)
+		g_source_remove(adapter->dep_timer);
 
 	g_free(adapter->name);
 	g_free(adapter->path);
@@ -512,6 +516,20 @@ out_err:
 	return FALSE;
 }
 
+static gboolean dep_timer(gpointer user_data)
+{
+	struct near_adapter *adapter = user_data;
+
+	DBG("");
+
+	if (adapter == NULL)
+		return FALSE;
+
+	adapter_start_poll(adapter);
+
+	return FALSE;
+}
+
 static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 								int status)
 {
@@ -672,6 +690,9 @@ int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 		target_idx =  __neard_device_get_idx(adapter->device_link);
 		__near_adapter_remove_target(idx, target_idx);
 	} else {
+		if (adapter->dep_timer > 0)
+			g_source_remove(adapter->dep_timer);
+
 		__near_adapter_devices_changed(idx);
 	}
 
@@ -840,6 +861,10 @@ static int adapter_add_device(struct near_adapter *adapter,
 
 	if (err < 0)
 		adapter->device_link = NULL;
+
+	DBG("Starting DEP timer");
+
+	adapter->dep_timer = g_timeout_add_seconds(1, dep_timer, adapter);
 
 	return err;
 }
