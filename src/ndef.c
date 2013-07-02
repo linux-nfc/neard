@@ -2528,6 +2528,8 @@ parse_aar_payload(uint8_t *payload, uint32_t length)
 		return NULL;
 	}
 
+	DBG("AAR package %s", aar_payload->package);
+
 	return aar_payload;
 }
 
