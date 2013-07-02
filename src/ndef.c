@@ -3355,6 +3355,66 @@ struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
 	return mime;
 }
 
+static char *get_mime_payload_data(DBusMessageIter iter,
+				char **payload, int *payload_len)
+{
+	DBG("");
+
+	if (payload == NULL || payload_len == NULL) {
+		near_error("Payload %p payload_len %p", payload, payload_len);
+		return NULL;
+	}
+
+	while (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_INVALID) {
+		const char *key;
+		DBusMessageIter ent_iter;
+		DBusMessageIter var_iter;
+		DBusMessageIter arr_iter;
+
+		dbus_message_iter_recurse(&iter, &ent_iter);
+		dbus_message_iter_get_basic(&ent_iter, &key);
+		dbus_message_iter_next(&ent_iter);
+		dbus_message_iter_recurse(&ent_iter, &var_iter);
+
+		if (g_strcmp0(key, "Payload") == 0) {
+			if (dbus_message_iter_get_arg_type(&var_iter) ==
+							DBUS_TYPE_ARRAY &&
+			    dbus_message_iter_get_element_type(&var_iter) ==
+							DBUS_TYPE_BYTE) {
+					dbus_message_iter_recurse(&var_iter,
+								 &arr_iter);
+					dbus_message_iter_get_fixed_array(
+							&arr_iter, payload,
+							payload_len);
+			} else {
+				near_error("Unexpected payload type");
+				return NULL;
+			}
+		}
+		dbus_message_iter_next(&iter);
+	}
+
+	return *payload;
+}
+
+static struct near_ndef_message *near_ndef_prepare_mime_payload_record(
+				char *type, char *payload, int payload_len)
+{
+	struct near_ndef_message *mime;
+
+	DBG("Payload %*s", payload_len, payload);
+	mime = ndef_message_alloc_complete(type, payload_len, NULL, 0,
+						RECORD_TNF_MIME, TRUE, TRUE);
+	if (mime == NULL) {
+		near_error("Failed to alloc NDEF message");
+		return NULL;
+	}
+
+	memcpy(mime->data + mime->offset, payload, payload_len);
+
+	return mime;
+}
+
 static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 {
 	DBusMessageIter iter, arr_iter;
@@ -3411,8 +3471,24 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 				g_free(carrier);
 
 				return mime;
-			}
+			} else {
+				/*
+				 * Expect data is set in the Payload field of
+				 * message.
+				 */
+				DBusMessageIter payload_iter;
+				char *payload;
+				int payload_len;
 
+				DBG("mime string %s", mime_str);
+				dbus_message_iter_recurse(&iter, &payload_iter);
+				if (get_mime_payload_data(payload_iter,
+						&payload, &payload_len) == NULL)
+					return NULL;
+
+				return near_ndef_prepare_mime_payload_record(
+					mime_str, payload, payload_len);
+			}
 		}
 
 		dbus_message_iter_next(&arr_iter);
