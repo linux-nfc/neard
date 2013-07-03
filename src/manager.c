@@ -59,14 +59,6 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	return reply;
 }
 
-static DBusMessage *set_property(DBusConnection *conn,
-					DBusMessage *msg, void *data)
-{
-	DBG("conn %p", conn);
-
-	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
-}
-
 int __near_manager_adapter_add(uint32_t idx, const char *name,
 				uint32_t protocols, near_bool_t powered)
 {
@@ -265,9 +257,6 @@ static const GDBusMethodTable manager_methods[] = {
 	{ GDBUS_METHOD("GetProperties",
 				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
 				get_properties) },
-	{ GDBUS_METHOD("SetProperty",
-				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
-				NULL, set_property) },
 	{ GDBUS_METHOD("RegisterHandoverAgent",
 			GDBUS_ARGS({ "path", "o" }, { "type", "s"}),
 			NULL, register_handover_agent) },

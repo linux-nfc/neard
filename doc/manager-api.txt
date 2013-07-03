@@ -7,19 +7,10 @@ Object path	/
 
 Methods		dict GetProperties()
 
-			Returns all properties for the device. See the
+			Returns all properties for the manager. See the
 			properties section for available properties.
 
 			Possible Errors: org.neard.Error.DoesNotExist
-
-		void SetProperty(string name, variant value)
-
-			Changes the value of the specified property. Only
-			properties that are listed a read-write are changeable.
-			On success this will emit a PropertyChanged signal.
-
-			Possible Errors: org.neard.Error.DoesNotExist
-					 org.neard.Error.InvalidArguments
 
 		void RegisterHandoverAgent(object path, string carrier)
 
