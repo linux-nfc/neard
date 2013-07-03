@@ -874,6 +874,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint8_t *nfcid, uint8_t nfcid_len)
 {
 	struct near_adapter *adapter;
+	int ret;
 
 	DBG("idx %d", idx);
 
@@ -888,11 +889,16 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	rf_mode_changed(adapter);
 
 	if (protocols & NFC_PROTO_NFC_DEP_MASK)
-		return adapter_add_device(adapter, target_idx,
+		ret = adapter_add_device(adapter, target_idx,
 						nfcid, nfcid_len);
 	else
-		return adapter_add_tag(adapter, target_idx, protocols,
+		ret = adapter_add_tag(adapter, target_idx, protocols,
 					sens_res, sel_res, nfcid, nfcid_len);
+
+	if (ret < 0 && adapter->constant_poll == TRUE)
+		adapter_start_poll(adapter);
+
+	return ret;
 }
 
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
