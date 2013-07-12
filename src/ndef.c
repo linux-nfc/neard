@@ -167,16 +167,6 @@ struct near_ndef_ac_payload {
 	uint16_t **adata;	/* auxiliary data reference */
 };
 
-/*
- * carrier data (see cdr in near_ndef_ac_payload )
- * These settings can be retrieved from mime, carrier records, etc...
- */
-struct near_ndef_carrier_data {
-	uint8_t cdr;		/* carrier data reference */
-	uint8_t *data;
-	size_t data_len;
-};
-
 /* Default Handover version */
 #define HANDOVER_VERSION	0x12
 #define HANDOVER_MAJOR(version) (((version) >> 4) & 0xf)
