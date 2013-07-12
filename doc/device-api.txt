@@ -12,15 +12,6 @@ Method		dict GetProperties()
 
 			Possible Errors: org.neard.Error.DoesNotExist
 
-		void SetProperty(string name, variant value)
-
-			Changes the value of the specified property. Only
-			properties that are listed a read-write are changeable.
-			On success this will emit a PropertyChanged signal.
-
-			Possible Errors: org.neard.Error.DoesNotExist
-					 org.neard.Error.InvalidArguments
-
 		void Push(dict attributes)
 
 			Creates an NDEF record from the attributes dictionary.
