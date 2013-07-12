@@ -1685,7 +1685,7 @@ static struct near_ndef_message *near_ndef_prepare_cr_message(uint16_t cr_id)
 
 static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 					uint8_t *data, int data_len,
-					char cdr, uint8_t cdr_len)
+					char *cdr, uint8_t cdr_len)
 {
 	struct near_ndef_message *msg = NULL;
 
@@ -1694,7 +1694,7 @@ static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 	if (mime_type == NULL)
 		return NULL;
 
-	msg = ndef_message_alloc_complete(mime_type, data_len, &cdr, cdr_len,
+	msg = ndef_message_alloc_complete(mime_type, data_len, cdr, cdr_len,
 						RECORD_TNF_MIME, TRUE, TRUE);
 	if (msg == NULL)
 		return NULL;
@@ -1786,7 +1786,8 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 		if (local_carrier == NULL &&
 				type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
 			*cfg = near_ndef_prepare_cfg_message(mime_type,
-							NULL, 0, cdr, 1);
+							NULL, 0,
+							&cdr, sizeof(cdr));
 			*ac = near_ndef_prepare_ac_message(CPS_UNKNOWN, cdr);
 
 			return 0;
@@ -1799,7 +1800,8 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 	}
 
 	*cfg = near_ndef_prepare_cfg_message(mime_type, local_carrier->data,
-						local_carrier->size, cdr, 1);
+							local_carrier->size,
+							&cdr, sizeof(cdr));
 	*ac = near_ndef_prepare_ac_message(local_carrier->state, cdr);
 
 	g_free(local_carrier);
