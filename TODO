@@ -59,6 +59,16 @@ Core
   Complexity: C4
   Owner: Samuel Ortiz <sameo@linux.intel.com>
 
+- Split NDEF code
+
+  NDEF code (Handover related in particular) should be splitted into parsing and
+  acting part. This would make code easier to follow and would also allow to
+  run unit tests on parsing part.
+
+  Priority: Low
+  Complexity: C4
+  Owner:
+
 
 Reader mode
 ===========
