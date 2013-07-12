@@ -153,8 +153,8 @@ struct near_ndef_mime_payload {
 
 /* Handover record definitions */
 
-/* alternative record (AC) */
-#define AC_RECORD_PAYLOAD_LEN	4
+/* alternative record (AC) length based on cdr length without adata */
+#define AC_RECORD_PAYLOAD_LEN(cdr_len) (3 + cdr_len)
 
 struct near_ndef_ac_payload {
 	enum carrier_power_state cps;	/* carrier power state */
@@ -1640,26 +1640,31 @@ fail:
 
 /* carrier power state & carrier reference */
 static struct near_ndef_message *near_ndef_prepare_ac_message(uint8_t cps,
-								char cdr)
+								char *cdr,
+								uint8_t cdr_len)
 {
 	struct near_ndef_message *ac_msg;
 
 	/* alloc "ac" message minus adata*/
-	ac_msg = ndef_message_alloc_complete("ac", AC_RECORD_PAYLOAD_LEN,
-					NULL, 0,
-					RECORD_TNF_WELLKNOWN,
-					TRUE, TRUE);
+	ac_msg = ndef_message_alloc_complete("ac",
+						AC_RECORD_PAYLOAD_LEN(cdr_len),
+						NULL, 0,
+						RECORD_TNF_WELLKNOWN,
+						TRUE, TRUE);
 	if (ac_msg == NULL)
 		return NULL;
 
 	/* Prepare ac message */
 	ac_msg->data[ac_msg->offset++] = cps;
-	ac_msg->data[ac_msg->offset++] = 1;	/* cdr_len def size */
-	ac_msg->data[ac_msg->offset++] = cdr;	/* cdr */
-	ac_msg->data[ac_msg->offset] = 0;	/* adata ref count */
+
+	ac_msg->data[ac_msg->offset++] = cdr_len;
+	memcpy(ac_msg->data + ac_msg->offset, cdr, cdr_len); /* cdr */
+	ac_msg->offset += cdr_len;
+
+	ac_msg->data[ac_msg->offset] = 0; /* adata ref count */
 
 	/* Check if we want an empty record */
-	if (cdr == 0x00)
+	if (*cdr == 0x00)
 		ac_msg->length = 0;
 
 	return ac_msg;
@@ -1788,7 +1793,8 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 			*cfg = near_ndef_prepare_cfg_message(mime_type,
 							NULL, 0,
 							&cdr, sizeof(cdr));
-			*ac = near_ndef_prepare_ac_message(CPS_UNKNOWN, cdr);
+			*ac = near_ndef_prepare_ac_message(CPS_UNKNOWN, &cdr,
+								sizeof(cdr));
 
 			return 0;
 		}
@@ -1802,7 +1808,8 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 	*cfg = near_ndef_prepare_cfg_message(mime_type, local_carrier->data,
 							local_carrier->size,
 							&cdr, sizeof(cdr));
-	*ac = near_ndef_prepare_ac_message(local_carrier->state, cdr);
+	*ac = near_ndef_prepare_ac_message(local_carrier->state,
+							&cdr, sizeof(cdr));
 
 	g_free(local_carrier);
 
@@ -1923,7 +1930,7 @@ static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
 
 	DBG("");
 
-	ac_msg = near_ndef_prepare_ac_message(CPS_UNKNOWN, cdr);
+	ac_msg = near_ndef_prepare_ac_message(CPS_UNKNOWN, &cdr, sizeof(cdr));
 	if (ac_msg == NULL)
 		return NULL;
 
