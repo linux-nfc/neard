@@ -159,8 +159,8 @@ struct near_ndef_mime_payload {
 struct near_ndef_ac_payload {
 	enum carrier_power_state cps;	/* carrier power state */
 
-	uint8_t cdr_len;	/* carrier data reference length: 0x01 */
-	uint8_t cdr;		/* carrier data reference */
+	uint8_t cdr_len;	/* carrier data reference length */
+	uint8_t *cdr;		/* carrier data reference */
 	uint8_t adata_refcount;	/* auxiliary data reference count */
 
 	/* !: if adata_refcount == 0, then there's no data reference */
@@ -602,6 +602,7 @@ static void free_ac_payload(struct near_ndef_ac_payload *ac)
 	if (ac == NULL)
 		return;
 
+	g_free(ac->cdr);
 	g_free(ac->adata);
 	g_free(ac);
 }
@@ -1610,8 +1611,15 @@ static struct near_ndef_ac_payload *parse_ac_payload(uint8_t *payload,
 	ac_payload->cdr_len = payload[offset];
 	offset++;
 
+	if (ac_payload->cdr_len == 0)
+		goto fail;
+
 	/* Carrier data reference */
-	ac_payload->cdr = payload[offset];
+	ac_payload->cdr = g_try_malloc0(ac_payload->cdr_len + 1);
+	if (ac_payload->cdr == NULL)
+		goto fail;
+
+	memcpy(ac_payload->cdr, payload + offset, ac_payload->cdr_len);
 	offset = offset + ac_payload->cdr_len;
 
 	/* Auxiliary data reference count */
