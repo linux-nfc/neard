@@ -116,6 +116,31 @@ struct near_ndef_record {
 	size_t data_len;
 };
 
+struct near_ndef_ho_payload {
+	uint8_t version;		/* version id */
+	uint16_t collision_record;	/* collision record */
+
+	uint8_t number_of_ac_payloads;	/* At least 1 ac is needed */
+	struct near_ndef_ac_payload **ac_payloads;
+
+	/* Optional records */
+	uint16_t *err_record;	/* not NULL if present */
+
+	uint8_t number_of_cfg_payloads;	/* extra NDEF records */
+	struct near_ndef_mime_payload **cfg_payloads;
+};
+
+struct near_ndef_ac_payload {
+	enum carrier_power_state cps;	/* carrier power state */
+
+	uint8_t cdr_len;	/* carrier data reference length: 0x01 */
+	uint8_t *cdr;		/* carrier data reference */
+	uint8_t adata_refcount;	/* auxiliary data reference count */
+
+	/* !: if adata_refcount == 0, then there's no data reference */
+	uint16_t **adata;	/* auxiliary data reference */
+};
+
 /* http://www.intel.com URI NDEF */
 static uint8_t uri[] = {0xd1, 0x1, 0xa, 0x55, 0x1, 0x69, 0x6e, 0x74,
 			0x65, 0x6c, 0x2e, 0x63, 0x6f, 0x6d};
@@ -140,6 +165,19 @@ static uint8_t aar[] = {0xd4, 0xf, 0xf, 0x61, 0x6e, 0x64, 0x72, 0x6f, 0x69,
 			0x64, 0x2e, 0x63, 0x6f, 0x6d, 0x3a, 0x70, 0x6b, 0x67,
 			0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70,
 			0x6c, 0x65, 0x2e, 0x61, 0x61, 0x72};
+
+/* Sample Bluetooth Handover Select Message on an NFC Forum Tag */
+static uint8_t ho_hs_bt[] = {0x91, 0x02, 0x0A, 0x48, 0x73, 0x12, 0xD1, 0x02,
+			      0x04, 0x61, 0x63, 0x03, 0x01, 0x30, 0x00, 0x5A,
+			      0x20, 0x1F, 0x01, 0x61, 0x70, 0x70, 0x6C, 0x69,
+			      0x63, 0x61, 0x74, 0x69, 0x6F, 0x6E, 0x2F, 0x76,
+			      0x6E, 0x64, 0x2E, 0x62, 0x6C, 0x75, 0x65, 0x74,
+			      0x6F, 0x6F, 0x74, 0x68, 0x2E, 0x65, 0x70, 0x2E,
+			      0x6F, 0x6F, 0x62, 0x30, 0x1F, 0x00, 0x03, 0x07,
+			      0x80, 0x88, 0xbf, 0x01, 0x04, 0x0D, 0x80, 0x06,
+			      0x04, 0x05, 0x03, 0x18, 0x11, 0x23, 0x11, 0x0B,
+			      0x09, 0x44, 0x65, 0x79, 0x69, 0x63, 0x65, 0x4e,
+			      0x61, 0x6d, 0x65};
 
 static void test_ndef_free_record(struct near_ndef_record *record)
 {
@@ -343,6 +381,40 @@ static void test_ndef_aar(void)
 	test_ndef_free_record(record);
 }
 
+static void test_ndef_ho_hs_bt(void)
+{
+	GList *records;
+	struct near_ndef_record *record;
+	struct near_ndef_ho_payload *ho;
+	struct near_ndef_ac_payload *ac;
+
+	/* TODO
+	 * It is not possible to run HO code as unit test now as this code does
+	 * both parsing and acting (eg. trying to access HO agent) in same run.
+	 * Don't enable this test until it is fixed.
+	 */
+	return;
+
+	records = near_ndef_parse_msg(ho_hs_bt, sizeof(ho_hs_bt), NULL);
+
+	g_assert(records);
+	g_assert(g_list_length(records) == 2);
+
+	record = records->data;
+	ho = record->ho;
+
+	g_assert(ho->number_of_ac_payloads == 1);
+
+	ac = ho->ac_payloads[0];
+
+	g_assert(ac->cdr_len == 1);
+	g_assert(memcmp(ac->cdr, "0", ac->cdr_len) == 0);
+
+	records = g_list_next(records);
+	record = records->data;
+	g_assert(strcmp(record->type, BT_MIME_STRING_2_1) == 0);
+}
+
 int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
@@ -355,6 +427,8 @@ int main(int argc, char **argv)
 							test_ndef_title_sp);
 	g_test_add_func("/testNDEF-parse/Android Application Record NDEF",
 							test_ndef_aar);
+	g_test_add_func("/testNDEF-parse/Test Handover Select NDEF",
+							test_ndef_ho_hs_bt);
 
 	return g_test_run();
 }
