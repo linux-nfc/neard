@@ -16,10 +16,25 @@ Method		dict GetProperties()
 
 			Creates an NDEF record from the attributes dictionary.
 
-			The attribute argument should at least contain a
-			record type and is described by the Record properties.
-			For example, one would add a type, a Language, an
-			Encoding and a Representation for a text record.
+			The attributes argument should at least contain a
+			record type. The rest of the attributes dictionary
+			depends on the record type:
+
+			 -----------------------------------------------------
+			|       Type     |     Additional dictionary keys     |
+			 -----------------------------------------------------
+			|       Text     | Encoding, Language, Representation |
+			 -----------------------------------------------------
+			|       URI      |                URI                 |
+			 -----------------------------------------------------
+			|   SmartPoster  |                URI                 |
+			 -----------------------------------------------------
+			|    Handover    |  Carrier (wifi or/and bluetooth)   |
+			 -----------------------------------------------------
+			| StaticHandover |  Carrier (wifi or/and bluetooth)   |
+			 -----------------------------------------------------
+			|       MIME     |      MIME, Payload (optional)      |
+			 -----------------------------------------------------
 
 			Possible Errors: org.neard.Error.PermissionDenied
 					 org.neard.Error.InvalidArguments
