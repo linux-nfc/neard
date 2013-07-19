@@ -28,30 +28,14 @@ Core
   state, and dispatch the various commands to the right plugins (one per
   protocol, a.k.a. tags).
 
-- WiFi handover
-
-  Priority: Medium
-  Complexity: C4
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-
-  We should extend the handover API for support Wi-Fi as well, and implement
-  the neard Wi-Fi handover agent from network manager components
-  (e.g. ConnMan).
-
-- Unit tests
-
-  Priority: Medium
-  Complexity: C2
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
-
 - Packaging
 
   Priority: Medium
   Complexity: C2
   Owner: Samuel Ortiz <sameo@linux.intel.com>
 
-  Packaging for both RPM and Debian packages based distributions should
-  be done in order to push neard into the mainstream Linux distributions.
+  Packaging for both RPM packages based distributions should be done in order
+  to push neard into the mainstream Linux distributions.
 
 - OBEX over LLCP
 
@@ -61,13 +45,13 @@ Core
 
 - Split NDEF code
 
-  NDEF code (Handover related in particular) should be splitted into parsing and
-  acting part. This would make code easier to follow and would also allow to
-  run unit tests on parsing part.
-
   Priority: Low
   Complexity: C4
   Owner:
+
+  NDEF code (Handover related in particular) should be splitted into parsing and
+  acting part. This would make code easier to follow and would also allow to
+  run unit tests on parsing part.
 
 
 Reader mode
@@ -86,22 +70,6 @@ Writer mode
 
 p2p mode
 ========
-
-- Bluetooth Handover integration
-
-  Priority: Medium
-  Complexity: C4
-  Dependencies: Core:Handover Agent API
-  Owner: Olivier Guiter <olivier.guiter@linux.intel.com>
-
-  The handover integration has to be done between bluetoothd, obexd and
-  neard. Obexd or BlueZ should be able to call a handover requester
-  org.neard.Manager method to send an Hr to a remote peer. This asynchronous
-  method will return upon reception of an Hs record. This is when BlueZ
-  will be able to initiate the pairing.
-  On the other hand, neard should be able to get the appropriate OOB data
-  from BlueZ through the handover agent API, and build an Hs to send to
-  the handover requester. The latter will then initiate the pairing.
 
 - SNEP and LLCP validation tests
 
@@ -131,10 +99,10 @@ p2p mode
 
   Priority: Medium
   Complexity: C4
-  Owner: Samuel Ortiz <sameo@linux.intel.com>
+  Owner: Olivier Guiter <olivier.guiter@intel.com>
 
   PHDC (Personal Health Device Communication) is a protocol on top of LLCP
   for exchanging ISO/IEEE 11073 PDUs. It has its own LLCP service name and
   as such could be implemented as a p2p plugin.
-  The PHDC plugin would define its own D-Bus interface for both the PHDC
-  Manager and Agent roles.
+  The PHDC plugin would define its own D-Bus interface for the PHDC Manager
+  role.
