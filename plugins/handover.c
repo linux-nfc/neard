@@ -181,7 +181,7 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 		/* Next prepare read to complete the Hr */
 		ndef->ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len +
 				NDEF_HR_MSG_MIN_LENGTH);
-		if (ndef == NULL)
+		if (ndef->ndef == NULL)
 			return FALSE;
 
 		/* Read header bytes */
