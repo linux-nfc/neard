@@ -167,6 +167,7 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 				near_tag_io_cb cb)
 {
 	struct hr_ndef *ndef;
+	uint8_t *new_ndef;
 	int bytes_recv;
 	int ndef_size;
 	int err;
@@ -179,10 +180,12 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 
 	if (ndef->in_extra_read == TRUE) {
 		/* Next prepare read to complete the Hr */
-		ndef->ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len +
+		new_ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len +
 				NDEF_HR_MSG_MIN_LENGTH);
-		if (ndef->ndef == NULL)
+		if (new_ndef == NULL)
 			return FALSE;
+
+		ndef->ndef = new_ndef;
 
 		/* Read header bytes */
 		bytes_recv = recv(client_fd, ndef->ndef + ndef->cur_ptr,
@@ -200,12 +203,13 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 		ndef->missing_bytes = ndef_size - bytes_recv;
 
 		/* Next prepare read to complete the NDEF */
-		ndef->ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len
+		new_ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len
 								+ ndef_size);
-		if (ndef->ndef == NULL) {
-			g_free(ndef);
+		if (new_ndef == NULL)
 			return FALSE;
-		}
+
+		ndef->ndef = new_ndef;
+
 		ndef->cur_record_len += ndef_size;
 		ndef->in_extra_read = FALSE;
 
