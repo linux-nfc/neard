@@ -22,6 +22,8 @@
 #ifndef __NEAR_NDEF_H
 #define __NEAR_NDEF_H
 
+#include <stdbool.h>
+
 #include <near/tag.h>
 
 struct near_ndef_record;

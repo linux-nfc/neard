@@ -22,6 +22,8 @@
 #ifndef __NEAR_SNEP_CORE_H
 #define __NEAR_SNEP_CORE_H
 
+#include <stdbool.h>
+
 #include <near/device.h>
 
 #define NEAR_SNEP_VERSION		0x10

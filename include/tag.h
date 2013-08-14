@@ -23,6 +23,7 @@
 #define __NEAR_TAG_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <glib.h>
 

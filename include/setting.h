@@ -22,6 +22,8 @@
 #ifndef __NEAR_SETTING_H
 #define __NEAR_SETTING_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
