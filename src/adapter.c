@@ -61,10 +61,10 @@ struct near_adapter {
 	uint32_t poll_mode;
 	enum near_adapter_rf_mode rf_mode;
 
-	near_bool_t powered;
-	near_bool_t polling;
-	near_bool_t constant_poll;
-	near_bool_t dep_up;
+	bool powered;
+	bool polling;
+	bool constant_poll;
+	bool dep_up;
 
 	GHashTable *tags;
 	struct near_tag *tag_link;
@@ -195,7 +195,7 @@ static int adapter_start_poll(struct near_adapter *adapter)
 	if (err < 0)
 		return err;
 
-	adapter->polling = TRUE;
+	adapter->polling = true;
 
 	polling_changed(adapter);
 
@@ -398,7 +398,7 @@ static DBusMessage *set_property(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
-	if (dbus_message_iter_init(msg, &iter) == FALSE)
+	if (!dbus_message_iter_init(msg, &iter))
 		return __near_error_invalid_arguments(msg);
 
 	dbus_message_iter_get_basic(&iter, &name);
@@ -407,7 +407,7 @@ static DBusMessage *set_property(DBusConnection *conn,
 
 	type = dbus_message_iter_get_arg_type(&value);
 
-	if (g_str_equal(name, "Powered") == TRUE) {
+	if (g_str_equal(name, "Powered")) {
 		dbus_bool_t powered;
 
 		if (type != DBUS_TYPE_BOOLEAN)
@@ -418,7 +418,7 @@ static DBusMessage *set_property(DBusConnection *conn,
 		err = __near_netlink_adapter_enable(adapter->idx, powered);
 		if (err < 0) {
 			if (err == -EALREADY) {
-				if (powered == TRUE)
+				if (powered)
 					return __near_error_already_enabled(msg);
 				else
 					return __near_error_already_disabled(msg);
@@ -473,14 +473,14 @@ static DBusMessage *stop_poll_loop(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
-	if (adapter->polling == FALSE)
+	if (!adapter->polling)
 		return __near_error_not_polling(msg);
 
 	err = __near_netlink_stop_poll(adapter->idx);
 	if (err < 0)
 		return __near_error_failed(msg, -err);
 
-	adapter->polling = FALSE;
+	adapter->polling = false;
 
 	polling_changed(adapter);
 
@@ -515,7 +515,7 @@ static gboolean check_presence(gpointer user_data)
 
 out_err:
 	near_adapter_disconnect(adapter->idx);
-	if (adapter->constant_poll == TRUE)
+	if (adapter->constant_poll)
 		adapter_start_poll(adapter);
 
 	return FALSE;
@@ -551,7 +551,7 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 		DBG("Tag is gone");
 
 		near_adapter_disconnect(adapter->idx);
-		if (adapter->constant_poll == TRUE)
+		if (adapter->constant_poll)
 			adapter_start_poll(adapter);
 
 		return;
@@ -617,10 +617,10 @@ static const GDBusSignalTable adapter_signals[] = {
 };
 
 struct near_adapter *__near_adapter_create(uint32_t idx,
-		const char *name, uint32_t protocols, near_bool_t powered)
+		const char *name, uint32_t protocols, bool powered)
 {
 	struct near_adapter *adapter;
-	near_bool_t powered_setting;
+	bool powered_setting;
 
 	adapter = g_try_malloc0(sizeof(struct near_adapter));
 	if (adapter == NULL)
@@ -633,9 +633,9 @@ struct near_adapter *__near_adapter_create(uint32_t idx,
 	}
 
 	powered_setting = near_setting_get_bool("DefaultPowered");
-	if (powered_setting == TRUE && powered == FALSE &&
+	if (powered_setting && !powered &&
 	    !__near_netlink_adapter_enable(idx, powered_setting))
-			powered = TRUE;
+			powered = true;
 
 	DBG("Powered %d", powered);
 
@@ -643,7 +643,7 @@ struct near_adapter *__near_adapter_create(uint32_t idx,
 	adapter->protocols = protocols;
 	adapter->powered = powered;
 	adapter->constant_poll = near_setting_get_bool("ConstantPoll");
-	adapter->dep_up = FALSE;
+	adapter->dep_up = false;
 	adapter->tags = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 							NULL, free_tag);
 	adapter->tag_sock = -1;
@@ -674,7 +674,7 @@ struct near_adapter *__near_adapter_get(uint32_t idx)
 	return g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 }
 
-int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
+int __near_adapter_set_dep_state(uint32_t idx, bool dep)
 {
 	struct near_adapter *adapter;
 
@@ -686,10 +686,10 @@ int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 
 	adapter->dep_up = dep;
 
-	if (dep == FALSE && adapter->constant_poll == TRUE)
+	if (!dep && adapter->constant_poll)
 		adapter_start_poll(adapter);
 
-	if (dep == FALSE) {
+	if (!dep) {
 		uint32_t target_idx;
 
 		target_idx =  __neard_device_get_idx(adapter->device_link);
@@ -704,7 +704,7 @@ int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep)
 	return 0;
 }
 
-near_bool_t __near_adapter_get_dep_state(uint32_t idx)
+bool __near_adapter_get_dep_state(uint32_t idx)
 {
 	struct near_adapter *adapter;
 
@@ -712,7 +712,7 @@ near_bool_t __near_adapter_get_dep_state(uint32_t idx)
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (adapter == NULL)
-		return FALSE;
+		return false;
 
 	return adapter->dep_up;
 }
@@ -761,7 +761,7 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	if (status < 0) {
 		near_adapter_disconnect(adapter->idx);
-		if (adapter->constant_poll == TRUE)
+		if (adapter->constant_poll)
 			adapter_start_poll(adapter);
 
 		return;
@@ -792,7 +792,7 @@ static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
 			adapter->device_link = NULL;
 		}
 
-		if (adapter->constant_poll == TRUE)
+		if (adapter->constant_poll)
 			adapter_start_poll(adapter);
 
 		return;
@@ -858,7 +858,7 @@ static int adapter_add_device(struct near_adapter *adapter,
 
 	adapter->device_link = device;
 
-	if (adapter->dep_up == TRUE)
+	if (adapter->dep_up)
 		return 0;
 
 	err = __near_netlink_dep_link_up(adapter->idx, target_idx,
@@ -887,7 +887,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	if (adapter == NULL)
 		return -ENODEV;
 
-	adapter->polling = FALSE;
+	adapter->polling = false;
 	polling_changed(adapter);
 
 	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_INITIATOR;
@@ -900,7 +900,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 		ret = adapter_add_tag(adapter, target_idx, protocols,
 					sens_res, sel_res, nfcid, nfcid_len);
 
-	if (ret < 0 && adapter->constant_poll == TRUE)
+	if (ret < 0 && adapter->constant_poll)
 		adapter_start_poll(adapter);
 
 	return ret;
@@ -920,14 +920,14 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 	rf_mode_changed(adapter);
 
 	if (g_hash_table_remove(adapter->tags,
-			GINT_TO_POINTER(target_idx)) == TRUE) {
+			GINT_TO_POINTER(target_idx))) {
 		__near_adapter_tags_changed(idx);
 
 		return 0;
 	}
 
 	if (g_hash_table_remove(adapter->devices,
-			GINT_TO_POINTER(target_idx)) == TRUE) {
+			GINT_TO_POINTER(target_idx))) {
 		__near_adapter_devices_changed(idx);
 
 		return 0;
@@ -947,8 +947,8 @@ int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	adapter->polling = FALSE;
-	adapter->dep_up = TRUE;
+	adapter->polling = false;
+	adapter->dep_up = true;
 	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_TARGET;
 	polling_changed(adapter);
 	rf_mode_changed(adapter);
@@ -973,17 +973,16 @@ int __near_adapter_remove_device(uint32_t idx)
 	if (adapter == NULL)
 		return -ENODEV;
 
-	if (g_hash_table_remove(adapter->devices,
-			GINT_TO_POINTER(device_idx)) == FALSE)
+	if (!g_hash_table_remove(adapter->devices, GINT_TO_POINTER(device_idx)))
 		return 0;
 
 	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_IDLE;
 	rf_mode_changed(adapter);
 	__near_adapter_devices_changed(idx);
 
-	adapter->dep_up = FALSE;
+	adapter->dep_up = false;
 
-	if (adapter->constant_poll == TRUE)
+	if (adapter->constant_poll)
 		adapter_start_poll(adapter);
 
 	return 0;

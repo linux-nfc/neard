@@ -146,7 +146,7 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 	struct nlattr *attrs[NFC_ATTR_MAX + 1];
 	char *name;
 	uint32_t idx, protocols;
-	near_bool_t powered;
+	bool powered;
 
 	DBG("");
 
@@ -164,7 +164,7 @@ static int get_devices_handler(struct nl_msg *n, void *arg)
 	protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 
 	if (attrs[NFC_ATTR_DEVICE_POWERED] == NULL)
-		powered = FALSE;
+		powered = false;
 	else
 		powered = nla_get_u8(attrs[NFC_ATTR_DEVICE_POWERED]);
 
@@ -338,7 +338,7 @@ nla_put_failure:
 	return err;
 }
 
-int __near_netlink_adapter_enable(int idx, near_bool_t enable)
+int __near_netlink_adapter_enable(int idx, bool enable)
 {
 	struct nl_msg *msg;
 	void *hdr;
@@ -351,7 +351,7 @@ int __near_netlink_adapter_enable(int idx, near_bool_t enable)
 	if (msg == NULL)
 		return -ENOMEM;
 
-	if (enable == TRUE)
+	if (enable)
 		cmd = NFC_CMD_DEV_UP;
 	else
 		cmd = NFC_CMD_DEV_DOWN;
@@ -383,7 +383,7 @@ static int no_seq_check(struct nl_msg *n, void *arg)
 	return NL_OK;
 }
 
-static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
+static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, bool add)
 {
 	struct nlattr *attrs[NFC_ATTR_MAX + 1];
 	uint32_t idx;
@@ -399,22 +399,22 @@ static int nfc_netlink_event_adapter(struct genlmsghdr *gnlh, near_bool_t add)
 
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 
-	if (add == TRUE &&
+	if (add &&
 		(attrs[NFC_ATTR_DEVICE_NAME] == NULL ||
 			attrs[NFC_ATTR_PROTOCOLS] == NULL)) {
 		near_error("Missing attributes");
 		return -EINVAL;
 	}
 
-	if (add == TRUE) {
+	if (add) {
 		char *name;
 		uint32_t protocols;
-		near_bool_t powered;
+		bool powered;
 
 		name = nla_get_string(attrs[NFC_ATTR_DEVICE_NAME]);
 		protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 		if (attrs[NFC_ATTR_DEVICE_POWERED] == NULL)
-			powered = FALSE;
+			powered = false;
 		else
 			powered = nla_get_u8(attrs[NFC_ATTR_DEVICE_POWERED]);
 
@@ -571,7 +571,7 @@ static int nfc_netlink_event_dep_up(struct genlmsghdr *gnlh)
 
 		DBG("%d %d", idx, target_idx);
 
-		return __near_adapter_set_dep_state(idx, TRUE);
+		return __near_adapter_set_dep_state(idx, true);
 	} else {
 		return -EOPNOTSUPP;
 	}
@@ -593,7 +593,7 @@ static int nfc_netlink_event_dep_down(struct genlmsghdr *gnlh)
 
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 
-	__near_adapter_set_dep_state(idx, FALSE);
+	__near_adapter_set_dep_state(idx, false);
 
 	return 0;
 }
@@ -657,12 +657,12 @@ static int nfc_netlink_event(struct nl_msg *n, void *arg)
 		break;
 	case NFC_EVENT_DEVICE_ADDED:
 		DBG("Adapter added");
-		nfc_netlink_event_adapter(gnlh, TRUE);
+		nfc_netlink_event_adapter(gnlh, true);
 
 		break;
 	case NFC_EVENT_DEVICE_REMOVED:
 		DBG("Adapter removed");
-		nfc_netlink_event_adapter(gnlh, FALSE);
+		nfc_netlink_event_adapter(gnlh, false);
 
 		break;
 	case NFC_CMD_DEP_LINK_UP:

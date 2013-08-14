@@ -77,26 +77,26 @@ extern struct near_debug_desc __stop___debug[];
 
 static gchar **enabled = NULL;
 
-static gboolean is_enabled(struct near_debug_desc *desc)
+static bool is_enabled(struct near_debug_desc *desc)
 {
 	int i;
 
 	if (enabled == NULL)
-		return FALSE;
+		return false;
 
 	for (i = 0; enabled[i] != NULL; i++) {
 		if (desc->name != NULL && g_pattern_match_simple(enabled[i],
-							desc->name) == TRUE)
-			return TRUE;
+							desc->name))
+			return true;
 		if (desc->file != NULL && g_pattern_match_simple(enabled[i],
-							desc->file) == TRUE)
-			return TRUE;
+							desc->file))
+			return true;
 	}
 
-	return FALSE;
+	return false;
 }
 
-int __near_log_init(const char *debug, gboolean detach)
+int __near_log_init(const char *debug, bool detach)
 {
 	int option = LOG_NDELAY | LOG_PID;
 	struct near_debug_desc *desc;
@@ -114,11 +114,11 @@ int __near_log_init(const char *debug, gboolean detach)
 				file = NULL;
 		}
 
-		if (is_enabled(desc) == TRUE)
+		if (is_enabled(desc))
 			desc->flags |= NEAR_DEBUG_FLAG_PRINT;
 	}
 
-	if (detach == FALSE)
+	if (!detach)
 		option |= LOG_PERROR;
 
 	openlog("neard", option, LOG_DAEMON);

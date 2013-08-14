@@ -449,7 +449,7 @@ struct carrier_data *__near_agent_handover_request_data(
 	dbus_message_unref(message);
 
 	if (reply == NULL) {
-		if (dbus_error_is_set(&error) == TRUE) {
+		if (dbus_error_is_set(&error)) {
 			near_error("RequestOOB failed: %s", error.message);
 			dbus_error_free(&error);
 		} else {
@@ -499,7 +499,7 @@ int __near_agent_handover_push_data(enum ho_agent_carrier carrier,
 		return 0;
 	}
 
-	if (dbus_error_is_set(&error) == TRUE) {
+	if (dbus_error_is_set(&error)) {
 			near_error("PushOOB failed: %s", error.message);
 			dbus_error_free(&error);
 	} else {
@@ -643,7 +643,7 @@ int __near_agent_handover_unregister(const char *sender, const char *path,
 	return 0;
 }
 
-near_bool_t __near_agent_handover_registered(enum ho_agent_carrier carrier)
+bool __near_agent_handover_registered(enum ho_agent_carrier carrier)
 {
 	struct near_handove_agent *agent = NULL;
 

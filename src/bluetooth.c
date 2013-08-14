@@ -77,9 +77,9 @@ struct near_oob_data {
 	char *bt_name;			/* short or long name */
 	uint8_t bt_name_len;
 	int class_of_device;		/* Class of device */
-	near_bool_t powered;
-	near_bool_t pairable;
-	near_bool_t discoverable;
+	bool powered;
+	bool pairable;
+	bool discoverable;
 	uint8_t *uuids;
 	int uuids_len;
 
@@ -322,7 +322,7 @@ static int extract_properties(DBusMessage *reply, struct near_oob_data *oob)
 
 	DBusMessageIter array, dict;
 
-	if (dbus_message_iter_init(reply, &array) == FALSE)
+	if (!dbus_message_iter_init(reply, &array))
 		return -1;
 
 	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_ARRAY)
@@ -340,7 +340,7 @@ static int extract_properties(DBusMessage *reply, struct near_oob_data *oob)
 		dbus_message_iter_next(&entry);
 		dbus_message_iter_recurse(&entry, &value);
 
-		if (g_str_equal(key, "Address") == TRUE) {
+		if (g_str_equal(key, "Address")) {
 			dbus_message_iter_get_basic(&value, &data);
 
 			/* Now, fill the local struct */
@@ -353,7 +353,7 @@ static int extract_properties(DBusMessage *reply, struct near_oob_data *oob)
 				oob->bd_addr[i] = strtol(data + j, NULL, 16);
 			DBG("local address: %s", data);
 
-		} else if (g_str_equal(key, "Name") == TRUE) {
+		} else if (g_str_equal(key, "Name")) {
 			dbus_message_iter_get_basic(&value, &data);
 			oob->bt_name = g_strdup(data);
 			if (oob->bt_name != NULL) {
@@ -361,23 +361,23 @@ static int extract_properties(DBusMessage *reply, struct near_oob_data *oob)
 				DBG("local name: %s", oob->bt_name);
 			}
 
-		} else if (g_str_equal(key, "Class") == TRUE) {
+		} else if (g_str_equal(key, "Class")) {
 			dbus_message_iter_get_basic(&value, &idata);
 			oob->class_of_device = idata;
 
-		} else if (g_str_equal(key, "Powered") == TRUE) {
+		} else if (g_str_equal(key, "Powered")) {
 			dbus_message_iter_get_basic(&value, &idata);
 			oob->powered = idata;
 
-		} else if (g_str_equal(key, "Discoverable") == TRUE) {
+		} else if (g_str_equal(key, "Discoverable")) {
 			dbus_message_iter_get_basic(&value, &idata);
 			oob->discoverable = idata;
 
-		} else if (g_str_equal(key, "Pairable") == TRUE) {
+		} else if (g_str_equal(key, "Pairable")) {
 			dbus_message_iter_get_basic(&value, &idata);
 			oob->pairable = idata;
 
-		} else if (g_str_equal(key, "UUIDs") == TRUE) {
+		} else if (g_str_equal(key, "UUIDs")) {
 			oob->uuids_len = sizeof(value);
 			oob->uuids = g_try_malloc0(oob->uuids_len);
 			if (oob->uuids == NULL)
@@ -425,7 +425,7 @@ static gboolean bt_adapter_property_changed(DBusConnection *conn,
 	DBusMessageIter var;
 	const char *property;
 
-	if (dbus_message_iter_init(message, &iter) == FALSE)
+	if (!dbus_message_iter_init(message, &iter))
 		return TRUE;
 
 	dbus_message_iter_get_basic(&iter, &property);
@@ -436,7 +436,7 @@ static gboolean bt_adapter_property_changed(DBusConnection *conn,
 
 	dbus_message_iter_recurse(&iter, &var);
 
-	if (g_str_equal(property, "Name") == TRUE) {
+	if (g_str_equal(property, "Name")) {
 		const char *name;
 
 		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_STRING)
@@ -453,7 +453,7 @@ static gboolean bt_adapter_property_changed(DBusConnection *conn,
 			bt_def_oob_data.bt_name_len = 0;
 
 		DBG("%s: %s", property, name);
-	} else if (g_str_equal(property, "Class") == TRUE) {
+	} else if (g_str_equal(property, "Class")) {
 		int class;
 
 		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_UINT32)
@@ -463,7 +463,7 @@ static gboolean bt_adapter_property_changed(DBusConnection *conn,
 		bt_def_oob_data.class_of_device = class;
 
 		DBG("%s: %x", property, bt_def_oob_data.class_of_device);
-	} else if (g_str_equal(property, "Powered") == TRUE) {
+	} else if (g_str_equal(property, "Powered")) {
 		dbus_bool_t powered;
 
 		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_BOOLEAN)
@@ -540,8 +540,8 @@ static void bt_get_default_adapter_cb(DBusPendingCall *pending, void *user_data)
 	if (dbus_set_error_from_message(&error, reply))
 		goto cb_fail;
 
-	if (dbus_message_get_args(reply, NULL, DBUS_TYPE_OBJECT_PATH,
-					&path, DBUS_TYPE_INVALID) == FALSE)
+	if (!dbus_message_get_args(reply, NULL, DBUS_TYPE_OBJECT_PATH,
+					&path, DBUS_TYPE_INVALID))
 		goto cb_fail;
 
 	/* Save the default adapter */
@@ -680,7 +680,7 @@ static void bt_parse_eir(uint8_t *eir_data, uint16_t eir_data_len,
  */
 int __near_bluetooth_parse_oob_record(struct carrier_data *data,
 						uint16_t *mime_properties,
-						near_bool_t pair)
+						bool pair)
 {
 	struct near_oob_data *oob;
 	uint16_t bt_oob_data_size;
@@ -760,7 +760,7 @@ int __near_bluetooth_parse_oob_record(struct carrier_data *data,
 		return -EINVAL;
 	}
 
-	if (pair == FALSE) {
+	if (!pair) {
 		bt_eir_free(oob);
 		return 0;
 	}
@@ -813,7 +813,7 @@ static int bt_sync_oob_readlocaldata(DBusConnection *conn, char *adapter_path,
 	dbus_message_unref(message);
 
 	if (!reply) {
-		if (dbus_error_is_set(&error) == TRUE) {
+		if (dbus_error_is_set(&error)) {
 			near_error("%s", error.message);
 			dbus_error_free(&error);
 		} else {
@@ -822,11 +822,11 @@ static int bt_sync_oob_readlocaldata(DBusConnection *conn, char *adapter_path,
 		return 0;
 	}
 
-	if (dbus_message_get_args(reply, NULL,
-			DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, spair_hash, &hash_len,
-			DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
-						spair_randomizer, &rndm_len,
-			DBUS_TYPE_INVALID) == FALSE)
+	if (!dbus_message_get_args(reply, NULL, DBUS_TYPE_ARRAY,
+					DBUS_TYPE_BYTE, spair_hash,
+					&hash_len, DBUS_TYPE_ARRAY,
+					DBUS_TYPE_BYTE, spair_randomizer,
+					&rndm_len, DBUS_TYPE_INVALID))
 		goto done;
 
 	if ((hash_len != OOB_SP_SIZE) || (rndm_len != OOB_SP_SIZE)) {
@@ -938,7 +938,7 @@ struct carrier_data *__near_bluetooth_local_get_properties(uint16_t mime_props)
 
 	data->data[0] = data->size ;
 
-	if (bt_def_oob_data.powered == TRUE)
+	if (bt_def_oob_data.powered)
 		data->state = CPS_ACTIVE;
 	else
 		data->state = CPS_INACTIVE;
@@ -966,7 +966,7 @@ static gboolean bt_adapter_removed(DBusConnection *conn, DBusMessage *message,
 	g_dbus_remove_watch(bt_conn, adapter_props_watch);
 	adapter_props_watch = 0;
 
-	if (dbus_message_iter_init(message, &iter) == FALSE)
+	if (!dbus_message_iter_init(message, &iter))
 		return TRUE;
 
 	dbus_message_iter_get_basic(&iter, &adapter_path);
@@ -992,7 +992,7 @@ static gboolean bt_default_adapter_changed(DBusConnection *conn,
 
 	DBG("");
 
-	if (dbus_message_iter_init(message, &iter) == FALSE)
+	if (!dbus_message_iter_init(message, &iter))
 		return TRUE;
 
 	g_dbus_remove_watch(bt_conn, adapter_props_watch);
@@ -1054,7 +1054,7 @@ static void bt_connect(DBusConnection *conn, void *data)
 {
 	DBG("connection %p with %p", conn, data);
 
-	if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE) {
+	if (__near_agent_handover_registered(HO_AGENT_BT)) {
 		DBG("Agent already registered");
 		return;
 	}
@@ -1092,7 +1092,7 @@ static void bt_disconnect(DBusConnection *conn, void *user_data)
 
 static int bt_prepare_handlers(DBusConnection *conn)
 {
-	if (__near_agent_handover_registered(HO_AGENT_BT) == TRUE)
+	if (__near_agent_handover_registered(HO_AGENT_BT))
 		return 0;
 
 	watch = g_dbus_add_service_watch(bt_conn, BLUEZ_SERVICE,
@@ -1154,7 +1154,7 @@ int __near_bluetooth_init(void)
 	/* save the dbus connection */
 	bt_conn = near_dbus_get_connection();
 	if (bt_conn == NULL) {
-		if (dbus_error_is_set(&err) == TRUE) {
+		if (dbus_error_is_set(&err)) {
 			near_error("%s", err.message);
 			dbus_error_free(&err);
 		} else

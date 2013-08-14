@@ -35,7 +35,7 @@ struct near_device_driver;
 
 #include <near/log.h>
 
-int __near_log_init(const char *debug, gboolean detach);
+int __near_log_init(const char *debug, bool detach);
 void __near_log_cleanup(void);
 
 #include <near/dbus.h>
@@ -67,7 +67,7 @@ DBusMessage *__near_error_invalid_property(DBusMessage *msg);
 DBusMessage *__near_error_io_error(DBusMessage *msg);
 
 int __near_manager_adapter_add(uint32_t idx, const char *name,
-			uint32_t protocols, near_bool_t powered);
+			uint32_t protocols, bool powered);
 void __near_manager_adapter_remove(uint32_t idx);
 int __near_manager_init(DBusConnection *conn);
 void __near_manager_cleanup(void);
@@ -75,7 +75,7 @@ void __near_manager_cleanup(void);
 #include <near/adapter.h>
 
 struct near_adapter *__near_adapter_create(uint32_t idx,
-		const char *name, uint32_t protocols, near_bool_t powered);
+		const char *name, uint32_t protocols, bool powered);
 void __near_adapter_destroy(struct near_adapter *adapter);
 const char *__near_adapter_get_path(struct near_adapter *adapter);
 struct near_adapter *__near_adapter_get(uint32_t idx);
@@ -87,8 +87,8 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx);
 int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len);
 int __near_adapter_remove_device(uint32_t idx);
-int __near_adapter_set_dep_state(uint32_t idx, near_bool_t dep);
-near_bool_t __near_adapter_get_dep_state(uint32_t idx);
+int __near_adapter_set_dep_state(uint32_t idx, bool dep);
+bool __near_adapter_get_dep_state(uint32_t idx);
 void __near_adapter_tags_changed(uint32_t adapter_idx);
 void __near_adapter_devices_changed(uint32_t adapter_idx);
 void __near_adapter_listen(struct near_device_driver *driver);
@@ -159,7 +159,7 @@ int __near_netlink_stop_poll(int idx);
 int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
 				uint8_t comm_mode, uint8_t rf_mode);
 int __near_netlink_dep_link_down(uint32_t idx);
-int __near_netlink_adapter_enable(int idx, near_bool_t enable);
+int __near_netlink_adapter_enable(int idx, bool enable);
 int __near_netlink_init(void);
 void __near_netlink_cleanup(void);
 
@@ -233,7 +233,7 @@ void __near_bluetooth_cleanup(void);
 void __near_bluetooth_legacy_start(void);
 void __near_bluetooth_legacy_stop(void);
 int __near_bluetooth_parse_oob_record(struct carrier_data *data,
-					uint16_t *properties, near_bool_t pair);
+					uint16_t *properties, bool pair);
 int __near_bluetooth_pair(void *data);
 struct carrier_data *__near_bluetooth_local_get_properties(uint16_t mime_props);
 
@@ -246,7 +246,7 @@ int __near_agent_handover_register(const char *sender, const char *path,
 					const char *carrier);
 int __near_agent_handover_unregister(const char *sender, const char *path,
 					const char *carrier);
-near_bool_t __near_agent_handover_registered(enum ho_agent_carrier carrier);
+bool __near_agent_handover_registered(enum ho_agent_carrier carrier);
 
 struct carrier_data *__near_agent_handover_request_data(
 					enum ho_agent_carrier carrier,

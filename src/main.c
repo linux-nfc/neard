@@ -35,8 +35,8 @@
 #include "near.h"
 
 static struct {
-	near_bool_t constant_poll;
-	near_bool_t default_powered;
+	bool constant_poll;
+	bool default_powered;
 } near_settings  = {
 	.constant_poll = FALSE,
 	.default_powered = FALSE,
@@ -68,7 +68,7 @@ static GKeyFile *load_config(const char *file)
 static void parse_config(GKeyFile *config)
 {
 	GError *error = NULL;
-	gboolean boolean;
+	bool boolean;
 
 	if (config == NULL)
 		return;
@@ -170,10 +170,10 @@ static void disconnect_callback(DBusConnection *conn, void *user_data)
 static gchar *option_debug = NULL;
 static gchar *option_plugin = NULL;
 static gchar *option_noplugin = NULL;
-static gboolean option_detach = TRUE;
-static gboolean option_version = FALSE;
+static bool option_detach = true;
+static bool option_version = false;
 
-static gboolean parse_debug(const char *key, const char *value,
+static bool parse_debug(const char *key, const char *value,
 					gpointer user_data, GError **error)
 {
 	if (value)
@@ -181,7 +181,7 @@ static gboolean parse_debug(const char *key, const char *value,
 	else
 		option_debug = g_strdup("*");
 
-	return TRUE;
+	return true;
 }
 
 static GOptionEntry options[] = {
@@ -200,15 +200,15 @@ static GOptionEntry options[] = {
 	{ NULL },
 };
 
-near_bool_t near_setting_get_bool(const char *key)
+bool near_setting_get_bool(const char *key)
 {
-	if (g_str_equal(key, "ConstantPoll") == TRUE)
+	if (g_str_equal(key, "ConstantPoll"))
 		return near_settings.constant_poll;
 
-	if (g_str_equal(key, "DefaultPowered") == TRUE)
+	if (g_str_equal(key, "DefaultPowered"))
 		return near_settings.default_powered;
 
-	return FALSE;
+	return false;
 }
 
 int main(int argc, char *argv[])
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
 
-	if (g_option_context_parse(context, &argc, &argv, &error) == FALSE) {
+	if (!g_option_context_parse(context, &argc, &argv, &error)) {
 		if (error != NULL) {
 			g_printerr("%s\n", error->message);
 			g_error_free(error);
@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
 
 	g_option_context_free(context);
 
-	if (option_version == TRUE) {
+	if (option_version) {
 		printf("%s\n", VERSION);
 		exit(0);
 	}
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 
 	conn = g_dbus_setup_bus(DBUS_BUS_SYSTEM, NFC_SERVICE, &err);
 	if (conn == NULL) {
-		if (dbus_error_is_set(&err) == TRUE) {
+		if (dbus_error_is_set(&err)) {
 			fprintf(stderr, "%s\n", err.message);
 			dbus_error_free(&err);
 		} else
@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
 
 	__near_plugin_init(option_plugin, option_noplugin);
 
-	if (option_detach == TRUE) {
+	if (option_detach) {
 		if (daemon(0, 0)) {
 			perror("Can't start daemon");
 			exit(1);

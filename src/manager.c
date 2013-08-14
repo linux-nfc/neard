@@ -60,7 +60,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 }
 
 int __near_manager_adapter_add(uint32_t idx, const char *name,
-				uint32_t protocols, near_bool_t powered)
+				uint32_t protocols, bool powered)
 {
 	struct near_adapter *adapter;
 	const char *path;
@@ -136,7 +136,7 @@ static DBusMessage *register_handover_agent(DBusConnection *conn,
 
 	sender = dbus_message_get_sender(msg);
 
-	if (dbus_message_iter_init(msg, &iter) == FALSE)
+	if (!dbus_message_iter_init(msg, &iter))
 		return __near_error_invalid_arguments(msg);
 
 	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
@@ -168,7 +168,7 @@ static DBusMessage *unregister_handover_agent(DBusConnection *conn,
 
 	sender = dbus_message_get_sender(msg);
 
-	if (dbus_message_iter_init(msg, &iter) == FALSE)
+	if (!dbus_message_iter_init(msg, &iter))
 		return __near_error_invalid_arguments(msg);
 
 	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
@@ -200,7 +200,7 @@ static DBusMessage *register_ndef_agent(DBusConnection *conn,
 
 	sender = dbus_message_get_sender(msg);
 
-	if (dbus_message_iter_init(msg, &iter) == FALSE)
+	if (!dbus_message_iter_init(msg, &iter))
 		return __near_error_invalid_arguments(msg);
 
 	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
@@ -232,7 +232,7 @@ static DBusMessage *unregister_ndef_agent(DBusConnection *conn,
 
 	sender = dbus_message_get_sender(msg);
 
-	if (dbus_message_iter_init(msg, &iter) == FALSE)
+	if (!dbus_message_iter_init(msg, &iter))
 		return __near_error_invalid_arguments(msg);
 
 	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)

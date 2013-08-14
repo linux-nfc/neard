@@ -1343,7 +1343,7 @@ static int process_mime_type(struct near_ndef_mime_payload *mime,
 		err = __near_agent_handover_push_data(HO_AGENT_BT, c_data);
 		if (err == -ESRCH)
 			err = __near_bluetooth_parse_oob_record(c_data,
-					&mime->handover.properties, TRUE);
+					&mime->handover.properties, true);
 		break;
 
 	case NEAR_CARRIER_WIFI:
@@ -1414,34 +1414,34 @@ static struct near_ndef_mime_payload *parse_mime_type(
 }
 
 /* Set the MB bit in message header */
-static uint8_t near_ndef_set_mb(uint8_t *hdr, near_bool_t first_rec)
+static uint8_t near_ndef_set_mb(uint8_t *hdr, bool first_rec)
 {
 	/* Reset bits 0x40 */
 	*hdr &= (0xFF & (~RECORD_MB));
 
 	/* Set if needed */
-	if (first_rec == TRUE)
+	if (first_rec)
 		*hdr |= RECORD_MB;
 
 	return *hdr;
 }
 
 /* Set the MB/ME bit in message header */
-static uint8_t near_ndef_set_me(uint8_t *hdr, near_bool_t last_rec)
+static uint8_t near_ndef_set_me(uint8_t *hdr, bool last_rec)
 {
 	/* Reset bits 0x80 */
 	*hdr &= (0xFF & (~RECORD_ME));
 
 	/* Set if needed */
-	if (last_rec == TRUE)
+	if (last_rec)
 		*hdr |= RECORD_ME;
 
 	return *hdr;
 }
 
 /* Set the MB/ME bit in message header */
-static uint8_t near_ndef_set_mb_me(uint8_t *hdr, near_bool_t first_rec,
-						near_bool_t last_rec)
+static uint8_t near_ndef_set_mb_me(uint8_t *hdr, bool first_rec,
+						bool last_rec)
 {
 	near_ndef_set_mb(hdr, first_rec);
 	return near_ndef_set_me(hdr, last_rec);
@@ -1453,8 +1453,8 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 		char *payload_id,
 		uint8_t payload_id_len,
 		enum record_tnf tnf,
-		near_bool_t first_rec,
-		near_bool_t last_rec)
+		bool first_rec,
+		bool last_rec)
 {
 	struct near_ndef_message *msg;
 	uint8_t hdr = 0, type_len, sr_bit, il_bit, id_len;
@@ -1475,8 +1475,8 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 
 	il_bit = (payload_id != NULL) ? TRUE : FALSE;
 
-	msg->length += (sr_bit == TRUE) ? 1 : 4;
-	msg->length += (il_bit == TRUE) ? 1 : 0;
+	msg->length += (sr_bit) ? 1 : 4;
+	msg->length += (il_bit) ? 1 : 0;
 	msg->length += type_len;
 	msg->length += payload_len;
 	msg->length += id_len;
@@ -1488,11 +1488,11 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 	/* Set MB ME bits */
 	hdr = near_ndef_set_mb_me(&hdr, first_rec, last_rec);
 
-	if (sr_bit == TRUE)
+	if (sr_bit)
 		hdr |= RECORD_SR;
 
 	hdr = RECORD_TNF_WKT_SET(hdr);
-	if (il_bit == TRUE)
+	if (il_bit)
 		hdr |= RECORD_IL;
 
 	switch (tnf) {
@@ -1527,14 +1527,14 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 	msg->data[msg->offset++] = hdr;
 	msg->data[msg->offset++] = type_len;
 
-	if (sr_bit == TRUE) {
+	if (sr_bit) {
 		msg->data[msg->offset++] = payload_len;
 	} else {
 		fillb32((msg->data + msg->offset), payload_len);
 		msg->offset += 4;
 	}
 
-	if (il_bit == TRUE)
+	if (il_bit)
 		msg->data[msg->offset++] = payload_id_len;
 
 	if (type_name != NULL) {
@@ -1542,7 +1542,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 		msg->offset += type_len;
 	}
 
-	if (il_bit == TRUE) {
+	if (il_bit) {
 		memcpy(msg->data + msg->offset, payload_id, payload_id_len);
 		msg->offset += payload_id_len;
 	}
@@ -1568,7 +1568,7 @@ static struct near_ndef_message *ndef_message_alloc(char *type_name,
 	return ndef_message_alloc_complete(type_name, payload_len,
 			NULL, 0,
 			RECORD_TNF_WELLKNOWN,
-			TRUE, TRUE);
+			true, true);
 }
 
 static enum carrier_power_state get_cps(uint8_t data)
@@ -1650,7 +1650,7 @@ static struct near_ndef_message *near_ndef_prepare_ac_message(uint8_t cps,
 						AC_RECORD_PAYLOAD_LEN(cdr_len),
 						NULL, 0,
 						RECORD_TNF_WELLKNOWN,
-						TRUE, TRUE);
+						true, true);
 	if (ac_msg == NULL)
 		return NULL;
 
@@ -1678,7 +1678,7 @@ static struct near_ndef_message *near_ndef_prepare_cr_message(uint16_t cr_id)
 	cr_msg = ndef_message_alloc_complete("cr", sizeof(uint16_t),
 						NULL, 0,
 						RECORD_TNF_WELLKNOWN,
-						TRUE, TRUE);
+						true, true);
 	if (cr_msg == NULL)
 		return NULL;
 
@@ -1700,7 +1700,7 @@ static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 		return NULL;
 
 	msg = ndef_message_alloc_complete(mime_type, data_len, cdr, cdr_len,
-						RECORD_TNF_MIME, TRUE, TRUE);
+						RECORD_TNF_MIME, true, true);
 	if (msg == NULL)
 		return NULL;
 
@@ -1845,7 +1845,7 @@ static struct near_ndef_message *prepare_handover_message_header(char *type,
 	 * So, we have to fix the payload length in the header.
 	 */
 	ho_msg->data[NDEF_PAYLOAD_LENGTH_OFFSET] = payload_len;
-	near_ndef_set_mb_me(ho_msg->data, TRUE, FALSE);
+	near_ndef_set_mb_me(ho_msg->data, true, false);
 
 	/* Add version */
 	ho_msg->data[ho_msg->offset++] = HANDOVER_VERSION;
@@ -1918,7 +1918,7 @@ static void set_mb_me_to_false(gpointer data, gpointer user_data)
 {
 	struct near_ndef_message *msg = data;
 
-	near_ndef_set_mb_me(msg->data, FALSE, FALSE);
+	near_ndef_set_mb_me(msg->data, false, false);
 }
 
 static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
@@ -1941,7 +1941,7 @@ static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
 	if (hs_msg == NULL)
 		goto fail;
 
-	near_ndef_set_mb_me(hs_msg->data, TRUE, TRUE);
+	near_ndef_set_mb_me(hs_msg->data, true, true);
 	memcpy(hs_msg->data + hs_msg->offset, ac_msg->data, ac_msg->length);
 	hs_msg->offset += ac_msg->length;
 
@@ -2029,23 +2029,23 @@ static struct near_ndef_message *near_ndef_prepare_hs_reply(
 	if (num_of_carriers == 1) {
 		/* only one message */
 		ac_msg = ac_msgs->data;
-		near_ndef_set_mb_me(ac_msg->data, TRUE, TRUE);
+		near_ndef_set_mb_me(ac_msg->data, true, true);
 	} else if (num_of_carriers > 1) {
 		g_list_foreach(ac_msgs, set_mb_me_to_false, NULL);
 		/* first message */
 		temp = g_list_first(ac_msgs);
 		ac_msg = temp->data;
-		near_ndef_set_mb_me(ac_msg->data, TRUE, FALSE);
+		near_ndef_set_mb_me(ac_msg->data, true, false);
 		/* last message */
 		temp = g_list_last(ac_msgs);
 		ac_msg = temp->data;
-		near_ndef_set_mb_me(ac_msg->data, FALSE, TRUE);
+		near_ndef_set_mb_me(ac_msg->data, false, true);
 	}
 
 	g_list_foreach(cfg_msgs, set_mb_me_to_false, NULL);
 	temp = g_list_last(cfg_msgs);
 	cfg_msg = temp->data;
-	near_ndef_set_mb_me(cfg_msg->data, FALSE, TRUE);
+	near_ndef_set_mb_me(cfg_msg->data, false, true);
 
 	/* copy acs */
 	copy_ac_records(hs_msg, ac_msgs);
@@ -2144,7 +2144,7 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 		if (cr_msg == NULL)
 			goto fail;
 
-		near_ndef_set_mb_me(cr_msg->data, TRUE, FALSE);
+		near_ndef_set_mb_me(cr_msg->data, true, false);
 
 		ho_pl_length += cr_msg->length;
 	}
@@ -2165,7 +2165,7 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 	/* last message */
 	temp = g_list_last(ac_msgs);
 	ac_msg = temp->data;
-	near_ndef_set_mb_me(ac_msg->data, FALSE, TRUE);
+	near_ndef_set_mb_me(ac_msg->data, false, true);
 
 	/*
 	 * Hs record payloads do not have collision recore, the first record
@@ -2174,13 +2174,13 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 	if (type == RECORD_TYPE_WKT_HANDOVER_SELECT) {
 		temp = g_list_first(ac_msgs);
 		ac_msg = temp->data;
-		near_ndef_set_mb_me(ac_msg->data, TRUE, FALSE);
+		near_ndef_set_mb_me(ac_msg->data, true, false);
 	}
 
 	g_list_foreach(cfg_msgs, set_mb_me_to_false, NULL);
 	temp = g_list_last(cfg_msgs);
 	cfg_msg = temp->data;
-	near_ndef_set_mb_me(cfg_msg->data, FALSE, TRUE);
+	near_ndef_set_mb_me(cfg_msg->data, false, true);
 
 	if (type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
 		/* copy cr */
@@ -2290,7 +2290,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	uint8_t mb = 0, me = 0, i;
 	uint32_t offset;
 	int16_t count_ac = 0;
-	near_bool_t action = FALSE, status;
+	bool action = false, status;
 
 	DBG("");
 
@@ -2375,9 +2375,9 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 			 * is the signal to launch the pairing.
 			 */
 			if (rec_type == RECORD_TYPE_WKT_HANDOVER_SELECT)
-				action = TRUE;
+				action = true;
 			else
-				action = FALSE;
+				action = false;
 
 			/* HO payload for reply creation */
 			trec->ho = ho_payload;
@@ -2451,19 +2451,19 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	 * In case of multiple carriers, handover with any carrier
 	 * gets done then leave the loop.
 	 */
-	if (action == TRUE) {
-		status = FALSE;
+	if (action) {
+		status = false;
 		count_ac = g_slist_length(mimes);
 
 		for (i = 0; i < count_ac; i++) {
 			if (process_mime_type(g_slist_nth_data(mimes, i),
 					g_slist_nth_data(c_datas, i)) == 0) {
-				status = TRUE;
+				status = true;
 				break;
 			}
 		}
 
-		if (status == FALSE) {
+		if (!status) {
 			DBG("could not process alternative carriers");
 			goto fail;
 		}
@@ -2557,56 +2557,56 @@ int __near_ndef_record_register(struct near_ndef_record *record, char *path)
  * These functions parse a specific type record (id or mime) to find the
  * associated string.
  */
-near_bool_t near_ndef_record_cmp_id(struct near_ndef_record *rec1,
+bool near_ndef_record_cmp_id(struct near_ndef_record *rec1,
 						struct near_ndef_record *rec2)
 {
 	DBG("");
 
 	if ((rec1 == NULL) || (rec2 == NULL))
-		return FALSE;
+		return false;
 
 	if ((rec1->header == NULL) || (rec2->header == NULL))
-		return FALSE;
+		return false;
 
 	/* usual checks */
 	if ((rec1->header->il_field == NULL) ||
 			(rec2->header->il_field == NULL))
-		return FALSE;
+		return false;
 
 	if (memcmp(rec1->header->il_field, rec2->header->il_field,
 		(rec1->header->il_length) > (rec2->header->il_length)
 					? (rec1->header->il_length) :
 					(rec2->header->il_length)) != 0)
-		return FALSE;
+		return false;
 
-	return TRUE;
+	return true;
 }
 
-near_bool_t near_ndef_record_cmp_mime(struct near_ndef_record *rec1,
+bool near_ndef_record_cmp_mime(struct near_ndef_record *rec1,
 					struct near_ndef_record *rec2)
 {
 
 	DBG("");
 
 	if ((rec1 == NULL) || (rec2 == NULL))
-		return FALSE;
+		return false;
 
 	if ((rec1->header == NULL) || (rec2->header == NULL))
-		return FALSE;
+		return false;
 	/* usual checks */
 	if ((rec1->mime == NULL) || (rec2->mime == NULL))
-		return FALSE;
+		return false;
 
 	if ((rec1->mime->type == NULL) || (rec2->mime->type == NULL))
-		return FALSE;
+		return false;
 
 	if (strlen(rec1->mime->type) != strlen(rec2->mime->type))
-		return FALSE;
+		return false;
 
 	if ((g_strcmp0(rec1->mime->type, rec2->mime->type) != 0))
-		return FALSE;
+		return false;
 
-	return TRUE;
+	return true;
 }
 
 /* helper to get the record data length */
@@ -3172,7 +3172,7 @@ static struct near_ndef_message *build_uri_record(DBusMessage *msg)
 		uri_prefix = __near_ndef_get_uri_prefix(i);
 
 		if (uri_prefix != NULL &&
-		    g_str_has_prefix(uri, uri_prefix) == TRUE) {
+		    g_str_has_prefix(uri, uri_prefix)) {
 			id = i;
 			id_len = strlen(uri_prefix);
 			break;
@@ -3207,7 +3207,7 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 		uri_prefix = __near_ndef_get_uri_prefix(i);
 
 		if (uri_prefix != NULL &&
-				g_str_has_prefix(uri, uri_prefix) == TRUE)
+				g_str_has_prefix(uri, uri_prefix))
 			break;
 	}
 
@@ -3350,7 +3350,8 @@ struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
 						(uint8_t *) passphrase);
 
 	mime = ndef_message_alloc_complete(WIFI_WSC_MIME_STRING, tlv_len, NULL,
-						0, RECORD_TNF_MIME, TRUE, TRUE);
+						0, RECORD_TNF_MIME, true,
+					   true);
 	if (mime == NULL) {
 		g_free(tlv);
 		return NULL;
@@ -3411,7 +3412,7 @@ static struct near_ndef_message *near_ndef_prepare_mime_payload_record(
 
 	DBG("Payload %*s", payload_len, payload);
 	mime = ndef_message_alloc_complete(type, payload_len, NULL, 0,
-						RECORD_TNF_MIME, TRUE, TRUE);
+						RECORD_TNF_MIME, true, true);
 	if (mime == NULL) {
 		near_error("Failed to alloc NDEF message");
 		return NULL;
@@ -3466,7 +3467,7 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 
 				mime = ndef_message_alloc_complete(
 					WIFI_WSC_MIME_STRING, carrier->size,
-					NULL, 0, RECORD_TNF_MIME, TRUE, TRUE);
+					NULL, 0, RECORD_TNF_MIME, true, true);
 				if (mime == NULL) {
 					g_free(carrier);
 					return NULL;

@@ -186,7 +186,7 @@ static int snep_core_read_ndef(int client_fd,
 	if (snep_data->nfc_data_length == snep_data->nfc_data_current_length)
 		return 0;
 
-	if (snep_data->respond_continue == FALSE) {
+	if (!snep_data->respond_continue) {
 		snep_data->respond_continue = TRUE;
 		near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_CONTINUE);
 	}
@@ -380,12 +380,12 @@ static int snep_core_push_prepare_fragments(struct p2p_snep_put_req_data *req,
 	return 0;
 }
 
-static near_bool_t snep_core_process_request(int client_fd,
+static bool snep_core_process_request(int client_fd,
 					struct p2p_snep_data *snep_data,
 					near_server_io req_get,
 					near_server_io req_put)
 {
-	near_bool_t ret;
+	bool ret;
 	int err;
 
 	DBG("request %d", snep_data->request);
@@ -399,7 +399,7 @@ static near_bool_t snep_core_process_request(int client_fd,
 		else {
 			near_snep_core_response_noinfo(client_fd,
 						NEAR_SNEP_RESP_NOT_IMPL);
-			ret = TRUE;
+			ret = true;
 		}
 
 		/* free and leave */
@@ -414,7 +414,7 @@ static near_bool_t snep_core_process_request(int client_fd,
 		else {
 			near_snep_core_response_noinfo(client_fd,
 						NEAR_SNEP_RESP_NOT_IMPL);
-			ret = TRUE;
+			ret = true;
 		}
 
 		/* If there's some fragments, don't delete before the CONT */
@@ -430,10 +430,10 @@ static near_bool_t snep_core_process_request(int client_fd,
 		DBG("NEAR_SNEP_REQ_REJECT");
 		if (snep_data->req->fragments == NULL) {
 			near_error("error: NEAR_SNEP_REQ_REJECT but no fragment");
-			ret = FALSE;
+			ret = false;
 		}
 		else {
-			ret = TRUE;
+			ret = true;
 		}
 
 		g_slist_free_full(snep_data->req->fragments,
@@ -452,14 +452,14 @@ static near_bool_t snep_core_process_request(int client_fd,
 		 */
 
 		if (snep_data->req == NULL) {
-			ret = TRUE;
+			ret = true;
 			break;
 		}
 
 		DBG("NEAR_SNEP_REQ_CONTINUE");
 		if (snep_data->req->fragments == NULL) {
 			near_error("error: NEAR_SNEP_REQ_CONTINUE but no fragment");
-			ret = FALSE;
+			ret = false;
 			goto leave_cont;
 		}
 
@@ -467,12 +467,12 @@ static near_bool_t snep_core_process_request(int client_fd,
 		while (g_slist_length(snep_data->req->fragments) != 0) {
 			err = snep_core_send_fragment(snep_data->req);
 			if (err < 0) {
-				ret = FALSE;
+				ret = false;
 				goto leave_cont;
 			}
 		}
 
-		ret = TRUE;
+		ret = true;
 
 leave_cont:
 		/* No more fragment to send, clean memory */
@@ -487,7 +487,7 @@ leave_cont:
 
 	default:
 		near_error("Unsupported SNEP request code");
-		ret = FALSE;
+		ret = false;
 		break;
 	}
 
@@ -510,7 +510,7 @@ leave_cont:
  *	missing bytes (llcp removes fragmentation issues)
  *
  */
-near_bool_t near_snep_core_read(int client_fd,
+bool near_snep_core_read(int client_fd,
 				uint32_t adapter_idx, uint32_t target_idx,
 				near_tag_io_cb cb,
 				near_server_io req_get,
@@ -550,20 +550,20 @@ near_bool_t near_snep_core_read(int client_fd,
 	if (bytes_recv < 0) {
 		near_error("Read error SNEP %d %s", bytes_recv,
 							strerror(errno));
-		return FALSE;
+		return false;
 	}
 
 	/* Check frame size */
 	if (bytes_recv != sizeof(frame)) {
 		near_error("Bad frame size: %d", bytes_recv);
-		return FALSE;
+		return false;
 	}
 
 	/* If major is different, send UNSUPPORTED VERSION */
 	if (NEAR_SNEP_MAJOR(frame.version) != NEAR_SNEP_MAJOR(NEAR_SNEP_VERSION)) {
 		near_error("Unsupported version (%d)", frame.version);
 		near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_VERSION);
-		return TRUE;
+		return true;
 	}
 
 	/*
@@ -581,7 +581,7 @@ near_bool_t near_snep_core_read(int client_fd,
 	/* This is a new request from the client */
 	snep_data = g_try_malloc0(sizeof(struct p2p_snep_data));
 	if (snep_data == NULL)
-		return FALSE;
+		return false;
 
 	/* the whole frame length */
 	ndef_length = GINT_FROM_BE(frame.length);
@@ -589,7 +589,7 @@ near_bool_t near_snep_core_read(int client_fd,
 	snep_data->nfc_data = g_try_malloc0(ndef_length + TLV_SIZE);
 	if (snep_data->nfc_data == NULL) {
 		g_free(snep_data);
-		return FALSE;
+		return false;
 	}
 
 	/* fill the struct */
@@ -636,7 +636,7 @@ static int near_snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 	struct p2p_snep_req_frame header;
 	struct snep_fragment *fragment;
 	uint32_t max_fragment_len;
-	gboolean fragmenting;
+	bool fragmenting;
 	int err;
 	int snep_req_header_length, snep_additional_length;
 
@@ -665,10 +665,10 @@ static int near_snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 
 	if (max_fragment_len >= (ndef->length + snep_req_header_length)) {
 		fragment->len = ndef->length + snep_req_header_length;
-		fragmenting = FALSE;
+		fragmenting = false;
 	} else {
 		fragment->len = max_fragment_len;
-		fragmenting = TRUE;
+		fragmenting = true;
 	}
 
 	fragment->data = g_try_malloc0(fragment->len);
@@ -686,7 +686,7 @@ static int near_snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 		near_put_be32(snep_req_header_length,
 				fragment->data + NEAR_SNEP_REQ_PUT_HEADER_LENGTH);
 
-	if (fragmenting == TRUE) {
+	if (fragmenting) {
 		memcpy(fragment->data + snep_req_header_length, ndef->data,
 				max_fragment_len - snep_req_header_length);
 		ndef->offset = max_fragment_len - snep_req_header_length;

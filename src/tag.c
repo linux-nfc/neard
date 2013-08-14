@@ -47,7 +47,7 @@ struct near_tag {
 	uint32_t type;
 	enum near_tag_sub_type sub_type;
 	enum near_tag_memory_layout layout;
-	near_bool_t readonly;
+	bool readonly;
 
 	uint8_t nfcid[NFC_MAX_NFCID1_LEN];
 	uint8_t nfcid_len;
@@ -57,7 +57,7 @@ struct near_tag {
 
 	uint32_t n_records;
 	GList *records;
-	near_bool_t blank;
+	bool blank;
 
 	/* Tag specific structures */
 	struct {
@@ -332,7 +332,7 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
-	if (tag->readonly == TRUE) {
+	if (tag->readonly) {
 		DBG("Read only tag");
 		return __near_error_permission_denied(msg);
 	}
@@ -596,7 +596,7 @@ static int tag_initialize(struct near_tag *tag,
 	tag->target_idx = target_idx;
 	tag->protocol = protocols;
 	tag->n_records = 0;
-	tag->readonly = FALSE;
+	tag->readonly = false;
 
 	if (nfcid_len <= NFC_MAX_NFCID1_LEN) {
 		tag->nfcid_len = nfcid_len;
@@ -795,17 +795,17 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 	return 0;
 }
 
-void near_tag_set_ro(struct near_tag *tag, near_bool_t readonly)
+void near_tag_set_ro(struct near_tag *tag, bool readonly)
 {
 	tag->readonly = readonly;
 }
 
-void near_tag_set_blank(struct near_tag *tag, near_bool_t blank)
+void near_tag_set_blank(struct near_tag *tag, bool blank)
 {
 	tag->blank = blank;
 }
 
-near_bool_t near_tag_get_blank(struct near_tag *tag)
+bool near_tag_get_blank(struct near_tag *tag)
 {
 	return tag->blank;
 }
@@ -1004,7 +1004,7 @@ int __near_tag_write(struct near_tag *tag,
 			__near_adapter_stop_check_presence(tag->adapter_idx,
 								tag->target_idx);
 
-			if (tag->blank == TRUE && driver->format != NULL) {
+			if (tag->blank && driver->format != NULL) {
 				DBG("Blank tag detected, formatting");
 				err = driver->format(tag->adapter_idx,
 						tag->target_idx, format_cb);

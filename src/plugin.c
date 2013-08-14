@@ -37,7 +37,7 @@ static GSList *plugins = NULL;
 
 struct near_plugin {
 	void *handle;
-	gboolean active;
+	bool active;
 	struct near_plugin_desc *desc;
 };
 
@@ -49,32 +49,32 @@ static gint compare_priority(gconstpointer a, gconstpointer b)
 	return plugin2->desc->priority - plugin1->desc->priority;
 }
 
-static gboolean add_plugin(void *handle, struct near_plugin_desc *desc)
+static bool add_plugin(void *handle, struct near_plugin_desc *desc)
 {
 	struct near_plugin *plugin;
 
 	if (desc->init == NULL)
-		return FALSE;
+		return false;
 
-	if (g_str_equal(desc->version, NEAR_VERSION) == FALSE) {
+	if (!g_str_equal(desc->version, NEAR_VERSION)) {
 		near_error("Version mismatch for %s", desc->description);
-		return FALSE;
+		return false;
 	}
 
 	plugin = g_try_new0(struct near_plugin, 1);
 	if (plugin == NULL)
-		return FALSE;
+		return false;
 
 	plugin->handle = handle;
-	plugin->active = FALSE;
+	plugin->active = false;
 	plugin->desc = desc;
 
 	plugins = g_slist_insert_sorted(plugins, plugin, compare_priority);
 
-	return TRUE;
+	return true;
 }
 
-static gboolean check_plugin(struct near_plugin_desc *desc,
+static bool check_plugin(struct near_plugin_desc *desc,
 				char **patterns, char **excludes)
 {
 	if (excludes) {
@@ -83,7 +83,7 @@ static gboolean check_plugin(struct near_plugin_desc *desc,
 				break;
 		if (*excludes) {
 			near_info("Excluding %s", desc->description);
-			return FALSE;
+			return false;
 		}
 	}
 
@@ -93,11 +93,11 @@ static gboolean check_plugin(struct near_plugin_desc *desc,
 				break;
 		if (!*patterns) {
 			near_info("Ignoring %s", desc->description);
-			return FALSE;
+			return false;
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
 #include "builtin.h"
@@ -121,8 +121,7 @@ int __near_plugin_init(const char *pattern, const char *exclude)
 		excludes = g_strsplit_set(exclude, ":, ", -1);
 
 	for (i = 0; __near_builtin[i]; i++) {
-		if (check_plugin(__near_builtin[i],
-						patterns, excludes) == FALSE)
+		if (!check_plugin(__near_builtin[i], patterns, excludes))
 			continue;
 
 		add_plugin(NULL, __near_builtin[i]);
@@ -134,8 +133,8 @@ int __near_plugin_init(const char *pattern, const char *exclude)
 			void *handle;
 			struct near_plugin_desc *desc;
 
-			if (g_str_has_prefix(file, "lib") == TRUE ||
-					g_str_has_suffix(file, ".so") == FALSE)
+			if (g_str_has_prefix(file, "lib") ||
+					!g_str_has_suffix(file, ".so"))
 				continue;
 
 			filename = g_build_filename(PLUGINDIR, file, NULL);
@@ -158,12 +157,12 @@ int __near_plugin_init(const char *pattern, const char *exclude)
 				continue;
 			}
 
-			if (check_plugin(desc, patterns, excludes) == FALSE) {
+			if (!check_plugin(desc, patterns, excludes)) {
 				dlclose(handle);
 				continue;
 			}
 
-			if (add_plugin(handle, desc) == FALSE)
+			if (!add_plugin(handle, desc))
 				dlclose(handle);
 		}
 
@@ -176,7 +175,7 @@ int __near_plugin_init(const char *pattern, const char *exclude)
 		if (plugin->desc->init() < 0)
 			continue;
 
-		plugin->active = TRUE;
+		plugin->active = true;
 	}
 
 	g_strfreev(patterns);
@@ -194,7 +193,7 @@ void __near_plugin_cleanup(void)
 	for (list = plugins; list; list = list->next) {
 		struct near_plugin *plugin = list->data;
 
-		if (plugin->active == TRUE && plugin->desc->exit)
+		if (plugin->active && plugin->desc->exit)
 			plugin->desc->exit();
 
 		if (plugin->handle != NULL)
