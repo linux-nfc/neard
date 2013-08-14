@@ -73,8 +73,8 @@ struct hr_ndef {
 	near_tag_io_cb cb;
 	int extra_ndef_count;
 	int block_free_size;
-	near_bool_t cfg_record_state;
-	near_bool_t in_extra_read;
+	bool cfg_record_state;
+	bool in_extra_read;
 };
 
 struct hr_push_client {
@@ -152,18 +152,18 @@ fail:
 	return err;
 }
 
-static near_bool_t handover_recv_error(void)
+static bool handover_recv_error(void)
 {
 	near_error("%s", strerror(errno));
 
 	if (errno == EAGAIN)
-		return TRUE;
+		return true;
 
-	return FALSE;
+	return false;
 }
 
 /* Add extra records right after the end of the "Hr" ndef record */
-static near_bool_t handover_read_cfg_records(int client_fd,
+static bool handover_read_cfg_records(int client_fd,
 				uint32_t adapter_idx, uint32_t target_idx,
 				near_tag_io_cb cb)
 {
@@ -176,15 +176,15 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
 	if (ndef == NULL) {
 		near_error("hr_ndef should exist");
-		return FALSE;
+		return false;
 	}
 
-	if (ndef->in_extra_read == TRUE) {
+	if (ndef->in_extra_read) {
 		/* Next prepare read to complete the Hr */
 		new_ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len +
 				NDEF_HR_MSG_MIN_LENGTH);
 		if (new_ndef == NULL)
-			return FALSE;
+			return false;
 
 		ndef->ndef = new_ndef;
 
@@ -207,14 +207,14 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 		new_ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len
 								+ ndef_size);
 		if (new_ndef == NULL)
-			return FALSE;
+			return false;
 
 		ndef->ndef = new_ndef;
 
 		ndef->cur_record_len += ndef_size;
-		ndef->in_extra_read = FALSE;
+		ndef->in_extra_read = false;
 
-		return TRUE;
+		return true;
 	}
 
 	/* Read remaining bytes */
@@ -228,12 +228,12 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 
 	/* Is the NDEF read complete ? */
 	if (ndef->missing_bytes)
-		return TRUE;	/* more bytes to come... */
+		return true;	/* more bytes to come... */
 
 	if (ndef->extra_ndef_count > 0)
 		ndef->extra_ndef_count--;
 
-	ndef->in_extra_read = TRUE;
+	ndef->in_extra_read = true;
 
 	if (ndef->extra_ndef_count == 0) {
 		/* All the bytes are read so now, parse the frame */
@@ -241,21 +241,21 @@ static near_bool_t handover_read_cfg_records(int client_fd,
 		if (err > 0) {
 			/* clean memory */
 			handover_close(client_fd, 0);
-			return TRUE;
+			return true;
 		}
 
-		return FALSE;
+		return false;
 	}
 
 	/* Process the next NDEF */
-	return TRUE;
+	return true;
 
 fail:
 	near_error("Handover read NDEFs failed");
-	return FALSE;
+	return false;
 }
 
-static near_bool_t handover_read_hr(int client_fd,
+static bool handover_read_hr(int client_fd,
 		uint32_t adapter_idx, uint32_t target_idx, near_tag_io_cb cb)
 {
 	int bytes_recv;
@@ -266,7 +266,7 @@ static near_bool_t handover_read_hr(int client_fd,
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
 	if (ndef == NULL)
-		return FALSE;
+		return false;
 
 	/* Read remaining bytes */
 	bytes_recv = recv(client_fd, ndef->ndef + ndef->cur_ptr,
@@ -279,7 +279,7 @@ static near_bool_t handover_read_hr(int client_fd,
 
 	/* Is the ndef "Hr" read complete or should we loop */
 	if (ndef->missing_bytes)
-		return TRUE;
+		return true;
 
 	/*
 	 * The first NDEF frame is read. We now should determine how many
@@ -296,23 +296,23 @@ static near_bool_t handover_read_hr(int client_fd,
 	ndef->extra_ndef_count = extra_ndefs;
 
 	/* End of Handover message - now process extra records */
-	ndef->in_extra_read = TRUE;
-	ndef->cfg_record_state = TRUE;
+	ndef->in_extra_read = true;
+	ndef->cfg_record_state = true;
 
 	/* But, if there's no ac record, we jump to the parsing */
 	if (ndef->extra_ndef_count == 0) {
 		handover_ndef_parse(client_fd, ndef);
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 
 fail:
 	near_error("Handover read failed");
-	return FALSE;
+	return false;
 }
 
-static near_bool_t handover_read_initialize(int client_fd,
+static bool handover_read_initialize(int client_fd,
 		uint32_t adapter_idx, uint32_t target_idx, near_tag_io_cb cb)
 {
 	int bytes_recv;
@@ -336,7 +336,7 @@ static near_bool_t handover_read_initialize(int client_fd,
 	ndef->adapter_idx = adapter_idx;
 	ndef->target_idx = target_idx;
 	ndef->cb = cb;
-	ndef->cfg_record_state = FALSE;
+	ndef->cfg_record_state = false;
 
 	g_hash_table_insert(hr_ndef_hash, GINT_TO_POINTER(client_fd), ndef);
 
@@ -356,7 +356,7 @@ static near_bool_t handover_read_initialize(int client_fd,
 
 	if (ndef->cur_record_len == NDEF_HR_MSG_MIN_LENGTH) {
 		handover_ndef_parse(client_fd, ndef);
-		return FALSE;
+		return false;
 	}
 
 	DBG("Handover frame size is %d", ndef->cur_ptr);
@@ -366,19 +366,19 @@ static near_bool_t handover_read_initialize(int client_fd,
 	if (ndef->ndef == NULL)
 		goto fail;
 
-	return TRUE;
+	return true;
 
 fail:
 	free_hr_ndef(ndef);
 
-	return FALSE;
+	return false;
 }
 
 /*
  * This function is a "dispatcher", to read Hr/Hs messages,
  * and/or additional NDEF messages
  */
-static near_bool_t handover_read(int client_fd,
+static bool handover_read(int client_fd,
 		uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb)
 {
@@ -391,7 +391,7 @@ static near_bool_t handover_read(int client_fd,
 						target_idx, cb);
 	}
 
-	if (ndef->cfg_record_state == TRUE) {
+	if (ndef->cfg_record_state) {
 		return handover_read_cfg_records(client_fd, adapter_idx,
 							target_idx, cb);
 	}
@@ -417,7 +417,7 @@ static void free_hr_push_client(struct hr_push_client *client, int status)
 static gboolean handover_push_event(GIOChannel *channel,
 				GIOCondition condition,	gpointer data)
 {
-	near_bool_t ret;
+	bool ret;
 	struct hr_push_client *client = (struct hr_push_client *) data;
 
 	DBG("condition 0x%x", condition);
@@ -434,7 +434,7 @@ static gboolean handover_push_event(GIOChannel *channel,
 			client->adapter_idx, client->target_idx,
 			client->cb);
 
-	if (ret == FALSE)
+	if (!ret)
 		free_hr_push_client(client, 0);
 
 	return ret;

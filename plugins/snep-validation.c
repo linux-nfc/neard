@@ -59,7 +59,7 @@ static void free_snep_validation_client(gpointer data)
  * The validation server shall accept PUT and GET requests. A PUT request shall
  * cause the server to store the ndef message transmitted with the request.
  * */
-static near_bool_t snep_validation_server_req_put(int client_fd, void *data)
+static bool snep_validation_server_req_put(int client_fd, void *data)
 {
 	struct p2p_snep_data *snep_data = data;
 	GList *records;
@@ -105,12 +105,12 @@ static near_bool_t snep_validation_server_req_put(int client_fd, void *data)
 
 	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_SUCCESS);
 
-	return TRUE;
+	return true;
 
 error:
 	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_REJECT);
 
-	return TRUE;
+	return true;
 }
 
 /*
@@ -119,7 +119,7 @@ error:
  * cause the server to return a previously stored NDEF message of the same NDEF
  * message type and identifier as transmitted with the request.
  * */
-static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
+static bool snep_validation_server_req_get(int client_fd, void *data)
 {
 	struct p2p_snep_data *snep_data = data;
 	struct near_ndef_record *recd, *rec_store;
@@ -168,10 +168,10 @@ static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
 		rec_store = iter->data;
 		/* Same mime type and same id ?*/
 
-		if (near_ndef_record_cmp_id(recd, rec_store) == FALSE)
+		if (!near_ndef_record_cmp_id(recd, rec_store))
 			continue;
 
-		if (near_ndef_record_cmp_mime(recd, rec_store) == FALSE)
+		if (!near_ndef_record_cmp_mime(recd, rec_store))
 			continue;
 
 		/* Found a record, check the length */
@@ -194,22 +194,22 @@ static near_bool_t snep_validation_server_req_get(int client_fd, void *data)
 		} else
 			near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_EXCESS);
 
-		return TRUE;
+		return true;
 	}
 
 done:
 	/* If not found */
 	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_NOT_FOUND);
-	return TRUE;
+	return true;
 
 error:
 	 /* Not found */
 	near_snep_core_response_noinfo(client_fd, NEAR_SNEP_RESP_REJECT);
-	return FALSE;
+	return false;
 }
 
 /* This function is a wrapper to push post processing read functions */
-static near_bool_t snep_validation_read(int client_fd, uint32_t adapter_idx,
+static bool snep_validation_read(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
 							near_tag_io_cb cb)
 {

@@ -54,7 +54,7 @@ struct p2p_npp_frame {
 	struct p2p_npp_ndef_entry ndefs[];
 } __attribute__((packed));
 
-static near_bool_t npp_read(int client_fd,
+static bool npp_read(int client_fd,
 			uint32_t adapter_idx, uint32_t target_idx,
 			near_tag_io_cb cb)
 {
@@ -124,7 +124,7 @@ static near_bool_t npp_read(int client_fd,
 	err = near_tag_add_data(adapter_idx, target_idx,
 					ndefs, total_ndef_length);
 	if (err < 0)
-		return FALSE;
+		return false;
 
 	device = near_device_get_device(adapter_idx, target_idx);
 	if (device == NULL) {
@@ -140,7 +140,7 @@ static near_bool_t npp_read(int client_fd,
 
 	g_free(ndefs);
 
-	return FALSE;
+	return false;
 }
 
 struct near_p2p_driver npp_driver = {

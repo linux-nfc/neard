@@ -60,7 +60,7 @@ struct sdu {
 	uint8_t *data;
 };
 
-typedef near_bool_t (*near_incoming_cb) (struct co_cl_client_data *co_client);
+typedef bool (*near_incoming_cb) (struct co_cl_client_data *co_client);
 
 static GHashTable *llcp_client_hash = NULL;
 
@@ -139,7 +139,7 @@ static gboolean llcp_common_delay_cb(gpointer user_data)
  * If this is the first SDU, we start a 2 secs timer, and be ready for
  * another SDU
  */
-static near_bool_t llcp_add_incoming_sdu(struct co_cl_client_data *clt, int len)
+static bool llcp_add_incoming_sdu(struct co_cl_client_data *clt, int len)
 {
 	struct sdu *i_sdu;
 
@@ -162,11 +162,11 @@ static near_bool_t llcp_add_incoming_sdu(struct co_cl_client_data *clt, int len)
 	if (clt->buf_count == 1)
 		g_timeout_add(ECHO_DELAY, llcp_common_delay_cb, clt);
 
-	return TRUE;
+	return true;
 
 out_error:
 	g_free(i_sdu);
-	return FALSE;
+	return false;
 }
 
 /*
@@ -174,7 +174,7 @@ out_error:
  * acceppt more than 2 SDUs, so we discard subsequent SDU.
  *
  * */
-static near_bool_t llcp_cl_data_recv(struct co_cl_client_data *cl_client)
+static bool llcp_cl_data_recv(struct co_cl_client_data *cl_client)
 {
 	socklen_t addr_len;
 	int len;
@@ -188,7 +188,7 @@ static near_bool_t llcp_cl_data_recv(struct co_cl_client_data *cl_client)
 
 	if (len < 0) {
 		near_error("Could not read data %d %s", len, strerror(errno));
-		return FALSE;
+		return false;
 	}
 
 	/* Two SDUs max, reject the others */
@@ -197,13 +197,13 @@ static near_bool_t llcp_cl_data_recv(struct co_cl_client_data *cl_client)
 	else
 		near_warn("No more than 2 SDU..ignored");
 
-	return TRUE;
+	return true;
 }
 
 /*
  * Connection oriented mode. We get the SDU and add it to the list.
  */
-static near_bool_t llcp_co_data_recv(struct co_cl_client_data *co_client)
+static bool llcp_co_data_recv(struct co_cl_client_data *co_client)
 {
 	int len;
 
@@ -212,14 +212,14 @@ static near_bool_t llcp_co_data_recv(struct co_cl_client_data *co_client)
 	len = recv(co_client->fd, co_client->miu_buffer, co_client->miu_len, 0);
 	if (len < 0) {
 		near_error("Could not read data %d %s", len, strerror(errno));
-		return FALSE;
+		return false;
 	}
 	return llcp_add_incoming_sdu(co_client, len);
 
 }
 
 /* Common function to initialize client connection data */
-static near_bool_t llcp_common_read(int client_fd, uint32_t adapter_idx,
+static bool llcp_common_read(int client_fd, uint32_t adapter_idx,
 					uint32_t target_idx, near_tag_io_cb cb,
 					near_incoming_cb llcp_read_bytes,
 					const int sock_type)
@@ -266,7 +266,7 @@ error:
 	DBG("Memory allocation failed");
 	g_free(cx_client);
 
-	return FALSE;
+	return false;
 }
 
 /* clean on close */
@@ -279,7 +279,7 @@ static void llcp_validation_close(int client_fd, int err)
 }
 
 /* Connection Oriented: Wrapper for read function */
-static near_bool_t llcp_validation_read_co(int client_fd, uint32_t adapter_idx,
+static bool llcp_validation_read_co(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
 							near_tag_io_cb cb)
 {
@@ -289,7 +289,7 @@ static near_bool_t llcp_validation_read_co(int client_fd, uint32_t adapter_idx,
 }
 
 /* Connection less: Wrapper for read function */
-static near_bool_t llcp_validation_read_cl(int client_fd, uint32_t adapter_idx,
+static bool llcp_validation_read_cl(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
 							near_tag_io_cb cb)
 {

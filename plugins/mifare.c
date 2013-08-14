@@ -430,7 +430,7 @@ static int mifare_read_sector(void *cookie,
 			uint8_t *pmem,		/* memory to fill */
 			uint16_t memsize,	/* remaining free size */
 			uint8_t	sector_id,	/* sector to read */
-			near_bool_t trailer,	/* Add trailer or not */
+			bool trailer,	/* Add trailer or not */
 			near_recv next_func)
 {
 	struct mifare_cookie *mf_ck = cookie;

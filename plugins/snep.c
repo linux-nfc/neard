@@ -49,7 +49,7 @@
  *
  * TODO: check the nfc_data (simple NDEF or complete frame ?)
  *  */
-static near_bool_t snep_default_server_req_put(int client_fd, void *data)
+static bool snep_default_server_req_put(int client_fd, void *data)
 {
 	struct p2p_snep_data *snep_data = data;
 	struct near_device *device;
@@ -65,12 +65,12 @@ static near_bool_t snep_default_server_req_put(int client_fd, void *data)
 			snep_data->target_idx,
 			snep_data->nfc_data,
 			snep_data->nfc_data_length) < 0)
-		return FALSE;
+		return false;
 
 	device = near_device_get_device(snep_data->adapter_idx,
 			snep_data->target_idx);
 	if (device == NULL)
-		return FALSE;
+		return false;
 
 	records = near_ndef_parse_msg(snep_data->nfc_data,
 				snep_data->nfc_data_length, NULL);
@@ -80,7 +80,7 @@ static near_bool_t snep_default_server_req_put(int client_fd, void *data)
 	snep_data->nfc_data_length = 0;
 	snep_data->nfc_data = NULL;
 
-	return TRUE;
+	return true;
 }
 
 /*
@@ -90,7 +90,7 @@ static near_bool_t snep_default_server_req_put(int client_fd, void *data)
  * !!! We check if the incoming NDEF looks like a handover frame,
  * because of Android 4.1.1 ...
  *  */
-static near_bool_t snep_default_server_req_get(int client_fd, void *data)
+static bool snep_default_server_req_get(int client_fd, void *data)
 {
 	struct p2p_snep_data *snep_data = data;
 
@@ -111,11 +111,11 @@ static near_bool_t snep_default_server_req_get(int client_fd, void *data)
 						NEAR_SNEP_ACC_LENGTH_SIZE);
 	}
 
-	return TRUE;
+	return true;
 }
 
 /* This function is a wrapper to push post processing read functions */
-static near_bool_t snep_default_read(int client_fd, uint32_t adapter_idx,
+static bool snep_default_read(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
 							near_tag_io_cb cb)
 {

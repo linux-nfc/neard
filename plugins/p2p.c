@@ -129,7 +129,7 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 							gpointer user_data)
 {
 	struct p2p_data *client_data = user_data;
-	near_bool_t more;
+	bool more;
 
 	DBG("condition 0x%x", condition);
 
@@ -359,7 +359,7 @@ out:
 	return FALSE;
 }
 
-static gboolean check_nval(GIOChannel *io)
+static bool check_nval(GIOChannel *io)
 {
 	struct pollfd fds;
 
@@ -368,9 +368,9 @@ static gboolean check_nval(GIOChannel *io)
 	fds.events = POLLNVAL;
 
 	if (poll(&fds, 1, 0) > 0 && (fds.revents & POLLNVAL))
-		return TRUE;
+		return true;
 
-	return FALSE;
+	return false;
 }
 
 static gboolean p2p_connect_event(GIOChannel *channel, GIOCondition condition,
