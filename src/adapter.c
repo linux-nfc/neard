@@ -142,10 +142,12 @@ static char *rf_mode_to_string(struct near_adapter *adapter)
 
 static void polling_changed(struct near_adapter *adapter)
 {
+	dbus_bool_t polling;
 
+	polling = adapter->polling;
 	near_dbus_property_changed_basic(adapter->path,
 					NFC_ADAPTER_INTERFACE, "Polling",
-					DBUS_TYPE_BOOLEAN, &adapter->polling);
+					DBUS_TYPE_BOOLEAN, &polling);
 }
 
 static void rf_mode_changed(struct near_adapter *adapter)
@@ -347,6 +349,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	const char *rf_mode;
 	DBusMessage *reply;
 	DBusMessageIter array, dict;
+	dbus_bool_t val;
 
 	DBG("conn %p", conn);
 
@@ -358,11 +361,13 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 	near_dbus_dict_open(&array, &dict);
 
+	val = adapter->powered;
 	near_dbus_dict_append_basic(&dict, "Powered",
-				    DBUS_TYPE_BOOLEAN, &adapter->powered);
+					DBUS_TYPE_BOOLEAN, &val);
 
+	val = adapter->polling;
 	near_dbus_dict_append_basic(&dict, "Polling",
-				    DBUS_TYPE_BOOLEAN, &adapter->polling);
+				    DBUS_TYPE_BOOLEAN, &val);
 
 	rf_mode = rf_mode_to_string(adapter);
 	if (rf_mode != NULL)
@@ -403,7 +408,7 @@ static DBusMessage *set_property(DBusConnection *conn,
 	type = dbus_message_iter_get_arg_type(&value);
 
 	if (g_str_equal(name, "Powered") == TRUE) {
-		near_bool_t powered;
+		dbus_bool_t powered;
 
 		if (type != DBUS_TYPE_BOOLEAN)
 			return __near_error_invalid_arguments(msg);
