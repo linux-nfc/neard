@@ -188,6 +188,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	const char *protocol, *type;
 	DBusMessage *reply;
 	DBusMessageIter array, dict;
+	dbus_bool_t readonly;
 
 	DBG("conn %p", conn);
 
@@ -209,8 +210,9 @@ static DBusMessage *get_properties(DBusConnection *conn,
 		near_dbus_dict_append_basic(&dict, "Protocol",
 					DBUS_TYPE_STRING, &protocol);
 
+	readonly = tag->readonly;
 	near_dbus_dict_append_basic(&dict, "ReadOnly",
-					DBUS_TYPE_BOOLEAN, &tag->readonly);
+					DBUS_TYPE_BOOLEAN, &readonly);
 
 	near_dbus_dict_append_array(&dict, "Records",
 				DBUS_TYPE_OBJECT_PATH, append_records, tag);
