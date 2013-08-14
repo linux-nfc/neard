@@ -61,7 +61,7 @@ static int pcap_file_write_packet(guint8 *data, guint32 len,
 	guint32 val32;
 	guint32 incl_len;
 
-	if (pcap_file == NULL || data == NULL || len == 0)
+	if (!pcap_file || !data || len == 0)
 		return -EINVAL;
 
 	val32 = timestamp->tv_sec;
@@ -141,7 +141,7 @@ exit_err:
 
 static void pcap_file_cleanup(void)
 {
-	if (pcap_file != NULL) {
+	if (pcap_file) {
 		fclose(pcap_file);
 		pcap_file = NULL;
 	}
@@ -359,7 +359,7 @@ int sniffer_init(void)
 
 	g_io_channel_unref(gio_channel);
 
-	if (opts.pcap_filename != NULL) {
+	if (opts.pcap_filename) {
 		err = pcap_file_init(opts.pcap_filename);
 		if (err)
 			goto exit;

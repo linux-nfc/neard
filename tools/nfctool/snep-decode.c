@@ -261,7 +261,7 @@ int snep_print_pdu(struct sniffer_packet *packet)
 
 	frag = g_hash_table_lookup(snep_frag_hash, GINT_TO_POINTER(frag_index));
 
-	if (frag != NULL) {
+	if (frag) {
 		/* Incoming or outgoing fragmented message */
 		err = snep_frag_append(frag, packet);
 
@@ -362,7 +362,7 @@ exit:
 
 void snep_decode_cleanup(void)
 {
-	if (snep_frag_hash != NULL)
+	if (snep_frag_hash)
 		g_hash_table_destroy(snep_frag_hash);
 }
 

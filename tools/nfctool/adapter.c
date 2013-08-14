@@ -82,7 +82,7 @@ void adapter_print_info(struct nfc_adapter *adapter)
 {
 	gchar *rf_mode_str;
 
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	printf("nfc%d:\n", adapter->idx);

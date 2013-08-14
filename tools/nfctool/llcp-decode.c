@@ -197,7 +197,7 @@ static void llcp_check_cc(struct sniffer_packet *packet)
 	/* Do we have a CONNECT pending for this SAP ?*/
 	sn = g_hash_table_lookup(connection_hash,
 					GINT_TO_POINTER(dsap));
-	if (sn == NULL)
+	if (!sn)
 		return;
 
 	if (strcmp(sn, "urn:nfc:sn:handover") == 0)
@@ -517,7 +517,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 	gchar *direction_color;
 	int err;
 
-	if (timestamp == NULL)
+	if (!timestamp)
 		return -EINVAL;
 
 	if (!timerisset(&start_timestamp))

@@ -67,7 +67,7 @@ static int nfctool_start_poll(void)
 
 	adapter = adapter_get(opts.adapter_idx);
 
-	if (adapter == NULL) {
+	if (!adapter) {
 		print_error("Invalid adapter index: %d", opts.adapter_idx);
 
 		return -ENODEV;
@@ -231,7 +231,7 @@ static int nfctool_targets_found(guint32 adapter_idx)
 
 	adapter = adapter_get(adapter_idx);
 
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	err = nl_get_targets(adapter);
@@ -287,7 +287,7 @@ static void nfctool_print_and_remove_snl(struct nfc_snl *sdres,
 		elem = g_slist_find_custom(opts.snl_list, sdres->uri,
 					   (GCompareFunc)g_strcmp0);
 
-		if (elem != NULL) {
+		if (elem) {
 			g_free(elem->data);
 			opts.snl_list = g_slist_delete_link(opts.snl_list,
 							    elem);
@@ -306,7 +306,7 @@ static int nfctool_snl_cb(guint8 cmd, guint32 idx, gpointer data)
 
 	printf("\n");
 
-	if (opts.snl_list == NULL) {
+	if (!opts.snl_list) {
 		opts.snl = false;
 		nfctool_quit(false);
 	}
@@ -380,7 +380,7 @@ static bool opt_parse_poll_arg(const gchar *option_name, const gchar *value,
 
 	opts.poll_mode = POLLING_MODE_INITIATOR;
 
-	if (value != NULL) {
+	if (value) {
 		if (*value == 't' || *value == 'T')
 			opts.poll_mode = POLLING_MODE_TARGET;
 		else if (*value == 'b' || *value == 'B')
@@ -402,10 +402,10 @@ static bool opt_parse_set_param_arg(const gchar *option_name,
 	params = g_strsplit(value, ",", -1);
 
 	i = 0;
-	while (params[i] != NULL) {
+	while (params[i]) {
 		keyval = g_strsplit(params[i], "=", 2);
 
-		if (keyval[0] == NULL || keyval[1] == NULL) {
+		if (!keyval[0] || !keyval[1]) {
 			result = false;
 			goto exit;
 		}
@@ -472,7 +472,7 @@ static bool opt_parse_show_timestamp_arg(const gchar *option_name,
 					     const gchar *value,
 					     gpointer data, GError **error)
 {
-	if (value != NULL && (*value == 'a' || *value == 'A'))
+	if (value && (*value == 'a' || *value == 'A'))
 		opts.show_timestamp = SNIFFER_SHOW_TIMESTAMP_ABS;
 	else
 		opts.show_timestamp = SNIFFER_SHOW_TIMESTAMP_DELTA;
@@ -556,7 +556,7 @@ static int nfctool_options_parse(int argc, char **argv)
 		goto done;
 	}
 
-	if (opts.device_name != NULL) {
+	if (opts.device_name) {
 		if (strncmp("nfc", opts.device_name, 3) != 0) {
 			print_error("Invalid device name: %s",
 							opts.device_name);
@@ -622,10 +622,10 @@ static void nfctool_main_loop_start(void)
 
 static void nfctool_options_cleanup(void)
 {
-	if (opts.device_name != NULL)
+	if (opts.device_name)
 		g_free(opts.device_name);
 
-	if (opts.pcap_filename != NULL)
+	if (opts.pcap_filename)
 		g_free(opts.pcap_filename);
 
 	g_slist_free_full(opts.snl_list, g_free);
@@ -633,7 +633,7 @@ static void nfctool_options_cleanup(void)
 
 static void nfctool_main_loop_clean(void)
 {
-	if (main_loop != NULL)
+	if (main_loop)
 		g_main_loop_unref(main_loop);
 }
 

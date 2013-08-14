@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 	}
 	
 	ndef = near_ndef_prepare_text_record("UTF-8", "en", "Hello world");
-	if (ndef == NULL) {
+	if (!ndef) {
 		close(fd);
 		near_error("Could not build NDEF");
 		return -1;
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 
 	frame_length = sizeof(struct p2p_snep_req_frame) + ndef->length;
 	frame = g_try_malloc0(frame_length);
-	if (frame == NULL) {
+	if (!frame) {
 		close(fd);
 		near_error("Could not allocate SNEP frame");
 		return -1;

@@ -123,7 +123,7 @@ static int nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
 	DBG("");
 
 	cb = nl_cb_alloc(NL_CB_DEFAULT);
-	if (cb == NULL)
+	if (!cb)
 		return -ENOMEM;
 
 	err = nl_send_auto_complete(sock, msg);
@@ -140,7 +140,7 @@ static int nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
 	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, nl_finish_handler, &done);
 	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, nl_ack_handler, &done);
 
-	if (rx_handler != NULL)
+	if (rx_handler)
 		nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, rx_handler, data);
 
 	while (err == 0 && done == 0)
@@ -200,7 +200,7 @@ static int nl_get_multicast_id(struct nl_sock *sock, const char *family,
 	DBG("");
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	ctrlid = genl_ctrl_resolve(sock, "nlctrl");
@@ -242,7 +242,7 @@ static int nl_get_params_handler(struct nl_msg *n, void *arg)
 
 	genlmsg_parse(nlh, 0, attrs, NFC_ATTR_MAX, NULL);
 
-	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL) {
+	if (!attrs[NFC_ATTR_DEVICE_INDEX]) {
 		nl_perror(NLE_MISSING_ATTR, "NFC_CMD_GET_PARAMS");
 		return NL_STOP;
 	}
@@ -268,16 +268,16 @@ int nl_get_params(struct nfc_adapter *adapter)
 
 	DBG("");
 
-	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+	if (!nfc_state || nfc_state->nfc_id < 0)
 		return -ENODEV;
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  0, NFC_CMD_LLC_GET_PARAMS, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
@@ -307,16 +307,16 @@ int nl_set_params(struct nfc_adapter *adapter, gint32 lto, gint32 rw,
 	if (lto < 0 && rw < 0 && miux < 0)
 		return -EINVAL;
 
-	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+	if (!nfc_state || nfc_state->nfc_id < 0)
 		return -ENODEV;
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  0, NFC_CMD_LLC_SET_PARAMS, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
@@ -373,16 +373,16 @@ int nl_get_targets(struct nfc_adapter *adapter)
 
 	DBG("");
 
-	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+	if (!nfc_state || nfc_state->nfc_id < 0)
 		return -ENODEV;
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  NLM_F_DUMP, NFC_CMD_GET_TARGET, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
@@ -420,20 +420,20 @@ static int nl_get_devices_handler(struct nl_msg *n, void *arg)
 
 	genlmsg_parse(nlh, 0, attrs, NFC_ATTR_MAX, NULL);
 
-	if (attrs[NFC_ATTR_DEVICE_INDEX] == NULL) {
+	if (!attrs[NFC_ATTR_DEVICE_INDEX]) {
 		nl_perror(NLE_MISSING_ATTR, "NFC_CMD_GET_DEVICE");
 		return NL_STOP;
 	}
 
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 
-	if (attrs[NFC_ATTR_PROTOCOLS] != NULL)
+	if (attrs[NFC_ATTR_PROTOCOLS])
 		protocols = nla_get_u32(attrs[NFC_ATTR_PROTOCOLS]);
 
-	if (attrs[NFC_ATTR_RF_MODE] != NULL)
+	if (attrs[NFC_ATTR_RF_MODE])
 		rf_mode = nla_get_u8(attrs[NFC_ATTR_RF_MODE]);
 
-	if (attrs[NFC_ATTR_DEVICE_POWERED] != NULL)
+	if (attrs[NFC_ATTR_DEVICE_POWERED])
 		powered = nla_get_u8(attrs[NFC_ATTR_DEVICE_POWERED]);
 
 	adapter_add(idx, protocols, powered, rf_mode);
@@ -449,16 +449,16 @@ int nl_get_devices(void)
 
 	DBG("");
 
-	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+	if (!nfc_state || nfc_state->nfc_id < 0)
 		return -ENODEV;
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  NLM_F_DUMP, NFC_CMD_GET_DEVICE, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto out;
 	}
@@ -483,12 +483,12 @@ int nl_send_dep_link_up(guint32 idx, guint32 target_idx)
 	DBG("");
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  NLM_F_REQUEST, NFC_CMD_DEP_LINK_UP, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
@@ -525,12 +525,12 @@ int nl_start_poll(struct nfc_adapter *adapter, guint8 mode)
 	DBG("IM protos 0x%x TM protos 0x%x", im_protocols, tm_protocols);
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  NLM_F_REQUEST, NFC_CMD_START_POLL, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
@@ -566,7 +566,7 @@ int nl_set_powered(struct nfc_adapter *adapter, bool powered)
 	DBG("");
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	if (powered)
@@ -576,7 +576,7 @@ int nl_set_powered(struct nfc_adapter *adapter, bool powered)
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			NLM_F_REQUEST, cmd, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
@@ -603,16 +603,16 @@ int nl_send_sdreq(struct nfc_adapter *adapter, GSList *uris)
 
 	DBG("");
 
-	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+	if (!nfc_state || nfc_state->nfc_id < 0)
 		return -ENODEV;
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
+	if (!msg)
 		return -ENOMEM;
 
 	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
 			  NLM_F_REQUEST, NFC_CMD_LLC_SDREQ, NFC_GENL_VERSION);
-	if (hdr == NULL) {
+	if (!hdr) {
 		err = -EINVAL;
 		goto nla_put_failure;
 	}
@@ -620,17 +620,17 @@ int nl_send_sdreq(struct nfc_adapter *adapter, GSList *uris)
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter->idx);
 
 	sdp_attr = nla_nest_start(msg, NFC_ATTR_LLC_SDP);
-	if (sdp_attr == NULL) {
+	if (!sdp_attr) {
 		err = -ENOMEM;
 		goto nla_put_failure;
 	}
 
 	i = 1;
 	uri = uris;
-	while (uri != NULL) {
+	while (uri) {
 		uri_attr = nla_nest_start(msg, i);
 
-		if (uri_attr == NULL) {
+		if (!uri_attr) {
 			err = -ENOMEM;
 			goto nla_put_failure;
 		}
@@ -675,8 +675,8 @@ static int nl_nfc_send_sdres_event(guint32 idx, struct nlattr *sdres_attr,
 			continue;
 		}
 
-		if (sdp_attrs[NFC_SDP_ATTR_URI] == NULL ||
-		    sdp_attrs[NFC_SDP_ATTR_SAP] == NULL) {
+		if (!sdp_attrs[NFC_SDP_ATTR_URI] ||
+		    !sdp_attrs[NFC_SDP_ATTR_SAP]) {
 			print_error("Missing attribute in reply");
 			continue;
 		}
@@ -716,13 +716,13 @@ static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 	nla_parse(attr, NFC_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		genlmsg_attrlen(gnlh, 0), NULL);
 
-	if (attr[NFC_ATTR_DEVICE_INDEX] != NULL)
+	if (attr[NFC_ATTR_DEVICE_INDEX])
 		idx = nla_get_u32(attr[NFC_ATTR_DEVICE_INDEX]);
 
-	if (handlers != NULL)
+	if (handlers)
 		cb = g_hash_table_lookup(handlers, GINT_TO_POINTER(cmd));
 
-	if (cb == NULL)
+	if (!cb)
 		return NL_SKIP;
 
 	switch (cmd) {
@@ -749,7 +749,7 @@ static gboolean nl_gio_handler(GIOChannel *channel,
 		return FALSE;
 
 	cb = nl_cb_alloc(NL_CB_VERBOSE);
-	if (cb == NULL)
+	if (!cb)
 		return TRUE;
 
 	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, nl_no_seq_check_cb, NULL);
@@ -766,7 +766,7 @@ void nl_add_event_handler(guint8 cmd, nfc_event_cb_t cb)
 {
 	guint32 c = cmd;
 
-	if (handlers != NULL)
+	if (handlers)
 		g_hash_table_replace(handlers, GINT_TO_POINTER(c), cb);
 }
 
@@ -789,7 +789,7 @@ void nl_cleanup(void)
 		nfc_state = NULL;
 	}
 
-	if (handlers != NULL)
+	if (handlers)
 		g_hash_table_destroy(handlers);
 }
 
@@ -803,14 +803,14 @@ int nl_init(void)
 	nfc_state = g_malloc0(sizeof(struct nlnfc_state));
 
 	nfc_state->cmd_sock = nl_socket_alloc();
-	if (nfc_state->cmd_sock == NULL) {
+	if (!nfc_state->cmd_sock) {
 		print_error("Failed to allocate NFC netlink socket");
 		err = -ENOMEM;
 		goto exit_err;
 	}
 
 	nfc_state->event_sock = nl_socket_alloc();
-	if (nfc_state->event_sock == NULL) {
+	if (!nfc_state->event_sock) {
 		print_error("Failed to allocate NFC netlink socket");
 		err = -ENOMEM;
 		goto exit_err;

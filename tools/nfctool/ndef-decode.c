@@ -117,7 +117,7 @@ static void ndef_print_bt_oob(guint8 *oob_data, guint32 oob_length)
 		case EIR_NAME_SHORT:
 		case EIR_NAME_COMPLETE:
 			local_name = g_try_malloc0(eir_length);
-			if (local_name == NULL)
+			if (!local_name)
 				break;
 
 			g_snprintf(local_name, eir_length,
@@ -176,7 +176,7 @@ static void ndef_print_wsc_oob(guint8 *oob_data, guint32 oob_length)
 
 		case DE_SSID:
 			ssid = g_try_malloc0(de_length + 1);
-			if (ssid == NULL)
+			if (!ssid)
 				break;
 
 			g_snprintf(ssid, de_length + 1,
@@ -188,7 +188,7 @@ static void ndef_print_wsc_oob(guint8 *oob_data, guint32 oob_length)
 
 		case DE_NETWORK_KEY:
 			passphrase = g_try_malloc0(de_length + 1);
-			if (passphrase == NULL)
+			if (!passphrase)
 				break;
 
 			g_snprintf(passphrase, de_length + 1,
@@ -326,7 +326,7 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 			switch (tnf) {
 			case RECORD_TNF_MIME:
 				mime_string = g_try_malloc(type_len + 1);
-				if (mime_string != NULL) {
+				if (mime_string) {
 					g_snprintf(mime_string,
 						type_len + 1, "%s", type);
 
@@ -351,7 +351,7 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 		}
 
 		if (payload) {
-			if (mime_string != NULL) {
+			if (mime_string) {
 				if (strcmp(mime_string,
 				"application/vnd.bluetooth.ep.oob") == 0)
 					ndef_print_bt_oob(payload, payload_len);
