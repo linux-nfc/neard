@@ -81,14 +81,14 @@ static bool is_enabled(struct near_debug_desc *desc)
 {
 	int i;
 
-	if (enabled == NULL)
+	if (!enabled)
 		return false;
 
-	for (i = 0; enabled[i] != NULL; i++) {
-		if (desc->name != NULL && g_pattern_match_simple(enabled[i],
+	for (i = 0; enabled[i]; i++) {
+		if (desc->name && g_pattern_match_simple(enabled[i],
 							desc->name))
 			return true;
-		if (desc->file != NULL && g_pattern_match_simple(enabled[i],
+		if (desc->file && g_pattern_match_simple(enabled[i],
 							desc->file))
 			return true;
 	}
@@ -102,13 +102,13 @@ int __near_log_init(const char *debug, bool detach)
 	struct near_debug_desc *desc;
 	const char *name = NULL, *file = NULL;
 
-	if (debug != NULL)
+	if (debug)
 		enabled = g_strsplit_set(debug, ":, ", 0);
 
 	for (desc = __start___debug; desc < __stop___debug; desc++) {
-		if (file != NULL || name != NULL) {
+		if (file || name) {
 			if (g_strcmp0(desc->file, file) == 0) {
-				if (desc->name == NULL)
+				if (!desc->name)
 					desc->name = name;
 			} else
 				file = NULL;

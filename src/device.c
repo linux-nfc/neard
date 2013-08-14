@@ -81,7 +81,7 @@ struct near_device *near_device_get_device(uint32_t adapter_idx,
 
 	path = g_strdup_printf("%s/nfc%d/device%d", NFC_PATH,
 					adapter_idx, target_idx);
-	if (path == NULL)
+	if (!path)
 		return NULL;
 
 	device = g_hash_table_lookup(device_hash, path);
@@ -113,7 +113,7 @@ static void append_records(DBusMessageIter *iter, void *user_data)
 		char *path;
 
 		path = __near_ndef_record_get_path(record);
-		if (path == NULL)
+		if (!path)
 			continue;
 
 		dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
@@ -131,7 +131,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	DBG("conn %p", conn);
 
 	reply = dbus_message_new_method_return(msg);
-	if (reply == NULL)
+	if (!reply)
 		return NULL;
 
 	dbus_message_iter_init_append(reply, &array);
@@ -165,12 +165,12 @@ static void push_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	conn = near_dbus_get_connection();
 	device = near_device_get_device(adapter_idx, target_idx);
 
-	if (conn == NULL || device == NULL)
+	if (!conn || !device)
 		return;
 
 	if (status != 0) {
 		reply = __near_error_failed(device->push_msg, -status);
-		if (reply != NULL)
+		if (reply)
 			g_dbus_send_message(conn, reply);
 	} else {
 		g_dbus_send_reply(conn, device->push_msg, DBUS_TYPE_INVALID);
@@ -251,13 +251,13 @@ static DBusMessage *push_ndef(DBusConnection *conn,
 	device->push_msg = dbus_message_ref(msg);
 
 	service_name = sn_from_message(msg);
-	if (service_name == NULL) {
+	if (!service_name) {
 		err = -EINVAL;
 		goto error;
 	}
 
 	ndef = __ndef_build_from_message(msg);
-	if (ndef == NULL) {
+	if (!ndef) {
 		err = -EINVAL;
 		goto error;
 	}
@@ -299,10 +299,10 @@ void __near_device_remove(struct near_device *device)
 
 	DBG("path %s", device->path);
 
-	if (g_hash_table_lookup(device_hash, device->path) == NULL)
+	if (!g_hash_table_lookup(device_hash, device->path))
 		return;
 
-	if (device->push_msg != NULL)
+	if (device->push_msg)
 		push_cb(device->adapter_idx, device->target_idx, EIO);
 
 	g_dbus_unregister_interface(connection, device->path,
@@ -317,15 +317,15 @@ int near_device_add_data(uint32_t adapter_idx, uint32_t target_idx,
 	struct near_device *device;
 
 	device = near_device_get_device(adapter_idx, target_idx);
-	if (device == NULL)
+	if (!device)
 		return -ENODEV;
 
 	device->data_length = data_length;
 	device->data = g_try_malloc0(data_length);
-	if (device->data == NULL)
+	if (!device->data)
 		return -ENOMEM;
 
-	if (data != NULL)
+	if (data)
 		memcpy(device->data, data, data_length);
 
 	return 0;
@@ -350,7 +350,7 @@ int near_device_add_records(struct near_device *device, GList *records,
 					NFC_PATH, device->adapter_idx,
 					device->target_idx, device->n_records);
 
-		if (path == NULL)
+		if (!path)
 			continue;
 
 		__near_ndef_record_register(record, path);
@@ -366,7 +366,7 @@ int near_device_add_records(struct near_device *device, GList *records,
 					DBUS_TYPE_OBJECT_PATH, append_records,
 					device);
 
-	if (cb != NULL)
+	if (cb)
 		cb(device->adapter_idx, device->target_idx, status);
 
 	g_list_free(records);
@@ -381,16 +381,16 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 	char *path;
 
 	device = near_device_get_device(adapter_idx, target_idx);
-	if (device != NULL)
+	if (device)
 		return NULL;
 
 	device = g_try_malloc0(sizeof(struct near_device));
-	if (device == NULL)
+	if (!device)
 		return NULL;
 
 	device->path = g_strdup_printf("%s/nfc%d/device%d", NFC_PATH,
 					adapter_idx, target_idx);
-	if (device->path == NULL) {
+	if (!device->path) {
 		g_free(device);
 		return NULL;
 	}
@@ -404,7 +404,7 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 	}
 
 	path = g_strdup(device->path);
-	if (path == NULL) {
+	if (!path) {
 		g_free(device);
 		return NULL;
 	}
@@ -471,7 +471,7 @@ int near_device_driver_register(struct near_device_driver *driver)
 {
 	DBG("");
 
-	if (driver->listen == NULL)
+	if (!driver->listen)
 		return -EINVAL;
 
 	driver_list = g_slist_insert_sorted(driver_list, driver, cmp_prio);

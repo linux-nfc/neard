@@ -44,7 +44,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	DBG("conn %p", conn);
 
 	reply = dbus_message_new_method_return(msg);
-	if (reply == NULL)
+	if (!reply)
 		return NULL;
 
 	dbus_message_iter_init_append(reply, &array);
@@ -69,11 +69,11 @@ int __near_manager_adapter_add(uint32_t idx, const char *name,
 	DBG("idx %d", idx);
 
 	adapter = __near_adapter_create(idx, name, protocols, powered);
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENOMEM;
 
 	path = __near_adapter_get_path(adapter);
-	if (path == NULL) {
+	if (!path) {
 		__near_adapter_destroy(adapter);
 		return -EINVAL;
 	}
@@ -104,11 +104,11 @@ void __near_manager_adapter_remove(uint32_t idx)
 	DBG("idx %d", idx);
 
 	adapter = __near_adapter_get(idx);
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	path = __near_adapter_get_path(adapter);
-	if (path == NULL)
+	if (!path)
 		return;
 
 

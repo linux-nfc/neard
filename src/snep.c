@@ -120,7 +120,7 @@ void near_snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
 	GList *records;
 	struct near_ndef_message *msg = NULL;
 
-	if (ndef == NULL)
+	if (!ndef)
 		return;
 
 	/*
@@ -134,7 +134,7 @@ void near_snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
 
 	/* Parse the incoming frame */
 	records = near_ndef_parse_msg(ndef, nfc_data_length, &msg);
-	if (records == NULL)
+	if (!records)
 		return;
 
 	near_ndef_records_free(records);
@@ -203,7 +203,7 @@ static void free_snep_core_fragment(gpointer data)
 {
 	struct snep_fragment *fragment = data;
 
-	if (fragment != NULL)
+	if (fragment)
 		g_free(fragment->data);
 
 	g_free(fragment);
@@ -216,7 +216,7 @@ static void free_snep_core_push_data(gpointer userdata, int status)
 
 	DBG("");
 
-	if (userdata == NULL)
+	if (!userdata)
 		return;
 
 	data = (struct p2p_snep_put_req_data *) userdata;
@@ -240,7 +240,7 @@ static int snep_core_send_fragment(struct p2p_snep_put_req_data *req)
 
 	DBG("");
 
-	if (req == NULL || req->fragments == NULL ||
+	if (!req || !req->fragments ||
 		g_slist_length(req->fragments) == 0)
 		return -EINVAL;
 
@@ -292,7 +292,7 @@ static int snep_core_push_response(struct p2p_snep_put_req_data *req)
 		/* Get the incoming data */
 		ndef_len = frame.length;
 		ndef = g_try_malloc0(ndef_len);
-		if (ndef == NULL)
+		if (!ndef)
 			return -ENOMEM;
 
 		bytes_recv = recv(req->fd, ndef, ndef_len, 0);
@@ -357,7 +357,7 @@ static int snep_core_push_prepare_fragments(struct p2p_snep_put_req_data *req,
 	while (ndef->offset < ndef->length) {
 
 		fragment = g_try_malloc0(sizeof(struct snep_fragment));
-		if (fragment == NULL)
+		if (!fragment)
 			return -ENOMEM;
 
 		if (max_fragment_len <= (ndef->length - ndef->offset))
@@ -366,7 +366,7 @@ static int snep_core_push_prepare_fragments(struct p2p_snep_put_req_data *req,
 			fragment->len = ndef->length - ndef->offset;
 
 		fragment->data = g_try_malloc0(fragment->len);
-		if (fragment->data == NULL) {
+		if (!fragment->data) {
 			g_free(fragment);
 			return -ENOMEM;
 		}
@@ -394,7 +394,7 @@ static bool snep_core_process_request(int client_fd,
 	switch (snep_data->request) {
 	case NEAR_SNEP_REQ_PUT:
 		DBG("NEAR_SNEP_REQ_PUT");
-		if (req_put != NULL)
+		if (req_put)
 			ret = (*req_put)(client_fd, snep_data);
 		else {
 			near_snep_core_response_noinfo(client_fd,
@@ -409,7 +409,7 @@ static bool snep_core_process_request(int client_fd,
 
 	case NEAR_SNEP_REQ_GET:
 		DBG("NEAR_SNEP_REQ_GET");
-		if (req_get != NULL)
+		if (req_get)
 			ret =  (*req_get)(client_fd, snep_data);
 		else {
 			near_snep_core_response_noinfo(client_fd,
@@ -418,7 +418,7 @@ static bool snep_core_process_request(int client_fd,
 		}
 
 		/* If there's some fragments, don't delete before the CONT */
-		if (snep_data->req == NULL) {
+		if (!snep_data->req) {
 			/* free and leave */
 			DBG("Clean Table");
 			g_hash_table_remove(snep_client_hash,
@@ -428,7 +428,7 @@ static bool snep_core_process_request(int client_fd,
 
 	case NEAR_SNEP_REQ_REJECT:
 		DBG("NEAR_SNEP_REQ_REJECT");
-		if (snep_data->req->fragments == NULL) {
+		if (!snep_data->req->fragments) {
 			near_error("error: NEAR_SNEP_REQ_REJECT but no fragment");
 			ret = false;
 		}
@@ -451,13 +451,13 @@ static bool snep_core_process_request(int client_fd,
 		 * remaining fragments...
 		 */
 
-		if (snep_data->req == NULL) {
+		if (!snep_data->req) {
 			ret = true;
 			break;
 		}
 
 		DBG("NEAR_SNEP_REQ_CONTINUE");
-		if (snep_data->req->fragments == NULL) {
+		if (!snep_data->req->fragments) {
 			near_error("error: NEAR_SNEP_REQ_CONTINUE but no fragment");
 			ret = false;
 			goto leave_cont;
@@ -531,7 +531,7 @@ bool near_snep_core_read(int client_fd,
 	 * If snep data is already there, and there are more bytes to read
 	 * we just go ahead and read more fragments from the client.
 	 */
-	if (snep_data != NULL &&
+	if (snep_data &&
 			snep_data->nfc_data_length !=
 					snep_data->nfc_data_current_length) {
 		ret = snep_core_read_ndef(client_fd, snep_data);
@@ -573,21 +573,21 @@ bool near_snep_core_read(int client_fd,
 	 * we should just process a CONTINUE frame and send the fragments
 	 * back to the client. This will be done from snep_core_process_request().
 	 */
-	if (snep_data != NULL) {
+	if (snep_data) {
 		snep_data->request = frame.request;
 		goto process_request;
 	}
 
 	/* This is a new request from the client */
 	snep_data = g_try_malloc0(sizeof(struct p2p_snep_data));
-	if (snep_data == NULL)
+	if (!snep_data)
 		return false;
 
 	/* the whole frame length */
 	ndef_length = GINT_FROM_BE(frame.length);
 
 	snep_data->nfc_data = g_try_malloc0(ndef_length + TLV_SIZE);
-	if (snep_data->nfc_data == NULL) {
+	if (!snep_data->nfc_data) {
 		g_free(snep_data);
 		return false;
 	}
@@ -658,7 +658,7 @@ static int near_snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 
 	fragment = g_try_malloc0(sizeof(struct snep_fragment));
 
-	if (fragment == NULL) {
+	if (!fragment) {
 		err = -ENOMEM;
 		goto error;
 	}
@@ -672,7 +672,7 @@ static int near_snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 	}
 
 	fragment->data = g_try_malloc0(fragment->len);
-	if (fragment->data == NULL) {
+	if (!fragment->data) {
 		g_free(fragment);
 		err = ENOMEM;
 		goto error;
@@ -716,7 +716,7 @@ static int near_snep_core_response(int fd, struct p2p_snep_put_req_data *req,
 	return 0;
 
 error:
-	if (req != NULL)
+	if (req)
 		free_snep_core_push_data(req, err);
 
 	return err;
@@ -737,18 +737,18 @@ void near_snep_core_response_with_info(int client_fd, uint8_t response,
 	/* get the snep data */
 	snep_data = g_hash_table_lookup(snep_client_hash,
 						GINT_TO_POINTER(client_fd));
-	if (snep_data == NULL) {
+	if (!snep_data) {
 		DBG("snep_data not found");
 		goto done;
 	}
 
 	/* Prepare the ndef struct */
 	ndef = g_try_malloc0(sizeof(struct near_ndef_message));
-	if (ndef == NULL)
+	if (!ndef)
 		goto done;
 
 	ndef->data = g_try_malloc0(length);
-	if (ndef->data == NULL) {
+	if (!ndef->data) {
 		g_free(ndef);
 		ndef = NULL;
 		goto done;
@@ -763,7 +763,7 @@ void near_snep_core_response_with_info(int client_fd, uint8_t response,
 
 	/* Now prepare req struct */
 	req = g_try_malloc0(sizeof(struct p2p_snep_put_req_data));
-	if (req == NULL)
+	if (!req)
 		goto done;
 
 	/* Prepare the callback */
@@ -779,14 +779,14 @@ void near_snep_core_response_with_info(int client_fd, uint8_t response,
 
 done:
 	/* If no fragment, free mem */
-	if (req != NULL) {
+	if (req) {
 		if (req->fragments == 0) {
 			g_free(req);
 			snep_data->req = NULL;
 		}
 	}
 
-	if (ndef != NULL)
+	if (ndef)
 		g_free(ndef->data);
 	g_free(ndef);
 }
@@ -804,7 +804,7 @@ int near_snep_core_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	req = g_try_malloc0(sizeof(struct p2p_snep_put_req_data));
-	if (req == NULL) {
+	if (!req) {
 		err = -ENOMEM;
 		goto error;
 	}
@@ -845,7 +845,7 @@ void near_snep_core_close(int client_fd, int err)
 
 	snep_data = g_hash_table_lookup(snep_client_hash,
 					GINT_TO_POINTER(client_fd));
-	if (snep_data == NULL)
+	if (!snep_data)
 		return;
 
 	snep_data->cb(snep_data->adapter_idx, snep_data->target_idx, err);

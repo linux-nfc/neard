@@ -154,7 +154,7 @@ static void rf_mode_changed(struct near_adapter *adapter)
 {
 	const char *rf_mode = rf_mode_to_string(adapter);
 
-	if (rf_mode == NULL)
+	if (!rf_mode)
 		return;
 
 	near_dbus_property_changed_basic(adapter->path,
@@ -209,7 +209,7 @@ static void append_path(gpointer key, gpointer value, gpointer user_data)
 
 	DBG("%s", adapter->path);
 
-	if (adapter->path == NULL)
+	if (!adapter->path)
 		return;
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
@@ -266,7 +266,7 @@ static void append_tag_path(gpointer key, gpointer value, gpointer user_data)
 	const char *tag_path;
 
 	tag_path = __near_tag_get_path(tag);
-	if (tag_path == NULL)
+	if (!tag_path)
 		return;
 
 	DBG("%s", tag_path);
@@ -290,7 +290,7 @@ static void append_device_path(gpointer key, gpointer value, gpointer user_data)
 	const char *device_path;
 
 	device_path = __near_device_get_path(device);
-	if (device_path == NULL)
+	if (!device_path)
 		return;
 
 	DBG("%s", device_path);
@@ -316,7 +316,7 @@ void __near_adapter_tags_changed(uint32_t adapter_idx)
 
 	adapter = g_hash_table_lookup(adapter_hash,
 					GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	near_dbus_property_changed_array(adapter->path,
@@ -333,7 +333,7 @@ void __near_adapter_devices_changed(uint32_t adapter_idx)
 
 	adapter = g_hash_table_lookup(adapter_hash,
 					GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	near_dbus_property_changed_array(adapter->path,
@@ -354,7 +354,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	DBG("conn %p", conn);
 
 	reply = dbus_message_new_method_return(msg);
-	if (reply == NULL)
+	if (!reply)
 		return NULL;
 
 	dbus_message_iter_init_append(reply, &array);
@@ -370,7 +370,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 				    DBUS_TYPE_BOOLEAN, &val);
 
 	rf_mode = rf_mode_to_string(adapter);
-	if (rf_mode != NULL)
+	if (rf_mode)
 		near_dbus_dict_append_basic(&dict, "Mode",
 						DBUS_TYPE_STRING, &rf_mode);
 
@@ -498,11 +498,11 @@ static gboolean check_presence(gpointer user_data)
 
 	DBG("");
 
-	if (adapter == NULL)
+	if (!adapter)
 		return FALSE;
 
 	tag = adapter->tag_link;
-	if (tag == NULL)
+	if (!tag)
 		goto out_err;
 
 	err = __near_tag_check_presence(tag, tag_present_cb);
@@ -527,7 +527,7 @@ static gboolean dep_timer(gpointer user_data)
 
 	DBG("");
 
-	if (adapter == NULL)
+	if (!adapter)
 		return FALSE;
 
 	adapter_start_poll(adapter);
@@ -544,7 +544,7 @@ static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
 
 	adapter = g_hash_table_lookup(adapter_hash,
 					GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	if (status < 0) {
@@ -571,7 +571,7 @@ void __near_adapter_start_check_presence(uint32_t adapter_idx,
 
 	adapter = g_hash_table_lookup(adapter_hash,
 			GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	adapter->presence_timeout =
@@ -588,7 +588,7 @@ void __near_adapter_stop_check_presence(uint32_t adapter_idx,
 
 	adapter = g_hash_table_lookup(adapter_hash,
 			GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	if (adapter->presence_timeout > 0)
@@ -623,11 +623,11 @@ struct near_adapter *__near_adapter_create(uint32_t idx,
 	bool powered_setting;
 
 	adapter = g_try_malloc0(sizeof(struct near_adapter));
-	if (adapter == NULL)
+	if (!adapter)
 		return NULL;
 
 	adapter->name = g_strdup(name);
-	if (adapter->name == NULL) {
+	if (!adapter->name) {
 		g_free(adapter);
 		return NULL;
 	}
@@ -681,7 +681,7 @@ int __near_adapter_set_dep_state(uint32_t idx, bool dep)
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	adapter->dep_up = dep;
@@ -711,7 +711,7 @@ bool __near_adapter_get_dep_state(uint32_t idx)
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return false;
 
 	return adapter->dep_up;
@@ -723,7 +723,7 @@ int __near_adapter_add(struct near_adapter *adapter)
 
 	DBG("%s", adapter->path);
 
-	if (g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx)) != NULL)
+	if (g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx)))
 		return -EEXIST;
 
 	g_hash_table_insert(adapter_hash, GINT_TO_POINTER(idx), adapter);
@@ -756,7 +756,7 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	adapter = g_hash_table_lookup(adapter_hash,
 					GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	if (status < 0) {
@@ -783,11 +783,11 @@ static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
 
 	adapter = g_hash_table_lookup(adapter_hash,
 					GINT_TO_POINTER(adapter_idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return;
 
 	if (status < 0) {
-		if (adapter->device_link != NULL) {
+		if (adapter->device_link) {
 			__near_netlink_dep_link_down(adapter->idx);
 			adapter->device_link = NULL;
 		}
@@ -811,7 +811,7 @@ static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 	tag = __near_tag_add(adapter->idx, target_idx, protocols,
 				sens_res, sel_res,
 				nfcid, nfcid_len);
-	if (tag == NULL)
+	if (!tag)
 		return -ENODEV;
 
 	g_hash_table_insert(adapter->tags, GINT_TO_POINTER(target_idx), tag);
@@ -843,7 +843,7 @@ static int adapter_add_device(struct near_adapter *adapter,
 	int err;
 
 	device = __near_device_add(adapter->idx, target_idx, nfcid, nfcid_len);
-	if (device == NULL)
+	if (!device)
 		return -ENODEV;
 
 	g_hash_table_insert(adapter->devices, GINT_TO_POINTER(target_idx),
@@ -884,7 +884,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	adapter->polling = false;
@@ -913,7 +913,7 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_IDLE;
@@ -944,7 +944,7 @@ int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	adapter->polling = false;
@@ -970,7 +970,7 @@ int __near_adapter_remove_device(uint32_t idx)
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	if (!g_hash_table_remove(adapter->devices, GINT_TO_POINTER(device_idx)))
@@ -995,7 +995,7 @@ static void adapter_flush_rx(struct near_adapter *adapter, int error)
 	for (list = adapter->ioreq_list; list; list = list->next) {
 		struct near_adapter_ioreq *req = list->data;
 
-		if (req == NULL)
+		if (!req)
 			continue;
 
 		req->cb(NULL, error, req->data);
@@ -1044,7 +1044,7 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 
 	sk = g_io_channel_unix_get_fd(channel);
 	first = g_list_first(adapter->ioreq_list);
-	if (first == NULL)
+	if (!first)
 		return TRUE;
 
 	req = first->data;
@@ -1067,7 +1067,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	if (adapter->tag_sock != -1)
@@ -1075,7 +1075,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 
 	tag = g_hash_table_lookup(adapter->tags,
 				GINT_TO_POINTER(target_idx));
-	if (tag == NULL)
+	if (!tag)
 		return -ENOLINK;
 
 	sock = socket(AF_NFC, SOCK_SEQPACKET, NFC_SOCKPROTO_RAW);
@@ -1096,7 +1096,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	adapter->tag_sock = sock;
 	adapter->tag_link = tag;
 
-	if (adapter->channel == NULL)
+	if (!adapter->channel)
 		adapter->channel = g_io_channel_unix_new(adapter->tag_sock);
 
 	g_io_channel_set_flags(adapter->channel, G_IO_FLAG_NONBLOCK, NULL);
@@ -1119,12 +1119,12 @@ int near_adapter_disconnect(uint32_t idx)
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL)
+	if (!adapter)
 		return -ENODEV;
 
 	DBG("link %p", adapter->tag_link);
 
-	if (adapter->tag_link == NULL)
+	if (!adapter->tag_link)
 		return -ENOLINK;
 
 	tag_type = __near_tag_get_type(adapter->tag_link);
@@ -1160,19 +1160,19 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 	DBG("idx %d", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
-	if (adapter == NULL) {
+	if (!adapter) {
 		err = -ENODEV;
 		goto out_err;
 	}
 
-	if (adapter->tag_sock == -1 || adapter->tag_link == NULL) {
+	if (adapter->tag_sock == -1 || !adapter->tag_link) {
 		err = -ENOLINK;
 		goto out_err;
 	}
 
-	if (cb != NULL && adapter->watch != 0) {
+	if (cb && adapter->watch != 0) {
 		req = g_try_malloc0(sizeof(*req));
-		if (req == NULL) {
+		if (!req) {
 			err = -ENOMEM;
 			goto out_err;
 		}
@@ -1194,7 +1194,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 	return err;
 
 out_err:
-	if (req != NULL) {
+	if (req) {
 		GList *last = g_list_last(adapter->ioreq_list);
 
 		g_free(req);
@@ -1202,7 +1202,7 @@ out_err:
 				g_list_delete_link(adapter->ioreq_list, last);
 	}
 
-	if (data_rel != NULL)
+	if (data_rel)
 		return (*data_rel)(err, data);
 
 	return err;
@@ -1215,7 +1215,7 @@ static void adapter_listen(gpointer key, gpointer value, gpointer user_data)
 
 	DBG("%s", adapter->path);
 
-	if (adapter->path == NULL)
+	if (!adapter->path)
 		return;
 
 	driver->listen(adapter->idx, device_read_cb);

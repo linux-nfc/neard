@@ -62,7 +62,7 @@ static void ndef_agent_free(gpointer data)
 
 	DBG("");
 
-	if (agent == NULL || agent->watch == 0)
+	if (!agent || agent->watch == 0)
 		return;
 
 	g_dbus_remove_watch(connection, agent->watch);
@@ -76,14 +76,14 @@ static void ndef_agent_release(gpointer key, gpointer data, gpointer user_data)
 	struct near_ndef_agent *agent = data;
 	DBusMessage *message;
 
-	if (agent == NULL)
+	if (!agent)
 		return;
 
 	DBG("%s %s", agent->sender, agent->path);
 
 	message = dbus_message_new_method_call(agent->sender, agent->path,
 					NFC_NDEF_AGENT_INTERFACE, "Release");
-	if (message == NULL)
+	if (!message)
 		return;
 
 	dbus_message_set_no_reply(message, TRUE);
@@ -110,7 +110,7 @@ static void append_record_path(DBusMessageIter *iter, void *user_data)
 		record = list->data;
 
 		path = __near_ndef_record_get_path(record);
-		if (path == NULL)
+		if (!path)
 			continue;
 
 		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &path);
@@ -132,7 +132,7 @@ static void ndef_agent_push_records(struct near_ndef_agent *agent,
 
 	DBG("");
 
-	if (agent->sender == NULL || agent->path == NULL)
+	if (!agent->sender || !agent->path)
 		return;
 
 	DBG("Sending NDEF to %s %s", agent->path, agent->sender);
@@ -140,7 +140,7 @@ static void ndef_agent_push_records(struct near_ndef_agent *agent,
 	message = dbus_message_new_method_call(agent->sender, agent->path,
 					NFC_NDEF_AGENT_INTERFACE,
 					"GetNDEF");
-	if (message == NULL)
+	if (!message)
 		return;
 
 	dbus_message_iter_init_append(message, &iter);
@@ -172,17 +172,17 @@ void __near_agent_ndef_parse_records(GList *records)
 		record = list->data;
 		type  = __near_ndef_record_get_type(record);
 
-		if (type == NULL)
+		if (!type)
 			continue;
 
 		DBG("Looking for type %s", type);
 
 		agent = g_hash_table_lookup(ndef_app_hash, type);
-		if (agent != NULL)
+		if (agent)
 			break;
 	}
 
-	if (agent == NULL)
+	if (!agent)
 		return;
 
 	ndef_agent_push_records(agent, records);
@@ -195,19 +195,19 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 
 	DBG("%s registers path %s for %s", sender, path, record_type);
 
-	if (g_hash_table_lookup(ndef_app_hash, record_type) != NULL)
+	if (g_hash_table_lookup(ndef_app_hash, record_type))
 		return -EEXIST;
 
 	agent = g_try_malloc0(sizeof(struct near_ndef_agent));
-	if (agent == NULL)
+	if (!agent)
 		return -ENOMEM;
 
 	agent->sender = g_strdup(sender);
 	agent->path = g_strdup(path);
 	agent->record_type = g_strdup(record_type);
 
-	if (agent->sender == NULL || agent->path == NULL ||
-	    agent->record_type == NULL) {
+	if (!agent->sender || !agent->path ||
+	    !agent->record_type) {
 		g_free(agent);
 		return -ENOMEM;
 	}
@@ -228,7 +228,7 @@ int __near_agent_ndef_unregister(const char *sender, const char *path,
 	DBG("sender %s path %s type %s", sender, path, record_type);
 
 	agent = g_hash_table_lookup(ndef_app_hash, record_type);
-	if (agent == NULL)
+	if (!agent)
 		return -EINVAL;
 
 	if (strcmp(agent->path, path) != 0 || strcmp(agent->sender, sender) != 0)
@@ -271,7 +271,7 @@ static struct carrier_data *parse_reply(DBusMessage *reply)
 	struct carrier_data *c_data;
 
 	c_data = g_try_new0(struct carrier_data, 1);
-	if (c_data == NULL)
+	if (!c_data)
 		return NULL;
 
 	c_data->state = CPS_UNKNOWN;
@@ -387,7 +387,7 @@ static void prepare_data(DBusMessage *message, struct carrier_data *data)
 
 	near_dbus_dict_open(&iter, &dict);
 
-	if (data != NULL) {
+	if (data) {
 		void *pdata = data->data;
 
 		switch (data->type) {
@@ -430,13 +430,13 @@ struct carrier_data *__near_agent_handover_request_data(
 
 	agent = g_hash_table_lookup(ho_agent_hash,
 				GINT_TO_POINTER(carrier));
-	if (agent == NULL)
+	if (!agent)
 		return NULL;
 
 	message = dbus_message_new_method_call(agent->sender,
 			agent->path, NFC_HANDOVER_AGENT_INTERFACE,
 			"RequestOOB");
-	if (message == NULL)
+	if (!message)
 		return NULL;
 
 	prepare_data(message, data);
@@ -448,7 +448,7 @@ struct carrier_data *__near_agent_handover_request_data(
 
 	dbus_message_unref(message);
 
-	if (reply == NULL) {
+	if (!reply) {
 		if (dbus_error_is_set(&error)) {
 			near_error("RequestOOB failed: %s", error.message);
 			dbus_error_free(&error);
@@ -476,13 +476,13 @@ int __near_agent_handover_push_data(enum ho_agent_carrier carrier,
 	struct near_handover_agent *agent = NULL;
 
 	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(carrier));
-	if (agent == NULL)
+	if (!agent)
 		return -ESRCH;
 
 	message = dbus_message_new_method_call(agent->sender,
 			agent->path, NFC_HANDOVER_AGENT_INTERFACE,
 			"PushOOB");
-	if (message == NULL)
+	if (!message)
 		return -ENOMEM;
 
 	prepare_data(message, data);
@@ -494,7 +494,7 @@ int __near_agent_handover_push_data(enum ho_agent_carrier carrier,
 
 	dbus_message_unref(message);
 
-	if (reply != NULL) {
+	if (reply) {
 		dbus_message_unref(reply);
 		return 0;
 	}
@@ -513,7 +513,7 @@ static void handover_agent_free(gpointer data)
 {
 	struct near_handover_agent *agent = data;
 
-	if (agent == NULL)
+	if (!agent)
 		return;
 
 	g_free(agent->sender);
@@ -535,7 +535,7 @@ static void handover_agent_disconnect(DBusConnection *conn, void *data)
 
 	DBG("data %p", data);
 
-	if (agent == NULL)
+	if (!agent)
 		return;
 
 	switch (agent->carrier) {
@@ -558,13 +558,13 @@ static void handover_agent_release(gpointer key, gpointer data,
 	struct near_handover_agent *agent = data;
 	DBusMessage *message;
 
-	if (agent == NULL || agent->watch == 0)
+	if (!agent || agent->watch == 0)
 		return;
 
 	message = dbus_message_new_method_call(agent->sender, agent->path,
 					"org.neard.HandoverAgent",
 					"Release");
-	if (message != NULL)
+	if (message)
 		g_dbus_send_message(connection, message);
 }
 
@@ -574,7 +574,7 @@ static int create_handover_agent(const char *sender, const char *path,
 	struct near_handover_agent *agent;
 
 	agent = g_try_malloc0(sizeof(struct near_handover_agent));
-	if (agent == NULL)
+	if (!agent)
 		return -ENOMEM;
 
 	agent->sender = g_strdup(sender);
@@ -615,7 +615,7 @@ int __near_agent_handover_register(const char *sender, const char *path,
 		return -EINVAL;
 
 	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(ho_carrier));
-	if (agent != NULL)
+	if (agent)
 		return -EEXIST;
 
 	return create_handover_agent(sender, path, ho_carrier);
@@ -631,7 +631,7 @@ int __near_agent_handover_unregister(const char *sender, const char *path,
 
 	ho_carrier = string2carrier(carrier);
 	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(ho_carrier));
-	if (agent == NULL)
+	if (!agent)
 		return -ESRCH;
 
 	if (strcmp(agent->path, path) != 0 ||
@@ -649,7 +649,7 @@ bool __near_agent_handover_registered(enum ho_agent_carrier carrier)
 
 	agent = g_hash_table_lookup(ho_agent_hash, GINT_TO_POINTER(carrier));
 
-	return agent != NULL ? TRUE : FALSE;
+	return agent ? TRUE : FALSE;
 }
 
 int __near_agent_init(void)
@@ -657,7 +657,7 @@ int __near_agent_init(void)
 	DBG("");
 
 	connection = near_dbus_get_connection();
-	if (connection == NULL)
+	if (!connection)
 		return -1;
 
 	ndef_app_hash = g_hash_table_new_full(g_str_hash, g_str_equal,

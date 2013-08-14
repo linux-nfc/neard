@@ -34,7 +34,7 @@ dbus_bool_t near_dbus_validate_ident(const char *ident)
 {
 	unsigned int i;
 
-	if (ident == NULL)
+	if (!ident)
 		return FALSE;
 
 	for (i = 0; i < strlen(ident); i++) {
@@ -55,13 +55,13 @@ char *near_dbus_encode_string(const char *value)
 	GString *str;
 	unsigned int i, size;
 
-	if (value == NULL)
+	if (!value)
 		return NULL;
 
 	size = strlen(value);
 
 	str = g_string_new(NULL);
-	if (str == NULL)
+	if (!str)
 		return NULL;
 
 	for (i = 0; i < size; i++) {
@@ -216,11 +216,11 @@ dbus_bool_t near_dbus_property_changed_basic(const char *path,
 	DBusMessage *signal;
 	DBusMessageIter iter;
 
-	if (path == NULL)
+	if (!path)
 		return FALSE;
 
 	signal = dbus_message_new_signal(path, interface, "PropertyChanged");
-	if (signal == NULL)
+	if (!signal)
 		return FALSE;
 
 	dbus_message_iter_init_append(signal, &iter);
@@ -238,11 +238,11 @@ dbus_bool_t near_dbus_property_changed_dict(const char *path,
 	DBusMessage *signal;
 	DBusMessageIter iter;
 
-	if (path == NULL)
+	if (!path)
 		return FALSE;
 
 	signal = dbus_message_new_signal(path, interface, "PropertyChanged");
-	if (signal == NULL)
+	if (!signal)
 		return FALSE;
 
 	dbus_message_iter_init_append(signal, &iter);
@@ -260,11 +260,11 @@ dbus_bool_t near_dbus_property_changed_array(const char *path,
 	DBusMessage *signal;
 	DBusMessageIter iter;
 
-	if (path == NULL)
+	if (!path)
 		return FALSE;
 
 	signal = dbus_message_new_signal(path, interface, "PropertyChanged");
-	if (signal == NULL)
+	if (!signal)
 		return FALSE;
 
 	dbus_message_iter_init_append(signal, &iter);

@@ -260,7 +260,7 @@ void __near_ndef_append_records(DBusMessageIter *iter, GList *records)
 		size_t data_len;
 
 		data = __near_ndef_record_get_data(record, &data_len);
-		if (data == NULL)
+		if (!data)
 			continue;
 
 		dbus_message_iter_append_fixed_array(iter, DBUS_TYPE_BYTE,
@@ -273,20 +273,20 @@ static void append_text_payload(struct near_ndef_text_payload *text,
 {
 	DBG("");
 
-	if (text == NULL || dict == NULL)
+	if (!text || !dict)
 		return;
 
-	if (text->encoding != NULL)
+	if (text->encoding)
 		near_dbus_dict_append_basic(dict, "Encoding",
 						DBUS_TYPE_STRING,
 						&(text->encoding));
 
-	if (text->language_code != NULL)
+	if (text->language_code)
 		near_dbus_dict_append_basic(dict, "Language",
 						DBUS_TYPE_STRING,
 						&(text->language_code));
 
-	if (text->data != NULL)
+	if (text->data)
 		near_dbus_dict_append_basic(dict, "Representation",
 						DBUS_TYPE_STRING,
 						&(text->data));
@@ -297,10 +297,10 @@ static void append_aar_payload(struct near_ndef_aar_payload *aar,
 {
 	DBG("");
 
-	if (aar == NULL || dict == NULL)
+	if (!aar || !dict)
 		return;
 
-	if (aar->package != NULL)
+	if (aar->package)
 		near_dbus_dict_append_basic(dict, "AndroidPackage",
 						DBUS_TYPE_STRING,
 						&(aar->package));
@@ -361,7 +361,7 @@ static void append_uri_payload(struct near_ndef_uri_payload *uri,
 
 	DBG("");
 
-	if (uri == NULL || dict == NULL)
+	if (!uri || !dict)
 		return;
 
 	if (uri->identifier > NFC_MAX_URI_ID) {
@@ -388,23 +388,23 @@ static void append_sp_payload(struct near_ndef_sp_payload *sp,
 
 	DBG("");
 
-	if (sp == NULL || dict == NULL)
+	if (!sp || !dict)
 		return;
 
-	if (sp->action != NULL)
+	if (sp->action)
 		near_dbus_dict_append_basic(dict, "Action", DBUS_TYPE_STRING,
 							&(sp->action));
 
-	if (sp->uri != NULL)
+	if (sp->uri)
 		append_uri_payload(sp->uri, dict);
 
-	if (sp->title_records != NULL &&
+	if (sp->title_records &&
 			sp->number_of_title_records > 0) {
 		for (i = 0; i < sp->number_of_title_records; i++)
 			append_text_payload(sp->title_records[i], dict);
 	}
 
-	if (sp->type != NULL)
+	if (sp->type)
 		near_dbus_dict_append_basic(dict, "MIMEType", DBUS_TYPE_STRING,
 								&(sp->type));
 
@@ -418,10 +418,10 @@ static void append_mime_payload(struct near_ndef_mime_payload *mime,
 {
 	DBG("");
 
-	if (mime == NULL || dict == NULL)
+	if (!mime || !dict)
 		return;
 
-	if (mime->type != NULL)
+	if (mime->type)
 		near_dbus_dict_append_basic(dict, "MIME",
 						DBUS_TYPE_STRING,
 						&(mime->type));
@@ -434,7 +434,7 @@ static void append_record(struct near_ndef_record *record,
 
 	DBG("");
 
-	if (record == NULL || dict == NULL)
+	if (!record || !dict)
 		return;
 
 	switch (record->header->rec_type) {
@@ -512,12 +512,12 @@ static DBusMessage *get_properties(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
-	if (conn == NULL || msg == NULL ||
-		data == NULL)
+	if (!conn || !msg ||
+		!data)
 		return NULL;
 
 	reply = dbus_message_new_method_return(msg);
-	if (reply == NULL)
+	if (!reply)
 		return NULL;
 
 	dbus_message_iter_init_append(reply, &array);
@@ -540,7 +540,7 @@ static const GDBusMethodTable record_methods[] = {
 
 static void free_text_payload(struct near_ndef_text_payload *text)
 {
-	if (text == NULL)
+	if (!text)
 		return;
 
 	g_free(text->encoding);
@@ -551,7 +551,7 @@ static void free_text_payload(struct near_ndef_text_payload *text)
 
 static void free_uri_payload(struct near_ndef_uri_payload *uri)
 {
-	if (uri == NULL)
+	if (!uri)
 		return;
 
 	g_free(uri->field);
@@ -562,12 +562,12 @@ static void free_sp_payload(struct near_ndef_sp_payload *sp)
 {
 	uint8_t i;
 
-	if (sp == NULL)
+	if (!sp)
 		return;
 
 	free_uri_payload(sp->uri);
 
-	if (sp->title_records != NULL) {
+	if (sp->title_records) {
 		for (i = 0; i < sp->number_of_title_records; i++)
 			free_text_payload(sp->title_records[i]);
 	}
@@ -580,7 +580,7 @@ static void free_sp_payload(struct near_ndef_sp_payload *sp)
 
 static void free_mime_payload(struct near_ndef_mime_payload *mime)
 {
-	if (mime == NULL)
+	if (!mime)
 		return;
 
 	g_free(mime->type);
@@ -589,7 +589,7 @@ static void free_mime_payload(struct near_ndef_mime_payload *mime)
 
 static void free_ac_payload(struct near_ndef_ac_payload *ac)
 {
-	if (ac == NULL)
+	if (!ac)
 		return;
 
 	g_free(ac->cdr);
@@ -601,10 +601,10 @@ static void free_ho_payload(struct near_ndef_ho_payload *ho)
 {
 	int i;
 
-	if (ho == NULL)
+	if (!ho)
 		return;
 
-	if (ho->ac_payloads != NULL) {
+	if (ho->ac_payloads) {
 		for (i = 0; i < ho->number_of_ac_payloads; i++)
 			free_ac_payload(ho->ac_payloads[i]);
 	}
@@ -615,7 +615,7 @@ static void free_ho_payload(struct near_ndef_ho_payload *ho)
 
 static void free_aar_payload(struct near_ndef_aar_payload *aar)
 {
-	if (aar == NULL)
+	if (!aar)
 		return;
 
 	g_free(aar->package);
@@ -624,12 +624,12 @@ static void free_aar_payload(struct near_ndef_aar_payload *aar)
 
 static void free_ndef_record(struct near_ndef_record *record)
 {
-	if (record == NULL)
+	if (!record)
 		return;
 
 	g_free(record->path);
 
-	if (record->header != NULL) {
+	if (record->header) {
 
 		switch (record->header->rec_type) {
 		case RECORD_TYPE_WKT_SIZE:
@@ -681,7 +681,7 @@ static void free_ndef_record(struct near_ndef_record *record)
 
 static void free_ndef_message(struct near_ndef_message *msg)
 {
-	if (msg == NULL)
+	if (!msg)
 		return;
 
 	g_free(msg->data);
@@ -794,7 +794,7 @@ static int build_record_type_string(struct near_ndef_record *rec)
 
 	DBG("");
 
-	if (rec == NULL || rec->header == NULL)
+	if (!rec || !rec->header)
 		return -EINVAL;
 
 	tnf = rec->header->tnf;
@@ -836,7 +836,7 @@ static uint8_t validate_record_begin_and_end_bits(uint8_t *msg_mb,
 {
 	DBG("");
 
-	if (msg_mb == NULL || msg_me == NULL)
+	if (!msg_mb || !msg_me)
 		return 0;
 
 	/* Validating record header begin and end bits
@@ -884,7 +884,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 
 	DBG("length %d", length);
 
-	if (rec == NULL || offset >= length)
+	if (!rec || offset >= length)
 		return NULL;
 
 	/* This check is for empty record. */
@@ -892,7 +892,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 		return NULL;
 
 	rec_header = g_try_malloc0(sizeof(struct near_ndef_record_header));
-	if (rec_header == NULL)
+	if (!rec_header)
 		return NULL;
 
 	rec_header->mb = RECORD_MB_BIT(rec[offset]);
@@ -936,7 +936,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 			goto fail;
 
 		type = g_try_malloc0(rec_header->type_len);
-		if (type == NULL)
+		if (!type)
 			goto fail;
 
 		memcpy(type, rec + offset, rec_header->type_len);
@@ -952,7 +952,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 			goto fail;
 
 		rec_header->il_field = g_try_malloc0(rec_header->il_length);
-		if (rec_header->il_field == NULL)
+		if (!rec_header->il_field)
 			goto fail;
 
 		memcpy(rec_header->il_field, rec + offset,
@@ -994,12 +994,12 @@ parse_text_payload(uint8_t *payload, uint32_t length)
 
 	DBG("");
 
-	if (payload == NULL)
+	if (!payload)
 		return NULL;
 
 	offset = 0;
 	text_payload = g_try_malloc0(sizeof(struct near_ndef_text_payload));
-	if (text_payload == NULL)
+	if (!text_payload)
 		return NULL;
 
 	/* 0x80 is used to get 7th bit value (0th bit is LSB) */
@@ -1056,12 +1056,12 @@ parse_uri_payload(uint8_t *payload, uint32_t length)
 
 	DBG("");
 
-	if (payload == NULL)
+	if (!payload)
 		return NULL;
 
 	offset = 0;
 	uri_payload = g_try_malloc0(sizeof(struct near_ndef_uri_payload));
-	if (uri_payload == NULL)
+	if (!uri_payload)
 		return NULL;
 
 	uri_payload->identifier = payload[offset];
@@ -1071,7 +1071,7 @@ parse_uri_payload(uint8_t *payload, uint32_t length)
 
 	if (uri_payload->field_length > 0) {
 		uri_payload->field = g_try_malloc0(uri_payload->field_length);
-		if (uri_payload->field == NULL)
+		if (!uri_payload->field)
 			goto fail;
 
 		memcpy(uri_payload->field, payload + offset,
@@ -1111,7 +1111,7 @@ static int8_t validate_language_code_in_sp_record(GSList *titles)
 
 	DBG("");
 
-	if (titles == NULL)
+	if (!titles)
 		return -EINVAL;
 
 	length = g_slist_length(titles);
@@ -1122,8 +1122,8 @@ static int8_t validate_language_code_in_sp_record(GSList *titles)
 		for (j = i + 1; j < length; j++) {
 			title2 = g_slist_nth_data(titles, j);
 
-			if ((title1->language_code == NULL) &&
-					(title2->language_code == NULL))
+			if ((!title1->language_code) &&
+					(!title2->language_code))
 				continue;
 
 			if (g_strcmp0(title1->language_code,
@@ -1146,12 +1146,12 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 
 	DBG("");
 
-	if (payload == NULL)
+	if (!payload)
 		return NULL;
 
 	offset = 0;
 	sp_payload = g_try_malloc0(sizeof(struct near_ndef_sp_payload));
-	if (sp_payload == NULL)
+	if (!sp_payload)
 		return NULL;
 
 	while (offset < length) {
@@ -1159,7 +1159,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 		DBG("Record header : 0x%x", payload[offset]);
 
 		rec_header = parse_record_header(payload, offset, length);
-		if (rec_header == NULL)
+		if (!rec_header)
 			goto fail;
 
 		if (validate_record_begin_and_end_bits(&mb, &me,
@@ -1186,12 +1186,12 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 
 		case RECORD_TYPE_WKT_URI:
 			/* URI record should be only one. */
-			if (sp_payload->uri != NULL)
+			if (sp_payload->uri)
 				goto fail;
 
 			sp_payload->uri = parse_uri_payload(payload + offset,
 						rec_header->payload_len);
-			if (sp_payload->uri == NULL)
+			if (!sp_payload->uri)
 				goto fail;
 
 			break;
@@ -1206,7 +1206,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 			struct near_ndef_text_payload *title;
 			title = parse_text_payload(payload + offset,
 						rec_header->payload_len);
-			if (title == NULL)
+			if (!title)
 				goto fail;
 
 			titles = g_slist_append(titles, title);
@@ -1229,7 +1229,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 			if (rec_header->payload_len > 0) {
 				sp_payload->type = g_try_malloc0(
 						rec_header->payload_len);
-				if (sp_payload->type == NULL)
+				if (!sp_payload->type)
 					goto fail;
 
 				sp_payload->type = g_strndup(
@@ -1264,7 +1264,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 	 * Code to fill smart poster record structure from
 	 * 'titles' list.
 	 */
-	if (titles == NULL)
+	if (!titles)
 		return sp_payload;
 
 	if (validate_language_code_in_sp_record(titles) != 0) {
@@ -1277,7 +1277,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 	sp_payload->title_records = g_try_malloc0(
 				sp_payload->number_of_title_records *
 				 sizeof(struct near_ndef_text_payload *));
-	if (sp_payload->title_records == NULL)
+	if (!sp_payload->title_records)
 		goto fail;
 
 	for (i = 0; i < sp_payload->number_of_title_records; i++) {
@@ -1293,7 +1293,7 @@ parse_sp_payload(uint8_t *payload, uint32_t length)
 fail:
 	near_error("smart poster payload parsing failed");
 
-	if (rec_header != NULL) {
+	if (rec_header) {
 		g_free(rec_header->type_name);
 		g_free(rec_header->il_field);
 		g_free(rec_header);
@@ -1335,7 +1335,7 @@ static int process_mime_type(struct near_ndef_mime_payload *mime,
 
 	DBG("");
 
-	if (mime == NULL || c_data == NULL)
+	if (!mime || !c_data)
 		return -EINVAL;
 
 	switch (mime->handover.carrier_type) {
@@ -1368,16 +1368,16 @@ static struct near_ndef_mime_payload *parse_mime_type(
 
 	DBG("");
 
-	if (c_data == NULL || ndef_data == NULL ||
+	if (!c_data || !ndef_data ||
 			((offset + payload_length) > ndef_length))
 		return NULL;
 
 	mime = g_try_malloc0(sizeof(struct near_ndef_mime_payload));
-	if (mime == NULL)
+	if (!mime)
 		return NULL;
 
 	c_temp = g_try_malloc0(sizeof(struct carrier_data));
-	if (c_temp == NULL) {
+	if (!c_temp) {
 		g_free(mime);
 		return NULL;
 	}
@@ -1460,7 +1460,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 	uint8_t hdr = 0, type_len, sr_bit, il_bit, id_len;
 
 	msg = g_try_malloc0(sizeof(struct near_ndef_message));
-	if (msg == NULL)
+	if (!msg)
 		return NULL;
 
 	msg->length = 0;
@@ -1468,12 +1468,12 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 	msg->length++; /* record header*/
 	msg->length++; /* type name length byte*/
 
-	type_len = (type_name != NULL) ? strlen(type_name) : 0;
-	id_len = (payload_id != NULL) ? payload_id_len : 0;
+	type_len = (type_name) ? strlen(type_name) : 0;
+	id_len = (payload_id) ? payload_id_len : 0;
 	sr_bit =  (payload_len <= NDEF_MSG_SHORT_RECORD_MAX_LENGTH)
 					? TRUE : FALSE;
 
-	il_bit = (payload_id != NULL) ? TRUE : FALSE;
+	il_bit = (payload_id) ? TRUE : FALSE;
 
 	msg->length += (sr_bit) ? 1 : 4;
 	msg->length += (il_bit) ? 1 : 0;
@@ -1482,7 +1482,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 	msg->length += id_len;
 
 	msg->data = g_try_malloc0(msg->length);
-	if (msg->data == NULL)
+	if (!msg->data)
 		goto fail;
 
 	/* Set MB ME bits */
@@ -1537,7 +1537,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 	if (il_bit)
 		msg->data[msg->offset++] = payload_id_len;
 
-	if (type_name != NULL) {
+	if (type_name) {
 		memcpy(msg->data + msg->offset, type_name, type_len);
 		msg->offset += type_len;
 	}
@@ -1585,12 +1585,12 @@ static struct near_ndef_ac_payload *parse_ac_payload(uint8_t *payload,
 
 	DBG("");
 
-	if (payload == NULL)
+	if (!payload)
 		return NULL;
 
 	offset = 0;
 	ac_payload = g_try_malloc0(sizeof(struct near_ndef_ac_payload));
-	if (ac_payload == NULL)
+	if (!ac_payload)
 		goto fail;
 
 	/* Carrier flag */
@@ -1606,7 +1606,7 @@ static struct near_ndef_ac_payload *parse_ac_payload(uint8_t *payload,
 
 	/* Carrier data reference */
 	ac_payload->cdr = g_try_malloc0(ac_payload->cdr_len + 1);
-	if (ac_payload->cdr == NULL)
+	if (!ac_payload->cdr)
 		goto fail;
 
 	memcpy(ac_payload->cdr, payload + offset, ac_payload->cdr_len);
@@ -1622,7 +1622,7 @@ static struct near_ndef_ac_payload *parse_ac_payload(uint8_t *payload,
 	/* save the auxiliary data reference */
 	ac_payload->adata = g_try_malloc0(
 			ac_payload->adata_refcount * sizeof(uint16_t));
-	if (ac_payload->adata == NULL)
+	if (!ac_payload->adata)
 		goto fail;
 
 	memcpy(ac_payload->adata, payload + offset,
@@ -1651,7 +1651,7 @@ static struct near_ndef_message *near_ndef_prepare_ac_message(uint8_t cps,
 						NULL, 0,
 						RECORD_TNF_WELLKNOWN,
 						true, true);
-	if (ac_msg == NULL)
+	if (!ac_msg)
 		return NULL;
 
 	/* Prepare ac message */
@@ -1679,7 +1679,7 @@ static struct near_ndef_message *near_ndef_prepare_cr_message(uint16_t cr_id)
 						NULL, 0,
 						RECORD_TNF_WELLKNOWN,
 						true, true);
-	if (cr_msg == NULL)
+	if (!cr_msg)
 		return NULL;
 
 	/* Prepare ac message */
@@ -1696,12 +1696,12 @@ static struct near_ndef_message *near_ndef_prepare_cfg_message(char *mime_type,
 
 	DBG(" %s", mime_type);
 
-	if (mime_type == NULL)
+	if (!mime_type)
 		return NULL;
 
 	msg = ndef_message_alloc_complete(mime_type, data_len, cdr, cdr_len,
 						RECORD_TNF_MIME, true, true);
-	if (msg == NULL)
+	if (!msg)
 		return NULL;
 
 	/* store data */
@@ -1729,7 +1729,7 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 
 	DBG("");
 
-	if (ac == NULL || cfg == NULL)
+	if (!ac || !cfg)
 		return -EINVAL;
 
 	switch (carrier) {
@@ -1739,10 +1739,10 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 		mime_type = BT_MIME_STRING_2_1;
 		local_carrier = __near_agent_handover_request_data(
 					HO_AGENT_BT, remote_carrier);
-		if (local_carrier != NULL)
+		if (local_carrier)
 			break;
 
-		prop = (mime != NULL) ? mime->handover.properties :
+		prop = (mime) ? mime->handover.properties :
 							OOB_PROPS_EMPTY;
 		local_carrier = __near_bluetooth_local_get_properties(prop);
 
@@ -1777,18 +1777,18 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 	 * Handover Select.
 	 * In those 2 cases we return an error.
 	 */
-	if (carrier == NEAR_CARRIER_WIFI && remote_carrier == NULL) {
-		if (local_carrier != NULL &&
+	if (carrier == NEAR_CARRIER_WIFI && !remote_carrier) {
+		if (local_carrier &&
 				type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
 			g_free(local_carrier);
 			return -EINVAL;
 		}
 
-		if (local_carrier == NULL &&
+		if (!local_carrier &&
 				type == RECORD_TYPE_WKT_HANDOVER_SELECT)
 			return -EINVAL;
 
-		if (local_carrier == NULL &&
+		if (!local_carrier &&
 				type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
 			*cfg = near_ndef_prepare_cfg_message(mime_type,
 							NULL, 0,
@@ -1800,7 +1800,7 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 		}
 	}
 
-	if (local_carrier == NULL) {
+	if (!local_carrier) {
 		DBG("Unable to retrieve local carrier %s data", carrier_string);
 		return -ESRCH;
 	}
@@ -1813,7 +1813,7 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 
 	g_free(local_carrier);
 
-	if (*cfg == NULL || *ac == NULL) {
+	if (!*cfg || !*ac) {
 		free_ndef_message(*ac);
 		free_ndef_message(*cfg);
 
@@ -1836,7 +1836,7 @@ static struct near_ndef_message *prepare_handover_message_header(char *type,
 	struct near_ndef_message *ho_msg;
 
 	ho_msg = ndef_message_alloc(type, msg_len);
-	if (ho_msg == NULL)
+	if (!ho_msg)
 		return NULL;
 
 	/*
@@ -1858,7 +1858,7 @@ static uint32_t ndef_message_list_length(GList *list)
 	struct near_ndef_message *msg;
 	uint32_t length = 0;
 
-	if (list == NULL)
+	if (!list)
 		return 0;
 
 	while (list) {
@@ -1875,7 +1875,7 @@ static void copy_ac_records(struct near_ndef_message *ho, GList *acs)
 	GList *temp = acs;
 	struct near_ndef_message *ac;
 
-	if (ho == NULL || temp == NULL)
+	if (!ho || !temp)
 		return;
 
 	while (temp) {
@@ -1896,7 +1896,7 @@ static void copy_cfg_records(struct near_ndef_message *ho, GList *cfgs)
 	struct near_ndef_message *cfg;
 	uint32_t offset;
 
-	if (ho == NULL || temp == NULL)
+	if (!ho || !temp)
 		return;
 
 	offset = ho->offset;
@@ -1931,14 +1931,14 @@ static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
 	DBG("");
 
 	ac_msg = near_ndef_prepare_ac_message(CPS_UNKNOWN, &cdr, sizeof(cdr));
-	if (ac_msg == NULL)
+	if (!ac_msg)
 		return NULL;
 
 	hs_length = 1;
 	hs_length += ac_msg->length;
 
 	hs_msg = prepare_handover_message_header("Hs", hs_length, hs_length);
-	if (hs_msg == NULL)
+	if (!hs_msg)
 		goto fail;
 
 	near_ndef_set_mb_me(hs_msg->data, true, true);
@@ -1980,7 +1980,7 @@ static struct near_ndef_message *near_ndef_prepare_hs_reply(
 	 * alternative carries or unknown mime types or unknown
 	 * configuration data.
 	 */
-	if ((remote_mimes == NULL || remote_cfgs == NULL))
+	if ((!remote_mimes || !remote_cfgs))
 		return near_ndef_prepare_empty_hs_message();
 
 	mime_iter = remote_mimes;
@@ -1989,7 +1989,7 @@ static struct near_ndef_message *near_ndef_prepare_hs_reply(
 	while (mime_iter) {
 		remote_mime = mime_iter->data;
 		remote_cfg  = cfg_iter->data;
-		if (remote_mime == NULL || remote_cfg == NULL)
+		if (!remote_mime || !remote_cfg)
 			goto fail;
 
 		ret = near_ndef_prepare_ac_and_cfg_records(
@@ -2021,7 +2021,7 @@ static struct near_ndef_message *near_ndef_prepare_hs_reply(
 	hs_length += ndef_message_list_length(cfg_msgs);
 
 	hs_msg = prepare_handover_message_header("Hs", hs_length, hs_pl_length);
-	if (hs_msg == NULL)
+	if (!hs_msg)
 		goto fail;
 
 	num_of_carriers = g_list_length(ac_msgs);
@@ -2141,7 +2141,7 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 	if (type == RECORD_TYPE_WKT_HANDOVER_REQUEST) {
 		collision = GUINT16_TO_BE(g_random_int_range(0, G_MAXUINT16 + 1));
 		cr_msg = near_ndef_prepare_cr_message(collision);
-		if (cr_msg == NULL)
+		if (!cr_msg)
 			goto fail;
 
 		near_ndef_set_mb_me(cr_msg->data, true, false);
@@ -2158,7 +2158,7 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 
 	ho_msg = prepare_handover_message_header(str_type,
 						ho_length, ho_pl_length);
-	if (ho_msg == NULL)
+	if (!ho_msg)
 		goto fail;
 
 	g_list_foreach(ac_msgs, set_mb_me_to_false, NULL);
@@ -2233,7 +2233,7 @@ static int near_fill_ho_payload(struct near_ndef_ho_payload *ho,
 	rec_count = g_slist_length(acs);
 	ho->ac_payloads = g_try_malloc0(rec_count *
 			sizeof(struct near_ndef_ac_payload *));
-	if (ho->ac_payloads == NULL)
+	if (!ho->ac_payloads)
 		goto fail;
 	temp = acs;
 	for (i = 0; i < rec_count; i++) {
@@ -2247,7 +2247,7 @@ static int near_fill_ho_payload(struct near_ndef_ho_payload *ho,
 	rec_count = g_slist_length(mimes);
 	ho->cfg_payloads = g_try_malloc0(rec_count *
 			sizeof(struct near_ndef_mime_payload *));
-	if (ho->cfg_payloads == NULL)
+	if (!ho->cfg_payloads)
 		goto fail;
 	temp = mimes;
 	for (i = 0; i < rec_count; i++) {
@@ -2294,13 +2294,13 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 
 	DBG("");
 
-	if (payload == NULL)
+	if (!payload)
 		return NULL;
 	offset = 0;
 
 	/* Create the handover record payload */
 	ho_payload = g_try_malloc0(sizeof(struct near_ndef_ho_payload));
-	if (ho_payload == NULL)
+	if (!ho_payload)
 		return NULL;
 
 	/* Version is the first mandatory field of hr payload */
@@ -2311,7 +2311,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	    HANDOVER_MAJOR(HANDOVER_VERSION)) {
 		near_error("Unsupported version (%d)", ho_payload->version);
 		/* Skip parsing and return an empty record */
-		if (reply != NULL)
+		if (reply)
 			*reply = near_ndef_prepare_empty_hs_message();
 
 		return ho_payload;
@@ -2325,12 +2325,12 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 	while (offset < ho_length) {
 		/* Create local record for mime parsing */
 		trec = g_try_malloc0(sizeof(struct near_ndef_record));
-		if (trec == NULL)
+		if (!trec)
 			return NULL;
 
 		trec->header = parse_record_header(payload, offset, ho_length);
 
-		if (trec->header == NULL)
+		if (!trec->header)
 			goto fail;
 
 		offset = trec->header->offset;
@@ -2387,7 +2387,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 					&c_data);
 			trec->ho = NULL;
 
-			if (mime == NULL || c_data == NULL)
+			if (!mime || !c_data)
 				goto fail;
 
 			/* add the mime to the list */
@@ -2427,7 +2427,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 
 			ac = parse_ac_payload(payload + offset,
 					trec->header->payload_len);
-			if (ac == NULL)
+			if (!ac)
 				goto fail;
 
 			acs = g_slist_append(acs, ac);
@@ -2467,7 +2467,7 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 			DBG("could not process alternative carriers");
 			goto fail;
 		}
-	} else if (reply != NULL) {
+	} else if (reply) {
 		/* This is a Hs with no cfg and no Ac: No reply and fail */
 		if (rec_type == RECORD_TYPE_WKT_HANDOVER_SELECT &&
 					g_slist_length(acs) == 0) {
@@ -2477,13 +2477,13 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 
 		/* Prepare Hs, it depends upon Hr message carrier types */
 		*reply = near_ndef_prepare_hs_reply(mimes, c_datas);
-		if (*reply == NULL) {
+		if (!*reply) {
 			DBG("error in preparing in HS record");
 			goto fail;
 		}
 	}
 
-	if ((acs == NULL) || (mimes == NULL))
+	if ((!acs) || (!mimes))
 		return ho_payload;
 
 	/* Save the records */
@@ -2499,8 +2499,8 @@ static struct near_ndef_ho_payload *parse_ho_payload(enum record_type rec_type,
 fail:
 	near_error("handover payload parsing failed");
 
-	if (trec != NULL) {
-		if (trec->header != NULL) {
+	if (trec) {
+		if (trec->header) {
 			g_free(trec->header->type_name);
 			g_free(trec->header->il_field);
 			g_free(trec->header);
@@ -2521,15 +2521,15 @@ parse_aar_payload(uint8_t *payload, uint32_t length)
 
 	DBG("");
 
-	if (payload == NULL)
+	if (!payload)
 		return NULL;
 
 	aar_payload = g_try_malloc0(sizeof(struct near_ndef_uri_payload));
-	if (aar_payload == NULL)
+	if (!aar_payload)
 		return NULL;
 
 	aar_payload->package = g_strndup((char *)payload, length);
-	if (aar_payload->package == NULL) {
+	if (!aar_payload->package) {
 		near_error("AAR payload parsing failed");
 		free_aar_payload(aar_payload);
 		return NULL;
@@ -2562,15 +2562,15 @@ bool near_ndef_record_cmp_id(struct near_ndef_record *rec1,
 {
 	DBG("");
 
-	if ((rec1 == NULL) || (rec2 == NULL))
+	if ((!rec1) || (!rec2))
 		return false;
 
-	if ((rec1->header == NULL) || (rec2->header == NULL))
+	if ((!rec1->header) || (!rec2->header))
 		return false;
 
 	/* usual checks */
-	if ((rec1->header->il_field == NULL) ||
-			(rec2->header->il_field == NULL))
+	if ((!rec1->header->il_field) ||
+			(!rec2->header->il_field))
 		return false;
 
 	if (memcmp(rec1->header->il_field, rec2->header->il_field,
@@ -2588,16 +2588,16 @@ bool near_ndef_record_cmp_mime(struct near_ndef_record *rec1,
 
 	DBG("");
 
-	if ((rec1 == NULL) || (rec2 == NULL))
+	if ((!rec1) || (!rec2))
 		return false;
 
-	if ((rec1->header == NULL) || (rec2->header == NULL))
+	if ((!rec1->header) || (!rec2->header))
 		return false;
 	/* usual checks */
-	if ((rec1->mime == NULL) || (rec2->mime == NULL))
+	if ((!rec1->mime) || (!rec2->mime))
 		return false;
 
-	if ((rec1->mime->type == NULL) || (rec2->mime->type == NULL))
+	if ((!rec1->mime->type) || (!rec2->mime->type))
 		return false;
 
 	if (strlen(rec1->mime->type) != strlen(rec2->mime->type))
@@ -2612,7 +2612,7 @@ bool near_ndef_record_cmp_mime(struct near_ndef_record *rec1,
 /* helper to get the record data length */
 size_t near_ndef_data_length(struct near_ndef_record *rec)
 {
-	if (rec == NULL)
+	if (!rec)
 		return 0;
 	else
 		return rec->data_len;
@@ -2621,7 +2621,7 @@ size_t near_ndef_data_length(struct near_ndef_record *rec)
 /* helper to get the record data pointer */
 uint8_t *near_ndef_data_ptr(struct near_ndef_record *rec)
 {
-	if (rec == NULL)
+	if (!rec)
 		return NULL;
 	else
 		return rec->data;
@@ -2640,7 +2640,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 
 	records = NULL;
 
-	if (ndef_data == NULL ||
+	if (!ndef_data ||
 		ndef_length < NDEF_MSG_MIN_LENGTH)
 			goto fail;
 
@@ -2649,12 +2649,12 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 		DBG("Record Header : 0x%X", ndef_data[offset]);
 
 		record = g_try_malloc0(sizeof(struct near_ndef_record));
-		if (record == NULL)
+		if (!record)
 			goto fail;
 
 		record->header = parse_record_header(ndef_data, offset,
 							ndef_length);
-		if (record->header == NULL)
+		if (!record->header)
 			goto fail;
 
 		if (validate_record_begin_and_end_bits(&p_mb, &p_me,
@@ -2693,7 +2693,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 					ndef_length - offset,
 					record->header->mb, record->header->me,
 					reply);
-			if (record->ho == NULL)
+			if (!record->ho)
 				goto fail;
 
 			/* the complete frame is processed, break the loop */
@@ -2704,7 +2704,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 			record->text = parse_text_payload(ndef_data + offset,
 						record->header->payload_len);
 
-			if (record->text == NULL)
+			if (!record->text)
 				goto fail;
 
 			break;
@@ -2713,7 +2713,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 			record->uri = parse_uri_payload(ndef_data + offset,
 						record->header->payload_len);
 
-			if (record->uri == NULL)
+			if (!record->uri)
 				goto fail;
 
 			break;
@@ -2723,7 +2723,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 						ndef_data + offset,
 						record->header->payload_len);
 
-			if (record->sp == NULL)
+			if (!record->sp)
 				goto fail;
 
 			break;
@@ -2733,11 +2733,11 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 						ndef_length, offset,
 						record->header->payload_len,
 						&c_data);
-			if (record->mime == NULL)
+			if (!record->mime)
 				goto fail;
 
 			/* No carrier data, move on */
-			if (c_data == NULL)
+			if (!c_data)
 				break;
 
 			if (process_mime_type(record->mime, c_data) < 0) {
@@ -2754,7 +2754,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 			record->aar = parse_aar_payload(ndef_data + offset,
 						record->header->payload_len);
 
-			if (record->aar == NULL)
+			if (!record->aar)
 				goto fail;
 
 			break;
@@ -2764,7 +2764,7 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 					record->header->payload_len;
 
 		record->data = g_try_malloc0(record->data_len);
-		if (record->data == NULL)
+		if (!record->data)
 			goto fail;
 
 		memcpy(record->data, record_start, record->data_len);
@@ -2867,14 +2867,14 @@ int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 
 	offset = 0;
 
-	if (ndef_in == NULL ||	ndef_in_length < NDEF_MSG_MIN_LENGTH) {
+	if (!ndef_in ||	ndef_in_length < NDEF_MSG_MIN_LENGTH) {
 		err = -EINVAL;
 		goto fail;
 	}
 
 	while (offset < ndef_in_length) {
 		record = g_try_malloc0(sizeof(struct near_ndef_record));
-		if (record == NULL) {
+		if (!record) {
 			err = -ENOMEM;
 			goto fail;
 		}
@@ -2882,7 +2882,7 @@ int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 		/* Create a record */
 		record->header = parse_record_header(ndef_in, offset,
 							ndef_in_length);
-		if (record->header == NULL) {
+		if (!record->header) {
 			err = -EINVAL;
 			goto fail;
 		}
@@ -2929,8 +2929,8 @@ struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 	/* Validate input parameters*/
 	if (((g_strcmp0(encoding, "UTF-8") != 0) &&
 		 (g_strcmp0(encoding, "UTF-16") != 0)) ||
-		 (language_code == NULL) ||
-		 (text == NULL)) {
+		 (!language_code) ||
+		 (!text)) {
 		return NULL;
 	}
 
@@ -2939,7 +2939,7 @@ struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 	payload_length = 1 + code_len + text_len;
 
 	msg = ndef_message_alloc("T", payload_length);
-	if (msg == NULL)
+	if (!msg)
 		return NULL;
 
 	if (g_strcmp0(encoding, "UTF-16") == 0)
@@ -2979,15 +2979,15 @@ struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 	DBG("");
 
 	/* Validate input parameters*/
-	if ((field_length == 0 && field != NULL) ||
-		(field_length != 0 && field == NULL)) {
+	if ((field_length == 0 && field) ||
+		(field_length != 0 && !field)) {
 		return NULL;
 	}
 
 	payload_length = field_length + 1;
 
 	msg = ndef_message_alloc("U", payload_length);
-	if (msg == NULL)
+	if (!msg)
 		return NULL;
 
 	msg->data[msg->offset++] = identifier;
@@ -3019,12 +3019,12 @@ near_ndef_prepare_smartposter_record(uint8_t uri_identifier,
 	/* URI is mandatory in Smartposter */
 	uri = near_ndef_prepare_uri_record(uri_identifier, uri_field_length,
 								uri_field);
-	if (uri == NULL)
+	if (!uri)
 		goto fail;
 
 	/* URI record length is equal to payload length of Sp record */
 	msg = ndef_message_alloc("Sp", uri->length);
-	if (msg == NULL)
+	if (!msg)
 		goto fail;
 
 	memcpy(msg->data + msg->offset, uri->data, uri->length);
@@ -3053,7 +3053,7 @@ static char *get_text_field(DBusMessage *msg, char *text)
 
 	DBG("");
 
-	if (text == NULL)
+	if (!text)
 		return NULL;
 
 	dbus_message_iter_init(msg, &iter);
@@ -3099,7 +3099,7 @@ static GSList *get_carrier_field(DBusMessage *msg)
 	DBG("");
 
 	carrier = get_text_field(msg, "Carrier");
-	if (carrier == NULL)
+	if (!carrier)
 		return NULL;
 
 	arr = g_strsplit(carrier, ",", NEAR_CARRIER_MAX);
@@ -3162,7 +3162,7 @@ static struct near_ndef_message *build_uri_record(DBusMessage *msg)
 	DBG("");
 
 	uri = get_uri_field(msg);
-	if (uri == NULL)
+	if (!uri)
 		return NULL;
 
 	id = 0;
@@ -3171,7 +3171,7 @@ static struct near_ndef_message *build_uri_record(DBusMessage *msg)
 	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
 		uri_prefix = __near_ndef_get_uri_prefix(i);
 
-		if (uri_prefix != NULL &&
+		if (uri_prefix &&
 		    g_str_has_prefix(uri, uri_prefix)) {
 			id = i;
 			id_len = strlen(uri_prefix);
@@ -3200,18 +3200,18 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 	 * TODO: Other records support.
 	 */
 	uri = get_uri_field(msg);
-	if (uri == NULL)
+	if (!uri)
 		return NULL;
 
 	for (i = 1; i <= NFC_MAX_URI_ID; i++) {
 		uri_prefix = __near_ndef_get_uri_prefix(i);
 
-		if (uri_prefix != NULL &&
+		if (uri_prefix &&
 				g_str_has_prefix(uri, uri_prefix))
 			break;
 	}
 
-	if (uri_prefix == NULL) {
+	if (!uri_prefix) {
 		i = 0;
 		id_len = 0;
 	} else
@@ -3242,7 +3242,7 @@ static int fill_wifi_wsc_data(uint8_t *tlv, uint16_t id,
 {
 	int offset = 0;
 
-	if (tlv == NULL || data == NULL)
+	if (!tlv || !data)
 		return 0;
 
 	fillb16(tlv, id);
@@ -3299,7 +3299,7 @@ struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
 	struct near_ndef_message *mime;
 
 	/* At least SSID is required in case of open network */
-	if (ssid == NULL)
+	if (!ssid)
 		return NULL;
 
 	DBG("SSID %s Passphrase %s", ssid, passphrase);
@@ -3307,7 +3307,7 @@ struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
 	/* Prepare TLV from ssid and passphrasse */
 	ssid_len = strlen(ssid);
 
-	if (passphrase != NULL) {
+	if (passphrase) {
 		pass_len = strlen(passphrase);
 		key_type = WIFI_WSC_KEY_PSK;
 	} else {
@@ -3320,12 +3320,12 @@ struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
 	/* add authentication type length */
 	tlv_len += WIFI_WSC_ID_LENGTH + WIFI_WSC_ID_DATA_LENGTH + 2;
 	/* add network key length */
-	if (passphrase != NULL)
+	if (passphrase)
 		tlv_len += WIFI_WSC_ID_LENGTH +
 				WIFI_WSC_ID_DATA_LENGTH + pass_len;
 
 	tlv = g_try_malloc0(tlv_len);
-	if (tlv ==  NULL)
+	if (!tlv)
 		return NULL;
 
 	offset = 0;
@@ -3344,7 +3344,7 @@ struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
 						(uint8_t *) temp_key);
 
 	/* copy Network Key */
-	if (passphrase != NULL)
+	if (passphrase)
 		offset += fill_wifi_wsc_data(tlv + offset, WIFI_WSC_ID_KEY,
 						pass_len,
 						(uint8_t *) passphrase);
@@ -3352,7 +3352,7 @@ struct near_ndef_message *near_ndef_prepare_wsc_record(char *ssid,
 	mime = ndef_message_alloc_complete(WIFI_WSC_MIME_STRING, tlv_len, NULL,
 						0, RECORD_TNF_MIME, true,
 					   true);
-	if (mime == NULL) {
+	if (!mime) {
 		g_free(tlv);
 		return NULL;
 	}
@@ -3368,7 +3368,7 @@ static char *get_mime_payload_data(DBusMessageIter iter,
 {
 	DBG("");
 
-	if (payload == NULL || payload_len == NULL) {
+	if (!payload || !payload_len) {
 		near_error("Payload %p payload_len %p", payload, payload_len);
 		return NULL;
 	}
@@ -3413,7 +3413,7 @@ static struct near_ndef_message *near_ndef_prepare_mime_payload_record(
 	DBG("Payload %*s", payload_len, payload);
 	mime = ndef_message_alloc_complete(type, payload_len, NULL, 0,
 						RECORD_TNF_MIME, true, true);
-	if (mime == NULL) {
+	if (!mime) {
 		near_error("Failed to alloc NDEF message");
 		return NULL;
 	}
@@ -3451,7 +3451,7 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 				struct carrier_data *carrier;
 
 				get_wsc_data(arr_iter, &ssid, &passphrase);
-				if (ssid != NULL)
+				if (ssid)
 					return near_ndef_prepare_wsc_record(
 							ssid, passphrase);
 
@@ -3462,13 +3462,13 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 				 */
 				carrier = __near_agent_handover_request_data(
 							HO_AGENT_WIFI, NULL);
-				if (carrier == NULL)
+				if (!carrier)
 					return NULL;
 
 				mime = ndef_message_alloc_complete(
 					WIFI_WSC_MIME_STRING, carrier->size,
 					NULL, 0, RECORD_TNF_MIME, true, true);
-				if (mime == NULL) {
+				if (!mime) {
 					g_free(carrier);
 					return NULL;
 				}
@@ -3490,8 +3490,8 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 
 				DBG("mime string %s", mime_str);
 				dbus_message_iter_recurse(&iter, &payload_iter);
-				if (get_mime_payload_data(payload_iter,
-						&payload, &payload_len) == NULL)
+				if (!get_mime_payload_data(payload_iter,
+							&payload, &payload_len))
 					return NULL;
 
 				return near_ndef_prepare_mime_payload_record(

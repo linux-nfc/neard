@@ -88,7 +88,7 @@ struct near_tag *near_tag_get_tag(uint32_t adapter_idx, uint32_t target_idx)
 
 	path = g_strdup_printf("%s/nfc%d/tag%d", NFC_PATH,
 					adapter_idx, target_idx);
-	if (path == NULL)
+	if (!path)
 		return NULL;
 
 	tag = g_hash_table_lookup(tag_hash, path);
@@ -110,7 +110,7 @@ static void append_records(DBusMessageIter *iter, void *user_data)
 		char *path;
 
 		path = __near_ndef_record_get_path(record);
-		if (path == NULL)
+		if (!path)
 			continue;
 
 		dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
@@ -193,7 +193,7 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	DBG("conn %p", conn);
 
 	reply = dbus_message_new_method_return(msg);
-	if (reply == NULL)
+	if (!reply)
 		return NULL;
 
 	dbus_message_iter_init_append(reply, &array);
@@ -201,12 +201,12 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	near_dbus_dict_open(&array, &dict);
 
 	type = type_string(tag);
-	if (type != NULL)
+	if (type)
 		near_dbus_dict_append_basic(&dict, "Type",
 					DBUS_TYPE_STRING, &type);
 
 	protocol = protocol_string(tag);
-	if (protocol != NULL)
+	if (protocol)
 		near_dbus_dict_append_basic(&dict, "Protocol",
 					DBUS_TYPE_STRING, &protocol);
 
@@ -236,7 +236,7 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
 
-	if (tag == NULL)
+	if (!tag)
 		return;
 
 	dbus_message_unref(tag->write_msg);
@@ -256,16 +256,16 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	DBG("Write status %d", status);
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return;
 
 	conn = near_dbus_get_connection();
-	if (conn == NULL)
+	if (!conn)
 		goto out;
 
 	if (status != 0) {
 		reply = __near_error_failed(tag->write_msg, EINVAL);
-		if (reply != NULL)
+		if (reply)
 			g_dbus_send_message(conn, reply);
 	} else {
 		g_dbus_send_reply(conn, tag->write_msg, DBUS_TYPE_INVALID);
@@ -301,10 +301,10 @@ static void format_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	DBG("format status %d", status);
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return;
 
-	if (tag->write_msg == NULL)
+	if (!tag->write_msg)
 		return;
 
 	if (status == 0) {
@@ -341,7 +341,7 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 		return __near_error_in_progress(msg);
 
 	ndef = __ndef_build_from_message(msg);
-	if (ndef == NULL)
+	if (!ndef)
 		return __near_error_failed(msg, EINVAL);
 
 	tag->write_msg = dbus_message_ref(msg);
@@ -357,14 +357,14 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
-		if (ndef_with_header == NULL)
+		if (!ndef_with_header)
 			goto fail;
 
 		ndef_with_header->offset = 0;
 		ndef_with_header->length = ndef->length + tlv_len_size;
 		ndef_with_header->data =
 				g_try_malloc0(ndef->length + tlv_len_size);
-		if (ndef_with_header->data == NULL)
+		if (!ndef_with_header->data)
 			goto fail;
 
 		ndef_with_header->data[0] = TLV_NDEF;
@@ -387,14 +387,14 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 	case NFC_PROTO_FELICA:
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
-		if (ndef_with_header == NULL)
+		if (!ndef_with_header)
 			goto fail;
 
 		ndef_with_header->offset = 0;
 		ndef_with_header->length = ndef->length;
 		ndef_with_header->data = g_try_malloc0(
 						ndef_with_header->length);
-		if (ndef_with_header->data == NULL)
+		if (!ndef_with_header->data)
 			goto fail;
 
 		memcpy(ndef_with_header->data, ndef->data, ndef->length);
@@ -404,13 +404,13 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 	case NFC_PROTO_ISO14443:
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
-		if (ndef_with_header == NULL)
+		if (!ndef_with_header)
 			goto fail;
 
 		ndef_with_header->offset = 0;
 		ndef_with_header->length = ndef->length + 2;
 		ndef_with_header->data = g_try_malloc0(ndef->length + 2);
-		if (ndef_with_header->data == NULL)
+		if (!ndef_with_header->data)
 			goto fail;
 
 		ndef_with_header->data[0] = (uint8_t)(ndef->length >> 8);
@@ -475,7 +475,7 @@ void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
 		char *path;
 
 		path = __near_ndef_record_get_path(record);
-		if (path == NULL)
+		if (!path)
 			continue;
 
 		dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
@@ -590,7 +590,7 @@ static int tag_initialize(struct near_tag *tag,
 
 	tag->path = g_strdup_printf("%s/nfc%d/tag%d", NFC_PATH,
 					adapter_idx, target_idx);
-	if (tag->path == NULL)
+	if (!tag->path)
 		return -ENOMEM;
 	tag->adapter_idx = adapter_idx;
 	tag->target_idx = target_idx;
@@ -617,11 +617,11 @@ struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
 	char *path;
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag != NULL)
+	if (tag)
 		return NULL;
 
 	tag = g_try_malloc0(sizeof(struct near_tag));
-	if (tag == NULL)
+	if (!tag)
 		return NULL;
 
 	if (tag_initialize(tag, adapter_idx, target_idx,
@@ -633,7 +633,7 @@ struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
 	}
 
 	path = g_strdup(tag->path);
-	if (path == NULL) {
+	if (!path) {
 		g_free(tag);
 		return NULL;
 	}
@@ -656,7 +656,7 @@ void __near_tag_remove(struct near_tag *tag)
 
 	DBG("path %s", tag->path);
 
-	if (g_hash_table_lookup(tag_hash, tag->path) == NULL)
+	if (!g_hash_table_lookup(tag_hash, tag->path))
 		return;
 
 	g_dbus_unregister_interface(connection, tag->path,
@@ -682,7 +682,7 @@ enum near_tag_sub_type near_tag_get_subtype(uint32_t adapter_idx,
 	struct near_tag *tag;
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return NEAR_TAG_NFC_SUBTYPE_UNKNOWN;
 
 	return tag->sub_type;
@@ -695,11 +695,11 @@ uint8_t *near_tag_get_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 	uint8_t *nfcid;
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		goto fail;
 
 	nfcid = g_try_malloc0(tag->nfcid_len);
-	if (nfcid == NULL)
+	if (!nfcid)
 		goto fail;
 
 	memcpy(nfcid, tag->nfcid, tag->nfcid_len);
@@ -720,7 +720,7 @@ int near_tag_set_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("NFCID len %zd", nfcid_len);
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return -ENODEV;
 
 	if (tag->nfcid_len > 0)
@@ -741,15 +741,15 @@ int near_tag_add_data(uint32_t adapter_idx, uint32_t target_idx,
 	struct near_tag *tag;
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return -ENODEV;
 
 	tag->data_length = data_length;
 	tag->data = g_try_malloc0(data_length);
-	if (tag->data == NULL)
+	if (!tag->data)
 		return -ENOMEM;
 
-	if (data != NULL)
+	if (data)
 		memcpy(tag->data, data, data_length);
 
 	return 0;
@@ -771,7 +771,7 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 					NFC_PATH, tag->adapter_idx,
 					tag->target_idx, tag->n_records);
 
-		if (path == NULL)
+		if (!path)
 			continue;
 
 		__near_ndef_record_register(record, path);
@@ -787,7 +787,7 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 					DBUS_TYPE_OBJECT_PATH, append_records,
 					tag);
 
-	if (cb != NULL)
+	if (cb)
 		cb(tag->adapter_idx, tag->target_idx, status);
 
 	g_list_free(records);
@@ -812,7 +812,7 @@ bool near_tag_get_blank(struct near_tag *tag)
 
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length)
 {
-	if (data_length == NULL)
+	if (!data_length)
 		return NULL;
 
 	*data_length = tag->data_length;
@@ -837,7 +837,7 @@ uint32_t near_tag_get_target_idx(struct near_tag *tag)
 
 enum near_tag_memory_layout near_tag_get_memory_layout(struct near_tag *tag)
 {
-	if (tag == NULL)
+	if (!tag)
 		return NEAR_TAG_MEMORY_UNKNOWN;
 
 	return tag->layout;
@@ -846,7 +846,7 @@ enum near_tag_memory_layout near_tag_get_memory_layout(struct near_tag *tag)
 void near_tag_set_memory_layout(struct near_tag *tag,
 					enum near_tag_memory_layout layout)
 {
-	if (tag == NULL)
+	if (!tag)
 		return;
 
 	tag->layout = layout;
@@ -854,7 +854,7 @@ void near_tag_set_memory_layout(struct near_tag *tag,
 
 void near_tag_set_max_ndef_size(struct near_tag *tag, uint16_t size)
 {
-	if (tag == NULL)
+	if (!tag)
 		return;
 
 	tag->t4.max_ndef_size = size;
@@ -862,7 +862,7 @@ void near_tag_set_max_ndef_size(struct near_tag *tag, uint16_t size)
 
 uint16_t near_tag_get_max_ndef_size(struct near_tag *tag)
 {
-	if (tag == NULL)
+	if (!tag)
 		return 0;
 
 	return tag->t4.max_ndef_size;
@@ -870,7 +870,7 @@ uint16_t near_tag_get_max_ndef_size(struct near_tag *tag)
 
 void near_tag_set_c_apdu_max_size(struct near_tag *tag, uint16_t size)
 {
-	if (tag == NULL)
+	if (!tag)
 		return;
 
 	tag->t4.c_apdu_max_size = size;
@@ -878,7 +878,7 @@ void near_tag_set_c_apdu_max_size(struct near_tag *tag, uint16_t size)
 
 uint16_t near_tag_get_c_apdu_max_size(struct near_tag *tag)
 {
-	if (tag == NULL)
+	if (!tag)
 		return 0;
 
 	return tag->t4.c_apdu_max_size;
@@ -886,7 +886,7 @@ uint16_t near_tag_get_c_apdu_max_size(struct near_tag *tag)
 
 void near_tag_set_idm(struct near_tag *tag, uint8_t *idm, uint8_t len)
 {
-	if (tag == NULL || len > TYPE3_IDM_LEN)
+	if (!tag || len > TYPE3_IDM_LEN)
 		return;
 
 	memset(tag->t3.IDm, 0, TYPE3_IDM_LEN);
@@ -895,7 +895,7 @@ void near_tag_set_idm(struct near_tag *tag, uint8_t *idm, uint8_t len)
 
 uint8_t *near_tag_get_idm(struct near_tag *tag, uint8_t *len)
 {
-	if (tag == NULL || len == NULL)
+	if (!tag || !len)
 		return NULL;
 
 	*len = TYPE3_IDM_LEN;
@@ -904,7 +904,7 @@ uint8_t *near_tag_get_idm(struct near_tag *tag, uint8_t *len)
 
 void near_tag_set_attr_block(struct near_tag *tag, uint8_t *attr, uint8_t len)
 {
-	if (tag == NULL || len > TYPE3_ATTR_BLOCK_SIZE)
+	if (!tag || len > TYPE3_ATTR_BLOCK_SIZE)
 		return;
 
 	memset(tag->t3.attr, 0, TYPE3_ATTR_BLOCK_SIZE);
@@ -913,7 +913,7 @@ void near_tag_set_attr_block(struct near_tag *tag, uint8_t *attr, uint8_t len)
 
 uint8_t *near_tag_get_attr_block(struct near_tag *tag, uint8_t *len)
 {
-	if (tag == NULL || len == NULL)
+	if (!tag || !len)
 		return NULL;
 
 	*len = TYPE3_ATTR_BLOCK_SIZE;
@@ -922,7 +922,7 @@ uint8_t *near_tag_get_attr_block(struct near_tag *tag, uint8_t *len)
 
 void near_tag_set_ic_type(struct near_tag *tag, uint8_t ic_type)
 {
-	if (tag == NULL)
+	if (!tag)
 		return;
 
 	tag->t3.ic_type = ic_type;
@@ -930,7 +930,7 @@ void near_tag_set_ic_type(struct near_tag *tag, uint8_t ic_type)
 
 uint8_t near_tag_get_ic_type(struct near_tag *tag)
 {
-	if (tag == NULL)
+	if (!tag)
 		return 0;
 
 	return tag->t3.ic_type;
@@ -948,7 +948,7 @@ int near_tag_driver_register(struct near_tag_driver *driver)
 {
 	DBG("");
 
-	if (driver->read == NULL)
+	if (!driver->read)
 		return -EINVAL;
 
 	driver_list = g_slist_insert_sorted(driver_list, driver, cmp_prio);
@@ -1004,7 +1004,7 @@ int __near_tag_write(struct near_tag *tag,
 			__near_adapter_stop_check_presence(tag->adapter_idx,
 								tag->target_idx);
 
-			if (tag->blank && driver->format != NULL) {
+			if (tag->blank && driver->format) {
 				DBG("Blank tag detected, formatting");
 				err = driver->format(tag->adapter_idx,
 						tag->target_idx, format_cb);
@@ -1018,7 +1018,7 @@ int __near_tag_write(struct near_tag *tag,
 		}
 	}
 
-	if (list == NULL)
+	if (!list)
 		err = -EOPNOTSUPP;
 
 	if (err < 0)
@@ -1040,7 +1040,7 @@ int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb)
 		DBG("driver type 0x%x", driver->type);
 
 		if (driver->type == tag->type) {
-			if (driver->check_presence == NULL)
+			if (!driver->check_presence)
 				continue;
 
 			return driver->check_presence(tag->adapter_idx, tag->target_idx, cb);

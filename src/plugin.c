@@ -53,7 +53,7 @@ static bool add_plugin(void *handle, struct near_plugin_desc *desc)
 {
 	struct near_plugin *plugin;
 
-	if (desc->init == NULL)
+	if (!desc->init)
 		return false;
 
 	if (!g_str_equal(desc->version, NEAR_VERSION)) {
@@ -62,7 +62,7 @@ static bool add_plugin(void *handle, struct near_plugin_desc *desc)
 	}
 
 	plugin = g_try_new0(struct near_plugin, 1);
-	if (plugin == NULL)
+	if (!plugin)
 		return false;
 
 	plugin->handle = handle;
@@ -128,8 +128,8 @@ int __near_plugin_init(const char *pattern, const char *exclude)
 	}
 
 	dir = g_dir_open(PLUGINDIR, 0, NULL);
-	if (dir != NULL) {
-		while ((file = g_dir_read_name(dir)) != NULL) {
+	if (dir) {
+		while ((file = g_dir_read_name(dir))) {
 			void *handle;
 			struct near_plugin_desc *desc;
 
@@ -140,7 +140,7 @@ int __near_plugin_init(const char *pattern, const char *exclude)
 			filename = g_build_filename(PLUGINDIR, file, NULL);
 
 			handle = dlopen(filename, RTLD_NOW);
-			if (handle == NULL) {
+			if (!handle) {
 				near_error("Can't load %s: %s",
 							filename, dlerror());
 				g_free(filename);
@@ -150,7 +150,7 @@ int __near_plugin_init(const char *pattern, const char *exclude)
 			g_free(filename);
 
 			desc = dlsym(handle, "near_plugin_desc");
-			if (desc == NULL) {
+			if (!desc) {
 				near_error("Can't load symbol: %s",
 								dlerror());
 				dlclose(handle);
@@ -196,7 +196,7 @@ void __near_plugin_cleanup(void)
 		if (plugin->active && plugin->desc->exit)
 			plugin->desc->exit();
 
-		if (plugin->handle != NULL)
+		if (plugin->handle)
 			dlclose(plugin->handle);
 
 		g_free(plugin);
