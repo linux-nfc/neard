@@ -142,13 +142,13 @@ static int t3_cookie_release(int err, void *data)
 
 	DBG("%p", cookie);
 
-	if (cookie == NULL)
+	if (!cookie)
 		return err;
 
-	if (cookie->cb != NULL)
+	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
-	if (cookie->ndef != NULL)
+	if (cookie->ndef)
 		g_free(cookie->ndef->data);
 
 	g_free(cookie->ndef);
@@ -337,7 +337,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 		goto out_err;
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -349,7 +349,7 @@ static int nfctype3_recv_block_0(uint8_t *resp, int length, void *data)
 		near_tag_set_ro(tag, FALSE);
 
 	t3_tag = g_try_malloc0(sizeof(struct type3_tag));
-	if (t3_tag == NULL) {
+	if (!t3_tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -440,7 +440,7 @@ static int check_sys_op_in_mc_block(uint8_t *resp, int length, void *data)
 
 		tag = near_tag_get_tag(cookie->adapter_idx,
 					cookie->target_idx);
-		if (tag == NULL) {
+		if (!tag) {
 			err = -ENOMEM;
 		goto out_err;
 		}
@@ -544,7 +544,7 @@ static int nfctype3_read(uint32_t adapter_idx,
 	cmd.len = LEN_CMD + LEN_CMD_LEN + 4;
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
@@ -672,10 +672,10 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
 
-	if (cookie == NULL) {
+	if (!cookie) {
 		err = -ENOMEM;
 
-		if (cb != NULL)
+		if (cb)
 			cb(adapter_idx, target_idx, err);
 
 		return err;
@@ -688,13 +688,13 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	cookie->current_block = 0;
 
 	idm = near_tag_get_idm(tag, &len);
-	if (idm == NULL)
+	if (!idm)
 		return t3_cookie_release(-EINVAL, cookie);
 
 	memcpy(cookie->IDm, idm, len);
 
 	attr = near_tag_get_attr_block(tag, &len);
-	if (attr == NULL)
+	if (!attr)
 		return t3_cookie_release(-EINVAL, cookie);
 
 	memcpy(cookie->attr, attr, len);
@@ -733,13 +733,13 @@ static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	DBG("");
 
-	if (ndef == NULL || cb == NULL) {
+	if (!ndef || !cb) {
 		err = -EINVAL;
 		goto out_err;
 	}
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -747,7 +747,7 @@ static int nfctype3_write(uint32_t adapter_idx, uint32_t target_idx,
 	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
 
 out_err:
-	if (cb != NULL && err < 0)
+	if (cb && err < 0)
 		cb(adapter_idx, target_idx, err);
 
 	return err;
@@ -785,7 +785,7 @@ static int nfctype3_check_presence(uint32_t adapter_idx,
 	cmd.len = LEN_CMD + LEN_CMD_LEN + 4 ;
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
@@ -815,7 +815,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 		goto out_err;
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -938,7 +938,7 @@ static int nfctype3_format(uint32_t adapter_idx,
 	DBG("");
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return -ENOMEM;
 
 	ic_type = near_tag_get_ic_type(tag);
@@ -946,7 +946,7 @@ static int nfctype3_format(uint32_t adapter_idx,
 		return -EOPNOTSUPP;
 
 	cookie = g_try_malloc0(sizeof(struct t3_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
@@ -955,7 +955,7 @@ static int nfctype3_format(uint32_t adapter_idx,
 	cookie->ic_type = ic_type;
 
 	idm = near_tag_get_idm(tag, &len);
-	if (idm == NULL)
+	if (!idm)
 		return t3_cookie_release(-EINVAL, cookie);
 
 	memcpy(cookie->IDm, idm, len);

@@ -89,7 +89,7 @@ static void free_hr_ndef(gpointer data)
 {
 	struct hr_ndef *ndef = data;
 
-	if (ndef != NULL)
+	if (ndef)
 		g_free(ndef->ndef);
 
 	g_free(ndef);
@@ -102,7 +102,7 @@ static void handover_close(int client_fd, int err)
 	DBG("");
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
-	if (ndef == NULL)
+	if (!ndef)
 		return;
 
 	g_hash_table_remove(hr_ndef_hash, GINT_TO_POINTER(client_fd));
@@ -117,7 +117,7 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 
 	DBG("");
 
-	if ((ndef->ndef == NULL) ||
+	if ((!ndef->ndef) ||
 			(ndef->cur_ptr < NDEF_HR_MSG_MIN_LENGTH)) {
 		err = -EINVAL;
 		goto fail;
@@ -125,7 +125,7 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 
 	/* call the global parse function */
 	records = near_ndef_parse_msg(ndef->ndef, ndef->cur_ptr, &msg);
-	if (records == NULL) {
+	if (!records) {
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -174,7 +174,7 @@ static bool handover_read_cfg_records(int client_fd,
 	int err;
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
-	if (ndef == NULL) {
+	if (!ndef) {
 		near_error("hr_ndef should exist");
 		return false;
 	}
@@ -183,7 +183,7 @@ static bool handover_read_cfg_records(int client_fd,
 		/* Next prepare read to complete the Hr */
 		new_ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len +
 				NDEF_HR_MSG_MIN_LENGTH);
-		if (new_ndef == NULL)
+		if (!new_ndef)
 			return false;
 
 		ndef->ndef = new_ndef;
@@ -206,7 +206,7 @@ static bool handover_read_cfg_records(int client_fd,
 		/* Next prepare read to complete the NDEF */
 		new_ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len
 								+ ndef_size);
-		if (new_ndef == NULL)
+		if (!new_ndef)
 			return false;
 
 		ndef->ndef = new_ndef;
@@ -265,7 +265,7 @@ static bool handover_read_hr(int client_fd,
 	DBG("");
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
-	if (ndef == NULL)
+	if (!ndef)
 		return false;
 
 	/* Read remaining bytes */
@@ -322,12 +322,12 @@ static bool handover_read_initialize(int client_fd,
 
 	/* Allocate the ndef structure */
 	ndef = g_try_malloc0(sizeof(struct hr_ndef));
-	if (ndef == NULL)
+	if (!ndef)
 		goto fail;
 
 	/* Allocate and read frame header (6 bytes) */
 	ndef->ndef = g_try_malloc0(NDEF_HR_MSG_MIN_LENGTH);
-	if (ndef->ndef == NULL)
+	if (!ndef->ndef)
 		goto fail;
 
 	/* Initialize default values */
@@ -363,7 +363,7 @@ static bool handover_read_initialize(int client_fd,
 
 	/* Next prepare read to complete the read */
 	ndef->ndef = g_try_realloc(ndef->ndef, ndef->cur_record_len);
-	if (ndef->ndef == NULL)
+	if (!ndef->ndef)
 		goto fail;
 
 	return true;
@@ -385,7 +385,7 @@ static bool handover_read(int client_fd,
 	struct hr_ndef *ndef;
 
 	ndef = g_hash_table_lookup(hr_ndef_hash, GINT_TO_POINTER(client_fd));
-	if (ndef == NULL) {
+	if (!ndef) {
 		/* First call: allocate and read header bytes */
 		return handover_read_initialize(client_fd, adapter_idx,
 						target_idx, cb);
@@ -452,7 +452,7 @@ static int handover_push(int client_fd,
 	DBG("");
 
 	client = g_try_malloc0(sizeof(struct hr_push_client));
-	if (client == NULL)
+	if (!client)
 		return -ENOMEM;
 
 	channel = g_io_channel_unix_new(client_fd);

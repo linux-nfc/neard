@@ -51,7 +51,7 @@ static void free_snep_validation_client(gpointer data)
 {
 	GList *old_ndefs = data;
 
-	if (old_ndefs != NULL)
+	if (old_ndefs)
 		g_list_free(old_ndefs);
 }
 
@@ -68,7 +68,7 @@ static bool snep_validation_server_req_put(int client_fd, void *data)
 
 	DBG("");
 
-	if (snep_data->nfc_data == NULL)
+	if (!snep_data->nfc_data)
 		goto error;
 
 	/*
@@ -85,7 +85,7 @@ static bool snep_validation_server_req_put(int client_fd, void *data)
 
 	recd = records->data;
 
-	if (recd == NULL) {
+	if (!recd) {
 		g_list_free(records);
 		goto error;
 	}
@@ -145,7 +145,7 @@ static bool snep_validation_server_req_get(int client_fd, void *data)
 	}
 
 	recd = records->data;
-	if (recd == NULL) {
+	if (!recd) {
 		g_list_free(records);
 		goto error;
 	}
@@ -159,7 +159,7 @@ static bool snep_validation_server_req_get(int client_fd, void *data)
 	incoming_ndefs = g_hash_table_lookup(snep_validation_hash,
 						GINT_TO_POINTER(client_fd));
 
-	if (incoming_ndefs == NULL)
+	if (!incoming_ndefs)
 		goto done;
 
 	/* Now, loop to find the the associated record */

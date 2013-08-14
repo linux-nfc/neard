@@ -165,7 +165,7 @@ static int t4_cookie_release(int err, void *data)
 
 	DBG("%p", cookie);
 
-	if (cookie == NULL)
+	if (!cookie)
 		return err;
 
 	if (err < 0 && cookie->cb)
@@ -209,7 +209,7 @@ static int ISO_send_cmd(uint8_t class,
 	}
 
 	cmd = g_try_malloc0(total_cmd_length);
-	if (cmd == NULL) {
+	if (!cmd) {
 		DBG("Mem alloc failed");
 		err = -ENOMEM;
 		goto out_err;
@@ -371,7 +371,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 		return t4_cookie_release(err, cookie);
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return t4_cookie_release(-ENOMEM, cookie);
 
 	near_tag_set_max_ndef_size(tag, cookie->max_ndef_size);
@@ -437,7 +437,7 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 
 	/* -2 for status word and -1 is for NFC first byte... */
 	read_cc = g_try_malloc0(length - 2 - NFC_STATUS_BYTE_LEN);
-	if (read_cc == NULL) {
+	if (!read_cc) {
 		DBG("Mem alloc failed");
 
 		return t4_cookie_release(-ENOMEM, cookie);
@@ -487,7 +487,7 @@ static int t4_select_cc(uint8_t *resp, int length, void *data)
 
 		cookie->tag = near_tag_get_tag(cookie->adapter_idx,
 						cookie->target_idx);
-		if (cookie->tag == NULL)
+		if (!cookie->tag)
 			return t4_cookie_release(-ENOMEM, cookie);
 
 		near_tag_set_blank(cookie->tag, TRUE);
@@ -564,7 +564,7 @@ static int nfctype4_read(uint32_t adapter_idx,
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
@@ -635,10 +635,10 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
 
-	if (cookie == NULL) {
+	if (!cookie) {
 		err = -ENOMEM;
 
-		if (cb != NULL)
+		if (cb)
 			cb(adapter_idx, target_idx, err);
 
 		return err;
@@ -691,13 +691,13 @@ static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	DBG("");
 
-	if (ndef == NULL || cb == NULL) {
+	if (!ndef || !cb) {
 		err = -EINVAL;
 		goto out_err;
 	}
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -705,7 +705,7 @@ static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,
 	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
 
 out_err:
-	if (cb != NULL)
+	if (cb)
 		cb(adapter_idx, target_idx, err);
 
 	return err;
@@ -736,7 +736,7 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
@@ -798,7 +798,7 @@ static int read_cc_file(uint8_t *resp, int length, void *data)
 
 	/* -2 for status word and -1 is for NFC first byte... */
 	read_cc = g_try_malloc0(length - 2 - NFC_STATUS_BYTE_LEN);
-	if (read_cc == NULL) {
+	if (!read_cc) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -808,7 +808,7 @@ static int read_cc_file(uint8_t *resp, int length, void *data)
 	cookie->max_ndef_size = g_ntohs(read_cc->tlv_fc.max_ndef_size);
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -920,7 +920,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 	}
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return t4_cookie_release(-EINVAL, cookie);
 
 	DBG("Formatting is done");
@@ -978,7 +978,7 @@ static int write_data_to_ndef_file(uint8_t *resp, int length, void *data)
 				+ ARRAY_SIZE(ndef_nlen);
 
 	cmd_data = g_try_malloc0(cmd_data_length);
-	if (cmd_data == NULL) {
+	if (!cmd_data) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -1029,7 +1029,7 @@ static int create_ndef_file(uint8_t *resp, int length, void *data)
 	}
 
 	ndef = g_try_malloc0(sizeof(struct desfire_std_file));
-	if (ndef == NULL) {
+	if (!ndef) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -1090,7 +1090,7 @@ static int write_data_to_cc_file(uint8_t *resp, int length, void *data)
 	}
 
 	cc = g_try_malloc0(sizeof(struct desfire_cc_file));
-	if (cc == NULL) {
+	if (!cc) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -1150,7 +1150,7 @@ static int create_cc_file(uint8_t *resp, int length, void *data)
 	}
 
 	cc = g_try_malloc0(sizeof(struct desfire_std_file));
-	if (cc == NULL) {
+	if (!cc) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -1206,7 +1206,7 @@ static int select_application_1(uint8_t *resp, int length, void *data)
 	/* Step4 : Select application (which is created just now) */
 	cmd_data_length = ARRAY_SIZE(desfire_aid_1);
 	cmd_data = g_try_malloc0(cmd_data_length);
-	if (cmd_data == NULL) {
+	if (!cmd_data) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -1252,7 +1252,7 @@ static int create_application(uint8_t *resp, int length, void *data)
 	}
 
 	app = g_try_malloc0(sizeof(struct desfire_app));
-	if (app == NULL) {
+	if (!app) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -1307,7 +1307,7 @@ static int select_application(uint8_t *resp, int length, void *data)
 	/* AID : 000000h */
 	cmd_data_length = ARRAY_SIZE(desfire_aid);
 	cmd_data = g_try_malloc0(cmd_data_length);
-	if (cmd_data == NULL) {
+	if (!cmd_data) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -1435,7 +1435,7 @@ static int nfctype4_format(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;

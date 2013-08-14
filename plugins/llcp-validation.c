@@ -69,7 +69,7 @@ static void free_one_sdu(gpointer data)
 {
 	struct sdu *i_sdu = data;
 
-	if (i_sdu == NULL)
+	if (!i_sdu)
 		return;
 
 	g_free(i_sdu->data);
@@ -97,7 +97,7 @@ static void llcp_send_data(gpointer data, gpointer user_data)
 	struct sdu *i_sdu = data;
 	int err;
 
-	if (i_sdu == NULL)
+	if (!i_sdu)
 		return;
 
 	/* conn less or oriented ? */
@@ -144,13 +144,13 @@ static bool llcp_add_incoming_sdu(struct co_cl_client_data *clt, int len)
 	struct sdu *i_sdu;
 
 	i_sdu = g_try_malloc0(sizeof(struct sdu));
-	if (i_sdu == NULL)
+	if (!i_sdu)
 		goto out_error;
 
 	i_sdu->len = len;
 	if (len > 0) {
 		i_sdu->data = g_try_malloc0(len);
-		if (i_sdu->data == NULL)
+		if (!i_sdu->data)
 			goto out_error;
 		memcpy(i_sdu->data, clt->miu_buffer, len);
 	}
@@ -231,9 +231,9 @@ static bool llcp_common_read(int client_fd, uint32_t adapter_idx,
 	cx_client = g_hash_table_lookup(llcp_client_hash,
 						GINT_TO_POINTER(client_fd));
 
-	if (cx_client == NULL) {
+	if (!cx_client) {
 		cx_client = g_try_malloc0(sizeof(struct co_cl_client_data));
-		if (cx_client == NULL)
+		if (!cx_client)
 			goto error;
 
 		cx_client->fd = client_fd;
@@ -248,7 +248,7 @@ static bool llcp_common_read(int client_fd, uint32_t adapter_idx,
 			cx_client->miu_len = LLCP_DEFAULT_MIU;
 
 		cx_client->miu_buffer = g_try_malloc0(cx_client->miu_len);
-		if (cx_client->miu_buffer == NULL) {
+		if (!cx_client->miu_buffer) {
 			DBG("Cannot allocate MIU buffer (size: %d)",
 							cx_client->miu_len);
 			goto error;

@@ -111,10 +111,10 @@ static int t2_cookie_release(int err, void *data)
 
 	DBG("%p", cookie);
 
-	if (cookie == NULL)
+	if (!cookie)
 		return err;
 
-	if (cookie->cb != NULL)
+	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
 	if (cookie->ndef)
@@ -233,13 +233,13 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		goto out_err;
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
 
 	t2_tag = g_try_malloc0(sizeof(struct type2_tag));
-	if (t2_tag == NULL) {
+	if (!t2_tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -293,7 +293,7 @@ static int nfctype2_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 	cmd.block = META_BLOCK_START;
 
 	cookie = g_try_malloc0(sizeof(struct t2_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
@@ -382,9 +382,9 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	cookie = g_try_malloc0(sizeof(struct t2_cookie));
-	if (cookie == NULL) {
+	if (!cookie) {
 		err = -ENOMEM;
-		if (cb != NULL)
+		if (cb)
 			cb(adapter_idx, target_idx, err);
 		return err;
 	}
@@ -416,13 +416,13 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	DBG("");
 
-	if (ndef == NULL || cb == NULL) {
+	if (!ndef || !cb) {
 		err = -EINVAL;
 		goto out_err;
 	}
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -462,7 +462,7 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out_err:
-	if (cb != NULL)
+	if (cb)
 		cb(adapter_idx, target_idx, err);
 
 	return err;
@@ -498,7 +498,7 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 		cmd.block = META_BLOCK_START;
 
 		cookie = g_try_malloc0(sizeof(struct t2_cookie));
-		if (cookie == NULL)
+		if (!cookie)
 			return -ENOMEM;
 
 		cookie->adapter_idx = adapter_idx;
@@ -536,7 +536,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 	}
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -562,7 +562,7 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return -EINVAL;
 
 
@@ -577,7 +577,7 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 	cc_ndef = g_try_malloc0(sizeof(struct near_ndef_message));
 	cookie = g_try_malloc0(sizeof(struct t2_cookie));
 
-	if (t2_cc == NULL || cc_ndef == NULL || cookie == NULL) {
+	if (!t2_cc || !cc_ndef || !cookie) {
 		err = -ENOMEM;
 		goto out_err;
 	}

@@ -146,7 +146,7 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 		else
 			err = 0;
 
-		if (client_data->driver->close != NULL)
+		if (client_data->driver->close)
 			client_data->driver->close(client_data->fd, err);
 
 		near_error("%s client channel closed",
@@ -186,7 +186,7 @@ static void free_client_data(gpointer data)
 
 	client_data = (struct p2p_data *) data;
 
-	if (client_data->driver->close != NULL)
+	if (client_data->driver->close)
 		client_data->driver->close(client_data->fd, 0);
 
 	if (client_data->watch > 0)
@@ -257,7 +257,7 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 	DBG("target idx %d", client_addr.target_idx);
 
 	client_data = g_try_malloc0(sizeof(struct p2p_data));
-	if (client_data == NULL) {
+	if (!client_data) {
 		close(client_fd);
 		return FALSE;
 	}
@@ -382,7 +382,7 @@ static gboolean p2p_connect_event(GIOChannel *channel, GIOCondition condition,
 
 	DBG("condition 0x%x", condition);
 
-	if (conn->driver->push == NULL) {
+	if (!conn->driver->push) {
 		err = -EOPNOTSUPP;
 		goto out;
 	}
@@ -456,7 +456,7 @@ static int p2p_bind(struct near_p2p_driver *driver, uint32_t adapter_idx,
 		return -errno;
 
 	server_data = g_try_malloc0(sizeof(struct p2p_data));
-	if (server_data == NULL) {
+	if (!server_data) {
 		close(fd);
 		return -ENOMEM;
 	}
@@ -482,7 +482,7 @@ static int p2p_listen(uint32_t adapter_idx, near_device_io_cb cb)
 	int err = -1, bind_err;
 	GSList *list;
 
-	for (list = driver_list; list != NULL; list = list->next) {
+	for (list = driver_list; list; list = list->next) {
 		struct near_p2p_driver *driver = list->data;
 
 		bind_err = p2p_bind(driver, adapter_idx, cb);
@@ -515,7 +515,7 @@ static int p2p_connect(uint32_t adapter_idx, uint32_t target_idx,
 		return -errno;
 
 	conn = g_try_malloc0(sizeof(struct p2p_connect));
-	if (conn == NULL) {
+	if (!conn) {
 		close(fd);
 		return -ENOMEM;
 	}
@@ -574,7 +574,7 @@ static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
 
 	DBG("");
 
-	for (list = driver_list; list != NULL; list = list->next) {
+	for (list = driver_list; list; list = list->next) {
 		struct near_p2p_driver *driver = list->data;
 
 		if (strcmp(driver->service_name, service_name) != 0)
@@ -588,7 +588,7 @@ static int p2p_push(uint32_t adapter_idx, uint32_t target_idx,
 		if (fd > 0)
 			return fd;
 
-		if (driver->fallback_service_name != NULL)
+		if (driver->fallback_service_name)
 			return  p2p_push(adapter_idx, target_idx, ndef,
 					(char *) driver->fallback_service_name,
 					cb);

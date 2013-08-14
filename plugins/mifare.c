@@ -208,7 +208,7 @@ static int mifare_release(int err, void *data)
 
 	DBG("%p", cookie);
 
-	if (cookie == NULL)
+	if (!cookie)
 		return err;
 
 	if (err < 0 && cookie->cb) {
@@ -489,7 +489,7 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 
 
 	/* Additional sectors to read ? */;
-	if (mf_ck->g_sect_list != NULL && mf_ck->g_sect_list->next != NULL) {
+	if (mf_ck->g_sect_list && mf_ck->g_sect_list->next) {
 
 		err = mifare_read_sector(data,	/* cookie */
 			mf_ck->nfc_data,		/* where to store */
@@ -512,7 +512,7 @@ static int mifare_read_NFC_loop(uint8_t *resp, int length, void *data)
 		DBG("Done reading");
 
 		nfc_data = near_tag_get_data(mf_ck->tag, &nfc_data_length);
-		if (nfc_data == NULL) {
+		if (!nfc_data) {
 			err = -ENOMEM;
 			goto out_err;
 		}
@@ -568,7 +568,7 @@ static int mifare_process_MADs(void *data)
 	DBG("");
 
 	/* Parse MAD entries to get the global size and fill the array */
-	if (mf_ck->mad_1 == NULL) {
+	if (!mf_ck->mad_1) {
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -596,7 +596,7 @@ static int mifare_process_MADs(void *data)
 
 	/* Now MAD 2 */
 	ioffset = MAD_V1_AIDS_LEN + 1 + 1; /* skip 0x10 */
-	if (mf_ck->mad_2 == NULL)
+	if (!mf_ck->mad_2)
 		goto done_mad;
 
 	/*
@@ -635,14 +635,14 @@ done_mad:
 	DBG("TAG Global size: [%d]", global_tag_size);
 
 	mf_ck->tag = near_tag_get_tag(mf_ck->adapter_idx, mf_ck->target_idx);
-	if (mf_ck->tag == NULL) {
+	if (!mf_ck->tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
 
 	/* don't allocate new data before writing */
 	tag_data = near_tag_get_data(mf_ck->tag, &data_size);
-	if (tag_data == NULL) {
+	if (!tag_data) {
 		err = near_tag_add_data(mf_ck->adapter_idx,
 						mf_ck->target_idx,
 						NULL, /* Empty */
@@ -680,7 +680,7 @@ static int mifare_read_MAD2(void *data)
 
 	/* As auth is ok, allocate Mifare Access Directory v1 */
 	mf_ck->mad_2 = g_try_malloc0(STD_SECTOR_SIZE);
-	if (mf_ck->mad_2 == NULL) {
+	if (!mf_ck->mad_2) {
 		near_error("Memory allocation failed (MAD2)");
 		err = -ENOMEM;
 		goto out_err;
@@ -743,7 +743,7 @@ static int mifare_read_MAD1(uint8_t *resp, int length, void *data)
 	 * allocated size is also STD_SECTOR_SIZE
 	 */
 	mf_ck->mad_1 = g_try_malloc0(STD_SECTOR_SIZE);
-	if (mf_ck->mad_1 == NULL) {
+	if (!mf_ck->mad_1) {
 		near_error("Memory allocation failed (MAD1)");
 		err = -ENOMEM;
 		goto out_err;
@@ -839,7 +839,7 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 
 	/* Alloc global cookie */
 	cookie = g_try_malloc0(sizeof(struct mifare_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	/* Get the nfcid1 */
@@ -906,7 +906,7 @@ int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 
 	/* Alloc global cookie */
 	cookie = g_try_malloc0(sizeof(struct mifare_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	/* Get the nfcid1 */
@@ -1161,7 +1161,7 @@ static int mifare_check_rights_loop(uint8_t *resp, int length, void *data)
 	int err;
 	int sector_id;
 
-	if (mf_ck->acc_sect->next != NULL) {
+	if (mf_ck->acc_sect->next) {
 
 		mf_ck->acc_sect = mf_ck->acc_sect->next;
 		sector_id = GPOINTER_TO_INT(mf_ck->acc_sect->data);
@@ -1308,7 +1308,7 @@ int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	/* Alloc global cookie */
 	cookie = g_try_malloc0(sizeof(struct mifare_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	/* Get the nfcid1 */

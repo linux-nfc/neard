@@ -93,7 +93,7 @@ static bool npp_read(int client_fd,
 		DBG("NDEF %d length %d", i, ndef_length);
 
 		new_ndefs = g_try_realloc(ndefs, total_ndef_length);
-		if (new_ndefs == NULL) {
+		if (!new_ndefs) {
 			near_error("Could not allocate NDEF buffer %d",
 								bytes_recv);
 			err = -ENOMEM;
@@ -127,7 +127,7 @@ static bool npp_read(int client_fd,
 		return false;
 
 	device = near_device_get_device(adapter_idx, target_idx);
-	if (device == NULL) {
+	if (!device) {
 		g_free(ndefs);
 		return -ENOMEM;
 	}

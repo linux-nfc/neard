@@ -114,7 +114,7 @@ struct t1_cookie {
 
 static void t1_init_cmd(struct type1_tag *tag, struct type1_cmd *cmd)
 {
-	if (tag == NULL || cmd == NULL)
+	if (!tag || !cmd)
 		return;
 
 	memcpy(cmd->uid, tag->uid, UID_LENGTH);
@@ -126,10 +126,10 @@ static int t1_cookie_release(int err, void *data)
 
 	DBG("%p", cookie);
 
-	if (cookie == NULL)
+	if (!cookie)
 		return err;
 
-	if (cookie->cb != NULL)
+	if (cookie->cb)
 		cookie->cb(cookie->adapter_idx, cookie->target_idx, err);
 
 	if (cookie->ndef)
@@ -280,13 +280,13 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		goto out_err;
 
 	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
 
 	t1_tag = g_try_malloc0(sizeof(struct type1_tag));
-	if (t1_tag == NULL) {
+	if (!t1_tag) {
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -403,14 +403,14 @@ static int nfctype1_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 	memset(&cmd, 0, sizeof(cmd));
 
 	cookie = g_try_malloc0(sizeof(struct t1_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
 
-	if (uid != NULL) {
+	if (uid) {
 		cmd.cmd = CMD_READ_ALL; /* Read ALL cmd give 124 bytes */
 		memcpy(cmd.uid, uid, UID_LENGTH);
 		memcpy(cookie->uid, uid, UID_LENGTH);
@@ -438,8 +438,8 @@ static int nfctype1_read(uint32_t adapter_idx,
 	DBG("");
 
 	uid = near_tag_get_nfcid(adapter_idx, target_idx, &uid_length);
-	if (uid == NULL || uid_length != UID_LENGTH) {
-		if (uid != NULL) {
+	if (!uid || uid_length != UID_LENGTH) {
+		if (uid) {
 			near_error("Invalid UID");
 
 			g_free(uid);
@@ -548,7 +548,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	uid = near_tag_get_nfcid(adapter_idx, target_idx, &uid_length);
-	if (uid == NULL || uid_length != UID_LENGTH) {
+	if (!uid || uid_length != UID_LENGTH) {
 		near_error("Invalid type 1 UID");
 		err = -EINVAL;
 		goto out_err;
@@ -560,7 +560,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 	memcpy(cmd.uid, uid, UID_LENGTH);
 
 	cookie = g_try_malloc0(sizeof(struct t1_cookie));
-	if (cookie == NULL) {
+	if (!cookie) {
 		g_free(uid);
 		err = -ENOMEM;
 		goto out_err;
@@ -580,7 +580,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 					sizeof(cmd), data_write_resp, cookie,
 					t1_cookie_release);
 out_err:
-	if (cb != NULL)
+	if (cb)
 		cb(adapter_idx, target_idx, err);
 
 	return err;
@@ -605,13 +605,13 @@ static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	DBG("");
 
-	if (ndef == NULL || cb == NULL) {
+	if (!ndef || !cb) {
 		err = -EINVAL;
 		goto out_err;
 	}
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL) {
+	if (!tag) {
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -635,7 +635,7 @@ static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 	return 0;
 
 out_err:
-	if (cb != NULL)
+	if (cb)
 		cb(adapter_idx, target_idx, err);
 
 	return err;
@@ -664,7 +664,7 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 	DBG("");
 
 	uid = near_tag_get_nfcid(adapter_idx, target_idx, &uid_length);
-	if (uid == NULL || uid_length != UID_LENGTH) {
+	if (!uid || uid_length != UID_LENGTH) {
 		near_error("Invalid type 1 UID");
 		return -EINVAL;
 	}
@@ -677,7 +677,7 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 	g_free(uid);
 
 	cookie = g_try_malloc0(sizeof(struct t1_cookie));
-	if (cookie == NULL)
+	if (!cookie)
 		return -ENOMEM;
 
 	cookie->adapter_idx = adapter_idx;
@@ -717,7 +717,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 					t1_cookie_release);
 	} else {
 		tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-		if (tag == NULL) {
+		if (!tag) {
 			err = -EINVAL;
 			goto out_err;
 		}
@@ -742,7 +742,7 @@ static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
 	DBG("");
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
-	if (tag == NULL)
+	if (!tag)
 		return -EINVAL;
 
 	/* TODO: Dynamic tag format */
@@ -750,13 +750,13 @@ static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
 		return -EOPNOTSUPP;
 
 	uid = near_tag_get_nfcid(adapter_idx, target_idx, &uid_length);
-	if (uid == NULL || uid_length != UID_LENGTH) {
+	if (!uid || uid_length != UID_LENGTH) {
 		near_error("Invalid type 1 UID");
 		return -EINVAL;
 	}
 
 	cookie = g_try_malloc0(sizeof(struct t1_cookie));
-	if (cookie == NULL) {
+	if (!cookie) {
 		err = -EINVAL;
 		goto out_err;
 	}

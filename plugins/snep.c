@@ -69,7 +69,7 @@ static bool snep_default_server_req_put(int client_fd, void *data)
 
 	device = near_device_get_device(snep_data->adapter_idx,
 			snep_data->target_idx);
-	if (device == NULL)
+	if (!device)
 		return false;
 
 	records = near_ndef_parse_msg(snep_data->nfc_data,
