@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
 

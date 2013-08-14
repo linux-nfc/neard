@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
 
@@ -186,7 +187,7 @@ static int ISO_send_cmd(uint8_t class,
 			uint8_t param2,
 			uint8_t *cmd_data,
 			uint8_t cmd_data_length,
-			near_bool_t le,
+			bool le,
 			near_recv cb,
 			void *in_data)
 {
@@ -198,7 +199,7 @@ static int ISO_send_cmd(uint8_t class,
 	DBG("CLA-%02x INS-%02x P1-%02x P2-%02x",
 			class, instruction, param1, param2);
 
-	if (le == FALSE) {
+	if (!le) {
 		if (cmd_data)
 			total_cmd_length = APDU_HEADER_LEN + cmd_data_length;
 		else
@@ -224,7 +225,7 @@ static int ISO_send_cmd(uint8_t class,
 		memcpy(cmd->data, cmd_data, cmd_data_length);
 		/* The Le byte set to 0x00 defined that any length
 		 * of PICC response is allowed */
-		if (le == TRUE)
+		if (le)
 			cmd->data[cmd_data_length] = 0;
 	}
 
@@ -255,7 +256,7 @@ static int ISO_Select(uint8_t *filename, uint8_t fnamelen, uint8_t P1,
 			0x00,		/* P2: First or only occurrence */
 			filename,	/* cmd_data */
 			fnamelen,	/* uint8_t cmd_data_length*/
-			FALSE,
+			false,
 			cb,
 			cookie);
 }
@@ -272,7 +273,7 @@ static int ISO_ReadBinary(uint16_t offset, uint8_t readsize,
 			(uint8_t) (offset & 0xFF),
 			0,		/* no data send */
 			readsize,	/* bytes to read */
-			FALSE,
+			false,
 			cb,
 			cookie);
 }
@@ -289,7 +290,7 @@ static int ISO_Update(uint16_t offset, uint8_t nlen,
 			(uint8_t) (offset & 0xFF),
 			data,			/* length of NDEF data */
 			nlen,			/* NLEN + NDEF data */
-			FALSE,
+			false,
 			cb,
 			cookie);
 }
@@ -990,7 +991,7 @@ static int write_data_to_ndef_file(uint8_t *resp, int length, void *data)
 
 	err = ISO_send_cmd(PICC_CLASS, WRITE_DATA_TO_FILE,
 				0x00, 0x00, cmd_data, cmd_data_length,
-				TRUE, format_resp, cookie);
+				true, format_resp, cookie);
 	if (err < 0) {
 		near_error("wrtie data to ndef file req failed %d", err);
 		goto out_err;
@@ -1045,7 +1046,7 @@ static int create_ndef_file(uint8_t *resp, int length, void *data)
 	err = ISO_send_cmd(PICC_CLASS, CREATE_STD_DATA_FILE,
 				0x00, 0x00, (uint8_t *)ndef,
 				sizeof(struct desfire_std_file),
-				TRUE, write_data_to_ndef_file, cookie);
+				true, write_data_to_ndef_file, cookie);
 	if (err < 0) {
 		near_error("create ndef file req failed %d", err);
 		goto out_err;
@@ -1110,7 +1111,7 @@ static int write_data_to_cc_file(uint8_t *resp, int length, void *data)
 	err = ISO_send_cmd(PICC_CLASS, WRITE_DATA_TO_FILE,
 				0x00, 0x00, (uint8_t *)cc,
 				sizeof(struct desfire_cc_file),
-				TRUE, create_ndef_file, cookie);
+				true, create_ndef_file, cookie);
 	if (err < 0) {
 		near_error("write data to cc file req failed %d", err);
 		goto out_err;
@@ -1165,7 +1166,7 @@ static int create_cc_file(uint8_t *resp, int length, void *data)
 				CREATE_STD_DATA_FILE,
 				0x00, 0x00, (uint8_t *)cc,
 				sizeof(struct desfire_std_file),
-				TRUE, write_data_to_cc_file, cookie);
+				true, write_data_to_cc_file, cookie);
 	if (err < 0) {
 		near_error("create cc file req failed %d", err);
 		goto out_err;
@@ -1213,7 +1214,7 @@ static int select_application_1(uint8_t *resp, int length, void *data)
 	memcpy(cmd_data, desfire_aid_1, cmd_data_length);
 	err = ISO_send_cmd(PICC_CLASS, SELECT_APPLICATION,
 				0x00, 0x00, cmd_data, cmd_data_length,
-				TRUE, create_cc_file, cookie);
+				true, create_cc_file, cookie);
 	if (err < 0) {
 		near_error("select application1 req failed %d", err);
 		goto out_err;
@@ -1266,7 +1267,7 @@ static int create_application(uint8_t *resp, int length, void *data)
 	err = ISO_send_cmd(PICC_CLASS, CREATE_APPLICATION,
 				0x00, 0x00, (uint8_t *)app,
 				sizeof(struct desfire_app),
-				TRUE, select_application_1, cookie);
+				true, select_application_1, cookie);
 	if (err < 0) {
 		near_error("create application req failed %d", err);
 		goto out_err;
@@ -1316,7 +1317,7 @@ static int select_application(uint8_t *resp, int length, void *data)
 	err = ISO_send_cmd(PICC_CLASS,
 				SELECT_APPLICATION,
 				0x00, 0x00, cmd_data, cmd_data_length,
-				TRUE, create_application, cookie);
+				true, create_application, cookie);
 	if (err < 0) {
 		near_error("select application req failed %d", err);
 		goto out_err;
@@ -1348,7 +1349,7 @@ static int get_version_frame3(uint8_t *resp, int length, void *data)
 
 		err = ISO_send_cmd(PICC_CLASS,
 					GET_VERSION_FRAME_RESPONSE_BYTE,
-					0x00, 0x00, NULL, 0, FALSE,
+					0x00, 0x00, NULL, 0, false,
 					select_application, cookie);
 		if (err < 0) {
 			near_error("get version3 req failed %d", err);
@@ -1387,7 +1388,7 @@ static int get_version_frame2(uint8_t *resp, int length, void *data)
 		cookie->memory_size = (1 << (resp[6] / 2));
 		err = ISO_send_cmd(PICC_CLASS,
 					GET_VERSION_FRAME_RESPONSE_BYTE,
-					0x00, 0x00, NULL, 0, FALSE,
+					0x00, 0x00, NULL, 0, false,
 					get_version_frame3, cookie);
 		if (err < 0) {
 			near_error("get version2 req failed %d", err);
@@ -1443,7 +1444,7 @@ static int nfctype4_format(uint32_t adapter_idx, uint32_t target_idx,
 
 	/* Step1 : Get Version */
 	err = ISO_send_cmd(PICC_CLASS, GET_VERSION,
-				0x00, 0x00, NULL, 0, FALSE,
+				0x00, 0x00, NULL, 0, false,
 				get_version_frame2, cookie);
 
 	if (err < 0) {
