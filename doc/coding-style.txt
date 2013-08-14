@@ -51,7 +51,7 @@ b = 3;
 
 The only exception to this rule applies when a variable is being allocated:
 array = g_try_new0(int, 20);
-if (array == NULL)	// Correct
+if (array)	// Correct
 	return;
 
 
@@ -162,7 +162,7 @@ the expected behavior, and you may want to use g_try_malloc instead.
 
 Example:
 additional = g_try_malloc(len - 1);  // correct
-if (additional == NULL)
+if (additional)
 	return FALSE;
 
 
@@ -247,22 +247,22 @@ rule might not apply.
 M13: Check for pointer being NULL
 =================================
 
-When checking if a pointer or a return value is NULL, explicitly compare to
-NULL rather than use the shorter check with "!" operator.
+When checking if a pointer or a return value is NULL, use the
+check with "!" operator.
 
 Example:
 1)
 array = g_try_new0(int, 20);
-if (!array)	// Wrong
+if (!array)	// Correct
 	return;
 
 2)
-if (!g_at_chat_get_slave(chat))	// Wrong
+if (!g_at_chat_get_slave(chat))	// Correct
 	return -EINVAL;
 
 3)
 array = g_try_new0(int, 20);
-if (array == NULL)	// Correct
+if (array == NULL)	// Wrong
 	return;
 
 
