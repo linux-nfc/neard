@@ -64,7 +64,7 @@
  * from lower layers */
 #define NEAR_SNEP_REQ_MAX_FRAGMENT_LENGTH 128
 
-typedef near_bool_t (*near_server_io) (int client_fd, void *snep_data);
+typedef bool (*near_server_io) (int client_fd, void *snep_data);
 
 struct p2p_snep_data {
 	uint8_t *nfc_data;
@@ -73,13 +73,13 @@ struct p2p_snep_data {
 	uint8_t *nfc_data_ptr;
 	uint32_t adapter_idx;
 	uint32_t target_idx;
-	gboolean respond_continue;
+	bool respond_continue;
 	uint8_t request;
 	near_tag_io_cb cb;
 	struct p2p_snep_put_req_data *req;
 };
 
-near_bool_t near_snep_core_read(int client_fd,
+bool near_snep_core_read(int client_fd,
 				uint32_t adapter_idx, uint32_t target_idx,
 				near_tag_io_cb cb,
 				near_server_io req_get,

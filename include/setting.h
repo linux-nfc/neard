@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-near_bool_t near_setting_get_bool(const char *key);
+bool near_setting_get_bool(const char *key);
 
 #ifdef __cplusplus
 }
