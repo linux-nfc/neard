@@ -43,7 +43,7 @@
 	} \
 	} while (0)
 
-#define TEST_SNEP_PTR_UNUSED(x) do { if ((void *)x != NULL) {} } while (0)
+#define TEST_SNEP_PTR_UNUSED(x) do { if ((void *)x) {} } while (0)
 
 static const char *short_text = "neard";
 
@@ -95,7 +95,7 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 
 	TEST_SNEP_LOG(">> dummy_req_put entry %p\n", data);
 
-	if (snep_data == NULL)
+	if (!snep_data)
 		goto error;
 
 	if (stored_recd)
@@ -108,7 +108,7 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 
 	nfc_data_length = 0;
 	nfc_data = g_try_malloc0(snep_data->nfc_data_length);
-	g_assert(nfc_data != NULL);
+	g_assert(nfc_data);
 
 	while (g_slist_length(test_fragments) > 0) {
 		static int frag_cnt;
@@ -129,7 +129,7 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 	}
 
 	records = near_ndef_parse_msg(nfc_data, nfc_data_length, NULL);
-	if (records == NULL) {
+	if (!records) {
 		TEST_SNEP_LOG("\tdummy_req_put parsing ndef failed\n");
 		goto error;
 	}
@@ -163,7 +163,7 @@ static bool test_snep_dummy_req_get(int fd, void *data)
 
 	TEST_SNEP_LOG(">> dummy_req_get entry %p\n", data);
 
-	if (snep_data == NULL)
+	if (!snep_data)
 		goto error;
 
 	TEST_SNEP_LOG("\t\tdummy_req_get STORED REC data=%p length=%zu\n",
@@ -253,7 +253,7 @@ static struct p2p_snep_req_frame *test_snep_build_req_frame(
 	struct p2p_snep_req_frame *req;
 
 	req = g_try_malloc0(frame_len);
-	g_assert(req != NULL);
+	g_assert(req);
 
 	req->version = ver;
 	req->request = req_type;
@@ -284,7 +284,7 @@ static struct p2p_snep_req_frame *test_snep_build_req_get_frame(
 	uint32_t acc_len_be = GUINT_TO_BE(acc_len);
 
 	req = g_try_malloc0(frame_len);
-	g_assert(req != NULL);
+	g_assert(req);
 
 	req->version = ver;
 	req->request = req_type;
@@ -312,7 +312,7 @@ static struct p2p_snep_resp_frame *test_snep_build_resp_frame(
 	struct p2p_snep_resp_frame *resp;
 
 	resp = g_try_malloc0(frame_len);
-	g_assert(resp != NULL);
+	g_assert(resp);
 
 	resp->version = ver;
 	resp->response = resp_type;
@@ -391,7 +391,7 @@ static void test_snep_read_recv_fragments(uint32_t frag_len,
 	g_assert(data_recvd);
 
 	resp = g_try_malloc0(frag_len);
-	g_assert(resp != NULL);
+	g_assert(resp);
 
 	do {
 		memset(resp, 0, frag_len);
@@ -417,7 +417,7 @@ static void test_snep_read_no_response(void)
 	int nbytes;
 
 	resp = g_try_malloc0(sizeof(*resp));
-	g_assert(resp != NULL);
+	g_assert(resp);
 
 	nbytes = recv(sockfd[client], resp, sizeof(*resp), MSG_DONTWAIT);
 	g_assert(nbytes < 0);
@@ -441,7 +441,7 @@ static void test_snep_read_verify_resp(int exp_resp_code,
 
 	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + exp_resp_info_len;
 	resp = test_snep_build_resp_frame(frame_len, 0, 0, 0, NULL);
-	g_assert(resp != NULL);
+	g_assert(resp);
 
 	nbytes = recv(sockfd[client], resp, frame_len, 0);
 	g_assert(nbytes == frame_len);
@@ -750,10 +750,10 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 	nbytes = recv(sockfd[client], resp, frame_len, 0);
 	g_assert(nbytes == frag_len);
 	g_assert(resp->length == GUINT_TO_BE(ctx->req_info_len));
-	g_assert(resp->info != NULL);
+	g_assert(resp->info);
 
 	data_recvd = g_try_malloc0(ctx->req_info_len);
-	g_assert(data_recvd != NULL);
+	g_assert(data_recvd);
 
 	/* store received info field */
 	memcpy(data_recvd, resp->info, nbytes - NEAR_SNEP_RESP_HEADER_LENGTH);

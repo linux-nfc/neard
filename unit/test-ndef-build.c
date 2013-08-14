@@ -95,7 +95,7 @@ static void test_ndef_wsc_with_out_ssid_build(void)
 
 	ndef = near_ndef_prepare_wsc_record(NULL, NULL);
 
-	g_assert(ndef == NULL);
+	g_assert(!ndef);
 }
 
 int main(int argc, char **argv)
