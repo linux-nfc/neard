@@ -158,7 +158,7 @@ static void pcap_file_cleanup(void)
  *
  */
 void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
-			   guint8 indent, gboolean print_len)
+			   guint8 indent, bool print_len)
 {
 	guint8 digits;
 	guint32 offset;

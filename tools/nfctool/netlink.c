@@ -556,7 +556,7 @@ nla_put_failure:
 	return err;
 }
 
-int nl_set_powered(struct nfc_adapter *adapter, gboolean powered)
+int nl_set_powered(struct nfc_adapter *adapter, bool powered)
 {
 	struct nl_msg *msg;
 	void *hdr;
@@ -569,7 +569,7 @@ int nl_set_powered(struct nfc_adapter *adapter, gboolean powered)
 	if (msg == NULL)
 		return -ENOMEM;
 
-	if (powered == TRUE)
+	if (powered)
 		cmd = NFC_CMD_DEV_UP;
 	else
 		cmd = NFC_CMD_DEV_DOWN;

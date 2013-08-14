@@ -211,7 +211,7 @@ static void ndef_print_wsc_oob(guint8 *oob_data, guint32 oob_length)
 
 int ndef_print_records(guint8 *data, guint32 data_len)
 {
-	gboolean mb, me, cf, sr, il;
+	bool mb, me, cf, sr, il;
 	enum record_tnf tnf;
 	char *mime_string;
 	guint8 type_len;

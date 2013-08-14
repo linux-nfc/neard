@@ -46,7 +46,7 @@ static GMainLoop *main_loop = NULL;
 static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data);
 static int nfctool_snl_cb(guint8 cmd, guint32 idx, gpointer data);
 
-static void nfctool_quit(gboolean force);
+static void nfctool_quit(bool force);
 
 static gchar *nfctool_poll_mode_str(int mode)
 {
@@ -135,7 +135,7 @@ static int nfctool_snl_send_request(struct nfc_adapter *adapter)
 	return err;
 }
 
-static int nfctool_set_powered(gboolean powered)
+static int nfctool_set_powered(bool powered)
 {
 	struct nfc_adapter *adapter;
 	int err;
@@ -177,9 +177,9 @@ static int nfctool_dep_link_down_cb(guint8 cmd, guint32 idx, gpointer data)
 
 	printf("Link is DOWN for adapter nfc%d\n\n", idx);
 
-	opts.snl = FALSE;
+	opts.snl = false;
 
-	nfctool_quit(FALSE);
+	nfctool_quit(false);
 
 	return 0;
 }
@@ -206,7 +206,7 @@ static int nfctool_snl(void)
 	if (adapter->rf_mode == NFC_RF_NONE) {
 		print_error("Can't send SNL request: No active link");
 
-		opts.snl = FALSE;
+		opts.snl = false;
 
 		return -ENOLINK;
 	}
@@ -271,7 +271,7 @@ static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data)
 		break;
 	}
 
-	nfctool_quit(FALSE);
+	nfctool_quit(false);
 
 	return err;
 }
@@ -307,8 +307,8 @@ static int nfctool_snl_cb(guint8 cmd, guint32 idx, gpointer data)
 	printf("\n");
 
 	if (opts.snl_list == NULL) {
-		opts.snl = FALSE;
-		nfctool_quit(FALSE);
+		opts.snl = false;
+		nfctool_quit(false);
 	}
 
 	return 0;
@@ -346,7 +346,7 @@ static void sig_term(int sig)
 
 	DBG("Terminating");
 
-	nfctool_quit(TRUE);
+	nfctool_quit(true);
 }
 
 struct nfctool_options opts = {
@@ -373,10 +373,10 @@ struct nfctool_options opts = {
 	.pcap_filename = NULL,
 };
 
-static gboolean opt_parse_poll_arg(const gchar *option_name, const gchar *value,
+static bool opt_parse_poll_arg(const gchar *option_name, const gchar *value,
 				   gpointer data, GError **error)
 {
-	opts.poll = TRUE;
+	opts.poll = true;
 
 	opts.poll_mode = POLLING_MODE_INITIATOR;
 
@@ -387,17 +387,17 @@ static gboolean opt_parse_poll_arg(const gchar *option_name, const gchar *value,
 			opts.poll_mode = POLLING_MODE_BOTH;
 	}
 
-	return TRUE;
+	return true;
 }
 
-static gboolean opt_parse_set_param_arg(const gchar *option_name,
+static bool opt_parse_set_param_arg(const gchar *option_name,
 					const gchar *value,
 					gpointer data, GError **error)
 {
 	gchar **params = NULL, **keyval = NULL;
 	gchar *end;
 	gint i, intval;
-	gboolean result;
+	bool result;
 
 	params = g_strsplit(value, ",", -1);
 
@@ -406,13 +406,13 @@ static gboolean opt_parse_set_param_arg(const gchar *option_name,
 		keyval = g_strsplit(params[i], "=", 2);
 
 		if (keyval[0] == NULL || keyval[1] == NULL) {
-			result = FALSE;
+			result = false;
 			goto exit;
 		}
 
 		intval = strtol(keyval[1], &end, 10);
 		if (keyval[1] == end) {
-			result = FALSE;
+			result = false;
 			goto exit;
 		}
 
@@ -420,7 +420,7 @@ static gboolean opt_parse_set_param_arg(const gchar *option_name,
 			if (intval < 0 || intval > LLCP_MAX_LTO) {
 				print_error("Bad value: max lto value is %d",
 								LLCP_MAX_LTO);
-				result = FALSE;
+				result = false;
 				goto exit;
 			}
 
@@ -429,7 +429,7 @@ static gboolean opt_parse_set_param_arg(const gchar *option_name,
 			if (intval < 0 || intval > LLCP_MAX_RW) {
 				print_error("Bad value: max rw value is %d",
 								LLCP_MAX_RW);
-				result = FALSE;
+				result = false;
 				goto exit;
 			}
 
@@ -438,17 +438,17 @@ static gboolean opt_parse_set_param_arg(const gchar *option_name,
 			if (intval < 0 || intval > LLCP_MAX_MIUX) {
 				print_error("Bad value: max miux value is %d",
 								LLCP_MAX_MIUX);
-				result = FALSE;
+				result = false;
 				goto exit;
 			}
 
 			opts.miux = intval;
 		} else {
-			result = FALSE;
+			result = false;
 			goto exit;
 		}
 
-		opts.set_param = TRUE;
+		opts.set_param = true;
 
 		g_strfreev(keyval);
 		keyval = NULL;
@@ -456,7 +456,7 @@ static gboolean opt_parse_set_param_arg(const gchar *option_name,
 		i++;
 	}
 
-	result = TRUE;
+	result = true;
 
 exit:
 	if (params)
@@ -468,7 +468,7 @@ exit:
 	return result;
 }
 
-static gboolean opt_parse_show_timestamp_arg(const gchar *option_name,
+static bool opt_parse_show_timestamp_arg(const gchar *option_name,
 					     const gchar *value,
 					     gpointer data, GError **error)
 {
@@ -477,21 +477,21 @@ static gboolean opt_parse_show_timestamp_arg(const gchar *option_name,
 	else
 		opts.show_timestamp = SNIFFER_SHOW_TIMESTAMP_DELTA;
 
-	return TRUE;
+	return true;
 }
 
-static gboolean opt_parse_snl_arg(const gchar *option_name, const gchar *value,
+static bool opt_parse_snl_arg(const gchar *option_name, const gchar *value,
 				  gpointer data, GError **error)
 {
 	gchar *uri;
 
-	opts.snl = TRUE;
+	opts.snl = true;
 
 	uri = g_strdup(value);
 
 	opts.snl_list = g_slist_prepend(opts.snl_list, uri);
 
-	return TRUE;
+	return true;
 }
 
 static GOptionEntry option_entries[] = {
@@ -575,10 +575,10 @@ static int nfctool_options_parse(int argc, char **argv)
 	}
 
 	if (opts.enable_dev || opts.disable_dev)
-		opts.list = TRUE;
+		opts.list = true;
 
 	if (opts.poll)
-		opts.enable_dev = TRUE;
+		opts.enable_dev = true;
 
 	opts.need_netlink = opts.list || opts.poll ||
 			    opts.set_param || opts.snl;
@@ -637,7 +637,7 @@ static void nfctool_main_loop_clean(void)
 		g_main_loop_unref(main_loop);
 }
 
-static void nfctool_quit(gboolean force)
+static void nfctool_quit(bool force)
 {
 	if (force || (!opts.sniff && !opts.snl))
 		g_main_loop_quit(main_loop);

@@ -60,6 +60,6 @@ int sniffer_init(void);
 void sniffer_cleanup(void);
 
 void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
-			   guint8 indent, gboolean print_len);
+			   guint8 indent, bool print_len);
 
 #endif /* __SNIFFER_H */
