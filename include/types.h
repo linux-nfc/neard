@@ -24,16 +24,6 @@
 
 #include <byteswap.h>
 
-#ifndef	FALSE
-#define	FALSE	(0)
-#endif
-
-#ifndef	TRUE
-#define	TRUE	(!FALSE)
-#endif
-
-typedef int	near_bool_t;
-
 #define near_get_unaligned(ptr)			\
 ({						\
 	struct __attribute__((packed)) {	\
