@@ -200,7 +200,6 @@ static int read_dynamic_tag(uint8_t *cc, int length, void *data)
 {
 	struct type1_tag *t1_tag = data;
 	struct type1_cmd t1_cmd;
-
 	uint8_t *tagdata;
 	uint8_t	*pndef;
 	size_t data_length;
@@ -209,10 +208,8 @@ static int read_dynamic_tag(uint8_t *cc, int length, void *data)
 
 	tagdata = near_tag_get_data(t1_tag->tag, &data_length);
 
-	/* Skip un-needed bytes */
+	/* Skip capability container bytes  */
 	pndef = cc + 4;		/* right after CC bytes */
-	pndef = pndef + 5;	/* skip TLV Lock bits bytes */
-	pndef = pndef + 5;	/* skip TLV ControlIT bytes */
 
 	/*
 	 * Save first NFC bytes to tag memory
@@ -242,7 +239,6 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	struct t1_cookie *cookie = data;
 	struct near_tag *tag;
 	struct type1_tag *t1_tag;
-
 	uint8_t *cc;
 	int err = -EOPNOTSUPP;
 
