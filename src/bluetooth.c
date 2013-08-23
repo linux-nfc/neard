@@ -562,7 +562,7 @@ static void bt_get_default_adapter_cb(DBusPendingCall *pending, void *user_data)
 	return;
 
 cb_fail:
-	near_error("%s", error.message);
+	near_error("Could not get Bluetooth default adapter %s", error.message);
 	dbus_error_free(&error);
 
 	dbus_message_unref(reply);
