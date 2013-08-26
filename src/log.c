@@ -96,7 +96,7 @@ static bool is_enabled(struct near_debug_desc *desc)
 	return false;
 }
 
-int __near_log_init(const char *debug, bool detach)
+int __near_log_init(const char *debug, gboolean detach)
 {
 	int option = LOG_NDELAY | LOG_PID;
 	struct near_debug_desc *desc;

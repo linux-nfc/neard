@@ -35,7 +35,7 @@ struct near_device_driver;
 
 #include <near/log.h>
 
-int __near_log_init(const char *debug, bool detach);
+int __near_log_init(const char *debug, gboolean detach);
 void __near_log_cleanup(void);
 
 #include <near/dbus.h>
