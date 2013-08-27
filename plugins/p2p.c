@@ -610,12 +610,15 @@ int near_p2p_register(struct near_p2p_driver *driver)
 	struct near_p2p_driver *tmp_driver;
 	GSList *list = NULL;
 
-	DBG("driver %p name %s", driver, driver->name);
+	DBG("driver %p name %s service %s", driver, driver->name,
+			driver->service_name);
 
 	for (list = driver_list; list; list = list->next) {
 		tmp_driver = list->data;
-		if (g_strcmp0(tmp_driver->name, driver->name) == 0) {
-			near_error("%s already registered", driver->name);
+		if (g_strcmp0(tmp_driver->service_name,
+						driver->service_name) == 0) {
+			near_error("%s already registered",
+							driver->service_name);
 			return -EALREADY;
 		}
 	}
@@ -626,7 +629,7 @@ int near_p2p_register(struct near_p2p_driver *driver)
 
 void near_p2p_unregister(struct near_p2p_driver *driver)
 {
-	DBG("driver %p name %s", driver, driver->name);
+	DBG("driver %p name %s", driver, driver->service_name);
 
 	driver_list = g_slist_remove(driver_list, driver);
 }
