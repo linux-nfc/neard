@@ -45,6 +45,7 @@ void __near_dbus_cleanup(void);
 
 DBusMessage *__near_error_failed(DBusMessage *msg, int errnum);
 DBusMessage *__near_error_invalid_arguments(DBusMessage *msg);
+DBusMessage *__near_error_out_of_memory(DBusMessage *msg);
 DBusMessage *__near_error_permission_denied(DBusMessage *msg);
 DBusMessage *__near_error_passphrase_required(DBusMessage *msg);
 DBusMessage *__near_error_not_registered(DBusMessage *msg);

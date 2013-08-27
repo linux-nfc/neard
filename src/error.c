@@ -39,6 +39,8 @@ DBusMessage *__near_error_failed(DBusMessage *msg, int errnum)
 		return __near_error_not_registered(msg);
 	case ENXIO:
 		return __near_error_not_found(msg);
+	case ENOMEM:
+		return __near_error_out_of_memory(msg);
 	case EACCES:
 		return __near_error_permission_denied(msg);
 	case EEXIST:
@@ -77,6 +79,12 @@ DBusMessage *__near_error_invalid_arguments(DBusMessage *msg)
 {
 	return g_dbus_create_error(msg, NFC_ERROR_INTERFACE
 				".InvalidArguments", "Invalid arguments");
+}
+
+DBusMessage *__near_error_out_of_memory(DBusMessage *msg)
+{
+	return g_dbus_create_error(msg, NFC_ERROR_INTERFACE
+					".OutOfMemory", "Out of memory");
 }
 
 DBusMessage *__near_error_permission_denied(DBusMessage *msg)
