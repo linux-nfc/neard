@@ -421,7 +421,7 @@ static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
 static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	struct type4_cc *read_cc;
+	struct type4_cc *read_cc = (struct type4_cc *)&resp[1];
 
 	DBG("%d", length);
 
@@ -434,16 +434,6 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 
 		return t4_cookie_release(-EIO, cookie);
 	}
-
-	/* -2 for status word and -1 is for NFC first byte... */
-	read_cc = g_try_malloc0(length - 2 - NFC_STATUS_BYTE_LEN);
-	if (!read_cc) {
-		DBG("Mem alloc failed");
-
-		return t4_cookie_release(-ENOMEM, cookie);
-	}
-
-	memcpy(read_cc, &resp[1], length - 2 - NFC_STATUS_BYTE_LEN) ;
 
 	cookie->r_apdu_max_size = g_ntohs(read_cc->max_R_apdu_data_size) -
 			APDU_HEADER_LEN;
