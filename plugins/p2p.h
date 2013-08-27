@@ -30,8 +30,8 @@
 #define LLCP_DEFAULT_MIU 128
 
 struct near_p2p_driver {
-	const char *name;
-	const char *service_name;
+	char *name;
+	char *service_name;
 	const char *fallback_service_name;
 	bool single_connection;
 	int sock_type;
