@@ -83,13 +83,15 @@ bool near_snep_core_read(int client_fd,
 				uint32_t adapter_idx, uint32_t target_idx,
 				near_tag_io_cb cb,
 				near_server_io req_get,
-				near_server_io req_put);
+				near_server_io req_put,
+				gpointer data);
 
 int near_snep_core_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 						struct near_ndef_message *ndef,
-						near_device_io_cb cb);
+						near_device_io_cb cb,
+						gpointer data);
 
-void near_snep_core_close(int client_fd, int err);
+void near_snep_core_close(int client_fd, int err, gpointer data);
 
 void near_snep_core_response_noinfo(int client_fd, uint8_t response);
 void near_snep_core_response_with_info(int client_fd, uint8_t response,

@@ -147,7 +147,8 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 			err = 0;
 
 		if (client_data->driver->close)
-			client_data->driver->close(client_data->fd, err);
+			client_data->driver->close(client_data->fd, err,
+						client_data->driver->user_data);
 
 		near_error("%s client channel closed",
 					client_data->driver->name);
@@ -173,7 +174,8 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 	more = client_data->driver->read(client_data->fd,
 						client_data->adapter_idx,
 						client_data->target_idx,
-						client_data->cb);
+						client_data->cb,
+						client_data->driver->user_data);
 
 	return more;
 }
@@ -187,7 +189,8 @@ static void free_client_data(gpointer data)
 	client_data = (struct p2p_data *) data;
 
 	if (client_data->driver->close)
-		client_data->driver->close(client_data->fd, 0);
+		client_data->driver->close(client_data->fd, 0,
+						client_data->driver->user_data);
 
 	if (client_data->watch > 0)
 		g_source_remove(client_data->watch);
@@ -346,7 +349,8 @@ static gboolean p2p_push_blocking(gpointer user_data)
 	}
 
 	err = conn->driver->push(fd, conn->adapter_idx, conn->target_idx,
-							conn->ndef, conn->cb);
+						conn->ndef, conn->cb,
+						conn->driver->user_data);
 
 out:
 	if (err < 0)
@@ -418,7 +422,8 @@ static gboolean p2p_connect_event(GIOChannel *channel, GIOCondition condition,
 	}
 
 	err = conn->driver->push(fd, conn->adapter_idx, conn->target_idx,
-					conn->ndef, conn->cb);
+					conn->ndef, conn->cb,
+					conn->driver->user_data);
 
 out:
 	if (err < 0)

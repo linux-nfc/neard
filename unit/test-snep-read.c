@@ -344,7 +344,8 @@ static bool test_snep_read_req_common(
 
 	TEST_SNEP_LOG("sent 0x%02X request\n", req->request);
 
-	ret = near_snep_core_read(sockfd[server], 0, 0, NULL, req_get, req_put);
+	ret = near_snep_core_read(sockfd[server], 0, 0, NULL, req_get, req_put,
+									NULL);
 
 	return ret;
 }
@@ -369,7 +370,8 @@ static bool test_snep_read_send_fragment(size_t frag_len,
 	g_assert(nbytes == frag_len);
 
 	near_snep_core_read(sockfd[server], 0, 0, NULL,
-			test_snep_dummy_req_get, test_snep_dummy_req_put);
+			test_snep_dummy_req_get, test_snep_dummy_req_put,
+									NULL);
 
 	return true;
 }
@@ -857,7 +859,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* UUT */
 	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
-			test_snep_dummy_req_get, test_snep_dummy_req_put);
+			test_snep_dummy_req_get, test_snep_dummy_req_put, NULL);
 	g_assert(ret);
 
 	resp = g_try_malloc0(frame_len);
@@ -876,7 +878,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* UUT */
 	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
-			test_snep_dummy_req_get, test_snep_dummy_req_put);
+			test_snep_dummy_req_get, test_snep_dummy_req_put, NULL);
 	g_assert(ret);
 
 	/* Get response and verify */

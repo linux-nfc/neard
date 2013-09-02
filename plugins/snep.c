@@ -117,13 +117,15 @@ static bool snep_default_server_req_get(int client_fd, void *data)
 /* This function is a wrapper to push post processing read functions */
 static bool snep_default_read(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
-							near_tag_io_cb cb)
+							near_tag_io_cb cb,
+							gpointer data)
 {
 	DBG("");
 
 	return near_snep_core_read(client_fd, adapter_idx, target_idx, cb,
 						snep_default_server_req_get,
-						snep_default_server_req_put);
+						snep_default_server_req_put,
+						data);
 
 }
 

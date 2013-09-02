@@ -56,7 +56,7 @@ struct p2p_npp_frame {
 
 static bool npp_read(int client_fd,
 			uint32_t adapter_idx, uint32_t target_idx,
-			near_tag_io_cb cb)
+			near_tag_io_cb cb, gpointer data)
 {
 	struct near_device *device;
 	struct p2p_npp_frame frame;

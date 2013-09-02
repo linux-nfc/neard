@@ -270,7 +270,7 @@ error:
 }
 
 /* clean on close */
-static void llcp_validation_close(int client_fd, int err)
+static void llcp_validation_close(int client_fd, int err, gpointer data)
 {
 	DBG("");
 
@@ -281,7 +281,8 @@ static void llcp_validation_close(int client_fd, int err)
 /* Connection Oriented: Wrapper for read function */
 static bool llcp_validation_read_co(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
-							near_tag_io_cb cb)
+							near_tag_io_cb cb,
+							gpointer data)
 {
 	DBG("CO client with fd: %d", client_fd);
 	return llcp_common_read(client_fd, adapter_idx, target_idx, cb,
@@ -291,7 +292,8 @@ static bool llcp_validation_read_co(int client_fd, uint32_t adapter_idx,
 /* Connection less: Wrapper for read function */
 static bool llcp_validation_read_cl(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
-							near_tag_io_cb cb)
+							near_tag_io_cb cb,
+							gpointer data)
 {
 	DBG("CL client with fd: %d", client_fd);
 	return llcp_common_read(client_fd, adapter_idx, target_idx, cb,

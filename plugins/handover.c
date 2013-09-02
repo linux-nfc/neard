@@ -95,7 +95,7 @@ static void free_hr_ndef(gpointer data)
 	g_free(ndef);
 }
 
-static void handover_close(int client_fd, int err)
+static void handover_close(int client_fd, int err, gpointer data)
 {
 	struct hr_ndef *ndef;
 
@@ -147,7 +147,7 @@ static int handover_ndef_parse(int client_fd, struct hr_ndef *ndef)
 fail:
 	near_error("ndef parsing failed %d", err);
 
-	handover_close(client_fd, 0);
+	handover_close(client_fd, 0, NULL);
 
 	return err;
 }
@@ -240,7 +240,7 @@ static bool handover_read_cfg_records(int client_fd,
 		err = handover_ndef_parse(client_fd, ndef);
 		if (err > 0) {
 			/* clean memory */
-			handover_close(client_fd, 0);
+			handover_close(client_fd, 0, NULL);
 			return true;
 		}
 
@@ -380,7 +380,8 @@ fail:
  */
 static bool handover_read(int client_fd,
 		uint32_t adapter_idx, uint32_t target_idx,
-		near_tag_io_cb cb)
+		near_tag_io_cb cb,
+		gpointer data)
 {
 	struct hr_ndef *ndef;
 
@@ -403,7 +404,7 @@ static void free_hr_push_client(struct hr_push_client *client, int status)
 {
 	DBG("");
 
-	handover_close(client->fd, 0);
+	handover_close(client->fd, 0, NULL);
 
 	if (client->cb)
 		client->cb(client->adapter_idx, client->target_idx, status);
@@ -432,7 +433,7 @@ static gboolean handover_push_event(GIOChannel *channel,
 
 	ret = handover_read(client->fd,
 			client->adapter_idx, client->target_idx,
-			client->cb);
+			client->cb, data);
 
 	if (!ret)
 		free_hr_push_client(client, 0);
@@ -443,7 +444,8 @@ static gboolean handover_push_event(GIOChannel *channel,
 static int handover_push(int client_fd,
 			uint32_t adapter_idx, uint32_t target_idx,
 			struct near_ndef_message *ndef,
-			near_device_io_cb cb)
+			near_device_io_cb cb,
+			gpointer data)
 {
 	int err;
 	struct hr_push_client *client;

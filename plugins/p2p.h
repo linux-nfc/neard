@@ -35,12 +35,16 @@ struct near_p2p_driver {
 	const char *fallback_service_name;
 	bool single_connection;
 	int sock_type;
-	bool (*read)(int client_fd,
-				uint32_t adapter_idx, uint32_t target_idx,
-				near_device_io_cb cb);
+	gpointer user_data;
+
+	bool (*read)(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
+						near_device_io_cb cb,
+						gpointer data);
 	int (*push)(int client_fd, uint32_t adapter_idx, uint32_t target_idx,
-			struct near_ndef_message *ndef, near_device_io_cb cb);
-	void (*close)(int client_fd, int err);
+						struct near_ndef_message *ndef,
+						near_device_io_cb cb,
+						gpointer data);
+	void (*close)(int client_fd, int err, gpointer data);
 };
 
 int npp_init(void);

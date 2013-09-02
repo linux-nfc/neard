@@ -211,24 +211,26 @@ error:
 /* This function is a wrapper to push post processing read functions */
 static bool snep_validation_read(int client_fd, uint32_t adapter_idx,
 							uint32_t target_idx,
-							near_tag_io_cb cb)
+							near_tag_io_cb cb,
+							gpointer data)
 {
 	DBG("");
 
 	return near_snep_core_read(client_fd, adapter_idx, target_idx, cb,
 						snep_validation_server_req_get,
-						snep_validation_server_req_put);
+						snep_validation_server_req_put,
+						data);
 
 }
 
-static void snep_validation_close(int client_fd, int err)
+static void snep_validation_close(int client_fd, int err, gpointer data)
 {
 	DBG("");
 
 	g_hash_table_remove(snep_validation_hash, GINT_TO_POINTER(client_fd));
 
 	/* Call core server close */
-	near_snep_core_close(client_fd, err);
+	near_snep_core_close(client_fd, err, data);
 }
 
 struct near_p2p_driver validation_snep_driver = {
