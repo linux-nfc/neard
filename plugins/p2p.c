@@ -650,6 +650,7 @@ static int p2p_init(void)
 {
 	DBG("");
 
+	phdc_init();
 	npp_init();
 	snep_init();
 	snep_validation_init();
@@ -669,6 +670,7 @@ static void p2p_exit(void)
 	snep_exit();
 	snep_validation_exit();
 	npp_exit();
+	phdc_exit();
 	handover_exit();
 
 	near_device_driver_unregister(&p2p_driver);

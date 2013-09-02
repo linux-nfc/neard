@@ -48,6 +48,9 @@ struct near_p2p_driver {
 	bool (*new_client)(char *service_name, int client_fd, gpointer data);
 };
 
+int phdc_init(void);
+void phdc_exit(void);
+
 int npp_init(void);
 void npp_exit(void);
 

@@ -29,5 +29,6 @@ builtin_sources += plugins/p2p.c plugins/npp.c \
 				plugins/snep.c \
 				plugins/snep-validation.c \
 				plugins/llcp-validation.c \
-				plugins/handover.c plugins/p2p.h
+				plugins/handover.c plugins/p2p.h \
+				plugins/phdc.c
 endif
