@@ -129,7 +129,6 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 							gpointer user_data)
 {
 	struct p2p_data *client_data = user_data;
-	bool more;
 
 	DBG("condition 0x%x", condition);
 
@@ -171,13 +170,15 @@ static gboolean p2p_client_event(GIOChannel *channel, GIOCondition condition,
 		return FALSE;
 	}
 
-	more = client_data->driver->read(client_data->fd,
+	if (client_data->driver->new_client)
+		return true;
+
+	return client_data->driver->read(client_data->fd,
 						client_data->adapter_idx,
 						client_data->target_idx,
 						client_data->cb,
 						client_data->driver->user_data);
 
-	return more;
 }
 
 static void free_client_data(gpointer data)
@@ -274,6 +275,12 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 
 	client_channel = g_io_channel_unix_new(client_fd);
 	g_io_channel_set_close_on_unref(client_channel, TRUE);
+
+	/* This would enable passthru active */
+	if (server_data->driver->new_client)
+		server_data->driver->new_client(
+				client_data->driver->service_name, client_fd,
+				server_data->driver->user_data);
 
 	client_data->watch = g_io_add_watch(client_channel,
 				G_IO_IN | G_IO_HUP | G_IO_NVAL | G_IO_ERR,
