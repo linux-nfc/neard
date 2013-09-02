@@ -1,0 +1,80 @@
+PHDC hierarchy
+==============
+Service		org.neard
+Interface	org.neard.PHDC
+Object path	/
+
+Methods		void RegisterAgent(dict values)
+
+			Register new PHDC agent.
+
+			PHDC Manager or Agent implementations calls this
+			method in order to register themselves against neard.
+			PHDC Managers will be notified through their
+			NewConnection method of new PHDC Agents connections.
+			PHDC Agents will be nnotified through their
+			NewConnection method when a connection to a PHDC Manager
+			succeeded.
+
+			Possible Errors: org.neard.Error.OutOfMemory
+					 org.neard.Error.InvalidArguments
+					 org.neard.Error.AlreadyExists
+
+		void UnregisterAgent(object path, string role)
+
+			Unregister an existing agent.
+
+			Possible Errors: org.neard.Error.OutOfMemory
+					 org.neard.Error.InvalidArguments
+
+
+Fields		string	Role
+
+			"Agent" or "Manager" (mandatory)
+
+		object	Path
+
+			Agent or Manager path (mandatory)
+
+		string	ServiceName
+
+			NFC urn to connect or to listen to
+			(default: "urn:nfc:sn:phdc").
+
+
+PHDC Manager hierarchy
+======================
+Service		unique name
+Interface	org.neard.PHDC.Manager
+Object path	freely definable
+
+
+Methods:	void NewConnection(fd agent)
+
+			This method gets called when a PHDC Agent connects
+			using the p2p service name. The Phdc Manager uses
+			the given agent file descriptor to exchange data
+			with the Agent.
+
+		void Disconnection(fd agent, error)
+
+			This method is called when a PHDC Agent closes the
+			file descriptoer.
+
+		void Release()
+
+			This method is called when the service daemon
+			unregisters the agent. An agent can use it to do
+			cleanup tasks.
+			There is no need to unregister the agent, because
+			when this method gets called it has already been
+			unregistered.
+
+
+PHDC Agent hierarchy
+====================
+Service		unique name
+Interface	org.neard.PHDC.Agent
+Object path	freely definable
+
+Methods:	NOT YET IMPLEMENTED
