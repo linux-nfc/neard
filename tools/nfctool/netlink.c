@@ -732,7 +732,7 @@ static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 		break;
 
 	default:
-		cb(gnlh->cmd, idx, NULL);
+		cb(gnlh->cmd, idx, &attr);
 		break;
 	}
 
