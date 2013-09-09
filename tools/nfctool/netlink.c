@@ -703,6 +703,40 @@ static int nl_nfc_send_sdres_event(guint32 idx, struct nlattr *sdres_attr,
 	return err;
 }
 
+int nl_fw_download(struct nfc_adapter *adapter, gchar *fw_filename)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	int err;
+
+	DBG("");
+
+	if (nfc_state == NULL || nfc_state->nfc_id < 0)
+		return -ENODEV;
+
+	msg = nlmsg_alloc();
+	if (msg == NULL)
+		return -ENOMEM;
+
+	err = -EINVAL;
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
+			  NLM_F_REQUEST, NFC_CMD_FW_DOWNLOAD, NFC_GENL_VERSION);
+	if (hdr == NULL)
+		goto nla_put_failure;
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter->idx);
+
+	NLA_PUT_STRING(msg, NFC_ATTR_FIRMWARE_NAME, fw_filename);
+
+	err = nl_send_msg(nfc_state->event_sock, msg, NULL, NULL);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
 static int nl_nfc_event_cb(struct nl_msg *n, void *arg)
 {
 	guint32 idx = INVALID_ADAPTER_IDX;

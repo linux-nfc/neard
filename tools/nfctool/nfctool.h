@@ -67,6 +67,7 @@ struct nfctool_options {
 	guint32 adapter_idx;
 	bool enable_dev;
 	bool disable_dev;
+	gchar *fw_filename;
 	bool set_param;
 	gint32 lto;
 	gint32 rw;

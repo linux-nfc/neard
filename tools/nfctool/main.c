@@ -30,6 +30,8 @@
 #include <sys/socket.h>
 #include <glib.h>
 
+#include <netlink/genl/genl.h>
+
 #include <near/nfc_copy.h>
 
 #include "nfctool.h"
@@ -148,6 +150,49 @@ static int nfctool_set_powered(bool powered)
 
 	if (err == 0)
 		adapter->powered = powered;
+
+	return err;
+}
+
+static int nfctool_fw_download_cb(guint8 cmd, guint32 adapter_idx,
+				  gpointer data)
+{
+	int err;
+	gchar *fw_filename;
+	struct nlattr **nl_attr = data;
+
+	if (nl_attr[NFC_ATTR_FIRMWARE_DOWNLOAD_STATUS] != NULL)
+		err = nla_get_u32(nl_attr[NFC_ATTR_FIRMWARE_DOWNLOAD_STATUS]);
+	else
+		err = -ENOTSUP;
+
+	if (nl_attr[NFC_ATTR_FIRMWARE_NAME] != NULL)
+		fw_filename = nla_get_string(nl_attr[NFC_ATTR_FIRMWARE_NAME]);
+	else
+		fw_filename = "UNKNOWN";
+
+	printf("Firmware download operation for %s terminated with status %s\n",
+	       fw_filename, err ? strerror(-err) : "OK");
+
+	nfctool_quit(false);
+
+	return 0;
+}
+
+static int nfctool_fw_download(gchar *fw_filename)
+{
+	struct nfc_adapter *adapter;
+	int err;
+
+	adapter = adapter_get(opts.adapter_idx);
+	if (!adapter)
+		return -ENODEV;
+
+	nl_add_event_handler(NFC_CMD_FW_DOWNLOAD, nfctool_fw_download_cb);
+
+	err = nl_fw_download(adapter, fw_filename);
+	if (err)
+		print_error("Firmware download failed: %s", strerror(-err));
 
 	return err;
 }
@@ -508,6 +553,8 @@ static GOptionEntry option_entries[] = {
 	  "enable device", NULL },
 	{ "disable", '0', 0, G_OPTION_ARG_NONE, &opts.disable_dev,
 	  "disable device", NULL },
+	{ "fw-download", 'w', 0, G_OPTION_ARG_STRING, &opts.fw_filename,
+	  "Put the device in firmware download mode", "fw_filename" },
 	{ "set-param", 's', 0, G_OPTION_ARG_CALLBACK, opt_parse_set_param_arg,
 	  "set lto, rw, and/or miux parameters", "lto=150,rw=1,miux=100" },
 	{ "snl", 'k', 0, G_OPTION_ARG_CALLBACK, &opt_parse_snl_arg,
@@ -580,8 +627,8 @@ static int nfctool_options_parse(int argc, char **argv)
 	if (opts.poll)
 		opts.enable_dev = true;
 
-	opts.need_netlink = opts.list || opts.poll ||
-			    opts.set_param || opts.snl;
+	opts.need_netlink = opts.list || opts.poll || opts.set_param ||
+			    opts.snl || opts.fw_filename;
 
 	if (!opts.need_netlink && !opts.sniff) {
 		printf("%s", g_option_context_get_help(context, TRUE, NULL));
@@ -590,7 +637,7 @@ static int nfctool_options_parse(int argc, char **argv)
 	}
 
 	if ((opts.poll || opts.set_param || opts.sniff || opts.snl ||
-	    opts.enable_dev || opts.disable_dev) &&
+	    opts.enable_dev || opts.disable_dev || opts.fw_filename) &&
 	    opts.adapter_idx == INVALID_ADAPTER_IDX) {
 		print_error("Please specify a device with -d nfcX option");
 
@@ -627,6 +674,9 @@ static void nfctool_options_cleanup(void)
 
 	if (opts.pcap_filename)
 		g_free(opts.pcap_filename);
+
+	if (opts.fw_filename != NULL)
+		g_free(opts.fw_filename);
 
 	g_slist_free_full(opts.snl_list, g_free);
 }
@@ -666,6 +716,14 @@ int main(int argc, char **argv)
 			goto exit_err;
 	}
 
+	if (opts.fw_filename) {
+		err = nfctool_fw_download(opts.fw_filename);
+		if (err)
+			goto exit_err;
+
+		goto start_loop;
+	}
+
 	if (opts.sniff) {
 		err = sniffer_init();
 		if (err)
@@ -703,7 +761,8 @@ int main(int argc, char **argv)
 	if (opts.snl)
 		nfctool_snl();
 
-	if (opts.poll || opts.sniff || opts.snl)
+start_loop:
+	if (opts.poll || opts.sniff || opts.snl || opts.fw_filename)
 		nfctool_main_loop_start();
 
 done:

@@ -48,4 +48,6 @@ int nl_send_sdreq(struct nfc_adapter *adapter, GSList *uris);
 
 int nl_set_powered(struct nfc_adapter *adapter, bool powered);
 
+int nl_fw_download(struct nfc_adapter *adapter, gchar *fw_filename);
+
 #endif /* __NETLINK_H */
