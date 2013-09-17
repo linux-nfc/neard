@@ -1,3 +1,14 @@
+ver 0.13
+	Added PHDC Manager support.
+	Added nfctool firmware update support.
+	Added AAR NDEF support.
+	Added raw MIME type payload support.
+	Added multibyte handover CDR support.
+	Fixed coding style for NULL pointer and 0 checks.
+	Fixed a t4t memory leak.
+	Fixed a t1t capability container reading offset.
+	Fixed a handover memory leak.
+
 ver 0.12
 	Added static handover through LLCP support.
 	Added WiFi configuration handover through SNEP support.
