@@ -154,12 +154,54 @@ static bool npp_read(int client_fd,
 	return false;
 }
 
+static int npp_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
+			struct near_ndef_message *ndef,
+			near_device_io_cb cb,
+			gpointer data)
+{
+	struct p2p_npp_frame *frame;
+	struct p2p_npp_ndef_entry *entry;
+	size_t frame_length;
+	int err;
+
+	DBG("");
+
+	frame_length = sizeof(struct p2p_npp_frame) +
+					sizeof(struct p2p_npp_ndef_entry) +
+					ndef->length;
+	frame = g_try_malloc0(frame_length);
+	if (!frame)
+		return -ENOMEM;
+
+	entry = &frame->ndefs[0];
+
+	frame->version = NPP_VERSION;
+	frame->n_ndef = GINT_TO_BE(1);
+
+	entry->action = NPP_DEFAULT_ACTION;
+	entry->ndef_length = GINT_TO_BE(ndef->length);
+	memcpy(entry->ndef, ndef->data, ndef->length);
+
+	DBG("Sending %zd bytes", frame_length);
+
+	err = send(fd, frame, frame_length, MSG_DONTWAIT);
+
+	g_free(frame);
+
+	cb(adapter_idx, target_idx, err < 0 ? err : 0);
+
+	close(fd);
+
+	return err;
+}
+
 struct near_p2p_driver npp_driver = {
 	.name = "NPP",
 	.service_name = NEAR_DEVICE_SN_NPP,
 	.fallback_service_name = NULL,
 	.sock_type = SOCK_STREAM,
 	.read = npp_read,
+	.push = npp_push,
 };
 
 int npp_init(void)
