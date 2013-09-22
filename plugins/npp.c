@@ -54,6 +54,12 @@ struct p2p_npp_frame {
 	struct p2p_npp_ndef_entry ndefs[];
 } __attribute__((packed));
 
+#define NPP_MAJOR_VERSION (0x0 & 0xf)
+#define NPP_MINOR_VERSION 0x1
+#define NPP_VERSION ((NPP_MAJOR_VERSION << 4) | NPP_MINOR_VERSION)
+
+#define NPP_DEFAULT_ACTION 0x1
+
 static bool npp_read(int client_fd,
 			uint32_t adapter_idx, uint32_t target_idx,
 			near_tag_io_cb cb, gpointer data)
@@ -78,6 +84,11 @@ static bool npp_read(int client_fd,
 	n_ndef = GINT_FROM_BE(frame.n_ndef);
 
 	DBG("version %d %d NDEFs", frame.version, n_ndef);
+
+	if (frame.version != NPP_VERSION) {
+		near_error("Invalid NPP version 0x%x", frame.version);
+		return false;
+	}
 
 	for (i = 0; i < n_ndef; i++) {
 		bytes_recv = recv(client_fd, &entry, sizeof(entry), 0);
@@ -121,7 +132,7 @@ static bool npp_read(int client_fd,
 
 	DBG("Total NDEF length %d", total_ndef_length);
 
-	err = near_tag_add_data(adapter_idx, target_idx,
+	err = near_device_add_data(adapter_idx, target_idx,
 					ndefs, total_ndef_length);
 	if (err < 0)
 		return false;
