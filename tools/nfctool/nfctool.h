@@ -59,25 +59,25 @@
 #define SNIFFER_SHOW_TIMESTAMP_ABS	2
 
 struct nfctool_options {
-	bool show_version;
-	bool list;
-	bool poll;
+	gboolean show_version;
+	gboolean list;
+	gboolean poll;
 	guint8 poll_mode;
 	gchar *device_name;
 	guint32 adapter_idx;
-	bool enable_dev;
-	bool disable_dev;
+	gboolean enable_dev;
+	gboolean disable_dev;
 	gchar *fw_filename;
-	bool set_param;
+	gboolean set_param;
 	gint32 lto;
 	gint32 rw;
 	gint32 miux;
-	bool need_netlink;
-	bool snl;
+	gboolean need_netlink;
+	gboolean snl;
 	GSList *snl_list;
-	bool sniff;
+	gboolean sniff;
 	gsize snap_len;
-	bool dump_symm;
+	gboolean dump_symm;
 	guint8 show_timestamp;
 	guint8 snep_sap;
 	guint8 handover_sap;
