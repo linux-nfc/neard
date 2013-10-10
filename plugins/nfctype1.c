@@ -629,11 +629,6 @@ static int nfctype1_write(uint32_t adapter_idx, uint32_t target_idx,
 
 	return data_write(adapter_idx, target_idx, ndef, cb);
 
-	if (err < 0)
-		goto out_err;
-
-	return 0;
-
 out_err:
 	if (cb)
 		cb(adapter_idx, target_idx, err);
