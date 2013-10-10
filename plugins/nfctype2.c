@@ -122,7 +122,6 @@ static int t2_cookie_release(int err, void *data)
 
 	g_free(cookie->ndef);
 	g_free(cookie);
-	cookie = NULL;
 
 	return err;
 }
