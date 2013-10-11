@@ -444,6 +444,11 @@ static DBusMessage *start_poll_loop(DBusConnection *conn,
 
 	DBG("conn %p", conn);
 
+	if (!adapter->powered) {
+		near_error("Adapter is down, can not start polling");
+		return __near_error_failed(msg, ENODEV);
+	}
+
 	dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &dbus_mode,
 							DBUS_TYPE_INVALID);
 
