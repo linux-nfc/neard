@@ -181,24 +181,13 @@ static const char *protocol_string(struct near_tag *tag)
 	return protocol;
 }
 
-static DBusMessage *get_properties(DBusConnection *conn,
-					DBusMessage *msg, void *data)
+static void append_properties(DBusMessageIter *iter, struct near_tag *tag)
 {
-	struct near_tag *tag = data;
-	const char *protocol, *type;
-	DBusMessage *reply;
-	DBusMessageIter array, dict;
+	DBusMessageIter dict;
 	dbus_bool_t readonly;
+	const char *protocol, *type;
 
-	DBG("conn %p", conn);
-
-	reply = dbus_message_new_method_return(msg);
-	if (!reply)
-		return NULL;
-
-	dbus_message_iter_init_append(reply, &array);
-
-	near_dbus_dict_open(&array, &dict);
+	near_dbus_dict_open(iter, &dict);
 
 	type = type_string(tag);
 	if (type)
@@ -217,7 +206,25 @@ static DBusMessage *get_properties(DBusConnection *conn,
 	near_dbus_dict_append_array(&dict, "Records",
 				DBUS_TYPE_OBJECT_PATH, append_records, tag);
 
-	near_dbus_dict_close(&array, &dict);
+	near_dbus_dict_close(iter, &dict);
+}
+
+static DBusMessage *get_properties(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	struct near_tag *tag = data;
+	DBusMessage *reply;
+	DBusMessageIter array;
+
+	DBG("conn %p", conn);
+
+	reply = dbus_message_new_method_return(msg);
+	if (!reply)
+		return NULL;
+
+	dbus_message_iter_init_append(reply, &array);
+
+	append_properties(&array, tag);
 
 	return reply;
 }
@@ -228,6 +235,44 @@ static DBusMessage *set_property(DBusConnection *conn,
 	DBG("conn %p", conn);
 
 	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+void __near_tag_found_signal(struct near_adapter *adapter,
+						struct near_tag *tag)
+{
+	const char *path;
+	DBusMessage *signal;
+	DBusMessageIter iter;
+
+	path = __near_adapter_get_path(adapter);
+	if (!path)
+		return;
+
+	signal = dbus_message_new_signal(path, NFC_ADAPTER_INTERFACE,
+								"TagFound");
+	if (!signal)
+		return;
+
+	dbus_message_iter_init_append(signal, &iter);
+	dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
+								&tag->path);
+	append_properties(&iter, tag);
+
+	dbus_connection_send(connection, signal, NULL);
+	dbus_message_unref(signal);
+}
+
+void __near_tag_lost_signal(struct near_adapter *adapter, struct near_tag *tag)
+{
+	const char *path;
+
+	path = __near_adapter_get_path(adapter);
+	if (!path)
+		return;
+
+	g_dbus_emit_signal(connection, path, NFC_ADAPTER_INTERFACE,
+			"TagLost", DBUS_TYPE_OBJECT_PATH, &tag->path,
+			DBUS_TYPE_INVALID);
 }
 
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)

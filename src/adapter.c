@@ -756,6 +756,7 @@ void __near_adapter_remove(struct near_adapter *adapter)
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_adapter *adapter;
+	struct near_tag *tag;
 
 	DBG("status %d", status);
 
@@ -773,6 +774,10 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	}
 
 	__near_adapter_tags_changed(adapter_idx);
+
+	tag = g_hash_table_lookup(adapter->tags, GINT_TO_POINTER(target_idx));
+	if (tag)
+		__near_tag_found_signal(adapter, tag);
 
 	adapter->presence_timeout =
 		g_timeout_add_seconds(CHECK_PRESENCE_PERIOD,
@@ -914,6 +919,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 {
 	struct near_adapter *adapter;
+	struct near_tag *tag;
 
 	DBG("idx %d", idx);
 
@@ -924,8 +930,11 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 	adapter->rf_mode = NEAR_ADAPTER_RF_MODE_IDLE;
 	rf_mode_changed(adapter);
 
-	if (g_hash_table_remove(adapter->tags,
-			GINT_TO_POINTER(target_idx))) {
+	tag = g_hash_table_lookup(adapter->tags, GINT_TO_POINTER(target_idx));
+	if (tag) {
+		__near_tag_lost_signal(adapter, tag);
+		g_hash_table_remove(adapter->tags, GINT_TO_POINTER(target_idx));
+
 		__near_adapter_tags_changed(idx);
 
 		return 0;
