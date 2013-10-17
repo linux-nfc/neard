@@ -87,7 +87,7 @@ Properties	string Type [readonly]
 
 			Possible values are "SmartPoster", "Text", "URI",
 			"HandoverRequest", "HandoverSelect", "HandoverCarrier",
-			"AAR" for Android Application Record and "MIMEType" for
+			"AAR" for Android Application Record and "MIME" for
 			RFC 2046 MIME types.
 
 		string Encoding [readonly]

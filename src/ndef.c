@@ -488,7 +488,7 @@ static void append_record(struct near_ndef_record *record,
 		break;
 
 	case RECORD_TYPE_MIME_TYPE:
-		type = "MIMEType";
+		type = "MIME";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
 		append_mime_payload(record->mime, dict);
