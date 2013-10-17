@@ -86,7 +86,9 @@ Properties	string Type [readonly]
 			The NDEF record type name.
 
 			Possible values are "SmartPoster", "Text", "URI",
-			"HandoverRequest", "HandoverSelect", "HandoverCarrier".
+			"HandoverRequest", "HandoverSelect", "HandoverCarrier",
+			"AAR" for Android Application Record and "MIMEType" for
+			RFC 2046 MIME types.
 
 		string Encoding [readonly]
 

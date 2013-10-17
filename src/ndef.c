@@ -488,14 +488,14 @@ static void append_record(struct near_ndef_record *record,
 		break;
 
 	case RECORD_TYPE_MIME_TYPE:
-		type = "MIME Type (RFC 2046)";
+		type = "MIMEType";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
 		append_mime_payload(record->mime, dict);
 		break;
 
 	case RECORD_TYPE_EXT_AAR:
-		type = "Android Application Record (AAR)";
+		type = "AAR";
 		near_dbus_dict_append_basic(dict, "Type",
 					DBUS_TYPE_STRING, &type);
 		append_aar_payload(record->aar, dict);
