@@ -117,11 +117,3 @@ Properties	string Mode [readonly]
 			The adapter supported protocols.
 			Possible values are "Felica", "MIFARE", "Jewel",
 			"ISO-DEP" and "NFC-DEP".
-
-		array{object} Tags [readonly]
-
-			The tags object paths.
-
-		array{object} Devices [readonly]
-
-			The devices object paths.

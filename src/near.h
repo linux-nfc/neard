@@ -241,14 +241,6 @@ int __near_bluetooth_pair(void *data);
 struct carrier_data *__near_bluetooth_local_get_properties(uint16_t mime_props);
 
 void __near_agent_ndef_parse_records(GList *records);
-int __near_agent_ndef_register(const char *sender, const char *path,
-						const char *record_type);
-int __near_agent_ndef_unregister(const char *sender, const char *path,
-						const char *record_type);
-int __near_agent_handover_register(const char *sender, const char *path,
-					const char *carrier);
-int __near_agent_handover_unregister(const char *sender, const char *path,
-					const char *carrier);
 bool __near_agent_handover_registered(enum ho_agent_carrier carrier);
 
 struct carrier_data *__near_agent_handover_request_data(

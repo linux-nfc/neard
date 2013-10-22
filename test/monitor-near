@@ -1,123 +1,46 @@
 #!/usr/bin/python
 
+from __future__ import absolute_import, print_function, unicode_literals
+
 import gobject
 
 import dbus
 import dbus.mainloop.glib
 
-from dbus.lowlevel import MethodCallMessage, HANDLER_RESULT_NOT_YET_HANDLED
+def property_changed(interface, changed, invalidated, path):
+	iface = interface[interface.rfind(".") + 1:]
+	for name, value in changed.iteritems():
+		val = str(value)
+		print("{%s.PropertyChanged} [%s] %s = %s" % (iface, path, name,
+									val))
 
-def extract_list(list):
-	val = "["
-	for i in list:
-		val += " " + str(i)
-	val += " ]"
-	return val
+def interfaces_added(path, interfaces):
+	for iface, props in interfaces.iteritems():
+		print("{Added %s} [%s]" % (iface, path))
+		for name, value in props.iteritems():
+			print("      %s = %s" % (name, value))
 
-def extract_bool(b):
-        if b == dbus.Boolean(1):
-	   val = "true"
-    	else:
-		val = "false"
-	return val	
-
-def property_changed_device(name, value, path):
-    device = path[path.rfind("/") + 1:]
-    if name in ["Records"]:
-	    val = extract_list(value)
-
-    print "[Device] [%s] %s = %s" % (device, name, val)
-
-def property_changed_adapter(name, value, path):
-    adapter = path[path.rfind("/") + 1:]
-    if name in ["Polling"]:
-           val = extract_bool(value)
-    elif name in ["Tags", "Devices"]:
-	   val = extract_list(value)
-    else:
-	   val = str(value)
-
-    print "[Adapter] [%s] %s = %s" % (adapter, name, val)
-
-def extract_record(key, list):
-	for i in list:
-		record = dbus.Interface(bus.get_object("org.neard", i),
-						"org.neard.Record")
-
-		properties = record.GetProperties()
-		print "        Record = [ %s ]" % (str(i))
-
-		for key in properties.keys():
-			if key in ["Representation"]:
-				val = unicode(properties[key])
-			else:
-				val = str(properties[key])
-			print "              %s = %s" % (key, val)
-
-def tag_found(path, properties, adapter_path):
-    tag = path[path.rfind("/") + 1:]
-    adapter = adapter_path[adapter_path.rfind("/") + 1:]
-
-    print "[Adapter] [%s] TagFound %s" % (adapter, path)
-    for key in properties.keys():
-	    if key in ["Type"]:
-		    val = str(properties[key])
-		    print "        %s = %s" % (key, val)
-	    elif key in ["Protocol"]:
-		    val = str(properties[key])
-		    print "        %s = %s" % (key, val)
-
-	    elif key in ["Records"]:
-		    extract_record(key, properties[key])
-
-def tag_lost(path, adapter_path):
-    tag = path[path.rfind("/") + 1:]
-    adapter = adapter_path[adapter_path.rfind("/") + 1:]
-
-    print "[Adapter] [%s] TagLost %s" % (adapter, path)
-
-def property_changed_manager(name, value, path):
-    manager = path[path.rfind("/") + 1:]
-    if name in ["Adapters"]:
-           val = extract_list(value)
-
-    print "[Manager] %s = %s" % (name, val)
-
+def interfaces_removed(path, interfaces):
+	for iface in interfaces:
+		print("{Removed %s} [%s]" % (iface, path))
 
 if __name__ == '__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 	bus = dbus.SystemBus()
 
-	bus.add_signal_receiver(property_changed_manager,
-				bus_name="org.neard",
-				dbus_interface="org.neard.Manager",
-				signal_name = "PropertyChanged",
-				path_keyword="path")
+	bus.add_signal_receiver(property_changed, bus_name="org.neard",
+			dbus_interface="org.freedesktop.DBus.Properties",
+			signal_name="PropertiesChanged",
+			path_keyword="path")
 
-	bus.add_signal_receiver(property_changed_adapter,
-				bus_name="org.neard",
-				dbus_interface="org.neard.Adapter",
-				signal_name = "PropertyChanged",
-				path_keyword="path")
+	bus.add_signal_receiver(interfaces_added, bus_name="org.neard",
+			dbus_interface="org.freedesktop.DBus.ObjectManager",
+			signal_name="InterfacesAdded")
 
-	bus.add_signal_receiver(tag_found,
-				bus_name="org.neard",
-				dbus_interface="org.neard.Adapter",
-				signal_name = "TagFound",
-				path_keyword="adapter_path")
-
-	bus.add_signal_receiver(tag_lost,
-				bus_name="org.neard",
-				dbus_interface="org.neard.Adapter",
-				signal_name = "TagLost",
-				path_keyword="adapter_path")
-
-	bus.add_signal_receiver(property_changed_device,
-				bus_name="org.neard",
-				dbus_interface="org.neard.Device",
-				signal_name = "PropertyChanged",
-				path_keyword="path")
+	bus.add_signal_receiver(interfaces_removed, bus_name="org.neard",
+			dbus_interface="org.freedesktop.DBus.ObjectManager",
+			signal_name="InterfacesRemoved")
 
 	mainloop = gobject.MainLoop()
 	mainloop.run()

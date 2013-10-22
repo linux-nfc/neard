@@ -2,7 +2,7 @@ PHDC hierarchy
 ==============
 Service		org.neard
 Interface	org.neard.PHDC
-Object path	/
+Object path	/org/neard
 
 Methods		void RegisterAgent(dict values)
 

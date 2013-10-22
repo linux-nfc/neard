@@ -161,8 +161,8 @@ if "__main__" == __name__:
 
 	print 'PHDC Simple Manager Test'
 	bus = dbus.SystemBus()
-	neard_manager = dbus.Interface(bus.get_object('org.neard', '/'),
-							'org.neard.PHDC')
+	obj = bus.get_object("org.neard", "/org/neard");
+	neard_manager = dbus.Interface(obj, "org.neard.PHDC")
 
 	simple_path = '/Simple'
 	valid_path = '/Validation'

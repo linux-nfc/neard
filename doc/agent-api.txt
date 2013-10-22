@@ -1,3 +1,42 @@
+Agent Manager hierarchy
+=======================
+
+Service		org.neard
+Interface	org.neard.AgentManager
+Object path	/org/neard
+
+Methods		void RegisterHandoverAgent(object path, string carrier)
+
+			Register new handover agent.
+
+			Supported carriers are: 'bluetooth', 'wifi'.
+			Only one registration will be accepted per carrier.
+
+			Possible Errors: org.neard.Error.InvalidArguments
+					 org.neard.Error.AlreadyExists.
+
+		void UnregisterHandoverAgent(object path, string carrier)
+
+			Unregister an existing handover agent.
+
+			Possible Errors: org.neard.Error.InvalidArguments
+
+		void RegisterNDEFAgent(object path, string type)
+
+			Register new NDEF agent.
+
+			When a record matching the registered type is found,
+			the agent will get the whole NDEF as a raw byte stream.
+
+			Possible Errors: org.neard.Error.InvalidArguments
+
+		void UnregisterNDEFAgent(object path, string type)
+
+			Unregister an existing NDEF agent.
+
+			Possible Errors: org.neard.Error.InvalidArguments
+
+
 HandoverAgent hierarchy
 =======================
 

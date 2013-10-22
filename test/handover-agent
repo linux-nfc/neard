@@ -117,8 +117,8 @@ if __name__ == '__main__':
 
 	power_state = options.power_state
 
-	manager = dbus.Interface(bus.get_object('org.neard', '/'),
-							'org.neard.Manager')
+	obj = bus.get_object("org.neard", "/org/neard");
+	manager = dbus.Interface(obj, "org.neard.AgentManager")
 
 	btpath = '/test/handover/bt/agent'
 	btcarrier = 'bluetooth'

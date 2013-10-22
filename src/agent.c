@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 
@@ -188,7 +189,7 @@ void __near_agent_ndef_parse_records(GList *records)
 	ndef_agent_push_records(agent, records);
 }
 
-int __near_agent_ndef_register(const char *sender, const char *path,
+static int ndef_register(const char *sender, const char *path,
 						const char *record_type)
 {
 	struct near_ndef_agent *agent;
@@ -220,7 +221,7 @@ int __near_agent_ndef_register(const char *sender, const char *path,
 	return 0;
 }
 
-int __near_agent_ndef_unregister(const char *sender, const char *path,
+static int ndef_unregister(const char *sender, const char *path,
 						const char *record_type)
 {
 	struct near_ndef_agent *agent;
@@ -601,7 +602,7 @@ static int create_handover_agent(const char *sender, const char *path,
 	return 0;
 }
 
-int __near_agent_handover_register(const char *sender, const char *path,
+static int handover_register(const char *sender, const char *path,
 						const char *carrier)
 {
 	struct near_handover_agent *agent;
@@ -621,7 +622,7 @@ int __near_agent_handover_register(const char *sender, const char *path,
 	return create_handover_agent(sender, path, ho_carrier);
 }
 
-int __near_agent_handover_unregister(const char *sender, const char *path,
+static int handover_unregister(const char *sender, const char *path,
 						const char *carrier)
 {
 	struct near_handover_agent *agent;
@@ -652,6 +653,150 @@ bool __near_agent_handover_registered(enum ho_agent_carrier carrier)
 	return agent ? TRUE : FALSE;
 }
 
+static DBusMessage *register_handover_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter;
+	const char *sender, *path, *carrier;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	if (!dbus_message_iter_init(msg, &iter))
+		return __near_error_invalid_arguments(msg);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &carrier);
+
+	err = handover_register(sender, path, carrier);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static DBusMessage *unregister_handover_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter;
+	const char *sender, *path, *carrier;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	if (!dbus_message_iter_init(msg, &iter))
+		return __near_error_invalid_arguments(msg);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &carrier);
+
+	err = handover_unregister(sender, path, carrier);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static DBusMessage *register_ndef_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter;
+	const char *sender, *path, *type;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	if (!dbus_message_iter_init(msg, &iter))
+		return __near_error_invalid_arguments(msg);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &type);
+
+	err = ndef_register(sender, path, type);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static DBusMessage *unregister_ndef_agent(DBusConnection *conn,
+					DBusMessage *msg, void *data)
+{
+	DBusMessageIter iter;
+	const char *sender, *path, *type;
+	int err;
+
+	DBG("conn %p", conn);
+
+	sender = dbus_message_get_sender(msg);
+
+	if (!dbus_message_iter_init(msg, &iter))
+		return __near_error_invalid_arguments(msg);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &path);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __near_error_invalid_arguments(msg);
+
+	dbus_message_iter_get_basic(&iter, &type);
+
+	err = ndef_unregister(sender, path, type);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
+static const GDBusMethodTable manager_methods[] = {
+	{ GDBUS_METHOD("RegisterHandoverAgent",
+			GDBUS_ARGS({ "path", "o" }, { "type", "s"}),
+			NULL, register_handover_agent) },
+	{ GDBUS_METHOD("UnregisterHandoverAgent",
+			GDBUS_ARGS({ "path", "o" }, { "type", "s"}),
+			NULL, unregister_handover_agent) },
+	{ GDBUS_METHOD("RegisterNDEFAgent",
+			GDBUS_ARGS({"path", "o"}, {"type", "s"}),
+			NULL, register_ndef_agent) },
+	{ GDBUS_METHOD("UnregisterNDEFAgent",
+			GDBUS_ARGS({"path", "o"}, {"type", "s"}),
+			NULL, unregister_ndef_agent) },
+	{ },
+};
+
 int __near_agent_init(void)
 {
 	DBG("");
@@ -659,6 +804,12 @@ int __near_agent_init(void)
 	connection = near_dbus_get_connection();
 	if (!connection)
 		return -1;
+
+	g_dbus_register_interface(connection, NFC_PATH,
+						NFC_AGENT_MANAGER_INTERFACE,
+						manager_methods,
+						NULL, NULL, NULL, NULL);
+
 
 	ndef_app_hash = g_hash_table_new_full(g_str_hash, g_str_equal,
 						g_free, ndef_agent_free);
@@ -680,6 +831,10 @@ void __near_agent_cleanup(void)
 	g_hash_table_foreach(ho_agent_hash, handover_agent_release, NULL);
 	g_hash_table_destroy(ho_agent_hash);
 	ho_agent_hash = NULL;
+
+	g_dbus_unregister_interface(connection, NFC_PATH,
+						NFC_AGENT_MANAGER_INTERFACE);
+
 
 	dbus_connection_unref(connection);
 }

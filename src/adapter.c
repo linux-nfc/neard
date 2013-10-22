@@ -142,24 +142,14 @@ static char *rf_mode_to_string(struct near_adapter *adapter)
 
 static void polling_changed(struct near_adapter *adapter)
 {
-	dbus_bool_t polling;
-
-	polling = adapter->polling;
-	near_dbus_property_changed_basic(adapter->path,
-					NFC_ADAPTER_INTERFACE, "Polling",
-					DBUS_TYPE_BOOLEAN, &polling);
+	g_dbus_emit_property_changed(connection, adapter->path,
+					NFC_ADAPTER_INTERFACE, "Polling");
 }
 
 static void rf_mode_changed(struct near_adapter *adapter)
 {
-	const char *rf_mode = rf_mode_to_string(adapter);
-
-	if (!rf_mode)
-		return;
-
-	near_dbus_property_changed_basic(adapter->path,
-					NFC_ADAPTER_INTERFACE, "Mode",
-					DBUS_TYPE_STRING, &rf_mode);
+	g_dbus_emit_property_changed(connection, adapter->path,
+					NFC_ADAPTER_INTERFACE, "Mode");
 }
 
 static int adapter_start_poll(struct near_adapter *adapter)
@@ -219,44 +209,6 @@ static void append_path(gpointer key, gpointer value, gpointer user_data)
 void __near_adapter_list(DBusMessageIter *iter, void *user_data)
 {
 	g_hash_table_foreach(adapter_hash, append_path, iter);
-}
-
-static void append_protocols(DBusMessageIter *iter, void *user_data)
-{
-	struct near_adapter *adapter = user_data;
-	const char *str;
-
-	DBG("protocols 0x%x", adapter->protocols);
-
-	if (adapter->protocols & NFC_PROTO_FELICA_MASK) {
-		str = "Felica";
-
-		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
-	}
-
-	if (adapter->protocols & NFC_PROTO_MIFARE_MASK) {
-		str = "MIFARE";
-
-		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
-	}
-
-	if (adapter->protocols & NFC_PROTO_JEWEL_MASK) {
-		str = "Jewel";
-
-		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
-	}
-
-	if (adapter->protocols & NFC_PROTO_ISO14443_MASK) {
-		str = "ISO-DEP";
-
-		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
-	}
-
-	if (adapter->protocols & NFC_PROTO_NFC_DEP_MASK) {
-		str = "NFC-DEP";
-
-		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
-	}
 }
 
 static void append_tag_path(gpointer key, gpointer value, gpointer user_data)
@@ -342,97 +294,151 @@ void __near_adapter_devices_changed(uint32_t adapter_idx)
 					adapter);
 }
 
-static DBusMessage *get_properties(DBusConnection *conn,
-					DBusMessage *msg, void *data)
+static gboolean property_get_mode(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
 {
-	struct near_adapter *adapter = data;
+	struct near_adapter *adapter = user_data;
 	const char *rf_mode;
-	DBusMessage *reply;
-	DBusMessageIter array, dict;
-	dbus_bool_t val;
-
-	DBG("conn %p", conn);
-
-	reply = dbus_message_new_method_return(msg);
-	if (!reply)
-		return NULL;
-
-	dbus_message_iter_init_append(reply, &array);
-
-	near_dbus_dict_open(&array, &dict);
-
-	val = adapter->powered;
-	near_dbus_dict_append_basic(&dict, "Powered",
-					DBUS_TYPE_BOOLEAN, &val);
-
-	val = adapter->polling;
-	near_dbus_dict_append_basic(&dict, "Polling",
-				    DBUS_TYPE_BOOLEAN, &val);
 
 	rf_mode = rf_mode_to_string(adapter);
-	if (rf_mode)
-		near_dbus_dict_append_basic(&dict, "Mode",
-						DBUS_TYPE_STRING, &rf_mode);
+	if (!rf_mode)
+		return FALSE;
 
-	near_dbus_dict_append_array(&dict, "Protocols",
-				DBUS_TYPE_STRING, append_protocols, adapter);
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &rf_mode);
 
-	near_dbus_dict_append_array(&dict, "Tags",
-				DBUS_TYPE_OBJECT_PATH, append_tags, adapter);
-
-	near_dbus_dict_append_array(&dict, "Devices",
-				DBUS_TYPE_OBJECT_PATH, append_devices, adapter);
-
-	near_dbus_dict_close(&array, &dict);
-
-	return reply;
+	return TRUE;
 }
 
-static DBusMessage *set_property(DBusConnection *conn,
-					DBusMessage *msg, void *data)
+static gboolean property_get_polling(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_adapter *adapter = user_data;
+	dbus_bool_t val;
+
+	val = adapter->polling;
+
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_BOOLEAN, &val);
+
+	return TRUE;
+}
+
+static gboolean property_get_powered(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_adapter *adapter = user_data;
+	dbus_bool_t val;
+
+	val = adapter->powered;
+
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_BOOLEAN, &val);
+
+	return TRUE;
+}
+
+static void set_powered(GDBusPendingPropertySet id, dbus_bool_t powered,
+								void *data)
 {
 	struct near_adapter *adapter = data;
-	DBusMessageIter iter, value;
-	const char *name;
-	int type, err;
+	int err;
 
-	DBG("conn %p", conn);
-
-	if (!dbus_message_iter_init(msg, &iter))
-		return __near_error_invalid_arguments(msg);
-
-	dbus_message_iter_get_basic(&iter, &name);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &value);
-
-	type = dbus_message_iter_get_arg_type(&value);
-
-	if (g_str_equal(name, "Powered")) {
-		dbus_bool_t powered;
-
-		if (type != DBUS_TYPE_BOOLEAN)
-			return __near_error_invalid_arguments(msg);
-
-		dbus_message_iter_get_basic(&value, &powered);
-
-		err = __near_netlink_adapter_enable(adapter->idx, powered);
-		if (err < 0) {
-			if (err == -EALREADY) {
-				if (powered)
-					return __near_error_already_enabled(msg);
-				else
-					return __near_error_already_disabled(msg);
-			}
-
-			return __near_error_failed(msg, -err);
+	err = __near_netlink_adapter_enable(adapter->idx, powered);
+	if (err < 0) {
+		if (err == -EALREADY) {
+			if (powered)
+				g_dbus_pending_property_error(id,
+						NFC_ERROR_INTERFACE ".Failed",
+						"Device already enabled");
+			else
+				g_dbus_pending_property_error(id,
+						NFC_ERROR_INTERFACE ".Failed",
+						"Device already disabled");
 		}
 
-		adapter->powered = powered;
-	} else {
-		return __near_error_invalid_property(msg);
+		g_dbus_pending_property_error(id,
+						NFC_ERROR_INTERFACE ".Failed",
+						strerror(err));
+
+		return;
 	}
 
-	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+	g_dbus_pending_property_success(id);
+
+	adapter->powered = powered;
+
+	g_dbus_emit_property_changed(connection, adapter->path,
+					NFC_ADAPTER_INTERFACE, "Powered");
+}
+
+static void property_set_powered(const GDBusPropertyTable *property,
+					DBusMessageIter *value,
+					GDBusPendingPropertySet id, void *data)
+{
+	dbus_bool_t powered;
+
+	if (dbus_message_iter_get_arg_type(value) != DBUS_TYPE_BOOLEAN) {
+		g_dbus_pending_property_error(id,
+					NFC_ERROR_INTERFACE ".InvalidArguments",
+					"Invalid arguments in method call");
+		return;
+	}
+
+	dbus_message_iter_get_basic(value, &powered);
+
+	set_powered(id, powered, data);
+}
+
+static void append_protocols(DBusMessageIter *iter,
+					struct near_adapter *adapter)
+{
+	const char *str;
+
+	DBG("protocols 0x%x", adapter->protocols);
+
+	if (adapter->protocols & NFC_PROTO_FELICA_MASK) {
+		str = "Felica";
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_MIFARE_MASK) {
+		str = "MIFARE";
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_JEWEL_MASK) {
+		str = "Jewel";
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_ISO14443_MASK) {
+		str = "ISO-DEP";
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
+	}
+
+	if (adapter->protocols & NFC_PROTO_NFC_DEP_MASK) {
+		str = "NFC-DEP";
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
+	}
+}
+
+static gboolean property_get_protocols(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_adapter *adapter = user_data;
+	DBusMessageIter dict;
+
+	dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY,
+						DBUS_TYPE_STRING_AS_STRING, &dict);
+
+	append_protocols(&dict, adapter);
+
+	dbus_message_iter_close_container(iter, &dict);
+
+	return TRUE;
 }
 
 static DBusMessage *start_poll_loop(DBusConnection *conn,
@@ -601,23 +607,18 @@ void __near_adapter_stop_check_presence(uint32_t adapter_idx,
 }
 
 static const GDBusMethodTable adapter_methods[] = {
-	{ GDBUS_METHOD("GetProperties",
-				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
-				get_properties) },
-	{ GDBUS_METHOD("SetProperty",
-				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
-				NULL, set_property) },
 	{ GDBUS_METHOD("StartPollLoop", GDBUS_ARGS({"name", "s"}), NULL,
 							start_poll_loop) },
 	{ GDBUS_METHOD("StopPollLoop", NULL, NULL, stop_poll_loop) },
 	{ },
 };
 
-static const GDBusSignalTable adapter_signals[] = {
-	{ GDBUS_SIGNAL("PropertyChanged",
-				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
-	{ GDBUS_SIGNAL("TagFound", GDBUS_ARGS({"address", "o"})) },
-	{ GDBUS_SIGNAL("TagLost", GDBUS_ARGS({"address", "o"})) },
+static const GDBusPropertyTable adapter_properties[] = {
+	{ "Mode", "s", property_get_mode },
+	{ "Powered", "b", property_get_powered, property_set_powered },
+	{ "Polling", "b", property_get_polling },
+	{ "Protocols", "as", property_get_protocols },
+
 	{ }
 };
 
@@ -737,8 +738,8 @@ int __near_adapter_add(struct near_adapter *adapter)
 
 	g_dbus_register_interface(connection, adapter->path,
 					NFC_ADAPTER_INTERFACE,
-					adapter_methods, adapter_signals,
-					NULL, adapter, NULL);
+					adapter_methods, NULL,
+					adapter_properties, adapter, NULL);
 
 	return 0;
 }

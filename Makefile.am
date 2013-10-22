@@ -71,18 +71,18 @@ else
 build_plugindir = $(plugindir)
 endif
 
-doc_files = doc/manager-api.txt doc/tag-api.txt doc/device-api.txt \
-		doc/adapter-api.txt doc/agent-api.txt doc/phdc-api.txt
+doc_files = doc/tag-api.txt doc/device-api.txt doc/adapter-api.txt \
+				doc/agent-api.txt doc/phdc-api.txt
 
 EXTRA_DIST = src/genbuiltin $(doc_files)
 
 dist_man_MANS = doc/neard.8 doc/neard.conf.5 doc/nfctool.1
 
-test_scripts = test/disable-adapter test/enable-adapter test/list-adapters \
+test_scripts = test/test-adapter \
 		test/dump-device test/dump-tag test/dump-record \
-		test/monitor-near test/start-poll test/stop-poll test/write-tag \
+		test/monitor-near test/write-tag \
 		test/push-device test/bt-handover test/handover-agent \
-		test/phdc-simple-manager
+		test/phdc-simple-manager test/neardutils.py
 
 if TEST
 testdir = $(pkglibdir)/test
@@ -96,7 +96,8 @@ noinst_PROGRAMS = tools/snep-send
 
 tools_snep_send_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/bluetooth.c src/ndef.c \
-					tools/snep-send.c src/agent.c
+					tools/snep-send.c src/error.c \
+					src/agent.c
 tools_snep_send_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
@@ -121,18 +122,20 @@ tools_nfctool_nfctool_LDADD = @GLIB_LIBS@ @NETLINK_LIBS@
 unit_tests = unit/test-ndef-parse unit/test-ndef-build unit/test-snep-read
 
 unit_test_ndef_parse_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
-					src/agent.c src/bluetooth.c \
-					src/ndef.c unit/test-ndef-parse.c
+					src/error.c src/agent.c \
+					src/bluetooth.c src/ndef.c \
+					unit/test-ndef-parse.c
 unit_test_ndef_parse_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 unit_test_ndef_build_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
-					src/agent.c src/bluetooth.c \
-					src/ndef.c unit/test-ndef-build.c
+					src/error.c src/agent.c \
+					src/bluetooth.c src/ndef.c \
+					unit/test-ndef-build.c
 unit_test_ndef_build_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 unit_test_snep_read_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
-					src/agent.c src/bluetooth.c \
-					src/ndef.c src/snep.c \
+					src/error.c src/agent.c \
+					src/bluetooth.c src/ndef.c src/snep.c \
 					unit/test-snep-read.c unit/test-utils.c \
 					unit/test-utils.h
 unit_test_snep_read_LDADD = @GLIB_LIBS@ @DBUS_LIBS@

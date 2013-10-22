@@ -533,7 +533,7 @@ int phdc_init(void)
 								free_mgr_data);
 
 	/* register dbus interface */
-	err = g_dbus_register_interface(phdc_conn, NFC_NEARD_PHDC_PATH,
+	err = g_dbus_register_interface(phdc_conn, "/org/neard",
 							NFC_NEARD_PHDC_IFACE,
 							phdc_methods,
 							NULL, NULL, NULL, NULL);
@@ -549,7 +549,7 @@ void phdc_exit(void)
 	/* Notify listeners...*/
 	g_hash_table_foreach(mgr_list, mgr_agent_release, NULL);
 
-	g_dbus_unregister_interface(phdc_conn, NFC_NEARD_PHDC_PATH,
+	g_dbus_unregister_interface(phdc_conn, "/org/neard",
 							NFC_NEARD_PHDC_IFACE);
 	/* Clean before leaving */
 	g_hash_table_remove_all(mgr_list);
