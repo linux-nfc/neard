@@ -78,10 +78,10 @@ EXTRA_DIST = src/genbuiltin $(doc_files)
 
 dist_man_MANS = doc/neard.8 doc/neard.conf.5 doc/nfctool.1
 
-test_scripts = test/test-adapter \
-		test/dump-device test/dump-tag test/dump-record \
+test_scripts = test/test-adapter test/test-device \
+		test/dump-tag test/dump-record \
 		test/monitor-near test/write-tag \
-		test/push-device test/bt-handover test/handover-agent \
+		test/bt-handover test/handover-agent \
 		test/phdc-simple-manager test/neardutils.py
 
 if TEST

@@ -101,59 +101,6 @@ uint32_t __neard_device_get_idx(struct near_device *device)
 	return device->target_idx;
 }
 
-static void append_records(DBusMessageIter *iter, void *user_data)
-{
-	struct near_device *device = user_data;
-	GList *list;
-
-	DBG("");
-
-	for (list = device->records; list; list = list->next) {
-		struct near_ndef_record *record = list->data;
-		char *path;
-
-		path = __near_ndef_record_get_path(record);
-		if (!path)
-			continue;
-
-		dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
-							&path);
-	}
-}
-
-static DBusMessage *get_properties(DBusConnection *conn,
-					DBusMessage *msg, void *data)
-{
-	struct near_device *device = data;
-	DBusMessage *reply;
-	DBusMessageIter array, dict;
-
-	DBG("conn %p", conn);
-
-	reply = dbus_message_new_method_return(msg);
-	if (!reply)
-		return NULL;
-
-	dbus_message_iter_init_append(reply, &array);
-
-	near_dbus_dict_open(&array, &dict);
-
-	near_dbus_dict_append_array(&dict, "Records",
-				DBUS_TYPE_OBJECT_PATH, append_records, device);
-
-	near_dbus_dict_close(&array, &dict);
-
-	return reply;
-}
-
-static DBusMessage *set_property(DBusConnection *conn,
-					DBusMessage *msg, void *data)
-{
-	DBG("conn %p", conn);
-
-	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
-}
-
 static void push_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_device *device;
@@ -276,21 +223,9 @@ error:
 }
 
 static const GDBusMethodTable device_methods[] = {
-	{ GDBUS_METHOD("GetProperties",
-				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
-				get_properties) },
-	{ GDBUS_METHOD("SetProperty",
-				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
-				NULL, set_property) },
 	{ GDBUS_ASYNC_METHOD("Push", GDBUS_ARGS({"attributes", "a{sv}"}),
 							NULL, push_ndef) },
 	{ },
-};
-
-static const GDBusSignalTable device_signals[] = {
-	{ GDBUS_SIGNAL("PropertyChanged",
-				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
-	{ }
 };
 
 void __near_device_remove(struct near_device *device)
@@ -361,11 +296,6 @@ int near_device_add_records(struct near_device *device, GList *records,
 
 	__near_agent_ndef_parse_records(device->records);
 
-	near_dbus_property_changed_array(device->path,
-					NFC_DEVICE_INTERFACE, "Records",
-					DBUS_TYPE_OBJECT_PATH, append_records,
-					device);
-
 	if (cb)
 		cb(device->adapter_idx, device->target_idx, status);
 
@@ -415,8 +345,8 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 
 	g_dbus_register_interface(connection, device->path,
 					NFC_DEVICE_INTERFACE,
-					device_methods, device_signals,
-							NULL, device, NULL);
+					device_methods, NULL, NULL,
+							device, NULL);
 
 	return device;
 }
