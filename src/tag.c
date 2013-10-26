@@ -181,98 +181,47 @@ static const char *protocol_string(struct near_tag *tag)
 	return protocol;
 }
 
-static void append_properties(DBusMessageIter *iter, struct near_tag *tag)
+static gboolean property_get_type(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
 {
-	DBusMessageIter dict;
-	dbus_bool_t readonly;
-	const char *protocol, *type;
-
-	near_dbus_dict_open(iter, &dict);
-
+	struct near_tag *tag = user_data;
+	const char *type;
+	
 	type = type_string(tag);
-	if (type)
-		near_dbus_dict_append_basic(&dict, "Type",
-					DBUS_TYPE_STRING, &type);
+	if (!type)
+		return FALSE;
 
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &type);
+
+	return TRUE;
+}
+
+static gboolean property_get_protocol(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_tag *tag = user_data;
+	const char *protocol;
+	
 	protocol = protocol_string(tag);
-	if (protocol)
-		near_dbus_dict_append_basic(&dict, "Protocol",
-					DBUS_TYPE_STRING, &protocol);
+	if (!protocol)
+		return FALSE;
+
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &protocol);
+
+	return TRUE;
+}
+
+static gboolean property_get_readonly(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_tag *tag = user_data;
+	dbus_bool_t readonly;
 
 	readonly = tag->readonly;
-	near_dbus_dict_append_basic(&dict, "ReadOnly",
-					DBUS_TYPE_BOOLEAN, &readonly);
 
-	near_dbus_dict_append_array(&dict, "Records",
-				DBUS_TYPE_OBJECT_PATH, append_records, tag);
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_BOOLEAN, &readonly);
 
-	near_dbus_dict_close(iter, &dict);
-}
-
-static DBusMessage *get_properties(DBusConnection *conn,
-					DBusMessage *msg, void *data)
-{
-	struct near_tag *tag = data;
-	DBusMessage *reply;
-	DBusMessageIter array;
-
-	DBG("conn %p", conn);
-
-	reply = dbus_message_new_method_return(msg);
-	if (!reply)
-		return NULL;
-
-	dbus_message_iter_init_append(reply, &array);
-
-	append_properties(&array, tag);
-
-	return reply;
-}
-
-static DBusMessage *set_property(DBusConnection *conn,
-					DBusMessage *msg, void *data)
-{
-	DBG("conn %p", conn);
-
-	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
-}
-
-void __near_tag_found_signal(struct near_adapter *adapter,
-						struct near_tag *tag)
-{
-	const char *path;
-	DBusMessage *signal;
-	DBusMessageIter iter;
-
-	path = __near_adapter_get_path(adapter);
-	if (!path)
-		return;
-
-	signal = dbus_message_new_signal(path, NFC_ADAPTER_INTERFACE,
-								"TagFound");
-	if (!signal)
-		return;
-
-	dbus_message_iter_init_append(signal, &iter);
-	dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-								&tag->path);
-	append_properties(&iter, tag);
-
-	dbus_connection_send(connection, signal, NULL);
-	dbus_message_unref(signal);
-}
-
-void __near_tag_lost_signal(struct near_adapter *adapter, struct near_tag *tag)
-{
-	const char *path;
-
-	path = __near_adapter_get_path(adapter);
-	if (!path)
-		return;
-
-	g_dbus_emit_signal(connection, path, NFC_ADAPTER_INTERFACE,
-			"TagLost", DBUS_TYPE_OBJECT_PATH, &tag->path,
-			DBUS_TYPE_INVALID);
+	return TRUE;
 }
 
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
@@ -290,8 +239,6 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	}
 
 	__near_adapter_start_check_presence(adapter_idx, target_idx);
-
-	__near_adapter_tags_changed(adapter_idx);
 }
 
 static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
@@ -495,23 +442,18 @@ fail:
 }
 
 static const GDBusMethodTable tag_methods[] = {
-	{ GDBUS_METHOD("GetProperties",
-				NULL, GDBUS_ARGS({"properties", "a{sv}"}),
-				get_properties) },
-	{ GDBUS_METHOD("SetProperty",
-				GDBUS_ARGS({"name", "s"}, {"value", "v"}),
-				NULL, set_property) },
 	{ GDBUS_ASYNC_METHOD("Write", GDBUS_ARGS({"attributes", "a{sv}"}),
 							NULL, write_ndef) },
 	{ },
 };
 
-static const GDBusSignalTable tag_signals[] = {
-	{ GDBUS_SIGNAL("PropertyChanged",
-				GDBUS_ARGS({"name", "s"}, {"value", "v"})) },
+static const GDBusPropertyTable tag_properties[] = {
+	{ "Type", "s", property_get_type },
+	{ "Protocol", "s", property_get_protocol },
+	{ "ReadOnly", "b", property_get_readonly },
+
 	{ }
 };
-
 
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter)
 {
@@ -691,8 +633,8 @@ struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
 
 	g_dbus_register_interface(connection, tag->path,
 					NFC_TAG_INTERFACE,
-					tag_methods, tag_signals,
-							NULL, tag, NULL);
+					tag_methods, NULL,
+				        tag_properties, tag, NULL);
 
 	return tag;
 }

@@ -79,10 +79,10 @@ EXTRA_DIST = src/genbuiltin $(doc_files)
 dist_man_MANS = doc/neard.8 doc/neard.conf.5 doc/nfctool.1
 
 test_scripts = test/test-adapter test/test-device \
-		test/dump-tag test/dump-record \
-		test/monitor-near test/write-tag \
-		test/bt-handover test/handover-agent \
-		test/phdc-simple-manager test/neardutils.py
+		test/test-tag test/dump-record \
+		test/monitor-near test/bt-handover \
+		test/handover-agent test/phdc-simple-manager \
+		test/neardutils.py
 
 if TEST
 testdir = $(pkglibdir)/test

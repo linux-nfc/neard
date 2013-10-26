@@ -1,0 +1,124 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+import neardutils
+
+bus = dbus.SystemBus()
+
+def extract_list(list):
+	val = "["
+	for i in list:
+		val += " " + str(i)
+	val += " ]"
+	return val
+
+def usage():
+	print("Usage: %s <command>" % (sys.argv[0]) )
+	print("")
+	print("  list")
+	print("  dump <tag>")
+	print("  write <tag> <type> <...>")
+	print "		If type is Text, parameters are <encoding> <language> <representation>"
+	print "		If type is URI, parameters are <uri>"
+	print "		If type is SmartPoster, parameters are <uri>"
+	print "		If type is SMS, parameters are <phone number> <text>"
+	print "		If type is E-Mail, parameters are <e-mail address>"
+	print "		If type is MIME, and WiFi AP is passphrase protected"
+	print "		   Type is MIME, parameters are wifi_wsc <ssid> <passphrase>"
+	print "		If type is MIME, and WiFi AP is open network"
+	print "		   Type is MIME, parameters are wifi_wsc <ssid>"
+	print "e.g. < %s /org/neard/nfc0/tag0 Text UTF-8 en-US hello,NFC! >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 URI http://www.nfc-forum.com >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 SmartPoster http://www.nfc-forum.com >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 SMS 0102030405 YourSMSMessage >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 E-Mail test@test.com >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 MIME wifi_wsc YourAPname passphrase >" % (sys.argv[0])
+	print "e.g. < %s /org/neard/nfc0/tag0 MIME wifi_wsc YourAPname >" % (sys.argv[0])
+
+
+	sys.exit(1)
+
+if (len(sys.argv) < 2):
+	usage()
+
+if (sys.argv[1] == "list"):
+	if (len(sys.argv) < 3):
+		om = dbus.Interface(bus.get_object("org.neard", "/"),
+					"org.freedesktop.DBus.ObjectManager")
+		objects = om.GetManagedObjects()
+		for path, interfaces in objects.iteritems():
+			if "org.neard.Tag" not in interfaces:
+				continue
+
+			print(" [ %s ]" % (path))
+
+		sys.exit(0)
+
+if (sys.argv[1] == "dump"):
+	if (len(sys.argv) < 3):
+		usage()
+	else:
+		tag_path = sys.argv[2]
+
+		om = dbus.Interface(bus.get_object("org.neard", "/"),
+					"org.freedesktop.DBus.ObjectManager")
+		objects = om.GetManagedObjects()
+		for path, interfaces in objects.iteritems():
+			if "org.neard.Record" not in interfaces:
+				continue
+
+			if path.startswith(tag_path):
+				print(" [ %s ]" % (path))
+
+		sys.exit(0)
+
+
+if (sys.argv[1] == "write"):
+   	if (len(sys.argv) < 5):
+		usage()
+	
+	tag = neardutils.find_tag(sys.argv[2])
+
+	if sys.argv[3] in ["Text"]:
+		tag.Write(({ "Type" : "Text",
+			"Encoding" : sys.argv[4],
+			"Language" : sys.argv[5],
+			"Representation" : sys.argv[6] }))
+
+	elif sys.argv[3] in ["URI"]:
+		tag.Write(({ "Type" : "URI",
+			"URI" : sys.argv[4] }))
+
+	elif sys.argv[3] in ["SmartPoster"]:
+	     tag.Write(({ "Type" : "SmartPoster",
+			"URI" : sys.argv[4] }))
+
+	elif sys.argv[3] in ["SMS"]:
+             URI = "sms:" + sys.argv[4] + "?body=" + sys.argv[5]
+	     tag.Write(({ "Type" : "URI",
+			"URI" : URI }))
+
+	elif sys.argv[3] in ["E-Mail"]:
+             URI = "mailto:" + sys.argv[4]
+	     tag.Write(({ "Type" : "URI",
+			"URI" : URI }))
+
+	elif sys.argv[3] in ["MIME"]:
+	     if len(sys.argv) == 6:
+	     	if sys.argv[4] in ["wifi_wsc"]:
+			tag.Write(({ "Type" : "MIME",
+				"MIME" : "application/vnd.wfa.wsc",
+				"SSID" : sys.argv[5] }))
+
+	     elif len(sys.argv) == 7:
+		 if sys.argv[4] in ["wifi_wsc"]:
+			tag.Write(({ "Type" : "MIME",
+				"MIME" : "application/vnd.wfa.wsc",
+				"SSID" : sys.argv[5],
+				"Passphrase" : sys.argv[6] }))
+	else:
+		usage()
+
+else:
+	usage()

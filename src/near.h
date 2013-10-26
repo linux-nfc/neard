@@ -90,8 +90,6 @@ int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len);
 int __near_adapter_remove_device(uint32_t idx);
 int __near_adapter_set_dep_state(uint32_t idx, bool dep);
 bool __near_adapter_get_dep_state(uint32_t idx);
-void __near_adapter_tags_changed(uint32_t adapter_idx);
-void __near_adapter_devices_changed(uint32_t adapter_idx);
 void __near_adapter_listen(struct near_device_driver *driver);
 void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 void __near_adapter_start_check_presence(uint32_t adapter_idx, uint32_t target_idx);
@@ -136,8 +134,6 @@ int __near_tag_write(struct near_tag *tag,
 				struct near_ndef_message *ndef,
 				near_tag_io_cb cb);
 int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb);
-void __near_tag_found_signal(struct near_adapter *adapter, struct near_tag *tag);
-void __near_tag_lost_signal(struct near_adapter *adapter, struct near_tag *tag);
 
 #include <near/device.h>
 

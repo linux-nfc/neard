@@ -5,23 +5,7 @@ Service		org.neard
 Interface	org.neard.Tag
 Object path	[variable prefix]/{nfc0}/{tag0, tag1...}
 
-Method		dict GetProperties()
-
-			Returns all properties for the device. See the
-			properties section for available properties.
-
-			Possible Errors: org.neard.Error.DoesNotExist
-
-		void SetProperty(string name, variant value)
-
-			Changes the value of the specified property. Only
-			properties that are listed a read-write are changeable.
-			On success this will emit a PropertyChanged signal.
-
-			Possible Errors: org.neard.Error.DoesNotExist
-					 org.neard.Error.InvalidArguments
-
-		void Write(dict attributes)
+Method		void Write(dict attributes)
 
 			Creates an NDEF record from the attributes dictionary.
 
@@ -35,12 +19,6 @@ Method		dict GetProperties()
 					 org.neard.Error.InProgress
 
 
-Signals		PropertyChanged(string name, variant value)
-
-			This signal indicates a changed value of the given
-			property.
-
-
 Properties	string Type [readonly]
 
 			The NFC tag type.
@@ -52,10 +30,6 @@ Properties	string Type [readonly]
 			The tag radio protocol.
 			Possible values are "Felica", "MIFARE", "Jewel",
 			and "ISO-DEP".
-
-		array{object} Records [readonly]
-
-			List of NDEF records object paths.
 
 		boolean ReadOnly [readonly]
 
