@@ -49,12 +49,12 @@ src_neard_DEPENDENCIES= src/neard.service
 
 nodist_src_neard_SOURCES = src/builtin.h
 
-AM_CFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} $(builtin_cflags) \
-					-DNEAR_PLUGIN_BUILTIN \
-					-DPLUGINDIR=\""$(plugindir)"\" \
-					-DCONFIGDIR=\""$(configdir)\""
+AM_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} \
+              -DNEAR_PLUGIN_BUILTIN -DPLUGINDIR=\""$(plugindir)"\" \
+              -DCONFIGDIR=\""$(configdir)\"" \
+              -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 
-AM_CPPFLAGS = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+AM_CFLAGS = ${builtin_cflags}
 
 CLEANFILES = src/builtin.h $(local_headers)
 
