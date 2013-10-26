@@ -17,8 +17,8 @@ def usage():
 	print("Usage: %s <command>" % (sys.argv[0]) )
 	print("")
 	print("  list")
-	print("  powered [on/off] nfcX")
-	print("  poll [on/off] nfcX [Initiator/Target/Dual]")
+	print("  powered nfcX [on/off]")
+	print("  poll nfcX [on/off] [Initiator/Target/Dual]")
 	sys.exit(1)
 
 if (len(sys.argv) < 2):
@@ -58,18 +58,18 @@ if (sys.argv[1] == "powered"):
 	if (len(sys.argv) < 4):
 		usage()
 	else:
-		path = "/org/neard/" + sys.argv[3]
+		path = "/org/neard/" + sys.argv[2]
 
 		adapter_path = neardutils.find_adapter(path).object_path
 		adapter = dbus.Interface(bus.get_object("org.neard", adapter_path),
 					"org.freedesktop.DBus.Properties")
 
-		if (sys.argv[2] == "on"):
+		if (sys.argv[3] == "on"):
 			value = dbus.Boolean(1)
-		elif (sys.argv[2] == "off"):
+		elif (sys.argv[3] == "off"):
 			value = dbus.Boolean(0)
 		else:
-			value = dbus.Boolean(sys.argv[2])
+			value = dbus.Boolean(sys.argv[3])
 		try:
 			adapter.Set("org.neard.Adapter", "Powered", value)
 		except dbus.DBusException, error:
@@ -80,11 +80,11 @@ if (sys.argv[1] == "poll"):
 	if (len(sys.argv) < 4):
 		usage()
 	else:
-		path = "/org/neard/" + sys.argv[3]
+		path = "/org/neard/" + sys.argv[2]
 
 		adapter = neardutils.find_adapter(path)
 
-		if (sys.argv[2] == "on"):
+		if (sys.argv[3] == "on"):
 			if (len(sys.argv) == 4):
 				mode = "Initiator"
 			else:
@@ -95,7 +95,7 @@ if (sys.argv[1] == "poll"):
 			except dbus.DBusException, error:
 				print "%s: %s" % (error._dbus_error_name, error.message)
 
-		elif (sys.argv[2] == "off"):
+		elif (sys.argv[3] == "off"):
 			try:
 				adapter.StopPollLoop()
 			except dbus.DBusException, error:
@@ -105,3 +105,5 @@ if (sys.argv[1] == "poll"):
 			usage()
 
 	sys.exit(0)
+
+usage()
