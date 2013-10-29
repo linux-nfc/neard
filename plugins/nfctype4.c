@@ -587,7 +587,6 @@ static int data_write_cb(uint8_t *resp, int length, void *data)
 
 	if (cookie->ndef->offset >= cookie->ndef->length) {
 		DBG("Done writing");
-		near_adapter_disconnect(cookie->adapter_idx);
 
 		if (cookie->cb)
 			cookie->cb(cookie->adapter_idx, cookie->target_idx, 0);
