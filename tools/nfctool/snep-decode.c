@@ -159,6 +159,8 @@ static int snep_decode_info(struct sniffer_packet *packet)
 	}
 
 	frag = g_malloc(sizeof(struct snep_frag));
+	if (!frag)
+		return -ENOMEM;
 
 	frag->count = 1;
 
@@ -167,6 +169,8 @@ static int snep_decode_info(struct sniffer_packet *packet)
 	frag->received = packet->snep.real_len;
 
 	frag->buffer = g_malloc0(frag->buffer_size);
+	if (!frag->buffer)
+		return -ENOMEM;
 
 	memcpy(frag->buffer, packet->snep.data, packet->snep.real_len);
 
