@@ -284,8 +284,10 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	if (!tag)
 		return;
 
-	dbus_message_unref(tag->write_msg);
-	tag->write_msg = NULL;
+	if (tag->write_msg) {
+		dbus_message_unref(tag->write_msg);
+		tag->write_msg = NULL;
+	}
 
 	__near_adapter_start_check_presence(adapter_idx, target_idx);
 
