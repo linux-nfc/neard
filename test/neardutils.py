@@ -67,3 +67,17 @@ def find_record_in_objects(objects, pattern=None):
 			obj = bus.get_object(SERVICE_NAME, path)
 			return dbus.Interface(obj, RECORD_INTERFACE)
 	raise Exception("NFC record not found")
+
+def dump_record(record_path):
+	bus = dbus.SystemBus()
+	record_prop = dbus.Interface(bus.get_object("org.neard", record_path),
+					"org.freedesktop.DBus.Properties")
+
+	properties = record_prop.GetAll(RECORD_INTERFACE)
+
+	for key in properties.keys():
+		if key in ["Representation"]:
+			val = unicode(properties[key])
+		else:
+			val = str(properties[key])
+		print "      %s = %s" % (key, val)

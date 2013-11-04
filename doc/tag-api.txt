@@ -43,18 +43,6 @@ Service		org.neard
 Interface	org.neard.Record
 Object path	[variable prefix]/{nfc0}/{tag0|device}/{record0,record1,...}
 
-Method		dict GetProperties()
-
-			Returns all properties for the record. Each record
-			has it's type and properties.
-
-			If type has "Text", possible properties are "Encoding",
-			"Language" and "Representation".
-
-			See the properties section for available properties.
-
-			Possible Errors: org.neard.Error.DoesNotExist
-
 Properties	string Type [readonly]
 
 			The NDEF record type name.

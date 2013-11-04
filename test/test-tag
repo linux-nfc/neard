@@ -70,6 +70,7 @@ if (sys.argv[1] == "dump"):
 
 			if path.startswith(tag_path):
 				print(" [ %s ]" % (path))
+				neardutils.dump_record(path)
 
 		sys.exit(0)
 
