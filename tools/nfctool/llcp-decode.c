@@ -268,7 +268,7 @@ static void llcp_print_params(struct sniffer_packet *packet)
 		case LLCP_PARAM_SN:
 			sn = g_strndup((gchar *)param + 2, param_len);
 			llcp_add_connection_sn(packet, sn);
-			sprintf(param_str, "%s", sn);
+			snprintf(param_str, 64, "%s", sn);
 			g_free(sn);
 			break;
 
@@ -279,7 +279,7 @@ static void llcp_print_params(struct sniffer_packet *packet)
 		case LLCP_PARAM_SDREQ:
 			tid = param[2];
 			sn = g_strndup((gchar *)param + 3, param_len - 1);
-			sprintf(param_str, "TID:%d, SN:%s", tid, sn);
+			snprintf(param_str, 64, "TID:%d, SN:%s", tid, sn);
 			g_free(sn);
 			break;
 
