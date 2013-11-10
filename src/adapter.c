@@ -618,6 +618,9 @@ int __near_adapter_set_dep_state(uint32_t idx, bool dep)
 	} else {
 		if (adapter->dep_timer > 0)
 			g_source_remove(adapter->dep_timer);
+
+		if (!__near_device_register_interface(adapter->device_link))
+			return -ENODEV;
 	}
 
 	return 0;
@@ -759,6 +762,8 @@ static int adapter_add_device(struct near_adapter *adapter,
 	struct near_device *device;
 	int err;
 
+	DBG();
+
 	device = __near_device_add(adapter->idx, target_idx, nfcid, nfcid_len);
 	if (!device)
 		return -ENODEV;
@@ -775,8 +780,12 @@ static int adapter_add_device(struct near_adapter *adapter,
 
 	adapter->device_link = device;
 
-	if (adapter->dep_up)
+	if (adapter->dep_up) {
+		if (!__near_device_register_interface(device))
+			return -ENODEV;
+
 		return 0;
+	}
 
 	err = __near_netlink_dep_link_up(adapter->idx, target_idx,
 					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);

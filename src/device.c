@@ -338,14 +338,17 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 
 	g_hash_table_insert(device_hash, path, device);
 
+	return device;
+}
+
+bool __near_device_register_interface(struct near_device *device)
+{
 	DBG("connection %p", connection);
 
-	g_dbus_register_interface(connection, device->path,
-					NFC_DEVICE_INTERFACE,
-					device_methods, NULL, NULL,
+	return g_dbus_register_interface(connection, device->path,
+						NFC_DEVICE_INTERFACE,
+						device_methods, NULL, NULL,
 							device, NULL);
-
-	return device;
 }
 
 int __near_device_listen(struct near_device *device, near_device_io_cb cb)
