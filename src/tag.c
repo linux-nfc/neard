@@ -186,7 +186,7 @@ static gboolean property_get_type(const GDBusPropertyTable *property,
 {
 	struct near_tag *tag = user_data;
 	const char *type;
-	
+
 	type = type_string(tag);
 	if (!type)
 		return FALSE;
@@ -201,7 +201,7 @@ static gboolean property_get_protocol(const GDBusPropertyTable *property,
 {
 	struct near_tag *tag = user_data;
 	const char *protocol;
-	
+
 	protocol = protocol_string(tag);
 	if (!protocol)
 		return FALSE;
