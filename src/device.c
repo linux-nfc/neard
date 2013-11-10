@@ -66,6 +66,9 @@ static void free_device(gpointer data)
 
 	near_ndef_records_free(device->records);
 
+	g_dbus_unregister_interface(connection, device->path,
+						NFC_DEVICE_INTERFACE);
+
 	g_free(device->path);
 	g_free(device->data);
 	g_free(device);
@@ -234,14 +237,8 @@ void __near_device_remove(struct near_device *device)
 
 	DBG("path %s", device->path);
 
-	if (!g_hash_table_lookup(device_hash, device->path))
-		return;
-
 	if (device->push_msg)
 		push_cb(device->adapter_idx, device->target_idx, EIO);
-
-	g_dbus_unregister_interface(connection, device->path,
-						NFC_DEVICE_INTERFACE);
 
 	g_hash_table_remove(device_hash, path);
 }
