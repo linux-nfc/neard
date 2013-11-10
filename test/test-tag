@@ -74,9 +74,9 @@ if (sys.argv[1] == "dump"):
 		sys.exit(0)
 
 if (sys.argv[1] == "write"):
-   	if (len(sys.argv) < 5):
+	if (len(sys.argv) < 5):
 		usage()
-	
+
 	tag = neardutils.find_tag(sys.argv[2])
 
 	if sys.argv[3] in ["Text"]:
@@ -105,7 +105,7 @@ if (sys.argv[1] == "write"):
 
 	elif sys.argv[3] in ["MIME"]:
 	     if len(sys.argv) == 6:
-	     	if sys.argv[4] in ["wifi_wsc"]:
+		     if sys.argv[4] in ["wifi_wsc"]:
 			tag.Write(({ "Type" : "MIME",
 				"MIME" : "application/vnd.wfa.wsc",
 				"SSID" : sys.argv[5] }))
