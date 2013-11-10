@@ -55,7 +55,7 @@ struct near_tag {
 	size_t data_length;
 	uint8_t *data;
 
-	uint32_t n_records;
+	uint32_t next_record;
 	GList *records;
 	bool blank;
 
@@ -266,7 +266,6 @@ static void write_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 	}
 
 	near_ndef_records_free(tag->records);
-	tag->n_records = 0;
 	tag->records = NULL;
 	g_free(tag->data);
 	tag->data = NULL;
@@ -584,7 +583,7 @@ static int tag_initialize(struct near_tag *tag,
 	tag->adapter_idx = adapter_idx;
 	tag->target_idx = target_idx;
 	tag->protocol = protocols;
-	tag->n_records = 0;
+	tag->next_record = 0;
 	tag->readonly = false;
 
 	if (nfcid_len <= NFC_MAX_NFCID1_LEN) {
@@ -752,14 +751,14 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 
 		path = g_strdup_printf("%s/nfc%d/tag%d/record%d",
 					NFC_PATH, tag->adapter_idx,
-					tag->target_idx, tag->n_records);
+					tag->target_idx, tag->next_record);
 
 		if (!path)
 			continue;
 
 		__near_ndef_record_register(record, path);
 
-		tag->n_records++;
+		tag->next_record++;
 		tag->records = g_list_append(tag->records, record);
 	}
 
