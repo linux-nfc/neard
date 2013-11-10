@@ -810,6 +810,14 @@ int __near_agent_init(void)
 						manager_methods,
 						NULL, NULL, NULL, NULL);
 
+	/*
+	 * Legacy interface, for backward compatibility only.
+	 * To be removed after 0.16.
+	 */
+	g_dbus_register_interface(connection, "/", "org.neard.Manager",
+						manager_methods,
+						NULL, NULL, NULL, NULL);
+
 
 	ndef_app_hash = g_hash_table_new_full(g_str_hash, g_str_equal,
 						g_free, ndef_agent_free);
@@ -831,6 +839,12 @@ void __near_agent_cleanup(void)
 	g_hash_table_foreach(ho_agent_hash, handover_agent_release, NULL);
 	g_hash_table_destroy(ho_agent_hash);
 	ho_agent_hash = NULL;
+
+	/*
+	 * Legacy interface, for backward compatibility only.
+	 * To be removed after 0.16.
+	 */
+	g_dbus_unregister_interface(connection, "/", "org.neard.Manager");
 
 	g_dbus_unregister_interface(connection, NFC_PATH,
 						NFC_AGENT_MANAGER_INTERFACE);
