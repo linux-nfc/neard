@@ -645,12 +645,6 @@ void __near_tag_remove(struct near_tag *tag)
 
 	DBG("path %s", tag->path);
 
-	if (!g_hash_table_lookup(tag_hash, tag->path))
-		return;
-
-	g_dbus_unregister_interface(connection, tag->path,
-						NFC_TAG_INTERFACE);
-
 	g_hash_table_remove(tag_hash, path);
 }
 
@@ -1046,6 +1040,9 @@ static void free_tag(gpointer data)
 	DBG("tag %p", tag);
 
 	near_ndef_records_free(tag->records);
+
+	g_dbus_unregister_interface(connection, tag->path,
+						NFC_TAG_INTERFACE);
 
 	g_free(tag->path);
 	g_free(tag->data);
