@@ -81,3 +81,16 @@ def dump_record(record_path):
 		else:
 			val = str(properties[key])
 		print "      %s = %s" % (key, val)
+
+def dump_all_records(path):
+	bus = dbus.SystemBus()
+	om = dbus.Interface(bus.get_object("org.neard", "/"),
+					"org.freedesktop.DBus.ObjectManager")
+	objects = om.GetManagedObjects()
+	for path, interfaces in objects.iteritems():
+		if "org.neard.Record" not in interfaces:
+			continue
+
+		if path.startswith(path):
+			print("  [ %s ]" % (path))
+			dump_record(path)

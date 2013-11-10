@@ -57,23 +57,21 @@ if (sys.argv[1] == "list"):
 
 if (sys.argv[1] == "dump"):
 	if (len(sys.argv) < 3):
-		usage()
-	else:
-		tag_path = sys.argv[2]
-
 		om = dbus.Interface(bus.get_object("org.neard", "/"),
 					"org.freedesktop.DBus.ObjectManager")
 		objects = om.GetManagedObjects()
 		for path, interfaces in objects.iteritems():
-			if "org.neard.Record" not in interfaces:
+			if "org.neard.Tag" not in interfaces:
 				continue
 
-			if path.startswith(tag_path):
-				print(" [ %s ]" % (path))
-				neardutils.dump_record(path)
+			print("[ %s ]" % (path))
+			neardutils.dump_all_records(path)
 
 		sys.exit(0)
+	else:
+		neardutils.dump_all_records(sys.argv[2])
 
+		sys.exit(0)
 
 if (sys.argv[1] == "write"):
    	if (len(sys.argv) < 5):
