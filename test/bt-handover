@@ -6,23 +6,27 @@ import gobject
 
 import dbus
 import dbus.mainloop.glib
+import neardutils
 
 from dbus.lowlevel import MethodCallMessage, HANDLER_RESULT_NOT_YET_HANDLED
 
 mainloop = gobject.MainLoop()
 
-def property_changed_adapter(name, value, path):
-    if name in ["Devices"]:
-        if (len(value) == 0):
-            print "Lost device, exiting"
-            mainloop.quit()
-        else:
-            device_path = value[0]
+def device_added(path, interfaces):
+	for iface, props in interfaces.iteritems():
+		if "org.neard.Device" in interfaces:
+			print("Pairing with %s" % (path))
+			device = dbus.Interface(bus.get_object("org.neard", path),
+							"org.neard.Device")
+			device.Push(({ "Type" : "Handover", "Carrier" : "bluetooth"}))
+			break
 
-            print "Pairing with %s" % (device_path)
-
-            device = dbus.Interface(bus.get_object("org.neard", device_path), "org.neard.Device")
-            device.Push(({ "Type" : "Handover", "Carrier" : "bluetooth"}))
+def device_removed(path, interfaces):
+	for iface in interfaces:
+		if "org.neard.Device" in interfaces:
+			print("Lost device %s" % (path))
+			mainloop.quit()
+			break
 
 if __name__ == '__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -41,29 +45,27 @@ if __name__ == '__main__':
 		bluez_adapter.RemoveDevice(bluez_path)
 
 
-	manager = dbus.Interface(bus.get_object("org.neard", "/"),
-					"org.neard.Manager")
+	adapter_path = neardutils.find_adapter().object_path
+        print("Adapter path %s" % (adapter_path))
+	adapter = dbus.Interface(bus.get_object("org.neard", adapter_path),
+							"org.neard.Adapter")
 
-	properties = manager.GetProperties()
-	device_path = properties["Adapters"][0]
-	adapter = dbus.Interface(bus.get_object("org.neard", device_path),
-					"org.neard.Adapter")
+	adapter_props = dbus.Interface(bus.get_object("org.neard", adapter_path),
+					"org.freedesktop.DBus.Properties")
+	powered = adapter_props.Get("org.neard.Adapter", "Powered")
+	if (powered == dbus.Boolean(0)):
+		adapter_props.Set("org.neard.Adapter", "Powered", dbus.Boolean(1))
 
-        adapter_properties = adapter.GetProperties()
+	polling = adapter_props.Get("org.neard.Adapter", "Polling")
+	if (polling == dbus.Boolean(0)):
+		adapter.StartPollLoop("Initiator")
 
-        for key in adapter_properties.keys():
-            if key in ["Polling"]:
-                if adapter_properties[key] == dbus.Boolean(1):
-                    print "Stoping poll on %s" % (device_path)
-                    adapter.StopPollLoop()
+	bus.add_signal_receiver(device_added, bus_name="org.neard",
+			dbus_interface="org.freedesktop.DBus.ObjectManager",
+			signal_name="InterfacesAdded")
 
-        print "Starting poll on %s" % (device_path)
-	adapter.StartPollLoop("Initiator")
-
-	bus.add_signal_receiver(property_changed_adapter,
-				bus_name="org.neard",
-				dbus_interface="org.neard.Adapter",
-				signal_name = "PropertyChanged",
-				path_keyword="path")
+	bus.add_signal_receiver(device_removed, bus_name="org.neard",
+			dbus_interface="org.freedesktop.DBus.ObjectManager",
+			signal_name="InterfacesRemoved")
 
 	mainloop.run()
