@@ -24,12 +24,19 @@ class NDEFAgent(dbus.service.Object):
 		if fields.has_key("Record"):
 			print "Record path %s" % (fields["Record"])
 
+		if fields.has_key("Payload"):
+			val = "["
+			for i in fields["Payload"]:
+				val += " 0x%x" % i
+			val += " ]"
+			print "Record payload %s" % val
+
 		if fields.has_key("NDEF"):
 			val = "["
 			for i in fields["NDEF"]:
 				val += " 0x%x" % i
 			val += " ]"
-			print "NDEF %s" % val
+			print "Complete NDEF %s" % val
 
 		return
 

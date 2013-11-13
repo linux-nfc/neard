@@ -115,6 +115,8 @@ static void ndef_agent_push_records(struct near_ndef_agent *agent,
 	DBusMessageIter iter, dict;
 	DBusMessage *message;
 	char *path;
+	uint8_t *payload;
+	size_t payload_len;
 
 	DBG("");
 
@@ -130,12 +132,15 @@ static void ndef_agent_push_records(struct near_ndef_agent *agent,
 		return;
 
 	path = __near_ndef_record_get_path(record);
+	payload = __near_ndef_record_get_payload(record, &payload_len);
 
 	dbus_message_iter_init_append(message, &iter);
 
 	near_dbus_dict_open(&iter, &dict);
 	near_dbus_dict_append_basic(&dict, "Record",
 					DBUS_TYPE_STRING, &path);
+	near_dbus_dict_append_fixed_array(&dict, "Payload",
+				DBUS_TYPE_BYTE, &payload, payload_len);
 	near_dbus_dict_append_array(&dict, "NDEF",
 				DBUS_TYPE_BYTE, append_ndef, records);
 	near_dbus_dict_close(&iter, &dict);

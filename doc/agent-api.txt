@@ -156,6 +156,10 @@ Fields		array{byte} NDEF
 
 			This is the raw NDEF data.
 
+		array{byte} Payload
+
+			This is the NDEF record payload.
+
 		object Record
 
 			This is a record object path.
