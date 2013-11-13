@@ -101,23 +101,6 @@ static void ndef_agent_disconnect(DBusConnection *conn, void *user_data)
 	g_hash_table_remove(ndef_app_hash, agent->record_type);
 }
 
-static void append_record_path(DBusMessageIter *iter, void *user_data)
-{
-	GList *records = user_data, *list;
-	struct near_ndef_record *record;
-	char *path;
-
-	for (list = records; list; list = list->next) {
-		record = list->data;
-
-		path = __near_ndef_record_get_path(record);
-		if (!path)
-			continue;
-
-		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &path);
-	}
-}
-
 static void append_ndef(DBusMessageIter *iter, void *user_data)
 {
 	GList *records = user_data;
@@ -126,10 +109,12 @@ static void append_ndef(DBusMessageIter *iter, void *user_data)
 }
 
 static void ndef_agent_push_records(struct near_ndef_agent *agent,
+					struct near_ndef_record *record,
 							GList *records)
 {
 	DBusMessageIter iter, dict;
 	DBusMessage *message;
+	char *path;
 
 	DBG("");
 
@@ -144,11 +129,13 @@ static void ndef_agent_push_records(struct near_ndef_agent *agent,
 	if (!message)
 		return;
 
+	path = __near_ndef_record_get_path(record);
+
 	dbus_message_iter_init_append(message, &iter);
 
 	near_dbus_dict_open(&iter, &dict);
-	near_dbus_dict_append_array(&dict, "Records",
-				DBUS_TYPE_STRING, append_record_path, records);
+	near_dbus_dict_append_basic(&dict, "Record",
+					DBUS_TYPE_STRING, &path);
 	near_dbus_dict_append_array(&dict, "NDEF",
 				DBUS_TYPE_BYTE, append_ndef, records);
 	near_dbus_dict_close(&iter, &dict);
@@ -180,13 +167,8 @@ void __near_agent_ndef_parse_records(GList *records)
 
 		agent = g_hash_table_lookup(ndef_app_hash, type);
 		if (agent)
-			break;
+			ndef_agent_push_records(agent, record, records);
 	}
-
-	if (!agent)
-		return;
-
-	ndef_agent_push_records(agent, records);
 }
 
 static int ndef_register(const char *sender, const char *path,
