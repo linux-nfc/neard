@@ -248,6 +248,14 @@ uint8_t *__near_ndef_record_get_data(struct near_ndef_record *record,
 	return record->data;
 }
 
+uint8_t *__near_ndef_record_get_payload(struct near_ndef_record *record,
+								size_t *len)
+{
+	*len = record->header->payload_len;
+
+	return record->data + record->header->header_len;
+}
+
 void __near_ndef_append_records(DBusMessageIter *iter, GList *records)
 {
 	GList *list;
