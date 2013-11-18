@@ -68,6 +68,12 @@ struct nlnfc_state {
 static struct nlnfc_state *nfc_state;
 static GIOChannel *netlink_channel = NULL;
 
+struct send_msg_data {
+	void *data;
+	int *done;
+	int (*finish_handler)(struct nl_msg *, void *);
+};
+
 static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
 			 void *arg)
 {
@@ -80,13 +86,17 @@ static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
 	return NL_STOP;
 }
 
-static int finish_handler(struct nl_msg *msg, void *arg)
+static int __finish_handler(struct nl_msg *msg, void *arg)
 {
-	int *ret = arg;
+	struct send_msg_data *data = arg;
+
 
 	DBG("");
 
-	*ret = 1;
+	if (data->finish_handler)
+		data->finish_handler(msg, data->data);
+
+	*(data->done) = 1;
 
 	return NL_SKIP;
 }
@@ -102,12 +112,14 @@ static int ack_handler(struct nl_msg *msg, void *arg)
 	return NL_STOP;
 }
 
-static int nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
+static int __nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
 			int (*rx_handler)(struct nl_msg *, void *),
+			int (*finish_handler)(struct nl_msg *, void *),
 			void *data)
 {
 	struct nl_cb *cb;
 	int err, done;
+	struct send_msg_data send_data;
 
 	DBG("");
 
@@ -124,9 +136,12 @@ static int nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
 	}
 
 	err = done = 0;
+	send_data.done = &done;
+	send_data.data = data;
+	send_data.finish_handler = finish_handler;
 
+	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, __finish_handler, &send_data);
 	nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &err);
-	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &done);
 	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &done);
 
 	if (rx_handler)
@@ -138,6 +153,13 @@ static int nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
 	nl_cb_put(cb);
 
 	return err;
+}
+
+static inline int nl_send_msg(struct nl_sock *sock, struct nl_msg *msg,
+			int (*rx_handler)(struct nl_msg *, void *),
+			void *data)
+{
+	return __nl_send_msg(sock, msg, rx_handler, NULL, data);
 }
 
 static int get_devices_handler(struct nl_msg *n, void *arg)
