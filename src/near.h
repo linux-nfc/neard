@@ -86,6 +86,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
 			uint8_t *nfcid, uint8_t nfcid_len);
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx);
+int __near_adapter_get_targets_done(uint32_t idx);
 int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len);
 int __near_adapter_remove_device(uint32_t idx);
 int __near_adapter_set_dep_state(uint32_t idx, bool dep);

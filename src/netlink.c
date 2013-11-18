@@ -492,6 +492,17 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 	return 0;
 }
 
+static int get_targets_finish_handler(struct nl_msg *n, void *arg)
+{
+	uint32_t adapter_idx;
+
+	DBG("");
+
+	adapter_idx = *((uint32_t *)arg);
+
+	return __near_adapter_get_targets_done(adapter_idx);
+}
+
 static int nfc_netlink_event_targets_found(struct genlmsghdr *gnlh)
 {
 	struct nlattr *attr[NFC_ATTR_MAX + 1];
@@ -526,8 +537,9 @@ static int nfc_netlink_event_targets_found(struct genlmsghdr *gnlh)
 
 	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, adapter_idx);
 
-	err = nl_send_msg(nfc_state->cmd_sock, msg,
-				get_targets_handler, &adapter_idx);
+	err = __nl_send_msg(nfc_state->cmd_sock, msg,
+				get_targets_handler, get_targets_finish_handler,
+								&adapter_idx);
 
 nla_put_failure:
 	nlmsg_free(msg);
