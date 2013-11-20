@@ -39,5 +39,9 @@ into starting a new polling cycle whenever a target or a device are lost.
 .B DefaultPowered=\fPtrue|false\fP
 Automatically turn an adapter on when being discovered.
 Default value is false.
+.TP
+.B ResetOnError=\fPtrue|false\fP
+Power cycle the adapter when getting a driver error from the kernel.
+Default value is true.
 .SH "SEE ALSO"
 .BR neard (8)

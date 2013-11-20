@@ -857,15 +857,16 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 static gboolean poll_error(gpointer user_data)
 {
 	struct near_adapter *adapter = user_data;
+	bool reset;
 
 	DBG("adapter %d", adapter->idx);
 
-	/*
-	 * Resettting the adapter upon polling errors.
-	 * This could be handled through a configuration setting.
-	 */
-	__near_netlink_adapter_enable(adapter->idx, false);
-	__near_netlink_adapter_enable(adapter->idx, true);
+	reset = near_setting_get_bool("ResetOnError");
+	if (reset) {
+		near_error("Resetting nfc%d", adapter->idx);
+		 __near_netlink_adapter_enable(adapter->idx, false);
+		 __near_netlink_adapter_enable(adapter->idx, true);
+	}
 
 	adapter_start_poll(adapter);
 
