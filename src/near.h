@@ -92,7 +92,6 @@ int __near_adapter_remove_device(uint32_t idx);
 int __near_adapter_set_dep_state(uint32_t idx, bool dep);
 bool __near_adapter_get_dep_state(uint32_t idx);
 void __near_adapter_listen(struct near_device_driver *driver);
-void __near_adapter_list(DBusMessageIter *iter, void *user_data);
 void __near_adapter_start_check_presence(uint32_t adapter_idx, uint32_t target_idx);
 void __near_adapter_stop_check_presence(uint32_t adapter_idx, uint32_t target_idx);
 int __near_adapter_init(void);

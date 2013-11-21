@@ -190,25 +190,6 @@ static int adapter_start_poll(struct near_adapter *adapter)
 	return 0;
 }
 
-static void append_path(gpointer key, gpointer value, gpointer user_data)
-{
-	struct near_adapter *adapter = value;
-	DBusMessageIter *iter = user_data;
-
-	DBG("%s", adapter->path);
-
-	if (!adapter->path)
-		return;
-
-	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH,
-							&adapter->path);
-}
-
-void __near_adapter_list(DBusMessageIter *iter, void *user_data)
-{
-	g_hash_table_foreach(adapter_hash, append_path, iter);
-}
-
 static gboolean property_get_mode(const GDBusPropertyTable *property,
 					DBusMessageIter *iter, void *user_data)
 {
