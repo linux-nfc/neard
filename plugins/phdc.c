@@ -88,6 +88,12 @@ static DBusMessage *error_not_found(DBusMessage *msg)
 						".NotFound", "Not found");
 }
 
+static DBusMessage *error_permission_denied(DBusMessage *msg)
+{
+	return g_dbus_create_error(msg, NFC_ERROR_INTERFACE
+				".PermissionDenied", "PermissionDenied");
+}
+
 static DBusMessage *error_failed(DBusMessage *msg, int errnum)
 {
 	const char *str = strerror(errnum);
@@ -397,6 +403,8 @@ static DBusMessage *dbus_register_phdc_agent(DBusConnection *conn,
 	/* Get the the sender name */
 	phdc_mgr->sender = g_strdup(dbus_message_get_sender(msg));
 
+	DBG("%s", phdc_mgr->sender);
+
 	/* default p2p values */
 	phdc_mgr->p2p_driver->fallback_service_name = NULL;
 	phdc_mgr->p2p_driver->sock_type = SOCK_STREAM;
@@ -476,8 +484,7 @@ static DBusMessage *dbus_unregister_phdc_agent(DBusConnection *conn,
 {
 	struct near_phdc_data *mgr;
 	DBusMessageIter iter;
-	const char *path;
-	const char *role;
+	const char *path, *role, *sender;
 
 	DBG("conn %p", conn);
 
@@ -486,6 +493,8 @@ static DBusMessage *dbus_unregister_phdc_agent(DBusConnection *conn,
 
 	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_OBJECT_PATH)
 		return error_invalid_arguments(msg);
+
+	sender = dbus_message_get_sender(msg);
 
 	dbus_message_iter_get_basic(&iter, &path);
 	dbus_message_iter_next(&iter);
@@ -499,6 +508,11 @@ static DBusMessage *dbus_unregister_phdc_agent(DBusConnection *conn,
 	mgr = search_mgr_list_by_path(path);
 	if (!mgr)
 		return error_not_found(msg);
+
+	DBG("%s", mgr->sender);
+
+	if (strncmp(sender, mgr->sender, strlen(mgr->sender)))
+		return error_permission_denied(msg);
 
 	/* remove it */
 	near_p2p_unregister(mgr->p2p_driver);
