@@ -159,6 +159,11 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 	/* Add data to tag mem */
 	tagdata = near_tag_get_data(t1_tag->tag, &data_length);
+
+	/* Check that we have enough free space */
+	if (data_length - t1_tag->data_read < (uint)length)
+		return -EINVAL;
+
 	memcpy(tagdata + t1_tag->data_read, resp + 1, length);
 
 	/* Next segment */
