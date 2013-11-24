@@ -676,9 +676,16 @@ static int nfc_netlink_event_tm_deactivated(struct genlmsghdr *gnlh)
 
 static int nfc_netlink_event(struct nl_msg *n, void *arg)
 {
+	struct sockaddr_nl *src = nlmsg_get_src(n);
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(n));
 
 	DBG("event 0x%x", gnlh->cmd);
+
+	if (src->nl_pid) {
+		near_error("WARNING: Wrong netlink message sender %d",
+								src->nl_pid);
+		return NL_SKIP;
+	}
 
 	switch (gnlh->cmd) {
 	case NFC_EVENT_TARGETS_FOUND:
