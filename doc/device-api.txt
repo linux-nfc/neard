@@ -33,3 +33,6 @@ Method		void Push(dict attributes)
 					 org.neard.Error.InvalidArguments
 					 org.neard.Error.InProgress
 
+Properties	object Adapter [readonly]
+
+			The object path of the adapter the device belongs to.

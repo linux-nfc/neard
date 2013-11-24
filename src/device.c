@@ -225,10 +225,37 @@ error:
 	return __near_error_failed(msg, -err);
 }
 
+static gboolean property_get_adapter(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_device *device = user_data;
+	struct near_adapter *adapter;
+	const char *path;
+
+	adapter = __near_adapter_get(device->adapter_idx);
+	if (!adapter)
+		return FALSE;
+
+	path = __near_adapter_get_path(adapter);
+	if (!path)
+		return FALSE;
+
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH, &path);
+
+	return TRUE;
+
+}
+
 static const GDBusMethodTable device_methods[] = {
 	{ GDBUS_ASYNC_METHOD("Push", GDBUS_ARGS({"attributes", "a{sv}"}),
 							NULL, push_ndef) },
 	{ },
+};
+
+static const GDBusPropertyTable device_properties[] = {
+	{ "Adapter", "o", property_get_adapter },
+
+	{ }
 };
 
 void __near_device_remove(struct near_device *device)
@@ -346,9 +373,9 @@ bool __near_device_register_interface(struct near_device *device)
 	DBG("connection %p", connection);
 
 	return g_dbus_register_interface(connection, device->path,
-						NFC_DEVICE_INTERFACE,
-						device_methods, NULL, NULL,
-							device, NULL);
+					NFC_DEVICE_INTERFACE,
+					device_methods, NULL,
+					device_properties, device, NULL);
 }
 
 int __near_device_listen(struct near_device *device, near_device_io_cb cb)
