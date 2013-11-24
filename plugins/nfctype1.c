@@ -321,6 +321,11 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 		DBG("READ Static complete");
 
 		tagdata = near_tag_get_data(t1_tag->tag, &data_length);
+
+		/* Check that we have enough free space */
+		if (data_length < (size_t)TAG_T1_DATA_LENGTH(cc))
+			return -EINVAL;
+
 		memcpy(tagdata, cc + LEN_CC_BYTES, TAG_T1_DATA_LENGTH(cc));
 
 		near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
