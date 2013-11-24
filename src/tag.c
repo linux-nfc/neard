@@ -224,6 +224,27 @@ static gboolean property_get_readonly(const GDBusPropertyTable *property,
 	return TRUE;
 }
 
+static gboolean property_get_adapter(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_tag *tag = user_data;
+	struct near_adapter *adapter;
+	const char *path;
+
+	adapter = __near_adapter_get(tag->adapter_idx);
+	if (!adapter)
+		return FALSE;
+
+	path = __near_adapter_get_path(adapter);
+	if (!path)
+		return FALSE;
+
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_OBJECT_PATH, &path);
+
+	return TRUE;
+
+}
+
 static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 {
 	struct near_tag *tag;
@@ -450,6 +471,7 @@ static const GDBusPropertyTable tag_properties[] = {
 	{ "Type", "s", property_get_type },
 	{ "Protocol", "s", property_get_protocol },
 	{ "ReadOnly", "b", property_get_readonly },
+	{ "Adapter", "o", property_get_adapter },
 
 	{ }
 };

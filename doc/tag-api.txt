@@ -23,7 +23,7 @@ Properties	string Type [readonly]
 
 			The NFC tag type.
 			Possible values are "Type 1", "Type 2", "Type 3",
-			"Type 4" and "NFC-DEP"
+			"Type 4" and "NFC-DEP".
 
 		string Protocol [readonly]
 
@@ -33,7 +33,11 @@ Properties	string Type [readonly]
 
 		boolean ReadOnly [readonly]
 
-			Give the current status of tag's read mode
+			Give the current status of tag's read mode.
+
+		object Adapter [readonly]
+
+			The object path of the adapter the tag belongs to.
 
 
 Record hierarchy
