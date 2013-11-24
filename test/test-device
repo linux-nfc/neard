@@ -50,6 +50,11 @@ if (sys.argv[1] == "list"):
 
 			print(" [ %s ]" % (path))
 
+			props = interfaces["org.neard.Device"]
+
+			for (key, value) in props.items():
+				print("    %s = %s" % (key, value))
+
 		sys.exit(0)
 
 if (sys.argv[1] == "dump"):
