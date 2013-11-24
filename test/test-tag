@@ -53,6 +53,19 @@ if (sys.argv[1] == "list"):
 
 			print(" [ %s ]" % (path))
 
+			props = interfaces["org.neard.Tag"]
+
+			for (key, value) in props.items():
+				if key in ["ReadOnly"]:
+					if value == dbus.Boolean(1):
+						val = "true"
+					else:
+						val = "false"
+					print("    %s = %s" % (key, val))
+
+				else:
+					print("    %s = %s" % (key, value))
+
 		sys.exit(0)
 
 if (sys.argv[1] == "dump"):
