@@ -28,25 +28,28 @@ def device_removed(path, interfaces):
 			mainloop.quit()
 			break
 
-if __name__ == '__main__':
-	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+def remove_paired_devices():
+	bluez_manager = dbus.Interface(bus.get_object("org.bluez", "/"),
+					"org.bluez.Manager")
 
-	bus = dbus.SystemBus()
-
-        bluez_manager = dbus.Interface(bus.get_object("org.bluez", "/"), "org.bluez.Manager")
-	
 	bluez_adapter_path = bluez_manager.DefaultAdapter()
+	bluez_adapter = dbus.Interface(bus.get_object("org.bluez",
+						bluez_adapter_path),
+						"org.bluez.Adapter")
 
-	bluez_adapter = dbus.Interface(bus.get_object("org.bluez", bluez_adapter_path),
-							"org.bluez.Adapter")
+	print("Using %s" % bluez_adapter.object_path)
 
 	for bluez_path in bluez_adapter.ListDevices():
 		print("Removing %s" % (bluez_path))
 		bluez_adapter.RemoveDevice(bluez_path)
 
+if __name__ == '__main__':
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+	bus = dbus.SystemBus()
 
 	adapter_path = neardutils.find_adapter().object_path
-        print("Adapter path %s" % (adapter_path))
+	print("Adapter path %s" % (adapter_path))
 	adapter = dbus.Interface(bus.get_object("org.neard", adapter_path),
 							"org.neard.Adapter")
 
@@ -55,6 +58,8 @@ if __name__ == '__main__':
 	powered = adapter_props.Get("org.neard.Adapter", "Powered")
 	if (powered == dbus.Boolean(0)):
 		adapter_props.Set("org.neard.Adapter", "Powered", dbus.Boolean(1))
+
+	remove_paired_devices()
 
 	polling = adapter_props.Get("org.neard.Adapter", "Polling")
 	if (polling == dbus.Boolean(0)):
