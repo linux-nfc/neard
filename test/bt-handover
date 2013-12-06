@@ -6,6 +6,7 @@ import gobject
 
 import dbus
 import dbus.mainloop.glib
+from optparse import OptionParser
 import neardutils
 
 from dbus.lowlevel import MethodCallMessage, HANDLER_RESULT_NOT_YET_HANDLED
@@ -28,7 +29,46 @@ def device_removed(path, interfaces):
 			mainloop.quit()
 			break
 
-def remove_paired_devices():
+def remove_paired_devices(bt_adapter):
+	manager = dbus.Interface(bus.get_object("org.bluez", "/"),
+					"org.freedesktop.DBus.ObjectManager")
+	objects = manager.GetManagedObjects()
+
+	all_adapters = (path for path, interfaces in objects.iteritems() if
+				"org.bluez.Adapter1" in interfaces.keys()
+				and path.endswith(bt_adapter))
+
+	bluez_adapter = None
+	for adapter in sorted(all_adapters):
+		bluez_adapter = dbus.Interface(bus.get_object("org.bluez",
+							adapter),
+							"org.bluez.Adapter1")
+		break
+
+	if(bluez_adapter is None):
+		print("Bluetooth adapter %s could not be found" % bluez_adapter)
+		exit()
+
+	adapter_path = bluez_adapter.object_path
+	print("Using %s" % adapter_path)
+
+	adapter_props = dbus.Interface(bus.get_object("org.bluez", adapter_path),
+					"org.freedesktop.DBus.Properties")
+
+	powered = adapter_props.Get("org.bluez.Adapter1", "Powered")
+	if (powered == dbus.Boolean(0)):
+		print("Bluetooth adapter %s is not powered" % adapter_path )
+		exit()
+
+	all_devices = (path for path, interfaces in objects.iteritems() if
+				("org.bluez.Device1" in interfaces.keys()
+				and path.startswith(bluez_adapter.object_path)))
+
+	for device in all_devices:
+		print("Removing %s" % (device))
+		bluez_adapter.RemoveDevice(device)
+
+def remove_paired_devices_bluez4():
 	bluez_manager = dbus.Interface(bus.get_object("org.bluez", "/"),
 					"org.bluez.Manager")
 
@@ -44,6 +84,18 @@ def remove_paired_devices():
 		bluez_adapter.RemoveDevice(bluez_path)
 
 if __name__ == '__main__':
+	parser = OptionParser()
+	parser.add_option("", "--bluez4", action="store_true",
+				dest="use_bluez4",
+				help="Use BlueZ 4 to remove paired devices.")
+	parser.add_option("-a", "--adapter", metavar="BT_ADAPTER",
+				dest="bt_adapter", default="",
+				help="The bluetooth adapter that is used by "
+					"the bluetooth stack. This options is "
+					"ignored when using BlueZ 4, instead "
+					"the default adapter is used.")
+	(options, args) = parser.parse_args()
+
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 	bus = dbus.SystemBus()
@@ -59,7 +111,10 @@ if __name__ == '__main__':
 	if (powered == dbus.Boolean(0)):
 		adapter_props.Set("org.neard.Adapter", "Powered", dbus.Boolean(1))
 
-	remove_paired_devices()
+	if (options.use_bluez4):
+		remove_paired_devices_bluez4()
+	else:
+		remove_paired_devices(options.bt_adapter)
 
 	polling = adapter_props.Get("org.neard.Adapter", "Polling")
 	if (polling == dbus.Boolean(0)):
