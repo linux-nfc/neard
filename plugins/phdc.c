@@ -472,7 +472,9 @@ static DBusMessage *dbus_register_phdc_agent(DBusConnection *conn,
 
 error:
 	/* free memory */
-	free_mgr_data(phdc_mgr);
+	if (phdc_mgr)
+		free_mgr_data(phdc_mgr);
+
 	return error_failed(msg, -err);
 }
 
