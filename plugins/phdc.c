@@ -155,11 +155,9 @@ static void mgr_agent_release(gpointer key, gpointer data, gpointer user_data)
 
 static void free_mgr_data(gpointer data)
 {
-	struct near_phdc_data *mgr_data;
+	struct near_phdc_data *mgr_data = data;
 
 	DBG("%p", data);
-
-	mgr_data = (struct near_phdc_data *)data;
 
 	/* free memory */
 	if (mgr_data->watch > 0)
@@ -175,7 +173,6 @@ static void free_mgr_data(gpointer data)
 	g_free(mgr_data->sender);
 
 	g_free(mgr_data);
-	mgr_data = NULL;
 }
 
 /*
