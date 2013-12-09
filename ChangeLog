@@ -1,3 +1,14 @@
+ver 0.14
+	Added a Tag and Device Adapter property.
+	Added NDEF agent record payload getter.
+	Added support for catching poll errors.
+	Added ObjectManager API support.
+	Added NPP push support.
+	Added simplified test scripts.
+	Fixed a t4t write bug.
+	Fixed NPP read.
+	Fixed security bugs.
+
 ver 0.13
 	Added PHDC Manager support.
 	Added nfctool firmware update support.
