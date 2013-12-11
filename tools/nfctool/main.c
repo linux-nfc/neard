@@ -779,5 +779,8 @@ exit_err:
 
 	nfctool_options_cleanup();
 
+	if (err)
+		print_error("%s", strerror(-err));
+
 	return err;
 }
