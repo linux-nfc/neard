@@ -201,7 +201,7 @@ static bool phdc_p2p_newclient(char *service_name, int agent_fd, gpointer data)
 	mgr->p2p_driver->user_data = mgr;
 
 	/* Call the pdhc manager */
-	msg = dbus_message_new_method_call(mgr->sender,	mgr->path,
+	msg = dbus_message_new_method_call(mgr->sender, mgr->path,
 						PHDC_MANAGER_IFACE,
 						AGENT_NEWCONNECTION);
 	if (!msg) {
@@ -267,8 +267,6 @@ static void phdc_p2p_close(int agent_fd, int err, gpointer data)
 
 	if (g_dbus_send_message(phdc_conn, msg) == FALSE)
 		near_error("Dbus send failed");
-
-	return;
 }
 
 /* Called when the external Phdc manager ends or disconnect */
@@ -284,7 +282,6 @@ static void phdc_manager_disconnect(DBusConnection *conn, void *user_data)
 	near_p2p_unregister(phdc_mgr->p2p_driver);
 
 	g_hash_table_remove(mgr_list, phdc_mgr);
-
 }
 
 /*
@@ -355,7 +352,6 @@ static int parse_dictionary(DBusMessage *msg, void *data,
 	return 0;
 
 error:
-
 	g_free(p2p->service_name);
 	p2p->service_name = NULL;
 
@@ -364,7 +360,6 @@ error:
 	phdc_mgr->path = NULL;
 
 	return err;
-
 }
 
 /*
@@ -567,5 +562,4 @@ void phdc_exit(void)
 	/* Clean before leaving */
 	g_hash_table_remove_all(mgr_list);
 	g_hash_table_destroy(mgr_list);
-
 }
