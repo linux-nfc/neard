@@ -274,6 +274,8 @@ static void phdc_manager_disconnect(DBusConnection *conn, void *user_data)
 	if (!phdc_mgr)
 		return;
 
+	phdc_mgr->watch = 0;
+
 	DBG("PHDC manager %s disconnected", phdc_mgr->sender);
 	/* Stop the associated p2p driver */
 	near_p2p_unregister(phdc_mgr->p2p_driver);
