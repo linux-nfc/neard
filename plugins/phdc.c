@@ -278,7 +278,7 @@ static void phdc_manager_disconnect(DBusConnection *conn, void *user_data)
 	/* Stop the associated p2p driver */
 	near_p2p_unregister(phdc_mgr->p2p_driver);
 
-	g_hash_table_remove(mgr_list, phdc_mgr);
+	g_hash_table_remove(mgr_list, phdc_mgr->p2p_driver->service_name);
 }
 
 /*
