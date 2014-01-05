@@ -271,9 +271,6 @@ static void phdc_manager_disconnect(DBusConnection *conn, void *user_data)
 {
 	struct near_phdc_data *phdc_mgr = user_data;
 
-	if (!phdc_mgr)
-		return;
-
 	phdc_mgr->watch = 0;
 
 	DBG("PHDC manager %s disconnected", phdc_mgr->sender);
