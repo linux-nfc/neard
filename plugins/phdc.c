@@ -138,9 +138,6 @@ static void mgr_agent_release(gpointer key, gpointer data, gpointer user_data)
 	struct near_phdc_data *mgr_data = data;
 	DBusMessage *message;
 
-	if (!mgr_data)
-		return;
-
 	DBG("%s %s", mgr_data->sender, mgr_data->path);
 
 	message = dbus_message_new_method_call(mgr_data->sender, mgr_data->path,
