@@ -1,0 +1,13 @@
+[Unit]
+Description=neard service
+Documentation=man:neard(8)
+
+[Service]
+Type=dbus
+BusName=org.neard
+ExecStart=@libexecdir@/neard -n
+NotifyAccess=main
+LimitNPROC=1
+
+[Install]
+Alias=dbus-org.neard.service

@@ -44,6 +44,8 @@ src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ @NETLINK_LIBS@ -ldl
 
 src_neard_LDFLAGS = -Wl,--export-dynamic
 
+src_neard_DEPENDENCIES= src/neard.service
+
 nodist_src_neard_SOURCES = src/builtin.h
 
 AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ @NETLINK_CFLAGS@ $(builtin_cflags) \
@@ -82,6 +84,14 @@ test_scripts = test/test-adapter test/test-device \
 		test/test-tag test/monitor-near test/bt-handover \
 		test/handover-agent test/phdc-simple-manager \
 		test/neardutils.py
+
+if SYSTEMD
+systemdsystemunitdir = @SYSTEMD_SYSTEMUNITDIR@
+systemdsystemunit_DATA = src/neard.service
+endif
+
+EXTRA_DIST += src/neard.service.in
+CLEANFILES += src/neard.service
 
 if TEST
 testdir = $(pkglibdir)/test
@@ -153,13 +163,20 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = neard.pc
 
-DISTCHECK_CONFIGURE_FLAGS = --enable-tools
+DISTCHECK_CONFIGURE_FLAGS = --enable-tools --disable-systemd
 
 DISTCLEANFILES = $(pkgconfig_DATA)
 
 MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \
 	ltmain.sh depcomp compile missing install-sh mkinstalldirs
+
+SED_PROCESS = $(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
+		$(SED) -e 's,@libexecdir\@,$(libexecdir),g' \
+		< $< > $@
+
+%.service: %.service.in Makefile
+	$(SED_PROCESS)
 
 src/plugin.$(OBJEXT): src/builtin.h
 
