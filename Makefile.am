@@ -2,9 +2,9 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_MAKEFLAGS = --no-print-directory
 
-includedir = ${includedir}/near
+pkgincludedir = ${includedir}/near
 
-include_HEADERS = include/types.h include/log.h include/plugin.h \
+pkginclude_HEADERS = include/types.h include/log.h include/plugin.h \
 			include/tag.h include/adapter.h include/ndef.h \
 			include/tlv.h include/setting.h include/device.h \
 			include/nfc_copy.h include/snep.h
@@ -13,7 +13,7 @@ nodist_include_HEADERS = include/version.h
 
 noinst_HEADERS = include/dbus.h
 
-local_headers = $(foreach file,$(include_HEADERS) $(nodist_include_HEADERS) \
+local_headers = $(foreach file,$(pkginclude_HEADERS) $(nodist_include_HEADERS) \
 			$(noinst_HEADERS), include/near/$(notdir $(file)))
 
 gdbus_sources = gdbus/gdbus.h gdbus/mainloop.c gdbus/watch.c \
@@ -32,8 +32,8 @@ builtin_libadd =
 
 bin_PROGRAMS =
 
-libexecdir = ${libexecdir}/nfc
-libexec_PROGRAMS = src/neard
+pkglibexecdir = ${libexecdir}/nfc
+pkglibexec_PROGRAMS = src/neard
 
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/main.c src/error.c src/near.h src/log.c \

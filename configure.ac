@@ -15,8 +15,6 @@ if (test "${libdir}" = '${exec_prefix}/lib'); then
 	libdir="${prefix}/lib"
 fi
 
-plugindir="${libdir}/near/plugins"
-
 PKG_PROG_PKG_CONFIG
 
 COMPILER_FLAGS
