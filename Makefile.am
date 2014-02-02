@@ -2,7 +2,7 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_MAKEFLAGS = --no-print-directory
 
-includedir = @includedir@/near
+includedir = ${includedir}/near
 
 include_HEADERS = include/types.h include/log.h include/plugin.h \
 			include/tag.h include/adapter.h include/ndef.h \
@@ -32,7 +32,7 @@ builtin_libadd =
 
 bin_PROGRAMS =
 
-libexecdir = @libexecdir@/nfc
+libexecdir = ${libexecdir}/nfc
 libexec_PROGRAMS = src/neard
 
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
@@ -41,7 +41,7 @@ src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
 			src/tag.c src/plugin.c src/netlink.c src/ndef.c \
 			src/tlv.c src/bluetooth.c src/agent.c src/snep.c
 
-src_neard_LDADD = $(builtin_libadd) @GLIB_LIBS@ @DBUS_LIBS@ @NETLINK_LIBS@ -ldl
+src_neard_LDADD = $(builtin_libadd) ${GLIB_LIBS} ${DBUS_LIBS} ${NETLINK_LIBS} -ldl
 
 src_neard_LDFLAGS = -Wl,--export-dynamic
 
@@ -49,7 +49,7 @@ src_neard_DEPENDENCIES= src/neard.service
 
 nodist_src_neard_SOURCES = src/builtin.h
 
-AM_CFLAGS = @GLIB_CFLAGS@ @DBUS_CFLAGS@ @NETLINK_CFLAGS@ $(builtin_cflags) \
+AM_CFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} $(builtin_cflags) \
 					-DNEAR_PLUGIN_BUILTIN \
 					-DPLUGINDIR=\""$(plugindir)"\" \
 					-DCONFIGDIR=\""$(configdir)\""
@@ -87,7 +87,7 @@ test_scripts = test/test-adapter test/test-device \
 		test/neardutils.py
 
 if SYSTEMD
-systemdsystemunitdir = @SYSTEMD_SYSTEMUNITDIR@
+systemdsystemunitdir = ${SYSTEMD_SYSTEMUNITDIR}
 systemdsystemunit_DATA = src/neard.service
 endif
 
@@ -108,7 +108,7 @@ tools_snep_send_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/bluetooth.c src/ndef.c \
 					tools/snep-send.c src/error.c \
 					src/agent.c
-tools_snep_send_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+tools_snep_send_LDADD = ${GLIB_LIBS} ${DBUS_LIBS}
 
 tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 					tools/nfctool/nfctool.h \
@@ -127,7 +127,7 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 					tools/nfctool/display.h \
 					tools/nfctool/display.c
 
-tools_nfctool_nfctool_LDADD = @GLIB_LIBS@ @NETLINK_LIBS@
+tools_nfctool_nfctool_LDADD = ${GLIB_LIBS} ${NETLINK_LIBS}
 
 unit_tests = unit/test-ndef-parse unit/test-ndef-build unit/test-snep-read
 
@@ -135,20 +135,20 @@ unit_test_ndef_parse_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/error.c src/agent.c \
 					src/bluetooth.c src/ndef.c \
 					unit/test-ndef-parse.c
-unit_test_ndef_parse_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+unit_test_ndef_parse_LDADD = ${GLIB_LIBS} ${DBUS_LIBS}
 
 unit_test_ndef_build_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/error.c src/agent.c \
 					src/bluetooth.c src/ndef.c \
 					unit/test-ndef-build.c
-unit_test_ndef_build_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+unit_test_ndef_build_LDADD = ${GLIB_LIBS} ${DBUS_LIBS}
 
 unit_test_snep_read_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					src/error.c src/agent.c \
 					src/bluetooth.c src/ndef.c src/snep.c \
 					unit/test-snep-read.c unit/test-utils.c \
 					unit/test-utils.h
-unit_test_snep_read_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
+unit_test_snep_read_LDADD = ${GLIB_LIBS} ${DBUS_LIBS}
 
 noinst_PROGRAMS += $(unit_tests)
 
