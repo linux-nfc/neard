@@ -10,4 +10,4 @@ fi
 		--disable-systemd \
 		--prefix=/usr \
 		--sysconfdir=/etc \
-		--enable-tools $*
+		--enable-tools "$@"
