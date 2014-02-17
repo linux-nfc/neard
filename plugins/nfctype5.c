@@ -108,6 +108,7 @@
 
 #define CMD_READ_SINGLE_BLOCK		0x20
 #define CMD_WRITE_SINGLE_BLOCK		0x21
+#define CMD_READ_MULITPLE_BLOCKS	0x23
 #define CMD_GET_SYSTEM_INFO		0x2b
 
 #define GET_SYS_INFO_FLAG_DSFID		0x01
@@ -144,6 +145,17 @@ struct type5_write_single_block_cmd {
 
 struct type5_write_single_block_resp {
 	uint8_t			flags;
+} __attribute__((packed));
+
+struct type5_read_multiple_blocks_cmd {
+	struct type5_cmd_hdr	hdr;
+	uint8_t			blk_no;
+	uint8_t			num_blks;
+} __attribute__((packed));
+
+struct type5_read_multiple_blocks_resp {
+	uint8_t			flags;
+	uint8_t			data[0];
 } __attribute__((packed));
 
 struct type5_get_system_info_cmd {
@@ -845,12 +857,146 @@ out_err:
 	return err;
 }
 
+static int nfctype5_format_resp(struct near_tag *tag, int err, void *data)
+{
+	struct t5_cookie *cookie = data;
+
+	DBG("");
+
+	if (!err) {
+		DBG("Done formatting");
+		near_tag_set_blank(tag, FALSE);
+	} else {
+		near_error("Format Failed");
+	}
+
+	return t5_cookie_release(err, cookie);
+}
+
+static int t5_read_multiple_blocks_resp(uint8_t *resp, int length, void *data)
+{
+	struct type5_read_multiple_blocks_resp *t5_resp =
+		(struct type5_read_multiple_blocks_resp *)
+					(resp + NFC_HEADER_SIZE);
+	struct t5_cookie *cookie = data;
+	struct type5_cc t5_cc;
+	struct near_tag *tag = cookie->tag;
+	uint8_t blk_size = near_tag_get_blk_size(tag);
+	size_t mem_size;
+	bool read_multiple_supported = false;
+	int err;
+
+	DBG("");
+
+	err = t5_check_resp(resp, length);
+	if (!err) {
+		length -= NFC_HEADER_SIZE;
+
+		if (length == (int)(sizeof(*t5_resp) + (2 * blk_size)))
+			read_multiple_supported = true;
+	}
+
+	t5_cc.cc0 = TYPE5_CC0_NDEF_MAGIC;
+
+	t5_cc.cc1 = TYPE5_VERSION_MAJOR << TYPE5_CC1_VER_MAJOR_SHIFT;
+	t5_cc.cc1 |= TYPE5_VERSION_MINOR << TYPE5_CC1_VER_MINOR_SHIFT;
+	t5_cc.cc1 |= TYPE5_CC1_READ_ACCESS_ALWAYS;
+
+	/*
+	 * Assume that the tag is *not* read only because if it is, the tag
+	 * would have to be formatted already and we wouldn't be here.
+	 * Besides, if it is read only then the write below will fail and
+	 * the CC won't be changed anyway.
+	 */
+	t5_cc.cc1 |= TYPE5_CC1_WRITE_ACCESS_ALWAYS;
+
+	mem_size = blk_size * near_tag_get_num_blks(tag);
+	mem_size = MIN(mem_size, TYPE5_MAX_MEM_SIZE);
+
+	t5_cc.cc2 = mem_size / 8;
+
+	/*
+	 * We cannot set the lock flag in CC3.  The reason is that to know
+	 * if LOCK operations are supported, we'd have to perform one.
+	 * But performing one will permanently LOCK that block so instead
+	 * just say that its not supported.  We also don't know whether
+	 * the tag needs a special frame format so just say "no" for that
+	 * one too.  If it does, we probably can't write to the tag anyway.
+	 */
+	t5_cc.cc3 = 0;
+
+	if (read_multiple_supported)
+		t5_cc.cc3 |= TYPE5_CC3_MBREAD_FLAG;
+
+	err = t5_write(tag, TYPE5_META_START_OFFSET, (uint8_t *)&t5_cc,
+			sizeof(t5_cc), nfctype5_format_resp, cookie);
+	if (err < 0)
+		err = t5_cookie_release(err, cookie);
+
+	return err;
+}
+
+static int t5_read_multiple_blocks(struct near_tag *tag,
+		struct t5_cookie *cookie)
+{
+	struct type5_read_multiple_blocks_cmd t5_cmd;
+	int err;
+
+	DBG("");
+
+	err = t5_cmd_hdr_init(tag, &t5_cmd.hdr, CMD_READ_MULITPLE_BLOCKS);
+	if (err)
+		return err;
+
+	/* Read 2 blocks starting at block 0 */
+	t5_cmd.blk_no = 0;
+	t5_cmd.num_blks = 1;
+
+	return near_adapter_send(near_tag_get_adapter_idx(tag),
+			(uint8_t *)&t5_cmd, sizeof(t5_cmd),
+			t5_read_multiple_blocks_resp, cookie,
+			t5_cookie_release);
+}
+
+static int nfctype5_format(uint32_t adapter_idx, uint32_t target_idx,
+		near_tag_io_cb cb)
+{
+	struct t5_cookie *cookie;
+	struct near_tag *tag;
+	int err;
+
+	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!tag) {
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	cookie = t5_cookie_alloc(tag);
+	if (!cookie) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	cookie->cb = cb;
+
+	return t5_read_multiple_blocks(tag, cookie);
+
+out_err:
+	if (cb)
+		cb(adapter_idx, target_idx, err);
+
+	return err;
+}
+
 static struct near_tag_driver type5_driver = {
 	.type		= NFC_PROTO_ISO15693,
 	.priority	= NEAR_TAG_PRIORITY_DEFAULT,
 	.read		= nfctype5_read,
 	.write		= nfctype5_write,
 	.check_presence = nfctype5_check_presence,
+	.format		= nfctype5_format,
 };
 
 static int nfctype5_init(void)
