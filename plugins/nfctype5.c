@@ -108,6 +108,12 @@
 
 #define CMD_READ_SINGLE_BLOCK		0x20
 #define CMD_WRITE_SINGLE_BLOCK		0x21
+#define CMD_GET_SYSTEM_INFO		0x2b
+
+#define GET_SYS_INFO_FLAG_DSFID		0x01
+#define GET_SYS_INFO_FLAG_AFI		0x02
+#define GET_SYS_INFO_FLAG_MEM_SIZE	0x04
+#define GET_SYS_INFO_FLAG_IC_REF	0x08
 
 struct type5_cmd_hdr {
 	uint8_t			flags;
@@ -138,6 +144,24 @@ struct type5_write_single_block_cmd {
 
 struct type5_write_single_block_resp {
 	uint8_t			flags;
+} __attribute__((packed));
+
+struct type5_get_system_info_cmd {
+	struct type5_cmd_hdr	hdr;
+} __attribute__((packed));
+
+struct type5_get_system_info_resp {
+	uint8_t			flags;
+	uint8_t			info_flags;
+	uint8_t			uid[NFC_MAX_ISO15693_UID_LEN];
+	uint8_t			data[0];
+} __attribute__((packed));
+
+struct type5_cc {
+	uint8_t			cc0;
+	uint8_t			cc1;
+	uint8_t			cc2;
+	uint8_t			cc3;
 } __attribute__((packed));
 
 typedef int (*t5_local_cb)(struct near_tag *tag, int err, void *data);
@@ -222,7 +246,7 @@ static struct t5_cookie *t5_cookie_alloc(struct near_tag *tag)
 	return cookie;
 }
 
-static __attribute__ ((unused)) int t5_cookie_release(int err, void *data)
+static int t5_cookie_release(int err, void *data)
 {
 	struct t5_cookie *cookie = data;
 
@@ -320,8 +344,7 @@ out_done:
 	return t5_cookie_release_local(err, cookie);
 }
 
-static __attribute__ ((unused))
-int t5_read(struct near_tag *tag, uint8_t offset, uint8_t *buf,
+static int t5_read(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 		size_t len, t5_local_cb local_cb, void *local_data)
 {
 	struct type5_read_single_block_cmd t5_cmd;
@@ -477,9 +500,249 @@ out_err:
 	return err;
 }
 
+/*
+ * The remaining routines implement the read, write, check_presence,
+ * and format plugin hooks
+ */
+static int t5_read_data_resp(struct near_tag *tag, int err, void *data)
+{
+	struct t5_cookie *cookie = data;
+	size_t data_length;
+	uint8_t *nfc_data;
+	GList *records;
+
+	DBG("");
+
+	if (err)
+		goto out_err;
+
+	nfc_data = near_tag_get_data(tag, &data_length);
+	if (!nfc_data) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	records = near_tlv_parse(nfc_data, data_length);
+	near_tag_add_records(tag, records, NULL, 0);
+
+out_err:
+	return t5_cookie_release(err, cookie);
+}
+
+static bool t5_cc_is_valid(struct type5_cc *t5_cc)
+{
+	bool valid = false;
+
+	if ((t5_cc->cc0 == TYPE5_CC0_NDEF_MAGIC) &&
+			(TYPE5_CC1_VER_GET_MAJOR(t5_cc->cc1) ==
+				 TYPE5_VERSION_MAJOR) &&
+			(TYPE5_CC1_VER_GET_MINOR(t5_cc->cc1) ==
+				 TYPE5_VERSION_MINOR))
+		valid = true;
+
+	return valid;
+}
+
+static size_t t5_cc_get_data_length(struct type5_cc *t5_cc)
+{
+	return t5_cc->cc2 * 8;
+}
+
+static bool t5_cc_is_read_only(struct type5_cc *t5_cc)
+{
+	return (t5_cc->cc1 & TYPE5_CC1_WRITE_ACCESS_MASK) !=
+		TYPE5_CC1_WRITE_ACCESS_ALWAYS;
+}
+
+static int t5_read_meta_resp(struct near_tag *tag, int err, void *data)
+{
+	struct t5_cookie *cookie = data;
+	struct type5_cc *t5_cc;
+	size_t data_length;
+	uint8_t *tag_data;
+
+	DBG("");
+
+	if (err)
+		goto out_err;
+
+	t5_cc = (struct type5_cc *)cookie->buf;
+
+	if (t5_cc_is_valid(t5_cc)) {
+		data_length = t5_cc_get_data_length(t5_cc) -
+			TYPE5_DATA_START_OFFSET(tag);
+
+		err = near_tag_add_data(near_tag_get_adapter_idx(tag),
+				near_tag_get_target_idx(tag), NULL,
+				data_length);
+		if (err)
+			goto out_err;
+
+		tag_data = near_tag_get_data(tag, &data_length);
+		if (!tag_data) {
+			err = -EIO;
+			goto out_err;
+		}
+
+		near_tag_set_blank(tag, FALSE);
+
+		if (t5_cc_is_read_only(t5_cc))
+			near_tag_set_ro(tag, TRUE);
+		else
+			near_tag_set_ro(tag, FALSE);
+
+		g_free(cookie->buf);
+
+		err = t5_read(tag, TYPE5_DATA_START_OFFSET(tag), tag_data,
+				data_length, t5_read_data_resp, cookie);
+		if (err < 0)
+			err = t5_cookie_release(err, cookie);
+
+		return err;
+	} else {
+		DBG("Mark as blank tag");
+		near_tag_set_blank(tag, TRUE);
+	}
+
+out_err:
+	g_free(cookie->buf);
+	return t5_cookie_release(err, cookie);
+}
+
+static int t5_read_meta(struct near_tag *tag, struct t5_cookie *cookie)
+{
+	uint8_t *buf;
+	int err;
+
+	DBG("");
+
+	buf = g_try_malloc0(TYPE5_LEN_CC_BYTES);
+	if (!buf)
+		return -ENOMEM;
+
+	cookie->buf = buf;
+
+	err = t5_read(tag, TYPE5_META_START_OFFSET, buf, TYPE5_LEN_CC_BYTES,
+			t5_read_meta_resp, cookie);
+	if (err < 0)
+		g_free(buf);
+
+	return err;
+}
+
+static int t5_get_sys_info_resp(uint8_t *resp, int length, void *data)
+{
+	struct type5_get_system_info_resp *t5_resp =
+		(struct type5_get_system_info_resp *)(resp + NFC_HEADER_SIZE);
+	struct t5_cookie *cookie = data;
+	struct near_tag *tag = cookie->tag;
+	uint8_t offset = 0;
+	int err;
+
+	DBG("length: %d", length);
+
+	err = t5_check_resp(resp, length);
+	if (err)
+		goto out_err;
+
+	length -= NFC_HEADER_SIZE;
+
+	if (length < (int)sizeof(*t5_resp)) {
+		near_error("Get System Info - Invalid response - length: %d",
+				length);
+		err = -EIO;
+		goto out_err;
+	}
+
+	if (t5_resp->info_flags & GET_SYS_INFO_FLAG_DSFID)
+		offset++;
+
+	if (t5_resp->info_flags & GET_SYS_INFO_FLAG_AFI)
+		offset++;
+
+	if (t5_resp->info_flags & GET_SYS_INFO_FLAG_MEM_SIZE) {
+		near_tag_set_num_blks(tag, t5_resp->data[offset++] + 1);
+		near_tag_set_blk_size(tag,
+			(t5_resp->data[offset++] & 0x1f) + 1);
+	} else { /* Tag must provide memory size info */
+		err = -EIO;
+		goto out_err;
+	}
+
+	err = t5_read_meta(tag, cookie);
+
+out_err:
+	if (err < 0)
+		err = t5_cookie_release(err, cookie);
+
+	return err;
+}
+
+static int t5_get_sys_info(struct near_tag *tag, struct t5_cookie *cookie)
+{
+	struct type5_get_system_info_cmd t5_cmd;
+	int err;
+
+	DBG("");
+
+	err = t5_cmd_hdr_init(tag, &t5_cmd.hdr, CMD_GET_SYSTEM_INFO);
+	if (err)
+		return err;
+
+	return near_adapter_send(near_tag_get_adapter_idx(tag),
+			(uint8_t *)&t5_cmd, sizeof(t5_cmd),
+			t5_get_sys_info_resp, cookie, NULL);
+}
+
+static int nfctype5_read(uint32_t adapter_idx, uint32_t target_idx,
+		near_tag_io_cb cb)
+{
+	struct t5_cookie *cookie;
+	struct near_tag *tag;
+	int err;
+
+	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!tag) {
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	cookie = t5_cookie_alloc(tag);
+	if (!cookie) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	cookie->cb = cb;
+
+	/*
+	 * Only need to call t5_get_sys_info() to get the blk_size and
+	 * num_blks once.  near_tag_get_blk_size() will return 0 if
+	 * t5_get_sys_info() hasn't been called yet.
+	 */
+	if (near_tag_get_blk_size(tag))
+		err = t5_read_meta(tag, cookie);
+	else
+		err = t5_get_sys_info(tag, cookie);
+
+	if (err < 0)
+		err = t5_cookie_release(err, cookie);
+
+	return err;
+
+out_err:
+	if (cb)
+		cb(adapter_idx, target_idx, err);
+
+	return err;
+}
+
 static struct near_tag_driver type5_driver = {
 	.type		= NFC_PROTO_ISO15693,
 	.priority	= NEAR_TAG_PRIORITY_DEFAULT,
+	.read		= nfctype5_read,
 };
 
 static int nfctype5_init(void)
