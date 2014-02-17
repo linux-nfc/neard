@@ -441,8 +441,7 @@ out_done:
 	return t5_cookie_release_local(err, cookie);
 }
 
-static int __attribute__ ((unused))
-t5_write(struct near_tag *tag, uint8_t offset, uint8_t *buf,
+static int t5_write(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 		size_t len, t5_local_cb local_cb, void *local_data)
 {
 	struct type5_write_single_block_cmd *t5_cmd;
@@ -739,10 +738,59 @@ out_err:
 	return err;
 }
 
+static int nfctype5_write_resp(struct near_tag *tag, int err, void *data)
+{
+	struct t5_cookie *cookie = data;
+
+	DBG("");
+
+	return t5_cookie_release(err, cookie);
+}
+
+static int nfctype5_write(uint32_t adapter_idx, uint32_t target_idx,
+		struct near_ndef_message *ndef, near_tag_io_cb cb)
+{
+	struct t5_cookie *cookie;
+	struct near_tag *tag;
+	int err;
+
+	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!tag) {
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	cookie = t5_cookie_alloc(tag);
+	if (!cookie) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	cookie->cb = cb;
+	cookie->ndef = ndef;
+
+	err = t5_write(tag, TYPE5_DATA_START_OFFSET(tag),
+			ndef->data + ndef->offset, ndef->length,
+			nfctype5_write_resp, cookie);
+	if (err < 0)
+		err = t5_cookie_release(err, cookie);
+
+	return err;
+
+out_err:
+	if (cb)
+		cb(adapter_idx, target_idx, err);
+
+	return err;
+}
+
 static struct near_tag_driver type5_driver = {
 	.type		= NFC_PROTO_ISO15693,
 	.priority	= NEAR_TAG_PRIORITY_DEFAULT,
 	.read		= nfctype5_read,
+	.write		= nfctype5_write,
 };
 
 static int nfctype5_init(void)
