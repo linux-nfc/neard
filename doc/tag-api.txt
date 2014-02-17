@@ -23,7 +23,7 @@ Properties	string Type [readonly]
 
 			The NFC tag type.
 			Possible values are "Type 1", "Type 2", "Type 3",
-			"Type 4" and "NFC-DEP".
+			"Type 4", "Type 5", and "NFC-DEP".
 
 		string Protocol [readonly]
 

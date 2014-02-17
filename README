@@ -43,6 +43,10 @@ disabled with the following configuration options:
 
 		Disable support for type 1 NFC tags.
 
+	--disable-nfctype5
+
+		Disable support for type 5 ISO 15693 tags.
+
 	--disable-p2p
 
 		Disable support for peer to peer mode.

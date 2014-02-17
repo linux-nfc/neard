@@ -17,6 +17,7 @@ Supported tags:
     * MIFARE classic 1K and 4K supported.
   * Type 3: Supported.
   * Type 4: Supported.
+  * Type 5: Supported.
 
 
 Card Emulation Mode
@@ -32,6 +33,7 @@ Supported tags:
   * Type 2: Supported.
   * Type 3: Supported.
   * Type 4: Supported.
+  * Type 5: Supported.
 
 
 Peer To Peer Mode
