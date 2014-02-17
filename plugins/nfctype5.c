@@ -786,11 +786,71 @@ out_err:
 	return err;
 }
 
+static int nfctype5_check_presence_resp(struct near_tag *tag, int err,
+		void *data)
+{
+	struct t5_cookie *cookie = data;
+
+	DBG("err: %d", err);
+
+	g_free(cookie->buf);
+
+	return t5_cookie_release(err, cookie);
+}
+
+static int nfctype5_check_presence(uint32_t adapter_idx, uint32_t target_idx,
+		near_tag_io_cb cb)
+{
+	struct t5_cookie *cookie;
+	struct near_tag *tag;
+	uint8_t *buf;
+	int err;
+
+	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!tag) {
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	cookie = t5_cookie_alloc(tag);
+	if (!cookie) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	cookie->cb = cb;
+
+	buf = g_try_malloc0(1);
+	if (!buf) {
+		err = -ENOMEM;
+		return t5_cookie_release(err, cookie);
+	}
+
+	cookie->buf = buf;
+
+	err = t5_read(tag, 0, buf, 1, nfctype5_check_presence_resp, cookie);
+	if (err < 0) {
+		g_free(buf);
+		err = t5_cookie_release(err, cookie);
+	}
+
+	return err;
+
+out_err:
+	if (cb)
+		cb(adapter_idx, target_idx, err);
+
+	return err;
+}
+
 static struct near_tag_driver type5_driver = {
 	.type		= NFC_PROTO_ISO15693,
 	.priority	= NEAR_TAG_PRIORITY_DEFAULT,
 	.read		= nfctype5_read,
 	.write		= nfctype5_write,
+	.check_presence = nfctype5_check_presence,
 };
 
 static int nfctype5_init(void)
