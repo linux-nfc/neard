@@ -23,6 +23,11 @@ builtin_modules += nfctype4
 builtin_sources += plugins/nfctype4.c
 endif
 
+if NFCTYPE5
+builtin_modules += nfctype5
+builtin_sources += plugins/nfctype5.c
+endif
+
 if P2P
 builtin_modules += p2p
 builtin_sources += plugins/p2p.c plugins/npp.c \
