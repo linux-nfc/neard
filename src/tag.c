@@ -141,6 +141,10 @@ static const char *type_string(struct near_tag *tag)
 		type = "Type 4";
 		break;
 
+	case NFC_PROTO_ISO15693:
+		type = "Type 5";
+		break;
+
 	default:
 		type = NULL;
 		near_error("Unknown tag type 0x%x", tag->type);
@@ -171,6 +175,10 @@ static const char *protocol_string(struct near_tag *tag)
 
 	case NFC_PROTO_ISO14443_MASK:
 		protocol = "ISO-DEP";
+		break;
+
+	case NFC_PROTO_ISO15693_MASK:
+		protocol = "ISO-15693";
 		break;
 
 	default:
@@ -364,6 +372,7 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 	switch (tag->type) {
 	case NFC_PROTO_JEWEL:
 	case NFC_PROTO_MIFARE:
+	case NFC_PROTO_ISO15693:
 		if (ndef->length < 0xff)
 			tlv_len_size = 3;
 		else
@@ -580,6 +589,10 @@ static void set_tag_type(struct near_tag *tag,
 
 	case NFC_PROTO_ISO14443_B_MASK:
 		tag->type = NFC_PROTO_ISO14443_B;
+		break;
+
+	case NFC_PROTO_ISO15693_MASK:
+		tag->type = NFC_PROTO_ISO15693;
 		break;
 
 	default:

@@ -106,6 +106,9 @@ void adapter_print_info(struct nfc_adapter *adapter)
 	if (adapter->protocols & NFC_PROTO_NFC_DEP_MASK)
 		printf("NFC-DEP ");
 
+	if (adapter->protocols & NFC_PROTO_ISO15693_MASK)
+		printf("ISO-15693 ");
+
 	printf("]\n");
 
 	printf("          Powered: %s\n",

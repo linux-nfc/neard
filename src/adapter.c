@@ -319,6 +319,12 @@ static void append_protocols(DBusMessageIter *iter,
 
 		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
 	}
+
+	if (adapter->protocols & NFC_PROTO_ISO15693_MASK) {
+		str = "ISO-15693";
+
+		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
+	}
 }
 
 static gboolean property_get_protocols(const GDBusPropertyTable *property,
