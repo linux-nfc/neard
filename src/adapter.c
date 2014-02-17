@@ -709,7 +709,9 @@ static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
 static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 			uint32_t protocols,
 			uint16_t sens_res, uint8_t sel_res,
-			uint8_t *nfcid, uint8_t nfcid_len)
+			uint8_t *nfcid, uint8_t nfcid_len,
+			uint8_t iso15693_dsfid,
+			uint8_t iso15693_uid_len, uint8_t *iso15693_uid)
 {
 	struct near_tag *tag;
 	uint32_t tag_type;
@@ -717,7 +719,8 @@ static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
 
 	tag = __near_tag_add(adapter->idx, target_idx, protocols,
 				sens_res, sel_res,
-				nfcid, nfcid_len);
+				nfcid, nfcid_len,
+				iso15693_dsfid, iso15693_uid_len, iso15693_uid);
 	if (!tag)
 		return -ENODEV;
 
@@ -789,7 +792,9 @@ static int adapter_add_device(struct near_adapter *adapter,
 
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
-			uint8_t *nfcid, uint8_t nfcid_len)
+			uint8_t *nfcid, uint8_t nfcid_len,
+			uint8_t iso15693_dsfid,
+			uint8_t iso15693_uid_len, uint8_t *iso15693_uid)
 {
 	struct near_adapter *adapter;
 	int ret;
@@ -811,7 +816,9 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 						nfcid, nfcid_len);
 	else
 		ret = adapter_add_tag(adapter, target_idx, protocols,
-					sens_res, sel_res, nfcid, nfcid_len);
+					sens_res, sel_res, nfcid, nfcid_len,
+					iso15693_dsfid,
+					iso15693_uid_len, iso15693_uid);
 
 	if (ret < 0 && adapter->constant_poll)
 		adapter_start_poll(adapter);

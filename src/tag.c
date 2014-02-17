@@ -52,6 +52,9 @@ struct near_tag {
 	uint8_t nfcid[NFC_MAX_NFCID1_LEN];
 	uint8_t nfcid_len;
 
+	uint8_t iso15693_dsfid;
+	uint8_t iso15693_uid[NFC_MAX_ISO15693_UID_LEN];
+
 	size_t data_length;
 	uint8_t *data;
 
@@ -607,7 +610,9 @@ static int tag_initialize(struct near_tag *tag,
 			uint32_t adapter_idx, uint32_t target_idx,
 			uint32_t protocols,
 			uint16_t sens_res, uint8_t sel_res,
-			uint8_t *nfcid, uint8_t nfcid_len)
+			uint8_t *nfcid, uint8_t nfcid_len,
+			uint8_t iso15693_dsfid,
+			uint8_t iso15693_uid_len, uint8_t *iso15693_uid)
 {
 	DBG("");
 
@@ -621,9 +626,12 @@ static int tag_initialize(struct near_tag *tag,
 	tag->next_record = 0;
 	tag->readonly = false;
 
-	if (nfcid_len <= NFC_MAX_NFCID1_LEN) {
+	if (nfcid_len && nfcid_len <= NFC_MAX_NFCID1_LEN) {
 		tag->nfcid_len = nfcid_len;
 		memcpy(tag->nfcid, nfcid, nfcid_len);
+	} else if (iso15693_uid_len) {
+		tag->iso15693_dsfid = iso15693_dsfid;
+		memcpy(tag->iso15693_uid, iso15693_uid, iso15693_uid_len);
 	}
 
 	set_tag_type(tag, sens_res, sel_res);
@@ -634,7 +642,9 @@ static int tag_initialize(struct near_tag *tag,
 struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
 				uint32_t protocols,
 				uint16_t sens_res, uint8_t sel_res,
-				uint8_t *nfcid, uint8_t nfcid_len)
+				uint8_t *nfcid, uint8_t nfcid_len,
+				uint8_t iso15693_dsfid,
+				uint8_t iso15693_uid_len, uint8_t *iso15693_uid)
 {
 	struct near_tag *tag;
 	char *path;
@@ -650,7 +660,9 @@ struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
 	if (tag_initialize(tag, adapter_idx, target_idx,
 				protocols,
 				sens_res, sel_res,
-				nfcid, nfcid_len) < 0) {
+				nfcid, nfcid_len,
+				iso15693_dsfid,
+				iso15693_uid_len, iso15693_uid) < 0) {
 		g_free(tag);
 		return NULL;
 	}
@@ -750,6 +762,49 @@ int near_tag_set_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 	tag->nfcid_len = nfcid_len;
 
 	return 0;
+}
+
+uint8_t *near_tag_get_iso15693_dsfid(uint32_t adapter_idx, uint32_t target_idx)
+{
+	struct near_tag *tag;
+	uint8_t *iso15693_dsfid;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!tag)
+		goto fail;
+
+	iso15693_dsfid = g_try_malloc0(NFC_MAX_ISO15693_DSFID_LEN);
+	if (!iso15693_dsfid)
+		goto fail;
+
+	memcpy(iso15693_dsfid, &tag->iso15693_dsfid,
+		NFC_MAX_ISO15693_DSFID_LEN);
+
+	return iso15693_dsfid;
+
+fail:
+	return NULL;
+}
+
+uint8_t *near_tag_get_iso15693_uid(uint32_t adapter_idx, uint32_t target_idx)
+{
+	struct near_tag *tag;
+	uint8_t *iso15693_uid;
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!tag)
+		goto fail;
+
+	iso15693_uid = g_try_malloc0(NFC_MAX_ISO15693_UID_LEN);
+	if (!iso15693_uid)
+		goto fail;
+
+	memcpy(iso15693_uid, tag->iso15693_uid, NFC_MAX_ISO15693_UID_LEN);
+
+	return iso15693_uid;
+
+fail:
+	return NULL;
 }
 
 int near_tag_add_data(uint32_t adapter_idx, uint32_t target_idx,

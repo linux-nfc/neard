@@ -30,6 +30,8 @@
 #define NFC_HEADER_SIZE 1
 
 #define NFC_MAX_NFCID1_LEN 10
+#define NFC_MAX_ISO15693_DSFID_LEN 1
+#define NFC_MAX_ISO15693_UID_LEN 8
 
 enum near_tag_sub_type {
 	NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT = 0,	// SAK 0x00
@@ -91,6 +93,8 @@ uint8_t *near_tag_get_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 					uint8_t *nfcid_len);
 int near_tag_set_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 					uint8_t *nfcid, size_t nfcid_len);
+uint8_t *near_tag_get_iso15693_dsfid(uint32_t adapter_idx, uint32_t target_idx);
+uint8_t *near_tag_get_iso15693_uid(uint32_t adapter_idx, uint32_t target_idx);
 uint8_t *near_tag_get_data(struct near_tag *tag, size_t *data_length);
 size_t near_tag_get_data_length(struct near_tag *tag);
 uint32_t near_tag_get_adapter_idx(struct near_tag *tag);

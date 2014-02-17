@@ -457,6 +457,8 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 	uint16_t sens_res = 0;
 	uint8_t sel_res = 0;
 	uint8_t nfcid[NFC_MAX_NFCID1_LEN], nfcid_len;
+	uint8_t iso15693_dsfid = 0;
+	uint8_t iso15693_uid_len, iso15693_uid[NFC_MAX_ISO15693_UID_LEN];
 
 	DBG("");
 
@@ -483,11 +485,28 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 		nfcid_len = 0;
 	}
 
+	if (attrs[NFC_ATTR_TARGET_ISO15693_DSFID])
+		iso15693_dsfid =
+			nla_get_u8(attrs[NFC_ATTR_TARGET_ISO15693_DSFID]);
+
+	if (attrs[NFC_ATTR_TARGET_ISO15693_UID]) {
+		iso15693_uid_len = nla_len(attrs[NFC_ATTR_TARGET_ISO15693_UID]);
+		if (iso15693_uid_len == NFC_MAX_ISO15693_UID_LEN)
+			memcpy(iso15693_uid,
+			       nla_data(attrs[NFC_ATTR_TARGET_ISO15693_UID]),
+					NFC_MAX_ISO15693_UID_LEN);
+	} else {
+		iso15693_uid_len = 0;
+	}
+
 	DBG("target idx %d proto 0x%x sens_res 0x%x sel_res 0x%x NFCID len %d",
 	    target_idx, protocols, sens_res, sel_res, nfcid_len);
+	DBG("\tiso15693_uid_len %d", iso15693_uid_len);
 
 	__near_adapter_add_target(adapter_idx, target_idx, protocols,
-				  sens_res, sel_res, nfcid, nfcid_len);
+				  sens_res, sel_res, nfcid, nfcid_len,
+				  iso15693_dsfid,
+				  iso15693_uid_len, iso15693_uid);
 
 	return 0;
 }

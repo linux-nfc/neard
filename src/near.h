@@ -84,7 +84,9 @@ int __near_adapter_add(struct near_adapter *adapter);
 void __near_adapter_remove(struct near_adapter *adapter);
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 			uint32_t protocols, uint16_t sens_res, uint8_t sel_res,
-			uint8_t *nfcid, uint8_t nfcid_len);
+			uint8_t *nfcid, uint8_t nfcid_len,
+			uint8_t iso15693_dsfid,
+			uint8_t iso15693_uid_len, uint8_t *iso15693_uid);
 int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx);
 int __near_adapter_get_targets_done(uint32_t idx);
 int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len);
@@ -122,10 +124,13 @@ void __near_snep_core_cleanup(void);
 
 int __near_tag_init(void);
 void __near_tag_cleanup(void);
-struct near_tag *__near_tag_add(uint32_t idx, uint32_t target_idx,
+struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
 				uint32_t protocols,
 				uint16_t sens_res, uint8_t sel_res,
-				uint8_t *nfcid, uint8_t nfcid_len);
+				uint8_t *nfcid, uint8_t nfcid_len,
+				uint8_t iso15693_dsfid,
+				uint8_t iso15693_uid_len,
+				uint8_t *iso15693_uid);
 void __near_tag_remove(struct near_tag *tag);
 const char *__near_tag_get_path(struct near_tag *tag);
 uint32_t __near_tag_get_type(struct near_tag *tag);
