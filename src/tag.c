@@ -74,6 +74,11 @@ struct near_tag {
 		uint16_t c_apdu_max_size;
 	} t4;
 
+	struct {
+		uint8_t blk_size;
+		uint8_t num_blks;
+	} t5;
+
 	DBusMessage *write_msg; /* Pending write message */
 	struct near_ndef_message *write_ndef;
 };
@@ -1006,6 +1011,26 @@ uint8_t near_tag_get_ic_type(struct near_tag *tag)
 		return 0;
 
 	return tag->t3.ic_type;
+}
+
+uint8_t near_tag_get_blk_size(struct near_tag *tag)
+{
+	return tag->t5.blk_size;
+}
+
+void near_tag_set_blk_size(struct near_tag *tag, uint8_t blk_size)
+{
+	tag->t5.blk_size = blk_size;
+}
+
+uint8_t near_tag_get_num_blks(struct near_tag *tag)
+{
+	return tag->t5.num_blks;
+}
+
+void near_tag_set_num_blks(struct near_tag *tag, uint8_t num_blks)
+{
+	tag->t5.num_blks = num_blks;
 }
 
 static gint cmp_prio(gconstpointer a, gconstpointer b)
