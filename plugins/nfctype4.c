@@ -376,6 +376,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 
 	near_tag_set_max_ndef_size(tag, cookie->max_ndef_size);
 	near_tag_set_c_apdu_max_size(tag, cookie->c_apdu_max_size);
+	near_tag_set_r_apdu_max_size(tag, cookie->r_apdu_max_size);
 	near_tag_set_blank(tag, FALSE);
 
 	/* save the tag */
@@ -784,6 +785,8 @@ static int read_cc_file(uint8_t *resp, int length, void *data)
 	}
 
 	memcpy(read_cc, &resp[1], length - 2 - NFC_STATUS_BYTE_LEN) ;
+	cookie->r_apdu_max_size = g_ntohs(read_cc->max_R_apdu_data_size) -
+			APDU_HEADER_LEN;
 	cookie->c_apdu_max_size = g_ntohs(read_cc->max_C_apdu_data_size);
 	cookie->max_ndef_size = g_ntohs(read_cc->tlv_fc.max_ndef_size);
 
@@ -795,6 +798,7 @@ static int read_cc_file(uint8_t *resp, int length, void *data)
 
 	near_tag_set_max_ndef_size(tag, cookie->memory_size);
 	near_tag_set_c_apdu_max_size(tag, cookie->c_apdu_max_size);
+	near_tag_set_r_apdu_max_size(tag, cookie->r_apdu_max_size);
 
 	if (read_cc->tlv_fc.tag  != 0x4) {
 		near_error("NDEF File not found") ;
