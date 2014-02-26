@@ -392,9 +392,8 @@ static int t4_get_file_len(struct t4_cookie *cookie)
 {
 	cookie->r_apdu_max_size = near_tag_get_r_apdu_max_size(cookie->tag);
 
-	/* Read 0x0f bytes, to grab the NDEF msg length */
-	return ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE,
-					t4_readbin_NDEF_ID, cookie);
+	/* Read 2 bytes from offset 0 which conatins the NDEF file length */
+	return ISO_ReadBinary(0, 2, t4_readbin_NDEF_ID, cookie);
 }
 
 static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
