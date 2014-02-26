@@ -609,9 +609,6 @@ static int data_write_cb(uint8_t *resp, int length, void *data)
 		cookie->ndef->offset = cookie->ndef->length;
 	}
 
-	if (err < 0)
-		return t4_cookie_release(err, cookie);
-
 	return err;
 }
 
@@ -663,13 +660,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 		cookie->ndef->offset = cookie->ndef->length;
 	}
 
-	if (err < 0)
-		goto out_err;
-
-	return 0;
-
-out_err:
-	return t4_cookie_release(err, cookie);
+	return err;
 }
 
 static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,
@@ -813,13 +804,11 @@ static int read_cc_file(uint8_t *resp, int length, void *data)
 
 	err = ISO_Select((uint8_t *)&read_cc->tlv_fc.file_id,
 			LEN_ISO_CC_FILEID, 0, select_ndef_file, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("select ndef file req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(read_cc);
-	return 0;
+	return err;
 
 out_err:
 	g_free(read_cc);
@@ -845,15 +834,10 @@ static int select_cc_file(uint8_t *resp, int length, void *data)
 	}
 
 	err = ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE, read_cc_file, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("read cc file req failed %d", err);
-		goto out_err;
-	}
 
-	return 0;
-
-out_err:
-	return t4_cookie_release(err, cookie);
+	return err;
 }
 
 static int select_iso_appname_v2(uint8_t *resp, int length, void *data)
@@ -876,15 +860,10 @@ static int select_iso_appname_v2(uint8_t *resp, int length, void *data)
 
 	err = ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0,
 			select_cc_file, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("select cc req failed %d", err);
-		goto out_err;
-	}
 
-	return 0;
-
-out_err:
-	return t4_cookie_release(err, cookie);
+	return err;
 }
 
 static int format_resp(uint8_t *resp, int length, void *data)
@@ -924,15 +903,10 @@ static int format_resp(uint8_t *resp, int length, void *data)
 	 */
 	err = ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
 			0x4, select_iso_appname_v2, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("iso_select appnamev2 req failed %d", err);
-		goto out_err;
-	}
 
 	return err;
-
-out_err:
-	return t4_cookie_release(err, cookie);
 }
 
 static int write_data_to_ndef_file(uint8_t *resp, int length, void *data)
@@ -981,13 +955,11 @@ static int write_data_to_ndef_file(uint8_t *resp, int length, void *data)
 	err = ISO_send_cmd(PICC_CLASS, WRITE_DATA_TO_FILE,
 				0x00, 0x00, cmd_data, cmd_data_length,
 				true, format_resp, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("wrtie data to ndef file req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(cmd_data);
-	return 0;
+	return err;
 
 out_err:
 	g_free(cmd_data);
@@ -1036,13 +1008,11 @@ static int create_ndef_file(uint8_t *resp, int length, void *data)
 				0x00, 0x00, (uint8_t *)ndef,
 				sizeof(struct desfire_std_file),
 				true, write_data_to_ndef_file, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("create ndef file req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(ndef);
-	return 0;
+	return err;
 
 out_err:
 	g_free(ndef);
@@ -1101,13 +1071,11 @@ static int write_data_to_cc_file(uint8_t *resp, int length, void *data)
 				0x00, 0x00, (uint8_t *)cc,
 				sizeof(struct desfire_cc_file),
 				true, create_ndef_file, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("write data to cc file req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(cc);
-	return 0;
+	return err;
 
 out_err:
 	g_free(cc);
@@ -1156,13 +1124,11 @@ static int create_cc_file(uint8_t *resp, int length, void *data)
 				0x00, 0x00, (uint8_t *)cc,
 				sizeof(struct desfire_std_file),
 				true, write_data_to_cc_file, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("create cc file req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(cc);
-	return 0;
+	return err;
 
 out_err:
 	g_free(cc);
@@ -1204,13 +1170,11 @@ static int select_application_1(uint8_t *resp, int length, void *data)
 	err = ISO_send_cmd(PICC_CLASS, SELECT_APPLICATION,
 				0x00, 0x00, cmd_data, cmd_data_length,
 				true, create_cc_file, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("select application1 req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(cmd_data);
-	return 0;
+	return err;
 
 out_err:
 	g_free(cmd_data);
@@ -1257,13 +1221,11 @@ static int create_application(uint8_t *resp, int length, void *data)
 				0x00, 0x00, (uint8_t *)app,
 				sizeof(struct desfire_app),
 				true, select_application_1, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("create application req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(app);
-	return 0;
+	return err;
 
 out_err:
 	g_free(app);
@@ -1307,13 +1269,11 @@ static int select_application(uint8_t *resp, int length, void *data)
 				SELECT_APPLICATION,
 				0x00, 0x00, cmd_data, cmd_data_length,
 				true, create_application, cookie);
-	if (err < 0) {
+	if (err < 0)
 		near_error("select application req failed %d", err);
-		goto out_err;
-	}
 
 	g_free(cmd_data);
-	return 0;
+	return err;
 
 out_err:
 	g_free(cmd_data);
@@ -1340,18 +1300,15 @@ static int get_version_frame3(uint8_t *resp, int length, void *data)
 					GET_VERSION_FRAME_RESPONSE_BYTE,
 					0x00, 0x00, NULL, 0, false,
 					select_application, cookie);
-		if (err < 0) {
+		if (err < 0)
 			near_error("get version3 req failed %d", err);
 
-			return t4_cookie_release(err, cookie);
-		}
-	} else {
-		near_error("get version2 response %02X", resp[length - 1]);
-
-		return t4_cookie_release(-EIO, cookie);
+		return err;
 	}
 
-	return 0;
+	near_error("get version2 response %02X", resp[length - 1]);
+
+	return t4_cookie_release(-EIO, cookie);
 }
 
 static int get_version_frame2(uint8_t *resp, int length, void *data)
@@ -1379,18 +1336,15 @@ static int get_version_frame2(uint8_t *resp, int length, void *data)
 					GET_VERSION_FRAME_RESPONSE_BYTE,
 					0x00, 0x00, NULL, 0, false,
 					get_version_frame3, cookie);
-		if (err < 0) {
+		if (err < 0)
 			near_error("get version2 req failed %d", err);
 
-			return t4_cookie_release(err, cookie);
-		}
-	} else {
-		near_error("get version response %02X", resp[length - 1]);
-
-		return t4_cookie_release(-EIO, cookie);
+		return err;
 	}
 
-	return 0;
+	near_error("get version response %02X", resp[length - 1]);
+
+	return t4_cookie_release(-EIO, cookie);
 }
 
 /* Steps to format Type 4 (MIFARE DESFire EV1) tag as per AN1104.pdf from nxp.
@@ -1436,10 +1390,8 @@ static int nfctype4_format(uint32_t adapter_idx, uint32_t target_idx,
 				0x00, 0x00, NULL, 0, false,
 				get_version_frame2, cookie);
 
-	if (err < 0) {
+	if (err < 0)
 		near_error("get version req failed %d", err);
-		g_free(cookie);
-	}
 
 	return err;
 }
