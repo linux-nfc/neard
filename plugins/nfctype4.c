@@ -350,7 +350,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
-	struct near_tag *tag;
+	struct near_tag *tag = cookie->tag;
 	int err;
 
 	DBG("%d", length);
@@ -370,17 +370,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	if (err < 0)
 		return t4_cookie_release(err, cookie);
 
-	tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
-	if (!tag)
-		return t4_cookie_release(-ENOMEM, cookie);
-
-	near_tag_set_max_ndef_size(tag, cookie->max_ndef_size);
-	near_tag_set_c_apdu_max_size(tag, cookie->c_apdu_max_size);
-	near_tag_set_r_apdu_max_size(tag, cookie->r_apdu_max_size);
 	near_tag_set_blank(tag, FALSE);
-
-	/* save the tag */
-	cookie->tag = tag;
 
 	/* Set write conditions */
 	if (cookie->write_access == T4_READ_ONLY)
@@ -396,6 +386,15 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	/* Read 1st block */
 	return ISO_ReadBinary(2, cookie->r_apdu_max_size - 2,
 			data_read_cb, cookie);
+}
+
+static int t4_get_file_len(struct t4_cookie *cookie)
+{
+	cookie->r_apdu_max_size = near_tag_get_r_apdu_max_size(cookie->tag);
+
+	/* Read 0x0f bytes, to grab the NDEF msg length */
+	return ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE,
+					t4_readbin_NDEF_ID, cookie);
 }
 
 static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
@@ -414,9 +413,7 @@ static int t4_select_NDEF_ID(uint8_t *resp, int length, void *data)
 		return t4_cookie_release(-EIO, cookie);
 	}
 
-	/* Read 0x0f bytes, to grab the NDEF msg length */
-	return ISO_ReadBinary(0, LEN_ISO_CC_READ_SIZE,
-					t4_readbin_NDEF_ID, cookie);
+	return t4_get_file_len(cookie);
 }
 
 static int t4_readbin_cc(uint8_t *resp, int length, void *data)
@@ -440,6 +437,10 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 			APDU_HEADER_LEN;
 	cookie->c_apdu_max_size = g_ntohs(read_cc->max_C_apdu_data_size);
 	cookie->max_ndef_size = g_ntohs(read_cc->tlv_fc.max_ndef_size);
+
+	near_tag_set_max_ndef_size(cookie->tag, cookie->max_ndef_size);
+	near_tag_set_c_apdu_max_size(cookie->tag, cookie->c_apdu_max_size);
+	near_tag_set_r_apdu_max_size(cookie->tag, cookie->r_apdu_max_size);
 
 	/* TODO 5.1.1: TLV blocks can be zero, one or more... */
 	/* TODO 5.1.2: Must ignore proprietary blocks (x05)... */
@@ -475,11 +476,6 @@ static int t4_select_cc(uint8_t *resp, int length, void *data)
 					NULL, 1 /* dummy length */);
 		if (err < 0)
 			return t4_cookie_release(err, cookie);
-
-		cookie->tag = near_tag_get_tag(cookie->adapter_idx,
-						cookie->target_idx);
-		if (!cookie->tag)
-			return t4_cookie_release(-ENOMEM, cookie);
 
 		near_tag_set_blank(cookie->tag, TRUE);
 
@@ -558,14 +554,26 @@ static int nfctype4_read(uint32_t adapter_idx,
 	if (!cookie)
 		return -ENOMEM;
 
+	cookie->tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!cookie->tag)
+		return t4_cookie_release(-ENOMEM, cookie);
+
 	cookie->adapter_idx = adapter_idx;
 	cookie->target_idx = target_idx;
 	cookie->cb = cb;
-	cookie->tag = NULL;
 	cookie->read_data = 0;
 
-	/* Check for V2 type 4 tag */
-	return ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
+	/*
+	 * If the NDEF file has already been selected by a previous
+	 * read, check_presence, or format operation, go straight
+	 * to reading the NDEF file length.  Otherwise, go through the
+	 * complete NDEF detection procedure.  If near_tag_get_r_apdu_max_size()
+	 * returns anything other than 0, we know the NDEF file is selected.
+	 */
+	if (near_tag_get_r_apdu_max_size(cookie->tag))
+		return t4_get_file_len(cookie);
+	else
+		return ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
 				0x4, t4_select_file_by_name_v2, cookie);
 }
 
@@ -733,6 +741,7 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 
 static int select_ndef_file(uint8_t *resp, int length, void *data)
 {
+	struct near_tag *tag;
 	struct t4_cookie *cookie = data;
 
 	DBG("%d", length);
@@ -743,6 +752,13 @@ static int select_ndef_file(uint8_t *resp, int length, void *data)
 	if (APDU_STATUS(resp + STATUS_WORD_1) != APDU_OK) {
 		near_error("select ndef file resp failed %02X",
 					resp[length - 1]);
+
+		tag = near_tag_get_tag(cookie->adapter_idx, cookie->target_idx);
+		if (tag) {
+			near_tag_set_max_ndef_size(tag, 0);
+			near_tag_set_c_apdu_max_size(tag, 0);
+			near_tag_set_r_apdu_max_size(tag, 0);
+		}
 
 		return t4_cookie_release(-EIO, cookie);
 	}
