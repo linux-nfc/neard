@@ -682,7 +682,7 @@ static int nfctype4_write(uint32_t adapter_idx, uint32_t target_idx,
 		goto out_err;
 	}
 
-	err = data_write(adapter_idx, target_idx, ndef, tag, cb);
+	return data_write(adapter_idx, target_idx, ndef, tag, cb);
 
 out_err:
 	if (cb)
