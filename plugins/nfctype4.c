@@ -229,7 +229,7 @@ static int ISO_send_cmd(uint8_t class,
 			cmd->data[cmd_data_length] = 0;
 	}
 
-	return near_adapter_send(in_rcv->adapter_idx, (uint8_t *) cmd,
+	err = near_adapter_send(in_rcv->adapter_idx, (uint8_t *) cmd,
 					total_cmd_length, cb, in_rcv,
 					t4_cookie_release);
 
