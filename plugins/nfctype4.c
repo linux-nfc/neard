@@ -211,7 +211,7 @@ static int ISO_send_cmd(uint8_t class,
 	cmd = g_try_malloc0(total_cmd_length);
 	if (!cmd) {
 		DBG("Mem alloc failed");
-		err = -ENOMEM;
+		err = t4_cookie_release(-ENOMEM, in_rcv);
 		goto out_err;
 	}
 
