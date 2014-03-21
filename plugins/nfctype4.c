@@ -351,6 +351,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 {
 	struct t4_cookie *cookie = data;
 	struct near_tag *tag = cookie->tag;
+	size_t data_length;
 	int err;
 
 	DBG("%d", length);
@@ -364,9 +365,11 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 		return t4_cookie_release(-EIO, cookie);
 	}
 
+	data_length = near_get_be16(resp + NFC_STATUS_BYTE_LEN);
+
 	/* Add data to the tag */
 	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx, NULL,
-				near_get_be16(resp + NFC_STATUS_BYTE_LEN));
+				data_length);
 	if (err < 0)
 		return t4_cookie_release(err, cookie);
 
@@ -384,8 +387,7 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	 */
 
 	/* Read 1st block */
-	return ISO_ReadBinary(2, cookie->r_apdu_max_size - 2,
-			data_read_cb, cookie);
+	return ISO_ReadBinary(2, data_length, data_read_cb, cookie);
 }
 
 static int t4_get_file_len(struct t4_cookie *cookie)
