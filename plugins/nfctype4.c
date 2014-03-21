@@ -243,17 +243,23 @@ out_err:
 /* ISO 7816 command: Select applications or files
  * p1=0 select by "file id"
  * P1=4 select by "DF name"
+ * If P1 == 0, then P2 is 0x0C.
+ * If P2 == 4, then P2 is 0x00.
  *  */
 static int ISO_Select(uint8_t *filename, uint8_t fnamelen, uint8_t P1,
 		near_recv cb, void *cookie)
 {
+	uint16_t P2;
+
 	DBG("");
+
+	P2 = P1 ? 0x00 : 0x0C;
 
 	return ISO_send_cmd(
 			0x00,		/* CLA */
 			0xA4,		/* INS: Select file */
 			P1,		/* P1: select by name */
-			0x00,		/* P2: First or only occurrence */
+			P2,		/* P2: First or only occurrence */
 			filename,	/* cmd_data */
 			fnamelen,	/* uint8_t cmd_data_length*/
 			false,
