@@ -100,7 +100,8 @@ void adapter_print_info(struct nfc_adapter *adapter)
 	if (adapter->protocols & NFC_PROTO_JEWEL_MASK)
 		printf("Jewel ");
 
-	if (adapter->protocols & NFC_PROTO_ISO14443_MASK)
+	if ((adapter->protocols & NFC_PROTO_ISO14443_MASK) ||
+	    (adapter->protocols & NFC_PROTO_ISO14443_B_MASK))
 		printf("ISO-DEP ");
 
 	if (adapter->protocols & NFC_PROTO_NFC_DEP_MASK)

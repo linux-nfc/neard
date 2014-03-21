@@ -148,6 +148,7 @@ static const char *type_string(struct near_tag *tag)
 		break;
 
 	case NFC_PROTO_ISO14443:
+	case NFC_PROTO_ISO14443_B:
 		type = "Type 4";
 		break;
 
@@ -184,6 +185,7 @@ static const char *protocol_string(struct near_tag *tag)
 		break;
 
 	case NFC_PROTO_ISO14443_MASK:
+	case NFC_PROTO_ISO14443_B_MASK:
 		protocol = "ISO-DEP";
 		break;
 
@@ -435,6 +437,7 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 		break;
 
 	case NFC_PROTO_ISO14443:
+	case NFC_PROTO_ISO14443_B:
 		ndef_with_header = g_try_malloc0(sizeof(
 					struct near_ndef_message));
 		if (!ndef_with_header)

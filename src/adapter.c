@@ -308,7 +308,8 @@ static void append_protocols(DBusMessageIter *iter,
 		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
 	}
 
-	if (adapter->protocols & NFC_PROTO_ISO14443_MASK) {
+	if ((adapter->protocols & NFC_PROTO_ISO14443_MASK) ||
+	    (adapter->protocols & NFC_PROTO_ISO14443_B_MASK)) {
 		str = "ISO-DEP";
 
 		dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &str);
