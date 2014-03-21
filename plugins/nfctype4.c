@@ -321,11 +321,11 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 
 	current_length = cookie->read_data;
 
-	if (current_length + (length_read) > data_length)
+	if ((current_length + length_read) > data_length)
 		length_read = data_length - current_length;
 
 	memcpy(nfc_data + current_length, resp + NFC_HEADER_SIZE, length_read);
-	if (current_length + length_read == data_length) {
+	if ((current_length + length_read) == data_length) {
 		GList *records;
 
 		DBG("Done reading");
@@ -337,7 +337,7 @@ static int data_read_cb(uint8_t *resp, int length, void *data)
 	}
 
 	cookie->read_data += length ;
-	remain_bytes = (data_length - cookie->read_data);
+	remain_bytes = data_length - cookie->read_data;
 
 	if (remain_bytes >= cookie->r_apdu_max_size)
 		return ISO_ReadBinary(cookie->read_data + 2,
