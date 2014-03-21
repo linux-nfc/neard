@@ -73,6 +73,7 @@ struct near_tag {
 		uint16_t max_ndef_size;
 		uint16_t c_apdu_max_size;
 		uint16_t r_apdu_max_size;
+		uint16_t file_id;
 	} t4;
 
 	struct {
@@ -976,6 +977,22 @@ uint16_t near_tag_get_r_apdu_max_size(struct near_tag *tag)
 		return 0;
 
 	return tag->t4.r_apdu_max_size;
+}
+
+void near_tag_set_file_id(struct near_tag *tag, uint16_t file_id)
+{
+	if (!tag)
+		return;
+
+	tag->t4.file_id = file_id;
+}
+
+uint16_t near_tag_get_file_id(struct near_tag *tag)
+{
+	if (!tag)
+		return 0;
+
+	return tag->t4.file_id;
 }
 
 void near_tag_set_idm(struct near_tag *tag, uint8_t *idm, uint8_t len)

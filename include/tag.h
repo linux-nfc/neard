@@ -110,6 +110,8 @@ void near_tag_set_c_apdu_max_size(struct near_tag *tag, uint16_t size);
 uint16_t near_tag_get_c_apdu_max_size(struct near_tag *tag);
 void near_tag_set_r_apdu_max_size(struct near_tag *tag, uint16_t size);
 uint16_t near_tag_get_r_apdu_max_size(struct near_tag *tag);
+void near_tag_set_file_id(struct near_tag *tag, uint16_t file_id);
+uint16_t near_tag_get_file_id(struct near_tag *tag);
 void near_tag_set_idm(struct near_tag *tag, uint8_t *idm, uint8_t len);
 uint8_t *near_tag_get_idm(struct near_tag *tag, uint8_t *len);
 void near_tag_set_attr_block(struct near_tag *tag, uint8_t *attr, uint8_t len);
