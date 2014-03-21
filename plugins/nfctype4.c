@@ -387,7 +387,12 @@ static int t4_readbin_NDEF_ID(uint8_t *resp, int length, void *data)
 	 */
 
 	/* Read 1st block */
-	return ISO_ReadBinary(2, data_length, data_read_cb, cookie);
+	if (data_length >= cookie->r_apdu_max_size)
+		return ISO_ReadBinary(2, cookie->r_apdu_max_size, data_read_cb,
+				cookie);
+	else
+		return ISO_ReadBinary(2, (uint8_t) data_length, data_read_cb,
+				cookie);
 }
 
 static int t4_get_file_len(struct t4_cookie *cookie)
