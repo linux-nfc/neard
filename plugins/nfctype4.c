@@ -465,6 +465,8 @@ static int t4_readbin_cc(uint8_t *resp, int length, void *data)
 	/* save rw conditions */
 	cookie->write_access = read_cc->tlv_fc.write_access;
 
+	near_tag_set_file_id(cookie->tag, read_cc->tlv_fc.file_id);
+
 	return ISO_Select((uint8_t *) &read_cc->tlv_fc.file_id,
 			LEN_ISO_CC_FILEID, 0, t4_select_NDEF_ID, cookie);
 }
@@ -733,8 +735,14 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 		uint32_t target_idx, near_tag_io_cb cb)
 {
 	struct t4_cookie *cookie;
+	struct near_tag *tag;
+	uint16_t file_id;
 
 	DBG("");
+
+	tag = near_tag_get_tag(adapter_idx, target_idx);
+	if (!tag)
+		return -EINVAL;
 
 	cookie = g_try_malloc0(sizeof(struct t4_cookie));
 	if (!cookie)
@@ -746,9 +754,11 @@ static int nfctype4_check_presence(uint32_t adapter_idx,
 	cookie->tag = NULL;
 	cookie->read_data = 0;
 
+	file_id = near_tag_get_file_id(tag);
+
 	/* Check for V2 type 4 tag */
-	return ISO_Select(iso_appname_v2, ARRAY_SIZE(iso_appname_v2),
-				0x4, check_presence, cookie);
+	return ISO_Select((uint8_t *)&file_id, LEN_ISO_CC_FILEID, 0,
+			check_presence, cookie);
 }
 
 static int select_ndef_file(uint8_t *resp, int length, void *data)
