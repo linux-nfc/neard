@@ -34,6 +34,17 @@
 #define NFC_TAG_INTERFACE		NFC_SERVICE ".Tag"
 #define NFC_RECORD_INTERFACE		NFC_SERVICE ".Record"
 
+#define SEEL_SERVICE     "org.neard.se"
+#define SEEL_PATH       "/org/neard/se"
+
+#define SEEL_ERROR_INTERFACE            SEEL_SERVICE ".Error"
+
+#define SEEL_MANAGER_INTERFACE          SEEL_SERVICE ".Manager"
+#define SEEL_MANAGER_PATH               "/"
+
+#define SEEL_SE_INTERFACE               SEEL_SERVICE ".SecureElement"
+#define SEEL_CHANNEL_INTERFACE          SEEL_SERVICE ".Channel"
+
 typedef void (* near_dbus_append_cb_t) (DBusMessageIter *iter,
 							void *user_data);
 
