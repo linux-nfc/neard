@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+ 
+plugindir=${libdir}/seeld/plugins
+
+Name: seeld
+Description: Secure Element daemon
+Requires: @GLIB_DEPS@ @DBUS_DEPS@
+Version: @VERSION@
+Libs: -module -avoid-version -export-symbols-regex seeld_plugin_desc
+Cflags: -I${includedir}
