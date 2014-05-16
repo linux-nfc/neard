@@ -37,3 +37,10 @@ builtin_sources += plugins/p2p.c plugins/npp.c \
 				plugins/handover.c plugins/p2p.h \
 				plugins/phdc.c
 endif
+
+if SE
+builtin_se_modules += nfc
+builtin_se_sources += se/plugins/nfc.c
+builtin_se_cflags += @NETLINK_CFLAGS@
+builtin_se_libadd += @NETLINK_LIBS@
+endif

@@ -46,18 +46,66 @@ src_neard_LDFLAGS = -Wl,--export-dynamic
 
 src_neard_DEPENDENCIES= src/neard.service
 
-nodist_src_neard_SOURCES = src/builtin.h
+BUILT_SOURCES = src/builtin.h
 
 AM_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} \
-              -DNEAR_PLUGIN_BUILTIN -DPLUGINDIR=\""$(plugindir)"\" \
-              -DCONFIGDIR=\""$(configdir)\"" \
-              -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+		-DNEAR_PLUGIN_BUILTIN -DPLUGINDIR=\""$(plugindir)"\" \
+		-DCONFIGDIR=\""$(configdir)\"" \
+		-I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 
-AM_CFLAGS = ${builtin_cflags}
+AM_CFLAGS = ${builtin_cflags} -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 
-CLEANFILES = src/builtin.h $(local_headers)
+if SE
+
+se_plugin_LTLIBRARIES =
+
+se_plugin_objects =
+
+builtin_se_modules =
+builtin_se_sources =
+builtin_se_libadd =
+builtin_se_cflags =
+
+pkglibexec_PROGRAMS += se/seeld
+
+se_seeld_SOURCES = $(gdbus_sources) $(builtin_se_sources) \
+			src/log.c src/dbus.c src/error.c src/plugin.c \
+			se/main.c se/seel.h se/manager.c se/manager.h \
+			se/se.c se/driver.c se/driver.h se/apdu.c \
+			se/channel.c se/ace.c
+
+se_seeld_LDADD = $(builtin_se_libadd) @GLIB_LIBS@ @DBUS_LIBS@ -ldl
+
+se_seeld_LDFLAGS = -Wl,--export-dynamic
+
+BUILT_SOURCES += se/builtin.h
+endif
+
+src_neard_CFLAGS = ${builtin_cflags} -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+
+src_neard_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} \
+			-DNEAR_PLUGIN_BUILTIN \
+			-DPLUGINDIR=\""$(plugindir)"\" \
+			-DCONFIGDIR=\""$(configdir)\"" \
+			-I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+
+if SE
+src_seeld_CFLAGS = ${builtin_se_cflags} -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+
+se_seeld_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} \
+					-DNEAR_PLUGIN_BUILTIN \
+					-DPLUGINDIR=\""$(build_se_plugindir)"\" \
+					-DCONFIGDIR=\""$(configdir)\"" \
+					-I$(builddir)/se
+endif
+
+CLEANFILES = src/builtin.h se/builtin.h $(local_headers)
 
 plugindir = $(libdir)/near/plugins
+
+if SE
+se_plugindir = $(libdir)/neard/plugins-se
+endif
 
 configdir = ${sysconfdir}/neard
 
@@ -68,8 +116,19 @@ dbusdir = ${sysconfdir}/dbus-1/system.d/
 dist_dbus_DATA = src/org.neard.conf
 
 if MAINTAINER_MODE
+
+if SE
+build_se_plugindir = $(abs_top_srcdir)/se/plugins/.libs
+endif
+
 build_plugindir = $(abs_top_srcdir)/plugins/.libs
+
 else
+
+if SE
+build_se_plugindir = $(se_plugindir)
+endif
+
 build_plugindir = $(plugindir)
 endif
 
@@ -128,6 +187,12 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 
 tools_nfctool_nfctool_LDADD = ${GLIB_LIBS} ${NETLINK_LIBS}
 
+tools_nfctool_nfctool_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} \
+			-DNEAR_PLUGIN_BUILTIN \
+			-DPLUGINDIR=\""$(plugindir)"\" \
+			-DCONFIGDIR=\""$(configdir)\"" \
+			-I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+
 unit_tests = unit/test-ndef-parse unit/test-ndef-build unit/test-snep-read
 
 unit_test_ndef_parse_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
@@ -163,7 +228,7 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = neard.pc
 
-DISTCHECK_CONFIGURE_FLAGS = --enable-tools --disable-systemd
+DISTCHECK_CONFIGURE_FLAGS = --enable-tools --enable-ese --disable-systemd
 
 DISTCLEANFILES = $(pkgconfig_DATA)
 
@@ -182,6 +247,11 @@ src/plugin.$(OBJEXT): src/builtin.h
 
 src/builtin.h: src/genbuiltin $(builtin_sources)
 	$(AM_V_GEN)$(srcdir)/src/genbuiltin $(builtin_modules) > $@
+
+se/plugin.$(OBJEXT): se/builtin.h
+
+se/builtin.h: src/genbuiltin $(builtin_se_sources)
+	$(AM_V_GEN)$(srcdir)/src/genbuiltin $(builtin_se_modules) > $@
 
 $(src_neard_OBJECTS) $(tools_nfctool_nfctool_OBJECTS) $(plugin_objects): $(local_headers)
 

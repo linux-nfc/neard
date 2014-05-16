@@ -23,6 +23,7 @@ AC_LANG_C
 AC_PROG_CC
 AC_PROG_CC_PIE
 AC_PROG_INSTALL
+AC_PROG_MKDIR_P
 
 m4_define([_LT_AC_TAGCONFIG], [])
 m4_ifdef([AC_LIBTOOL_TAGS], [AC_LIBTOOL_TAGS([])])
@@ -170,5 +171,12 @@ AC_ARG_ENABLE(p2p, AC_HELP_STRING([--disable-p2p],
 				[disable NFC peer to peer support]),
 				[enable_p2p=${enableval}])
 AM_CONDITIONAL(P2P, test "${enable_p2p}" != "no")
+
+AC_ARG_ENABLE(ese, AC_HELP_STRING([--enable-ese],
+				[enable embedded SE support]),
+				[enable_ese=${enableval}])
+AM_CONDITIONAL(ESE, test "${enable_ese}" = "yes")
+
+AM_CONDITIONAL(SE, test "${enable_ese}" = "yes")
 
 AC_OUTPUT(Makefile include/version.h neard.pc)

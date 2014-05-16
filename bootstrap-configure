@@ -9,5 +9,6 @@ fi
 		--enable-debug \
 		--disable-systemd \
 		--prefix=/usr \
+		--enable-ese \
 		--sysconfdir=/etc \
 		--enable-tools "$@"
