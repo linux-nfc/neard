@@ -100,7 +100,7 @@ static bool check_plugin(struct near_plugin_desc *desc,
 	return true;
 }
 
-#include "builtin.h"
+#include <builtin.h>
 
 int __near_plugin_init(const char *pattern, const char *exclude)
 {
