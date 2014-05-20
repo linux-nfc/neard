@@ -480,11 +480,12 @@ static void get_next_gp_data(struct seel_ace *ace)
 	err = __seel_se_queue_io(ace->se, get_next_gp_data,
 					get_next_gp_data_cb, ace);
 	if (err < 0) {
-		DBG("GET NEXT ALL err %d", err);
+		near_error("GET NEXT ALL err %d", err);
 		g_free(ace->rules_payload);
-		__seel_apdu_free(get_next_gp_data);
 		return;
 	}
+
+	return;
 }
 
 static void get_all_gp_data_cb(void *context,
@@ -571,8 +572,7 @@ static void get_refresh_gp_data_cb(void *context,
 
 	err = __seel_se_queue_io(se, get_all_gp_data, get_all_gp_data_cb, ace);
 	if (err < 0) {
-		DBG("GET DATA ALL err %d", err);
-		__seel_apdu_free(get_all_gp_data);
+		near_error("GET DATA ALL err %d", err);
 		return;
 	}
 
@@ -597,8 +597,7 @@ static void select_gp_aid_cb(void *context,
 
 	err = __seel_se_queue_io(se, get_refresh_gp_data, get_refresh_gp_data_cb, se);
 	if (err < 0) {
-		DBG("GET REFRESH DATA err %d", err);
-		__seel_apdu_free(get_refresh_gp_data);
+		near_error("GET REFRESH DATA err %d", err);
 		return;
 	}
 
@@ -620,7 +619,6 @@ int __seel_ace_add(struct seel_se *se)
 	err = __seel_se_queue_io(se, select_gp_aid, select_gp_aid_cb, se);
 	if (err < 0) {
 		near_error("GP AID err %d", err);
-		__seel_apdu_free(select_gp_aid);
 		return err;
 	}
 

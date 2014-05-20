@@ -178,8 +178,10 @@ int __seel_se_queue_io(struct seel_se *se, struct seel_apdu *apdu,
 	DBG("Pending req %d", se->ioreq_pending);
 
 	req = g_try_malloc0(sizeof(struct seel_se_ioreq));
-	if (req == NULL)
+	if (req == NULL) {
+		__seel_apdu_free(apdu);
 		return -ENOMEM;
+	}
 
 	req->se = se;
 	req->apdu = apdu;
@@ -507,7 +509,6 @@ static void open_channel_cb(void *context,
 	err = __seel_se_queue_io(ctx->se, select_aid, select_aid_cb, ctx);
 	if (err < 0) {
 		DBG("AID err %d", err);
-		__seel_apdu_free(select_aid);
 		return open_channel_error(ctx, err);
 	}
 
@@ -552,7 +553,6 @@ static DBusMessage *open_channel(DBusConnection *conn,
 	if (err < 0) {
 		near_error("error %d", err);
 
-		__seel_apdu_free(open_channel);
 		dbus_message_unref(ctx->msg);
 		g_free(ctx);
 
@@ -658,7 +658,6 @@ static DBusMessage *close_channel(DBusConnection *conn,
 	if (err < 0) {
 		near_error("error %d", err);
 
-		__seel_apdu_free(close_channel);
 		dbus_message_unref(ctx->msg);
 		g_free(ctx);
 

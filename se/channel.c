@@ -145,7 +145,6 @@ send_data:
 	if (err < 0) {
 		near_error("error %d", err);
 
-		__seel_apdu_free(send_apdu);
 		dbus_message_unref(pending_msg);
 
 		return __near_error_failed(msg, -err);
