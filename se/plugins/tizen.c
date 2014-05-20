@@ -153,10 +153,10 @@ static void add_modem(const char *path)
 	if (modem == NULL)
 		return;
 
-	modem->path = g_strdup_printf("%s/%s", TELEPHONY_DEFAULT_PATH, path);
+	modem->path = g_strdup(path);
 	modem->sim_available = false;
 
-	g_hash_table_insert(modem_hash, g_strdup(path), modem);
+	g_hash_table_insert(modem_hash, g_strdup(modem->path), modem);
 }
 
 static void remove_modem(gpointer user_data)
@@ -193,10 +193,15 @@ static void get_modems_reply(DBusPendingCall *call, void *user_data)
 
 	dbus_message_iter_recurse(&array, &entry);
 	while (dbus_message_iter_get_arg_type(&entry) == DBUS_TYPE_STRING) {
-		const char *path;
+		const char *name, *path;
 
-		dbus_message_iter_get_basic(&entry, &path);
-		add_modem(path);
+		dbus_message_iter_get_basic(&entry, &name);
+
+		path = g_strdup_printf("%s/%s", TELEPHONY_DEFAULT_PATH, name);
+		if (path != NULL) {
+			add_modem(path);
+			g_free(path);
+		}
 
 		dbus_message_iter_next(&entry);
 	}
@@ -296,13 +301,11 @@ static gboolean sim_changed(DBusConnection *conn, DBusMessage *message,
 	struct tapi_modem *modem;
 	int status;
 
-	DBG("");
-
 	DBG("modem_path %s", path);
 
 	modem = g_hash_table_lookup(modem_hash, path);
-	if (modem != NULL)
-		add_modem(path);
+	if (modem == NULL)
+		return TRUE;
 
 	if (!dbus_message_get_args(message, NULL, DBUS_TYPE_INT32, &status,
 					DBUS_TYPE_INVALID))
