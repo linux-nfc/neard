@@ -481,7 +481,6 @@ static void get_next_gp_data(struct seel_ace *ace)
 					get_next_gp_data_cb, ace);
 	if (err < 0) {
 		near_error("GET NEXT ALL err %d", err);
-		g_free(ace->rules_payload);
 		return;
 	}
 

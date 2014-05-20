@@ -143,11 +143,8 @@ send_data:
 	err = __seel_se_queue_io(channel->se, send_apdu,
 					send_apdu_cb, pending_msg);
 	if (err < 0) {
-		near_error("error %d", err);
-
-		dbus_message_unref(pending_msg);
-
-		return __near_error_failed(msg, -err);
+		near_error("send apdu error %d", err);
+		return NULL;
 	}
 
 	return NULL;

@@ -123,6 +123,8 @@ static void io_cb(void *context,
 		err = __seel_apdu_resp_status(apdu, apdu_length);
 
 	req->cb(req->context, apdu, apdu_length, err);
+
+	__seel_apdu_free(req->apdu);
 	g_free(req);
 
 	se->ioreq_pending = false;
@@ -165,8 +167,6 @@ static int send_io(struct seel_se *se)
 						__seel_apdu_length(req->apdu),
 						io_cb, req);
 
-	__seel_apdu_free(req->apdu);
-
 	return err;
 }
 
@@ -179,6 +179,7 @@ int __seel_se_queue_io(struct seel_se *se, struct seel_apdu *apdu,
 
 	req = g_try_malloc0(sizeof(struct seel_se_ioreq));
 	if (req == NULL) {
+		cb(context, NULL, 0, -ENOMEM);
 		__seel_apdu_free(apdu);
 		return -ENOMEM;
 	}
@@ -508,8 +509,8 @@ static void open_channel_cb(void *context,
 	/* Send the AID selection APDU */
 	err = __seel_se_queue_io(ctx->se, select_aid, select_aid_cb, ctx);
 	if (err < 0) {
-		DBG("AID err %d", err);
-		return open_channel_error(ctx, err);
+		near_error("AID err %d", err);
+		return;
 	}
 
 	return;
@@ -551,12 +552,8 @@ static DBusMessage *open_channel(DBusConnection *conn,
 
 	err = __seel_se_queue_io(se, open_channel, open_channel_cb, ctx);
 	if (err < 0) {
-		near_error("error %d", err);
-
-		dbus_message_unref(ctx->msg);
-		g_free(ctx);
-
-		return __near_error_failed(msg, -err);
+		near_error("open channel error %d", err);
+		return NULL;
 	}
 
 	return NULL;
@@ -656,12 +653,8 @@ static DBusMessage *close_channel(DBusConnection *conn,
 
 	err = __seel_se_queue_io(se, close_channel, close_channel_cb, ctx);
 	if (err < 0) {
-		near_error("error %d", err);
-
-		dbus_message_unref(ctx->msg);
-		g_free(ctx);
-
-		return __near_error_failed(msg, -err);
+		near_error("close channel error %d", err);
+		return NULL;
 	}
 
 	return NULL;
