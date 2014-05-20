@@ -393,29 +393,33 @@ static int tapi_transceive(uint8_t ctrl_idx, uint32_t se_idx,
 	DBusMessageIter iter;
 	DBusMessageIter value, array;
 	DBusPendingCall *call;
-
 	struct tapi_transceive_context *ctx;
+	int err;
 
 	DBG("%zd APDU %p", apdu_length, apdu);
 
+	if (default_modem == NULL) {
+		err = -EIO;
+		goto fail;
+	}
+
 	ctx = g_try_malloc0(sizeof(struct tapi_transceive_context));
 	if (ctx == NULL) {
-		cb(context, NULL, 0, -ENOMEM);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto fail;
 	}
 
 	ctx->context = context;
 	ctx->cb = cb;
 
-	if (default_modem == NULL)
-		return -EIO;
-
 	message = dbus_message_new_method_call(TELEPHONY_SERVICE,
 					default_modem->path,
 					SIM_INTERFACE, TRANSFER_APDU);
 
-	if (message == NULL)
-		return -ENOMEM;
+	if (message == NULL) {
+		err = -ENOMEM;
+		goto fail;
+	}
 
 	dbus_message_iter_init_append(message, &iter);
 	dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
@@ -434,13 +438,15 @@ static int tapi_transceive(uint8_t ctrl_idx, uint32_t se_idx,
 					       &call, -1) == FALSE) {
 		DBG("Failed to Transfer APDU through UICC");
 		dbus_message_unref(message);
-		return -EINVAL;
+		err = -EINVAL;
+		goto fail;
 	}
 
 	if (call == NULL) {
 		DBG("D-Bus connection not available");
 		dbus_message_unref(message);
-		return -EINVAL;
+		err = -EINVAL;
+		goto fail;
 	}
 
 	dbus_pending_call_set_notify(call, tapi_transfer_apdu_reply,
@@ -448,6 +454,13 @@ static int tapi_transceive(uint8_t ctrl_idx, uint32_t se_idx,
 	dbus_message_unref(message);
 
 	return 0;
+
+fail:
+	cb(context, NULL, 0, err);
+	if (ctx != NULL)
+		g_free(ctx);
+
+	return err;
 }
 
 static struct seel_io_driver tizen_io_driver = {
