@@ -603,8 +603,9 @@ static void select_gp_aid_cb(void *context,
 	return ;
 }
 
-int __seel_ace_add(struct seel_se *se)
+gboolean __seel_ace_add(gpointer user_data)
 {
+	struct seel_se *se = user_data;
 	struct seel_apdu *select_gp_aid;
 	int err;
 
@@ -612,16 +613,16 @@ int __seel_ace_add(struct seel_se *se)
 
 	select_gp_aid = __seel_apdu_select_aid(0, gp_aid, GP_AID_LEN);
 	if (!select_gp_aid)
-		return -ENOMEM;
+		return FALSE;
 
 	/* Send the GP AID selection APDU */
 	err = __seel_se_queue_io(se, select_gp_aid, select_gp_aid_cb, se);
 	if (err < 0) {
 		near_error("GP AID err %d", err);
-		return err;
+		return FALSE;
 	}
 
-	return 0;
+	return FALSE;
 }
 
 int __seel_ace_remove(struct seel_se *se)

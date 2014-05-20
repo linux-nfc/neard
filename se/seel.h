@@ -77,7 +77,7 @@ uint8_t *__seel_channel_get_aid(struct seel_channel *channel, size_t *aid_len);
 struct seel_se *__seel_channel_get_se(struct seel_channel *channel);
 bool __seel_channel_is_basic(struct seel_channel *channel);
 
-int __seel_ace_add(struct seel_se *se);
+gboolean __seel_ace_add(gpointer user_data);
 int __seel_ace_remove(struct seel_se *se);
 bool __seel_ace_apdu_allowed(struct seel_channel *channel, uint8_t *app_hash,
 			     uint8_t *apdu, size_t apdu_len);

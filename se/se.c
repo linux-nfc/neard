@@ -716,7 +716,7 @@ char *__seel_se_add(uint32_t se_idx, uint8_t ctrl_idx,
 					se_methods, se_signals,
 					NULL, se, NULL);
 
-	__seel_ace_add(se);
+	g_idle_add(__seel_ace_add, se);
 
 	return se->path;
 }
