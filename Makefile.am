@@ -133,7 +133,8 @@ build_plugindir = $(plugindir)
 endif
 
 doc_files = doc/tag-api.txt doc/device-api.txt doc/adapter-api.txt \
-				doc/agent-api.txt doc/phdc-api.txt
+		doc/agent-api.txt doc/phdc-api.txt \
+		doc/secureelement-api.txt doc/se-manager-api.txt
 
 EXTRA_DIST = src/genbuiltin $(doc_files)
 

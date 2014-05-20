@@ -1,0 +1,101 @@
+Secure Element hierarchy
+========================
+
+Service		org.neard.se
+Interface	org.neard.se.SecureElement
+Object path	[variable prefix]/{se0,se1,...}
+
+
+Methods:	dict GetProperties()
+
+			Returns all properties for the secure element. See the
+			properties section for available properties.
+
+			Possible Errors: org.seeld.Error.DoesNotExist
+
+		void SetProperty(string name, variant value)
+
+			Changes the value of the specified property. Only
+			properties that are listed a read-write are changeable.
+			On success this will emit a PropertyChanged signal.
+
+			Possible Errors: org.seeld.Error.DoesNotExist
+					 org.seeld.Error.InvalidArguments
+
+		object OpenChannel(array{byte} AID)
+
+			Open an ISO7816 logical channel to the secure element.
+			The AID (Application ID) array must be between 5 and 16
+			bytes long.
+			The returned path is a Channel object path.
+
+			Possible errors: org.seeld.Error.Failed
+				 	 org.seeld.Error.InvalidArguments
+					 org.seeld.Error.PermissionDenied
+					 org.seeld.Error.NotSupported
+
+		void CloseChannel(object channel)
+
+			Close an ISO7816 channel, passed as an object path
+			argument.
+
+			Possible errors: org.seeld.Error.Failed
+				 	 org.seeld.Error.InvalidArguments
+					 org.seeld.Error.PermissionDenied
+					 org.seeld.Error.NotSupported
+
+Signals		PropertyChanged(string name, variant value)
+
+			This signal indicates a changed value of the given
+			property.
+
+
+Properties	string Type [readonly]
+
+			The secure element type.
+
+			Possible values are "Embedded", "UICC" or "ASSD".
+
+		boolean Enabled [readwrite]
+
+			Enable a secure element.
+			This will e.g. enable the SWP link for a UICC
+			based secure element.
+
+		array{object} Channels [readonly]
+
+			The opened channels object paths for this secure element.
+
+
+Channel hierarchy
+=================
+
+Service		org.neard.se
+Interface	org.neard.se.Channel
+Object path	[variable prefix]/{se0}/{channel0,channel1,...}
+
+Methods:	dict GetProperties()
+
+			Returns all properties for the secure element. See the
+			properties section for available properties.
+
+			Possible Errors: org.seeld.Error.DoesNotExist
+
+		array{byte} SendAPDU(array{byte})
+
+			Send an ISO7816 APDU over this channel.
+			This is an asynchronous method and the returned array
+			is the response to the ISO7816 command.
+
+			Possible errors: org.seeld.Error.Failed
+					 org.seeld.Error.PermissionDenied
+					 org.seeld.Error.NotSupported
+
+
+Properties	boolean Basic [readonly]
+
+			Indicates if the channel is a basic one or not.
+
+		array{byte} AID
+
+			Associated Application ID.

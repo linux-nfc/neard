@@ -1,0 +1,26 @@
+Manager hierarchy
+=================
+
+Service		org.neard.se
+Interface	org.neard.se.Manager
+Object path	/
+
+Methods		dict GetProperties()
+
+			Returns all properties for the manager. See the
+			properties section for available properties.
+
+			Possible Errors: org.seeld.Error.DoesNotExist
+
+Signals		SecureElementAdded(object se)
+
+			Parameter is the object path of the added secure element.
+
+		SecureElementRemoved(object se)
+
+			Parameter is the object path of .
+
+
+Properties	array{object} SecureElements [readonly]
+
+			List of secure element object paths.
