@@ -596,19 +596,17 @@ static void close_channel_cb(void *context, uint8_t *apdu, size_t apdu_length,
 
 	conn = near_dbus_get_connection();
 
-	if (!err)
+	if (err)
 		return close_channel_error(ctx, err);
 
 	/* Check response status */
 	err = __seel_apdu_resp_status(apdu, apdu_length);
-	if (!err)
+	if (err)
 		return close_channel_error(ctx, err);
 
 	channel_path = __seel_channel_get_path(ctx->channel);
 	if (!g_hash_table_remove(ctx->se->channel_hash, channel_path))
 		return close_channel_error(ctx, -ENODEV);
-
-	__seel_channel_remove(ctx->channel);
 
 	g_dbus_send_reply(conn, ctx->msg, DBUS_TYPE_INVALID);
 
@@ -631,7 +629,7 @@ static DBusMessage *close_channel(DBusConnection *conn,
 	if (se->enabled == false)
 		return __near_error_failed(msg, ENODEV);
 
-	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &path,
+	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path,
 					DBUS_TYPE_INVALID))
 		return __near_error_invalid_arguments(msg);
 
