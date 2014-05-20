@@ -624,5 +624,5 @@ static void tapi_exit(void)
 	dbus_connection_unref(connection);
 }
 
-SEEL_PLUGIN_DEFINE(tapi, "Tizen telephony plugin", VERSION,
+SEEL_PLUGIN_DEFINE(tizen, "Tizen telephony plugin", VERSION,
 			SEEL_PLUGIN_PRIORITY_HIGH, tapi_init, tapi_exit)
