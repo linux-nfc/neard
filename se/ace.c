@@ -54,6 +54,7 @@ uint8_t gp_aid[] = {0xA0, 0x00, 0x00, 0x01,
 #define APDU_STATUS_LEN 2
 #define GET_ALL_DATA_CMD_LEN 2
 #define GET_REFRESH_DATA_CMD_LEN 2
+#define GET_REFRESH_DATA_TAG_LEN 1
 #define GET_REFRESH_TAG_LEN 8
 
 /* if ((APDU_header & rule->mask) == rule->header) then APDU is allowed */
@@ -551,10 +552,11 @@ static void get_refresh_gp_data_cb(void *context,
 	if (err)
 		return;
 
-	if (apdu_length != GET_REFRESH_DATA_CMD_LEN + GET_REFRESH_TAG_LEN + APDU_STATUS_LEN)
+	if (apdu_length != GET_REFRESH_DATA_CMD_LEN + GET_REFRESH_DATA_TAG_LEN
+				 + GET_REFRESH_TAG_LEN + APDU_STATUS_LEN)
 		return;
 
-	if (apdu[0] != 0xDF || apdu[1] != 0x20)
+	if (apdu[0] != 0xDF || apdu[1] != 0x20 || apdu[2] != 0x08)
 		return;
 
 	ace = g_try_malloc0(sizeof(struct seel_ace));
@@ -563,7 +565,8 @@ static void get_refresh_gp_data_cb(void *context,
 
 	ace->se = se;
 
-	memcpy(ace->rules_tag, apdu + GET_REFRESH_DATA_CMD_LEN, GET_REFRESH_TAG_LEN);
+	memcpy(ace->rules_tag, apdu + GET_REFRESH_DATA_CMD_LEN
+			+ GET_REFRESH_DATA_TAG_LEN, GET_REFRESH_TAG_LEN);
 
 	get_all_gp_data = __seel_apdu_get_all_gp_data();
 	if (!get_all_gp_data)

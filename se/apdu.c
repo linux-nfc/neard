@@ -229,7 +229,7 @@ struct seel_apdu *__seel_apdu_get_refresh_gp_data(void)
 	DBG("");
 
 	return alloc_apdu(CLA_PROPRIETARY_CMD, 0, INS_GET_GP_DATA,
-						0xDF, 0x20, 0, NULL, -1);
+						0xDF, 0x20, 0, NULL, 0xB);
 }
 
 static int apdu_trailer_status(struct iso7816_apdu_resp *trailer)
