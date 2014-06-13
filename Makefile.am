@@ -254,7 +254,14 @@ se/plugin.$(OBJEXT): se/builtin.h
 se/builtin.h: src/genbuiltin $(builtin_se_sources)
 	$(AM_V_GEN)$(srcdir)/src/genbuiltin $(builtin_se_modules) > $@
 
-$(src_neard_OBJECTS) $(tools_nfctool_nfctool_OBJECTS) $(plugin_objects): $(local_headers)
+$(src_neard_OBJECTS) \
+$(tools_nfctool_nfctool_OBJECTS) \
+$(plugin_objects) \
+$(se_seeld_OBJECTS) \
+$(unit_test_ndef_parse_OBJECTS) \
+$(unit_test_ndef_build_OBJECTS) \
+$(unit_test_snep-read_OBJECTS) \
+$(tools_snep_send_OBJECTS): $(local_headers)
 
 include/near/version.h: include/version.h
 	$(AM_V_at)$(MKDIR_P) include/near
