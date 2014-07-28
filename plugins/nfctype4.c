@@ -2,6 +2,7 @@
  *
  *  neard - Near Field Communication manager
  *
+ *  Copyright (C) 2014  Marvell International Ltd.
  *  Copyright (C) 2011  Intel Corporation. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -74,6 +75,8 @@
 
 #define T4_ALL_ACCESS		0x00
 #define T4_READ_ONLY		0xFF
+#define T4_V1			0x01
+#define T4_V2			0x02
 
 #define APDU_STATUS(a) near_get_be16(a)
 
@@ -157,6 +160,7 @@ struct t4_cookie {
 	uint8_t write_access;
 	struct near_ndef_message *ndef;
 	uint16_t memory_size;
+	uint8_t version;
 };
 
 static int t4_cookie_release(int err, void *data)
@@ -243,17 +247,21 @@ out_err:
 /* ISO 7816 command: Select applications or files
  * p1=0 select by "file id"
  * P1=4 select by "DF name"
- * If P1 == 0, then P2 is 0x0C.
- * If P2 == 4, then P2 is 0x00.
+ * If P1 == 0, then P2 is 0x0C if T4_V2, 0 if T4_V1.
+ * If P1 == 4, then P2 is 0x00.
  *  */
 static int ISO_Select(uint8_t *filename, uint8_t fnamelen, uint8_t P1,
-		near_recv cb, void *cookie)
+		near_recv cb, void *data)
 {
 	uint16_t P2;
+	struct t4_cookie *cookie = data;
 
 	DBG("");
 
-	P2 = P1 ? 0x00 : 0x0C;
+	if (cookie->version == T4_V1 && P1 == 0)
+		P2 = 0;
+	else
+		P2 = P1 ? 0x00 : 0x0C;
 
 	return ISO_send_cmd(
 			0x00,		/* CLA */
@@ -264,7 +272,7 @@ static int ISO_Select(uint8_t *filename, uint8_t fnamelen, uint8_t P1,
 			fnamelen,	/* uint8_t cmd_data_length*/
 			false,
 			cb,
-			cookie);
+			data);
 }
 
 /* ISO 7816 command: Read binary data from files */
@@ -521,6 +529,9 @@ static int t4_select_file_by_name_v1(uint8_t *resp, int length, void *data)
 	if (resp[NFC_STATUS] != 0)
 		return t4_cookie_release(-EIO, cookie);
 
+	/* Tag is V1 */
+	cookie->version = T4_V1;
+
 	/* Jump to select phase */
 	return ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0,
 				t4_select_cc, cookie);
@@ -551,6 +562,9 @@ static int t4_select_file_by_name_v2(uint8_t *resp, int length, void *data)
 
 	if (resp[NFC_STATUS] != 0)
 		return t4_cookie_release(-EIO, cookie);
+
+	/* Tag is V2 */
+	cookie->version = T4_V2;
 
 	/* Jump to select phase */
 	return ISO_Select(iso_cc_fileid, LEN_ISO_CC_FILEID, 0, t4_select_cc,
