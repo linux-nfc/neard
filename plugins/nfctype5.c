@@ -1,6 +1,7 @@
 /*
  *  NFC Type 5 (ISO 15693) Tag code
  *
+ *  Copyright (C) 2014 Marvell International Ltd.
  *  Copyright (C) 2013 Animal Creek Technologies, Inc. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -8,10 +9,7 @@
  *  published by the Free Software Foundation.
  */
 /*
- * Currently only single block reads and writes are used for I/O.
- * The read multiple command is used but only to determine if the
- * tag supports it which is necessary when setting the CC info
- * during format.
+ * Currently only single block writes are used for I/O.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -189,6 +187,7 @@ struct t5_cookie {
 	int			dst_offset;
 	size_t			bytes_left;
 	uint8_t			blk;
+	uint8_t			nb_requested_blocks;
 };
 
 static int t5_cmd_hdr_init(struct near_tag *tag, struct type5_cmd_hdr *cmd_hdr,
@@ -565,12 +564,75 @@ static bool t5_cc_is_read_only(struct type5_cc *t5_cc)
 		TYPE5_CC1_WRITE_ACCESS_ALWAYS;
 }
 
+static int t5_read_multiple_blocks_resp(uint8_t *resp, int length, void *data)
+{
+	struct type5_read_multiple_blocks_resp *t5_resp =
+		(struct type5_read_multiple_blocks_resp *)
+					(resp + NFC_HEADER_SIZE);
+	struct t5_cookie *cookie = data;
+	struct near_tag *tag = cookie->tag;
+	uint8_t blk_size = near_tag_get_blk_size(tag);
+	size_t data_length;
+	GList *records;
+	int err;
+
+	DBG("");
+
+	cookie->buf = near_tag_get_data(tag, &data_length);
+
+	err = t5_check_resp(resp, length);
+	if (err)
+		goto out_done;
+
+	length -= NFC_HEADER_SIZE;
+
+	if (length != (int)(sizeof(*t5_resp) +
+			    (cookie->nb_requested_blocks * blk_size))) {
+		err = -EIO;
+		goto out_done;
+	}
+
+	/* Copy length - 2 bytes (-2 because of RMB header) */
+	memcpy(cookie->buf, t5_resp->data, length - 2);
+
+	records = near_tlv_parse(cookie->buf, data_length);
+	near_tag_add_records(tag, records, NULL, 0);
+
+out_done:
+	return t5_cookie_release(err, cookie);
+}
+
+static int t5_read_multiple_blocks(struct near_tag *tag,
+				   uint8_t starting_block,
+				   uint8_t number_of_blocks,
+				   near_recv rx_cb,
+				   struct t5_cookie *cookie)
+{
+	struct type5_read_multiple_blocks_cmd t5_cmd;
+	int err;
+
+	DBG("");
+
+	err = t5_cmd_hdr_init(tag, &t5_cmd.hdr, CMD_READ_MULITPLE_BLOCKS);
+	if (err)
+		return err;
+
+	t5_cmd.blk_no = starting_block;
+	t5_cmd.num_blks = number_of_blocks - 1;
+
+	return near_adapter_send(near_tag_get_adapter_idx(tag),
+			(uint8_t *)&t5_cmd, sizeof(t5_cmd),
+                        rx_cb, cookie, t5_cookie_release);
+}
+
 static int t5_read_meta_resp(struct near_tag *tag, int err, void *data)
 {
 	struct t5_cookie *cookie = data;
 	struct type5_cc *t5_cc;
 	size_t data_length;
 	uint8_t *tag_data;
+	uint16_t first_block;
+	int rmb_supported;
 
 	DBG("");
 
@@ -602,10 +664,25 @@ static int t5_read_meta_resp(struct near_tag *tag, int err, void *data)
 		else
 			near_tag_set_ro(tag, FALSE);
 
+		rmb_supported = t5_cc->cc3 & TYPE5_CC3_MBREAD_FLAG;
+
 		g_free(cookie->buf);
 
-		err = t5_read(tag, TYPE5_DATA_START_OFFSET(tag), tag_data,
-				data_length, t5_read_data_resp, cookie);
+		if (rmb_supported) {
+			first_block = TYPE5_DATA_START_OFFSET(tag) /
+				near_tag_get_blk_size(tag);
+			cookie->nb_requested_blocks =
+				near_tag_get_num_blks(tag) - first_block;
+			err = t5_read_multiple_blocks(tag, first_block,
+					cookie->nb_requested_blocks,
+					t5_read_multiple_blocks_resp,
+					cookie);
+		} else {
+			err = t5_read(tag, TYPE5_DATA_START_OFFSET(tag),
+				      tag_data, data_length, t5_read_data_resp,
+				      cookie);
+		}
+
 		if (err < 0)
 			err = t5_cookie_release(err, cookie);
 
@@ -873,7 +950,8 @@ static int nfctype5_format_resp(struct near_tag *tag, int err, void *data)
 	return t5_cookie_release(err, cookie);
 }
 
-static int t5_read_multiple_blocks_resp(uint8_t *resp, int length, void *data)
+static int t5_format_read_multiple_blocks_resp(uint8_t *resp, int length,
+						void *data)
 {
 	struct type5_read_multiple_blocks_resp *t5_resp =
 		(struct type5_read_multiple_blocks_resp *)
@@ -936,28 +1014,6 @@ static int t5_read_multiple_blocks_resp(uint8_t *resp, int length, void *data)
 	return err;
 }
 
-static int t5_read_multiple_blocks(struct near_tag *tag,
-		struct t5_cookie *cookie)
-{
-	struct type5_read_multiple_blocks_cmd t5_cmd;
-	int err;
-
-	DBG("");
-
-	err = t5_cmd_hdr_init(tag, &t5_cmd.hdr, CMD_READ_MULITPLE_BLOCKS);
-	if (err)
-		return err;
-
-	/* Read 2 blocks starting at block 0 */
-	t5_cmd.blk_no = 0;
-	t5_cmd.num_blks = 1;
-
-	return near_adapter_send(near_tag_get_adapter_idx(tag),
-			(uint8_t *)&t5_cmd, sizeof(t5_cmd),
-			t5_read_multiple_blocks_resp, cookie,
-			t5_cookie_release);
-}
-
 static int nfctype5_format(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb)
 {
@@ -981,7 +1037,9 @@ static int nfctype5_format(uint32_t adapter_idx, uint32_t target_idx,
 
 	cookie->cb = cb;
 
-	return t5_read_multiple_blocks(tag, cookie);
+	return t5_read_multiple_blocks(tag, 0, 2,
+				       t5_format_read_multiple_blocks_resp,
+				       cookie);
 
 out_err:
 	if (cb)
