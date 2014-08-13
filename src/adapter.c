@@ -596,8 +596,17 @@ int __near_adapter_set_dep_state(uint32_t idx, bool dep)
 
 	adapter->dep_up = dep;
 
-	if (!dep && adapter->constant_poll)
-		adapter_start_poll(adapter);
+	if (!dep && adapter->constant_poll) {
+		/*
+		 * The immediate polling may fail if the adapter is busy in
+		 * that very moment. In this case we need to try polling later
+		 * again, so constant polling will work properly.
+		 */
+		if(adapter_start_poll(adapter) == -EBUSY) {
+			near_error("Adapter is busy, retry polling later");
+			g_timeout_add_seconds(1, dep_timer, adapter);
+		}
+	}
 
 	if (!dep) {
 		uint32_t target_idx;
