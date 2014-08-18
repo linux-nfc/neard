@@ -795,7 +795,7 @@ static int nfctype1_check_presence(uint32_t adapter_idx,
 		return -EINVAL;
 	}
 
-	t1_cmd.cmd = CMD_READ_ALL;     /* Read ALL cmd give 124 bytes */
+	t1_cmd.cmd = CMD_RID;	       /* Send a Read Identification (RID) */
 	t1_cmd.addr = 0;	       /* NA */
 	t1_cmd.data[0] = 0;
 	memcpy(t1_cmd.uid, uid, UID_LENGTH);
