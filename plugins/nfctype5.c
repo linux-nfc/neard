@@ -113,6 +113,7 @@
 #define GET_SYS_INFO_FLAG_AFI		0x02
 #define GET_SYS_INFO_FLAG_MEM_SIZE	0x04
 #define GET_SYS_INFO_FLAG_IC_REF	0x08
+#define GET_SYS_INFO_FLAG_16B_NB_BLOCK	0x10
 
 struct type5_cmd_hdr {
 	uint8_t			flags;
@@ -749,7 +750,12 @@ static int t5_get_sys_info_resp(uint8_t *resp, int length, void *data)
 		offset++;
 
 	if (t5_resp->info_flags & GET_SYS_INFO_FLAG_MEM_SIZE) {
-		near_tag_set_num_blks(tag, t5_resp->data[offset++] + 1);
+		if (t5_resp->info_flags & GET_SYS_INFO_FLAG_16B_NB_BLOCK) {
+			near_tag_set_num_blks(tag, (t5_resp->data[offset] |
+				(t5_resp->data[offset + 1] << 8)) + 1);
+			offset += 2;
+		} else
+			near_tag_set_num_blks(tag, t5_resp->data[offset++] + 1);
 		near_tag_set_blk_size(tag,
 			(t5_resp->data[offset++] & 0x1f) + 1);
 	} else { /* Tag must provide memory size info */
