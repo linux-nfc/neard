@@ -2,6 +2,7 @@
  *
  *  neard - Near Field Communication manager
  *
+ *  Copyright (C) 2014  Marvell International Ltd.
  *  Copyright (C) 2011  Intel Corporation. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -76,16 +77,28 @@
 #define TYPE1_STATIC_MAX_DATA_SIZE	0x60
 
 #define UID_LENGTH 4
+#define MAX_LOCKED_BYTES 128
 
 #define TYPE1_TAG_VER_1_1 0x11
 #define TYPE1_TAG_STATIC_SIZE_120 0x0E
 #define TYPE1_READ_WRITE_ACCESS 0x00
 #define TYPE1_STATIC_TAG_DATA_LENGTH 116
 
-struct type1_cmd {
+#define LOCK_TLV_TYPE		0x01
+#define RESERVED_TLV_TYPE	0x02
+#define NDEF_TLV_TYPE		0x03
+
+struct type1_static_cmd {
 	uint8_t cmd;
 	uint8_t addr;
 	uint8_t data[1];
+	uint8_t uid[UID_LENGTH];
+} __attribute__((packed));
+
+struct type1_dynamic_cmd {
+	uint8_t cmd;
+	uint8_t addr;
+	uint8_t data[8];
 	uint8_t uid[UID_LENGTH];
 } __attribute__((packed));
 
@@ -95,7 +108,10 @@ struct type1_tag {
 	uint16_t current_seg;
 	uint16_t last_seg;
 	uint16_t data_read;
+	uint16_t real_addr;
 	uint8_t uid[UID_LENGTH];
+	uint8_t locked_bytes[MAX_LOCKED_BYTES];
+	uint16_t nb_locked_bytes;
 
 	near_tag_io_cb cb;
 	struct near_tag *tag;
@@ -112,11 +128,13 @@ struct t1_cookie {
 	uint8_t cc[LEN_CC_BYTES];
 };
 
-static void t1_init_cmd(struct type1_tag *tag, struct type1_cmd *cmd)
+static void t1_init_dynamic_cmd(struct type1_tag *tag,
+				struct type1_dynamic_cmd *cmd)
 {
 	if (!tag || !cmd)
 		return;
 
+	memset(cmd->data, 0, sizeof (cmd->data));
 	memcpy(cmd->uid, tag->uid, UID_LENGTH);
 }
 
@@ -142,11 +160,34 @@ static int t1_cookie_release(int err, void *data)
 	return err;
 }
 
+static int lock_bytes_in_region(struct type1_tag *t1_tag,
+				uint16_t addr, uint8_t size)
+{
+	uint8_t i, lb;
+
+	for (i = 0; i < t1_tag->nb_locked_bytes; ++i) {
+		lb = t1_tag->locked_bytes[i];
+		if (lb >= addr && lb < (addr + size))
+			return 1;
+	}
+	return 0;
+}
+
+static int lock_byte(struct type1_tag *t1_tag, uint16_t addr)
+{
+	uint8_t i;
+
+	for (i = 0; i < t1_tag->nb_locked_bytes; ++i)
+		if (t1_tag->locked_bytes[i] == addr)
+			return 1;
+	return 0;
+}
+
 /* Read segments (128 bytes) and store them to the tag data block */
 static int data_recv(uint8_t *resp, int length, void *data)
 {
 	struct type1_tag *t1_tag = data;
-	struct type1_cmd t1_cmd;
+	struct type1_dynamic_cmd t1_cmd;
 	uint8_t *tagdata;
 	size_t data_length;
 
@@ -155,7 +196,8 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	if (length < 0)
 		return length;
 
-	length = length - LEN_STATUS_BYTE;  /* ignore first byte */
+	/* ignore first byte, ignore second byte (ADDS) */
+	length = length - LEN_STATUS_BYTE - 1;
 
 	/* Add data to tag mem */
 	tagdata = near_tag_get_data(t1_tag->tag, &data_length);
@@ -164,7 +206,20 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	if (data_length - t1_tag->data_read < (uint)length)
 		return -EINVAL;
 
-	memcpy(tagdata + t1_tag->data_read, resp + 1, length);
+	if (lock_bytes_in_region(t1_tag, t1_tag->real_addr, length)) {
+		uint8_t i, j;
+
+		for (i = j = 0; i < length; ++i)
+			if (!lock_byte(t1_tag, t1_tag->real_addr + i)) {
+				tagdata[t1_tag->data_read + j++] = resp[2 + i];
+			}
+
+		t1_tag->real_addr += i;
+		length = j;
+	} else {
+		memcpy(tagdata + t1_tag->data_read, resp + 2, length);
+		t1_tag->real_addr += length;
+	}
 
 	/* Next segment */
 	t1_tag->data_read =  t1_tag->data_read + length;
@@ -172,7 +227,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 	if (t1_tag->current_seg <= t1_tag->last_seg) {
 		/* RSEG cmd */
-		t1_init_cmd(t1_tag, &t1_cmd);
+		t1_init_dynamic_cmd(t1_tag, &t1_cmd);
 
 		t1_cmd.cmd = CMD_READ_SEGS;
 		t1_cmd.addr = (t1_tag->current_seg << 4) & 0xFF;
@@ -185,7 +240,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 		DBG("READ complete");
 
-		records = near_tlv_parse(tagdata, data_length);
+		records = near_tlv_parse(tagdata, t1_tag->data_read);
 		near_tag_add_records(t1_tag->tag, records, t1_tag->cb, 0);
 
 		/* free memory */
@@ -205,10 +260,11 @@ static int data_recv(uint8_t *resp, int length, void *data)
 static int read_dynamic_tag(uint8_t *cc, int length, void *data)
 {
 	struct type1_tag *t1_tag = data;
-	struct type1_cmd t1_cmd;
+	struct type1_dynamic_cmd t1_cmd;
 	uint8_t *tagdata;
 	uint8_t	*pndef;
 	size_t data_length;
+	uint8_t current_addr = 12; /* CC => after HR, UID */
 
 	DBG("Dynamic Mode");
 
@@ -216,19 +272,75 @@ static int read_dynamic_tag(uint8_t *cc, int length, void *data)
 
 	/* Skip capability container bytes  */
 	pndef = cc + 4;		/* right after CC bytes */
+	length -= 14; /* Remove HR + UID + CC */
 
 	/*
-	 * Save first NFC bytes to tag memory
-	 * 10 blocks[0x3..0xC] of 8 bytes + 2 bytes from block 2
+	 * First bytes of the data memory might contains LOCK TLV
+	 * Let's store them and continue till we found the NDEF TLV
 	 */
-	memcpy(tagdata,	pndef, 10 * BLOCK_SIZE + 2);
+	do {
+		uint16_t byte_addr;
+		uint8_t page_addr;
+		uint8_t byte_offset;
+		uint8_t bytes_per_page;
+		uint8_t size = 0;
+
+		if (*pndef == NDEF_TLV_TYPE) {
+			break;
+		} else if (*pndef == LOCK_TLV_TYPE ||
+			   *pndef == RESERVED_TLV_TYPE) {
+			page_addr = (pndef[2] >> 4) & 0xF;
+			byte_offset = pndef[2] & 0xF;
+			if (*pndef == LOCK_TLV_TYPE)
+				size = pndef[3] / 8; /* Convert in bytes */
+			else
+				size = pndef[3];
+			bytes_per_page = pndef[4] & 0xF;
+			byte_addr = (page_addr - 1) * (2 << (bytes_per_page - 1))
+				+ byte_offset;
+		}
+
+		if (size != 0) {
+			uint8_t i;
+
+			for (i = 0; i < size; ++i)
+				t1_tag->locked_bytes[t1_tag->nb_locked_bytes++] = byte_addr + i;
+		}
+		length -= 2 + pndef[1];
+		current_addr += 2 + pndef[1];
+		pndef += 2 + pndef[1];
+	} while (length > 0);
+
+
+	if (length <= 0) {
+		DBG("NDEF TLV not found");
+		return -1;
+	}
+
+	t1_tag->real_addr = current_addr;
+
+	if (lock_bytes_in_region(t1_tag, current_addr, length)) {
+		uint8_t i, j;
+
+		for (i = j = 0; i < length; ++i)
+			if (!lock_byte(t1_tag, current_addr + i))
+				tagdata[j++] = pndef[i];
+		t1_tag->real_addr += i;
+		length = j;
+	} else {
+		/*
+		 * Save NDEF TLV first bytes of payload to tag memoy
+		 */
+		memcpy(tagdata,	pndef, length);
+		t1_tag->real_addr += length;
+	}
 
 	/* Read the next one, up to the end of the data area */
 	t1_tag->current_seg = 1;
 	t1_tag->last_seg = ((cc[2] * BLOCK_SIZE) / TAG_T1_SEGMENT_SIZE);
-	t1_tag->data_read = 10 * BLOCK_SIZE + 2;
+	t1_tag->data_read = length;
 
-	t1_init_cmd(t1_tag, &t1_cmd);
+	t1_init_dynamic_cmd(t1_tag, &t1_cmd);
 
 	/* T1 read segment */
 	t1_cmd.cmd = CMD_READ_SEGS;
@@ -246,9 +358,12 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	struct near_tag *tag;
 	struct type1_tag *t1_tag;
 	uint8_t *cc;
+	uint8_t i;
 	int err = -EOPNOTSUPP;
 
 	DBG("%d", length);
+
+	length -= LEN_STATUS_BYTE;  /* ignore first byte */
 
 	if (length < 0) {
 		err = length;
@@ -300,6 +415,12 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	t1_tag->cb = cookie->cb;
 	t1_tag->tag = tag;
 	memcpy(t1_tag->uid, cookie->uid, UID_LENGTH);
+	memset(t1_tag->locked_bytes, 0, MAX_LOCKED_BYTES);
+	t1_tag->nb_locked_bytes = 0;
+
+	/* Initialize page 0xD as reserved */
+	for (i = 0; i < 8; ++i)
+		t1_tag->locked_bytes[t1_tag->nb_locked_bytes++] = 0x68 + i;
 
 	/* Set the ReadWrite flag */
 	if (TAG_T1_WRITE_FLAG(cc) == TYPE1_NOWRITE_ACCESS)
@@ -365,7 +486,7 @@ out_err:
 static int rid_resp(uint8_t *resp, int length, void *data)
 {
 	struct t1_cookie *cookie = data;
-	struct type1_cmd t1_cmd;
+	struct type1_static_cmd t1_cmd;
 	uint8_t *uid;
 	int err;
 
@@ -405,7 +526,7 @@ out_err:
 static int nfctype1_read_meta(uint32_t adapter_idx, uint32_t target_idx,
 						near_tag_io_cb cb, uint8_t *uid)
 {
-	struct type1_cmd cmd;
+	struct type1_static_cmd cmd;
 	struct t1_cookie *cookie;
 
 	DBG("");
@@ -486,7 +607,7 @@ static int write_nmn_e1_resp(uint8_t *resp, int length, void *data)
 
 static int write_nmn_e1(struct t1_cookie *cookie)
 {
-	struct type1_cmd cmd;
+	struct type1_static_cmd cmd;
 
 	DBG("");
 
@@ -504,7 +625,7 @@ static int data_write_resp(uint8_t *resp, int length, void *data)
 {
 	struct t1_cookie *cookie = data;
 	uint8_t addr = 0;
-	struct type1_cmd cmd;
+	struct type1_static_cmd cmd;
 	int err;
 
 	DBG("");
@@ -551,7 +672,7 @@ static int data_write(uint32_t adapter_idx, uint32_t target_idx,
 			struct near_ndef_message *ndef, near_tag_io_cb cb)
 {
 	int err;
-	struct type1_cmd cmd;
+	struct type1_static_cmd cmd;
 	struct t1_cookie *cookie;
 	uint8_t *uid, uid_length;
 
@@ -662,7 +783,7 @@ static int check_presence(uint8_t *resp, int length, void *data)
 static int nfctype1_check_presence(uint32_t adapter_idx,
 				uint32_t target_idx, near_tag_io_cb cb)
 {
-	struct type1_cmd t1_cmd;
+	struct type1_static_cmd t1_cmd;
 	struct t1_cookie *cookie;
 	uint8_t *uid, uid_length;
 
@@ -699,7 +820,7 @@ static int format_resp(uint8_t *resp, int length, void *data)
 	int err = 0;
 	struct t1_cookie *cookie = data;
 	struct near_tag *tag;
-	struct type1_cmd cmd;
+	struct type1_static_cmd cmd;
 	uint8_t addr;
 
 	DBG("");
@@ -740,7 +861,7 @@ static int nfctype1_format(uint32_t adapter_idx, uint32_t target_idx,
 {
 	int err;
 	struct near_tag *tag;
-	struct type1_cmd cmd;
+	struct type1_static_cmd cmd;
 	struct t1_cookie *cookie;
 	uint8_t *uid, uid_length, addr;
 
