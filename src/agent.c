@@ -70,6 +70,7 @@ static void ndef_agent_free(gpointer data)
 
 	g_free(agent->sender);
 	g_free(agent->path);
+	g_free(agent);
 }
 
 static void ndef_agent_release(gpointer key, gpointer data, gpointer user_data)
@@ -515,6 +516,8 @@ static void handover_agent_free(gpointer data)
 
 	g_dbus_remove_watch(connection, agent->watch);
 	agent->watch = 0;
+
+	g_free(agent);
 }
 
 static void handover_agent_disconnect(DBusConnection *conn, void *data)
