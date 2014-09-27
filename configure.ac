@@ -178,4 +178,5 @@ AM_CONDITIONAL(ESE, test "${enable_ese}" = "yes")
 
 AM_CONDITIONAL(SE, test "${enable_ese}" = "yes")
 
-AC_OUTPUT(Makefile include/version.h neard.pc)
+AC_CONFIG_FILES([Makefile include/version.h neard.pc])
+AC_OUTPUT
