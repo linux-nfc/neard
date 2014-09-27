@@ -33,12 +33,12 @@ AC_PROG_LIBTOOL
 
 AM_CONDITIONAL(READLINE, test "${enable_readline}" = "yes")
 
-AC_ARG_ENABLE(systemd, AC_HELP_STRING([--disable-systemd],
+AC_ARG_ENABLE(systemd, AS_HELP_STRING([--disable-systemd],
                 [disable systemd integration]), [enable_systemd=${enableval}])
 AM_CONDITIONAL(SYSTEMD, test "${enable_systemd}" != "no")
 
 AC_ARG_WITH([systemdsystemunitdir],
-                        AC_HELP_STRING([--with-systemdsystemunitdir=DIR],
+                        AS_HELP_STRING([--with-systemdsystemunitdir=DIR],
                         [path to systemd system unit directory]),
                                         [path_systemunitdir=${withval}])
 if (test "${enable_systemd}" != "no" && test -z "${path_systemunitdir}"); then
@@ -52,7 +52,7 @@ fi
 AC_SUBST(SYSTEMD_SYSTEMUNITDIR, [${path_systemunitdir}])
 
 AC_ARG_WITH([systemduserunitdir],
-                        AC_HELP_STRING([--with-systemduserunitdir=DIR],
+                        AS_HELP_STRING([--with-systemduserunitdir=DIR],
                         [path to systemd user unit directory]),
                                         [path_userunitdir=${withval}])
 if (test "${enable_systemd}" != "no" && test -z "${path_userunitdir}"); then
@@ -65,14 +65,14 @@ if (test "${enable_systemd}" != "no" && test -z "${path_userunitdir}"); then
 fi
 AC_SUBST(SYSTEMD_USERUNITDIR, [${path_userunitdir}])
 
-AC_ARG_ENABLE(optimization, AC_HELP_STRING([--disable-optimization],
+AC_ARG_ENABLE(optimization, AS_HELP_STRING([--disable-optimization],
 			[disable code optimization through compiler]), [
 	if (test "${enableval}" = "no"); then
 		CFLAGS="$CFLAGS -O0"
 	fi
 ])
 
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug],
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
 			[enable compiling with debugging information]), [
 	if (test "${enableval}" = "yes" &&
 				test "${ac_cv_prog_cc_g}" = "yes"); then
@@ -80,7 +80,7 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug],
 	fi
 ])
 
-AC_ARG_ENABLE(pie, AC_HELP_STRING([--enable-pie],
+AC_ARG_ENABLE(pie, AS_HELP_STRING([--enable-pie],
 			[enable position independent executables flag]), [
 	if (test "${enableval}" = "yes" &&
 				test "${ac_cv_prog_cc_pie}" = "yes"); then
@@ -132,47 +132,47 @@ AC_SUBST(NETLINK_CFLAGS)
 AC_SUBST(NETLINK_LIBS)
 AC_SUBST(NETLINK_DEPS)
 
-AC_ARG_ENABLE(test, AC_HELP_STRING([--enable-test],
+AC_ARG_ENABLE(test, AS_HELP_STRING([--enable-test],
 					[enable test/example scripts]),
 					[enable_test=${enableval}])
 AM_CONDITIONAL(TEST, test "${enable_test}" = "yes")
 
-AC_ARG_ENABLE(tools, AC_HELP_STRING([--enable-tools],
+AC_ARG_ENABLE(tools, AS_HELP_STRING([--enable-tools],
 					[enable testing tools]),
 					[enable_tools=${enableval}])
 AM_CONDITIONAL(TOOLS, test "${enable_tools}" = "yes")
 
-AC_ARG_ENABLE(nfctype1, AC_HELP_STRING([--disable-nfctype1],
+AC_ARG_ENABLE(nfctype1, AS_HELP_STRING([--disable-nfctype1],
 				[disable NFC forum type 1 tags support]),
 				[enable_nfctype1=${enableval}])
 AM_CONDITIONAL(NFCTYPE1, test "${enable_nfctype1}" != "no")
 
-AC_ARG_ENABLE(nfctype2, AC_HELP_STRING([--disable-nfctype2],
+AC_ARG_ENABLE(nfctype2, AS_HELP_STRING([--disable-nfctype2],
 				[disable NFC forum type 2 tags support]),
 				[enable_nfctype2=${enableval}])
 AM_CONDITIONAL(NFCTYPE2, test "${enable_nfctype2}" != "no")
 
-AC_ARG_ENABLE(nfctype3, AC_HELP_STRING([--disable-nfctype3],
+AC_ARG_ENABLE(nfctype3, AS_HELP_STRING([--disable-nfctype3],
 				[disable NFC forum type 3 tags support]),
 				[enable_nfctype3=${enableval}])
 AM_CONDITIONAL(NFCTYPE3, test "${enable_nfctype3}" != "no")
 
-AC_ARG_ENABLE(nfctype4, AC_HELP_STRING([--disable-nfctype4],
+AC_ARG_ENABLE(nfctype4, AS_HELP_STRING([--disable-nfctype4],
 				[disable NFC forum type 4 tags support]),
 				[enable_nfctype4=${enableval}])
 AM_CONDITIONAL(NFCTYPE4, test "${enable_nfctype4}" != "no")
 
-AC_ARG_ENABLE(nfctype5, AC_HELP_STRING([--disable-nfctype5],
+AC_ARG_ENABLE(nfctype5, AS_HELP_STRING([--disable-nfctype5],
 				[disable NFC forum type 5 tags support]),
 				[enable_nfctype5=${enableval}])
 AM_CONDITIONAL(NFCTYPE5, test "${enable_nfctype5}" != "no")
 
-AC_ARG_ENABLE(p2p, AC_HELP_STRING([--disable-p2p],
+AC_ARG_ENABLE(p2p, AS_HELP_STRING([--disable-p2p],
 				[disable NFC peer to peer support]),
 				[enable_p2p=${enableval}])
 AM_CONDITIONAL(P2P, test "${enable_p2p}" != "no")
 
-AC_ARG_ENABLE(ese, AC_HELP_STRING([--enable-ese],
+AC_ARG_ENABLE(ese, AS_HELP_STRING([--enable-ese],
 				[enable embedded SE support]),
 				[enable_ese=${enableval}])
 AM_CONDITIONAL(ESE, test "${enable_ese}" = "yes")
