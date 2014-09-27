@@ -187,6 +187,7 @@ tools_nfctool_nfctool_SOURCES = tools/nfctool/main.c \
 					tools/nfctool/display.c
 
 tools_nfctool_nfctool_LDADD = ${GLIB_LIBS} ${NETLINK_LIBS}
+endif
 
 tools_nfctool_nfctool_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} \
 			-DNEAR_PLUGIN_BUILTIN \
@@ -218,8 +219,6 @@ unit_test_snep_read_LDADD = ${GLIB_LIBS} ${DBUS_LIBS}
 check_PROGRAMS = $(unit_tests)
 
 TESTS = $(unit_tests)
-
-endif
 
 include Makefile.plugins
 
