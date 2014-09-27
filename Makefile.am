@@ -215,7 +215,7 @@ unit_test_snep_read_SOURCES = $(gdbus_sources) src/log.c src/dbus.c \
 					unit/test-utils.h
 unit_test_snep_read_LDADD = ${GLIB_LIBS} ${DBUS_LIBS}
 
-noinst_PROGRAMS += $(unit_tests)
+check_PROGRAMS = $(unit_tests)
 
 TESTS = $(unit_tests)
 
