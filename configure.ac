@@ -1,5 +1,6 @@
 AC_PREREQ(2.60)
 AC_INIT(neard, 0.14, [linux-nfc@lists.01.org])
+AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects color-tests])
 AC_CONFIG_HEADERS(config.h)
