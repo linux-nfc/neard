@@ -8,8 +8,10 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AM_MAINTAINER_MODE
 
+# Do not expand the default variables so that they can be changed at build
+# time, in the make command-line.
 if (test "${libdir}" = '${exec_prefix}/lib'); then
-	libdir="${prefix}/lib"
+	libdir='${prefix}/lib'
 fi
 
 PKG_PROG_PKG_CONFIG
