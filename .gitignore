@@ -3,6 +3,8 @@
 *.lo
 *.la
 *.so
+*.log
+*.trs
 .deps
 .libs
 .dirstamp
@@ -24,6 +26,7 @@ ltmain.sh
 m4/
 missing
 stamp-h1
+test-driver
 autom4te.cache
 TAGS
 
@@ -32,6 +35,7 @@ include/near
 include/version.h
 src/builtin.h
 src/neard
+src/neard.service
 tools/snep-send
 tools/nfctool/nfctool
 unit/test-ndef
