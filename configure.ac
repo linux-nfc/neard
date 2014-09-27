@@ -14,6 +14,11 @@ if (test "${libdir}" = '${exec_prefix}/lib'); then
 	libdir='${prefix}/lib'
 fi
 
+plugindir='${pkglibdir}/plugins'
+se_plugindir='${pkglibdir}/plugins-se'
+AC_SUBST(plugindir)
+AC_SUBST(se_plugindir)
+
 PKG_PROG_PKG_CONFIG
 
 NEARD_COMPILER_FLAGS

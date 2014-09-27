@@ -101,12 +101,6 @@ endif
 
 CLEANFILES = src/builtin.h se/builtin.h $(local_headers)
 
-plugindir = $(libdir)/near/plugins
-
-if SE
-se_plugindir = $(libdir)/neard/plugins-se
-endif
-
 configdir = ${sysconfdir}/neard
 
 dist_noinst_DATA = src/main.conf
