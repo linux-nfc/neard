@@ -8,8 +8,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AM_MAINTAINER_MODE
 
-AC_PREFIX_DEFAULT(/usr/local)
-
 if (test "${libdir}" = '${exec_prefix}/lib'); then
 	libdir="${prefix}/lib"
 fi
