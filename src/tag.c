@@ -149,8 +149,11 @@ static const char *type_string(struct near_tag *tag)
 		break;
 
 	case NFC_PROTO_ISO14443:
+		type = "Type 4A";
+		break;
+
 	case NFC_PROTO_ISO14443_B:
-		type = "Type 4";
+		type = "Type 4B";
 		break;
 
 	case NFC_PROTO_ISO15693:
