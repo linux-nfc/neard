@@ -64,7 +64,7 @@ extern int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 
 #define TAG_DATA_CC(data) ((data) + 12)
 #define TAG_DATA_LENGTH(cc) ((cc)[2] * 8)
-#define TAG_DATA_NFC(cc) ((cc)[0] & TYPE2_MAGIC)
+#define TAG_DATA_NFC(cc) ((cc)[0])
 
 #define TYPE2_NOWRITE_ACCESS	0x0F
 #define TYPE2_READWRITE_ACCESS	0x00
@@ -255,7 +255,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	near_tag_set_memory_layout(tag, NEAR_TAG_MEMORY_STATIC);
 
-	if (TAG_DATA_NFC(cc) == 0) {
+	if (TAG_DATA_NFC(cc) != TYPE2_MAGIC) {
 		DBG("Mark as blank tag");
 		near_tag_set_blank(tag, TRUE);
 	} else {
