@@ -2,7 +2,6 @@
  *
  *  neard - Near Field Communication manager
  *
- *  Copyright (C) 2014  Marvell International Ltd.
  *  Copyright (C) 2011  Intel Corporation. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -717,18 +716,27 @@ static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
 	}
 }
 
-static int adapter_select_tag(struct near_adapter *adapter,
-			      struct near_tag *tag)
+static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
+			uint32_t protocols,
+			uint16_t sens_res, uint8_t sel_res,
+			uint8_t *nfcid, uint8_t nfcid_len,
+			uint8_t iso15693_dsfid,
+			uint8_t iso15693_uid_len, uint8_t *iso15693_uid)
 {
+	struct near_tag *tag;
 	uint32_t tag_type;
-	uint32_t target_idx;
 	int err;
 
-	tag_type = __near_tag_get_type(tag);
-	target_idx = __near_tag_get_idx(tag);
-
-	if (!__near_tag_register_interface(tag))
+	tag = __near_tag_add(adapter->idx, target_idx, protocols,
+				sens_res, sel_res,
+				nfcid, nfcid_len,
+				iso15693_dsfid, iso15693_uid_len, iso15693_uid);
+	if (!tag)
 		return -ENODEV;
+
+	g_hash_table_insert(adapter->tags, GINT_TO_POINTER(target_idx), tag);
+
+	tag_type = __near_tag_get_type(tag);
 
 	err = near_adapter_connect(adapter->idx, target_idx, tag_type);
 	if (err < 0) {
@@ -747,31 +755,21 @@ static int adapter_select_tag(struct near_adapter *adapter,
 	return err;
 }
 
-
-static int adapter_add_tag(struct near_adapter *adapter, uint32_t target_idx,
-			   uint32_t protocols,
-			   uint16_t sens_res, uint8_t sel_res,
-			   uint8_t *nfcid, uint8_t nfcid_len,
-			   uint8_t iso15693_dsfid,
-			   uint8_t iso15693_uid_len, uint8_t *iso15693_uid)
+static int adapter_add_device(struct near_adapter *adapter,
+				uint32_t target_idx,
+				uint8_t *nfcid, uint8_t nfcid_len)
 {
-	struct near_tag *tag;
+	struct near_device *device;
+	int err;
 
-	tag = __near_tag_add(adapter->idx, target_idx, protocols,
-				sens_res, sel_res,
-				nfcid, nfcid_len,
-				iso15693_dsfid, iso15693_uid_len, iso15693_uid);
-	if (!tag)
+	DBG();
+
+	device = __near_device_add(adapter->idx, target_idx, nfcid, nfcid_len);
+	if (!device)
 		return -ENODEV;
 
-	g_hash_table_insert(adapter->tags, GINT_TO_POINTER(target_idx), tag);
-	return 0;
-}
-
-static int adapter_select_device(struct near_adapter *adapter,
-				 struct near_device *device)
-{
-	int err;
+	g_hash_table_insert(adapter->devices, GINT_TO_POINTER(target_idx),
+								device);
 
 	/* For p2p, reading is listening for an incoming connection */
 	err = __near_device_listen(device, device_read_cb);
@@ -789,40 +787,17 @@ static int adapter_select_device(struct near_adapter *adapter,
 		return 0;
 	}
 
-	err = __near_netlink_dep_link_up(adapter->idx,
-					 __neard_device_get_idx(device),
-					 NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
+	err = __near_netlink_dep_link_up(adapter->idx, target_idx,
+					NFC_COMM_ACTIVE, NFC_RF_INITIATOR);
 
-	if (err == -EALREADY) {
-		DBG("dep link up is already in progress");
-		err = 0;
-	}
 	if (err < 0)
 		adapter->device_link = NULL;
-	else {
-		DBG("Starting DEP timer");
-		adapter->dep_timer = g_timeout_add_seconds(1, dep_timer,
-							   adapter);
-	}
+
+	DBG("Starting DEP timer");
+
+	adapter->dep_timer = g_timeout_add_seconds(1, dep_timer, adapter);
+
 	return err;
-}
-
-static int adapter_add_device(struct near_adapter *adapter,
-			      uint32_t target_idx,
-			      uint8_t *nfcid, uint8_t nfcid_len)
-{
-	struct near_device *device;
-
-	DBG("target_idx %d", target_idx);
-
-	device = __near_device_add(adapter->idx, target_idx, nfcid, nfcid_len);
-	if (!device)
-		return -ENODEV;
-
-	g_hash_table_insert(adapter->devices, GINT_TO_POINTER(target_idx),
-								device);
-
-	return 0;
 }
 
 int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
@@ -854,6 +829,9 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 					sens_res, sel_res, nfcid, nfcid_len,
 					iso15693_dsfid,
 					iso15693_uid_len, iso15693_uid);
+
+	if (ret < 0 && adapter->constant_poll)
+		adapter_start_poll(adapter);
 
 	return ret;
 }
@@ -902,11 +880,6 @@ static gboolean poll_error(gpointer user_data)
 int __near_adapter_get_targets_done(uint32_t idx)
 {
 	struct near_adapter *adapter;
-	struct near_device *device;
-	struct near_tag *tag;
-	GList *values;
-	int targets = 0;
-	int ret = -1;
 
 	DBG("idx %d", idx);
 
@@ -914,37 +887,10 @@ int __near_adapter_get_targets_done(uint32_t idx)
 	if (!adapter)
 		return -ENODEV;
 
-	/*
-	 * In case of a multiple discovery, let's assume that we want to
-	 * connect to NFC-DEP interface if any. Then fallback to tag operations
-	 */
+	if (g_hash_table_size(adapter->devices) > 0)
+		return 0;
 
-	if (g_hash_table_size(adapter->devices)) {
-		++targets;
-		/* Try to select the first device */
-		values = g_hash_table_get_values(adapter->devices);
-		device = g_list_first(values)->data;
-		ret = adapter_select_device(adapter, device);
-		g_list_free(values);
-	}
-
-	if (ret < 0 && g_hash_table_size(adapter->tags)) {
-		++targets;
-		/* Try to select the first tag */
-		values = g_hash_table_get_values(adapter->tags);
-		tag = g_list_first(values)->data;
-		ret = adapter_select_tag(adapter, tag);
-		g_list_free(values);
-	}
-
-	if (ret < 0) {
-		DBG("selection fails");
-		/* We found at least one peer but activation fails */
-		if (adapter->constant_poll)
-			adapter_start_poll(adapter);
-	}
-
-	if (targets)
+	if (g_hash_table_size(adapter->tags) > 0)
 		return 0;
 
 	near_error("No targets found - Polling error");

@@ -2,7 +2,6 @@
  *
  *  neard - Near Field Communication manager
  *
- *  Copyright (C) 2014  Marvell International Ltd.
  *  Copyright (C) 2011  Intel Corporation. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -132,11 +131,9 @@ struct near_tag *__near_tag_add(uint32_t adapter_idx, uint32_t target_idx,
 				uint8_t iso15693_dsfid,
 				uint8_t iso15693_uid_len,
 				uint8_t *iso15693_uid);
-bool __near_tag_register_interface(struct near_tag *tag);
 void __near_tag_remove(struct near_tag *tag);
 const char *__near_tag_get_path(struct near_tag *tag);
 uint32_t __near_tag_get_type(struct near_tag *tag);
-uint32_t __near_tag_get_idx(struct near_tag *tag);
 void __near_tag_append_records(struct near_tag *tag, DBusMessageIter *iter);
 int __near_tag_read(struct near_tag *tag, near_tag_io_cb cb);
 int __near_tag_write(struct near_tag *tag,
