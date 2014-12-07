@@ -1,3 +1,18 @@
+ver 0.15
+	Added iso15693 (NFC type5) support.
+	Added Secure Element support (seeld).
+	Added iso14443-B (NFC type4b) support.
+	Added NFC type5 RMB (Read Multiple Block) support.
+	Fixed NFC type1 dynamic read.
+	Fixed NFC type1 check_presence to only read the tag ID.
+	Fixed NFC type2 CC magic number check.
+	Fixed NFC type4 NDEF detection and handling code.
+	Fixed NFC type4 check_presence implementation.
+	Fixed PHDC coding style and potential bugs.
+	Fixed the constant poll loop to retry on busy adapters.
+	Fixed an agent memory leak.
+	Fixed and cleaned the build system.
+
 ver 0.14
 	Added a Tag and Device Adapter property.
 	Added NDEF agent record payload getter.
