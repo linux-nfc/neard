@@ -36,6 +36,8 @@ include/version.h
 src/builtin.h
 src/neard
 src/neard.service
+se/builtin.h
+se/seeld
 tools/snep-send
 tools/nfctool/nfctool
 unit/test-ndef
