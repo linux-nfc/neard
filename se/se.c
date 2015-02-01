@@ -406,6 +406,9 @@ static DBusMessage *set_property(DBusConnection *conn,
 		err = se_toggle(se, enabled);
 		if (err < 0) {
 			if (err == -EALREADY) {
+				if (se->enabled != enabled)
+					goto ignore_err;
+
 				if (enabled)
 					return __near_error_already_enabled(msg);
 				else
@@ -415,8 +418,11 @@ static DBusMessage *set_property(DBusConnection *conn,
 			return __near_error_failed(msg, -err);
 		}
 
+ignore_err:
 		se->enabled = enabled;
-		g_idle_add(__seel_ace_add, se);
+
+		if (enabled)
+			g_idle_add(__seel_ace_add, se);
 	} else {
 		return __near_error_invalid_property(msg);
 	}
