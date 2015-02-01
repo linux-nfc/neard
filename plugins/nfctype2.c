@@ -62,6 +62,8 @@ extern int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 #define DATA_BLOCK_START 4
 #define TYPE2_MAGIC 0xe1
 
+#define META_BLOCK_MULC_END 0x28
+
 #define TAG_DATA_CC(data) ((data) + 12)
 #define TAG_DATA_LENGTH(cc) ((cc)[2] * 8)
 #define TAG_DATA_NFC(cc) ((cc)[0])
@@ -132,7 +134,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	struct type2_cmd cmd;
 	uint8_t *nfc_data;
 	size_t current_length, length_read, data_length;
-	uint32_t adapter_idx;
+	uint32_t adapter_idx, target_idx;
 	int read_blocks;
 
 	DBG("%d", length);
@@ -153,7 +155,8 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 	memcpy(nfc_data + current_length, resp + NFC_HEADER_SIZE, length_read);
 
-	if (current_length + length_read == data_length) {
+	if (current_length + length_read == data_length ||
+	    (length < READ_SIZE && tag->current_block == META_BLOCK_MULC_END)) {
 		GList *records;
 
 		/* TODO parse tag->data for NDEFS, and notify target.c */
@@ -163,6 +166,20 @@ static int data_recv(uint8_t *resp, int length, void *data)
 
 		records = near_tlv_parse(nfc_data, data_length);
 		near_tag_add_records(tag->tag, records, tag->cb, 0);
+
+		if (length < READ_SIZE) {
+			/*
+			 * We reached a non readable block.
+			 * According to Mifare Ultralight C spec MF0ICU2,
+			 * if we read a block from 0x2c the tag will return
+			 * NAK on the RF interface.
+			 * For future check presence, we then need to reactivate
+			 * the target.
+			 */
+			target_idx = near_tag_get_target_idx(tag->tag);
+			near_tag_activate_target(adapter_idx, target_idx,
+						NFC_PROTO_MIFARE);
+		}
 
 		g_free(tag);
 
