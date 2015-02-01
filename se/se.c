@@ -122,7 +122,8 @@ static void io_cb(void *context,
 	if (!err)
 		err = __seel_apdu_resp_status(apdu, apdu_length);
 
-	req->cb(req->context, apdu, apdu_length, err);
+	if (req->cb)
+		req->cb(req->context, apdu, apdu_length, err);
 
 	__seel_apdu_free(req->apdu);
 	g_free(req);
@@ -461,19 +462,39 @@ static void select_aid_cb(void *context,
 			int err)
 {
 	struct open_channel_context *ctx = context;
+	struct seel_apdu *close_channel;
 	struct seel_channel *channel;
 	char *path;
 	DBusConnection *conn;
+	int ret;
 
 	conn = near_dbus_get_connection();
 
-	if (err != 0)
-		return open_channel_error(ctx, err);
+	if (err != 0) {
+		/*
+		 * err != 0 means SW != 9000.
+		 * In this case, we need to clean the previously
+		 * allocated logical channel.
+		 */
+		close_channel = __seel_apdu_close_logical_channel(ctx->channel);
+		if (!close_channel)
+			goto err;
+
+		ret = __seel_se_queue_io(ctx->se, close_channel, NULL, ctx);
+		if (ret < 0) {
+			near_error("close channel error %d", ret);
+			err = ret;
+		}
+
+		goto err;
+	}
 
 	channel = __seel_channel_add(ctx->se, ctx->channel,
 					ctx->aid, ctx->aid_len, false);
-	if (!channel)
-		return open_channel_error(ctx, -ENOMEM);
+	if (!channel) {
+		err = -ENOMEM;
+		goto err;
+	}
 
 	path = __seel_channel_get_path(channel);
 	g_hash_table_replace(ctx->se->channel_hash, path, channel);
@@ -485,6 +506,10 @@ static void select_aid_cb(void *context,
 	dbus_message_unref(ctx->msg);
 	ctx->msg = NULL;
 	g_free(ctx);
+	return;
+
+err:
+	return open_channel_error(ctx, err);
 }
 
 static void open_channel_cb(void *context,
