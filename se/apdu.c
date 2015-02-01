@@ -236,10 +236,23 @@ static int apdu_trailer_status(struct iso7816_apdu_resp *trailer)
 {
 	DBG("SW1 0x%x SW2 0x%x", trailer->sw1, trailer->sw2);
 
+	/*
+	 * SIMAlliance_OpenMobileAPI3_0_release1_FINAL.pdf
+	 *
+	 * The API shall handle received status word as follows:
+	 * If the status word indicates that the SE was able to open
+	 * a channel (e.g status word '90 00' or status words
+	 * referencing a warning in ISO-7816-4: '62 XX' or '63 XX')
+	 * the API shall keep the channel opened and the next
+	 * getSelectResponse() shall return the received status word.
+	 */
 	switch (trailer->sw1) {
 	case 0x90:
 		if (trailer->sw2 == 0)
 			return 0;
+	case 0x63:
+	case 0x62:
+		return 0;
 	default:
 		return -EIO;
 	}
