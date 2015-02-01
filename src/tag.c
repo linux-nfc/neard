@@ -1187,6 +1187,13 @@ int __near_tag_check_presence(struct near_tag *tag, near_tag_io_cb cb)
 	return -EOPNOTSUPP;
 }
 
+int near_tag_activate_target(uint32_t adapter_idx, uint32_t target_idx,
+			uint32_t protocol)
+{
+	return __near_netlink_activate_target(adapter_idx, target_idx,
+					protocol);
+}
+
 static void free_tag(gpointer data)
 {
 	struct near_tag *tag = data;
