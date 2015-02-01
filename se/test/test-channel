@@ -1,0 +1,64 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+
+bus = dbus.SystemBus()
+
+def extract_byte_array(byte_array):
+	return ' '.join("{:02x}".format(byte) for byte in byte_array)
+
+def usage():
+	print "Usage: %s <command>" % (sys.argv[0])
+	print ""
+	print "  list"
+	print "  send_apdu nfcX_<se_type>_seX channelX <apdu>"
+	sys.exit(1)
+
+if (len(sys.argv) < 2):
+        usage()
+
+if (sys.argv[1] == "list"):
+	if (len(sys.argv) != 3):
+		usage()
+	else:
+		path = "/org/neard/se/" + sys.argv[2]
+
+		seel = dbus.Interface(bus.get_object("org.neard.se", path),
+							"org.neard.se.SecureElement")
+		properties = seel.GetProperties()
+
+		for path in properties["Channels"]:
+			print "[ %s ]" % (path)
+
+			channel = dbus.Interface(bus.get_object("org.neard.se", path),
+						"org.neard.se.Channel")
+			properties = channel.GetProperties()
+
+			for key in properties.keys():
+				if key in ["Basic"]:
+					if properties[key] == dbus.Boolean(1):
+						val = "true"
+					else:
+						val = "false"
+					print "    %s = %s" % (key, val)
+
+				if key in ["AID"]:
+					print "    %s = %s" % (key, extract_byte_array(properties[key]))
+	sys.exit(0)
+
+if (sys.argv[1] == "send_apdu"):
+	if (len(sys.argv) != 5):
+		usage()
+	else:
+		path = "/org/neard/se/" + sys.argv[2] + "/" + sys.argv[3]
+
+		channel = dbus.Interface(bus.get_object("org.neard.se", path),
+					"org.neard.se.Channel")
+
+		response = channel.SendAPDU(sys.argv[4].decode("hex"))
+
+		print "--> %s" % extract_byte_array(response)
+	sys.exit(0)
+
+usage()
