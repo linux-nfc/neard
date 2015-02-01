@@ -1,0 +1,114 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+
+bus = dbus.SystemBus()
+
+def extract_list(list):
+	val = "["
+	for i in list:
+		val += " " + str(i)
+	val += " ]"
+	return val
+
+def usage():
+	print "Usage: %s <command>" % (sys.argv[0])
+	print ""
+	print "  list"
+	print "  enabled nfcX_<se_type>_seX [on/off]"
+	print "  open_channel nfcX_<se_type>_seX <AID>"
+	print "  close_channel nfcX_<se_type>_seX channelX"
+	sys.exit(1)
+
+if (len(sys.argv) < 2):
+	usage()
+
+if (sys.argv[1] == "list"):
+	if (len(sys.argv) != 2):
+		usage()
+	else:
+		manager = dbus.Interface(bus.get_object("org.neard.se", "/"),
+							"org.neard.se.Manager")
+		properties = manager.GetProperties()
+
+		for path in properties["SecureElements"]:
+			print "[ %s ]" % (path)
+
+			seel = dbus.Interface(bus.get_object("org.neard.se", path),
+						"org.neard.se.SecureElement")
+			properties = seel.GetProperties()
+
+			for key in properties.keys():
+				if key in ["Enabled"]:
+					if properties[key] == dbus.Boolean(1):
+						val = "true"
+					else:
+						val = "false"
+					print "    %s = %s" % (key, val)
+
+				if key in ["Type"]:
+					print "    %s = %s" % (key, str(properties[key]))
+
+				if key in ["Channels"]:
+					print "    %s = %s" % (key, extract_list(properties[key]))
+	sys.exit(0)
+
+if (sys.argv[1] == "enabled"):
+	if (len(sys.argv) < 4):
+		usage()
+	else:
+		path = "/org/neard/se/" + sys.argv[2]
+
+		seel = dbus.Interface(bus.get_object("org.neard.se", path),
+					"org.neard.se.SecureElement")
+
+		try:
+			if (sys.argv[3] == "on"):
+				val = seel.SetProperty("Enabled", dbus.Boolean(1), timeout = 10)
+			elif (sys.argv[3] == "off"):
+				val = seel.SetProperty("Enabled", dbus.Boolean(0), timeout = 10)
+			else:
+				print "Invalid option %s" % sys.argv[3]
+
+		except dbus.DBusException, error:
+			print "%s: %s" % (error._dbus_error_name, error.message)
+	sys.exit(0)
+
+if (sys.argv[1] == "open_channel"):
+	if (len(sys.argv) < 4):
+		usage()
+	else:
+		path = "/org/neard/se/" + sys.argv[2]
+
+		seel = dbus.Interface(bus.get_object("org.neard.se", path),
+					"org.neard.se.SecureElement")
+
+		try:
+			channel = seel.OpenChannel(sys.argv[3].decode("hex"))
+
+			print "Opened channel: %s" % str(channel)
+		except dbus.DBusException, error:
+			print "%s: %s" % (error._dbus_error_name, error.message)
+	sys.exit(0)
+
+if (sys.argv[1] == "close_channel"):
+	if (len(sys.argv) < 4):
+		usage()
+	else:
+		seel_path = "/org/neard/se/" + sys.argv[2]
+		channel_path = seel_path + "/" + sys.argv[3]
+
+		seel = dbus.Interface(bus.get_object("org.neard.se", seel_path),
+					"org.neard.se.SecureElement")
+
+		channel = dbus.Interface(bus.get_object("org.neard.se", channel_path),
+					"org.neard.se.Channel")
+		try:
+			seel.CloseChannel(channel)
+
+		except dbus.DBusException, error:
+			print "%s: %s" % (error._dbus_error_name, error.message)
+	sys.exit(0)
+
+usage()
