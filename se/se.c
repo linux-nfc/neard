@@ -416,6 +416,7 @@ static DBusMessage *set_property(DBusConnection *conn,
 		}
 
 		se->enabled = enabled;
+		g_idle_add(__seel_ace_add, se);
 	} else {
 		return __near_error_invalid_property(msg);
 	}
@@ -715,8 +716,6 @@ char *__seel_se_add(uint32_t se_idx, uint8_t ctrl_idx,
 					SEEL_SE_INTERFACE,
 					se_methods, se_signals,
 					NULL, se, NULL);
-
-	g_idle_add(__seel_ace_add, se);
 
 	return se->path;
 }
