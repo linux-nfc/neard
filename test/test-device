@@ -41,9 +41,7 @@ if (len(sys.argv) < 2):
 
 if (sys.argv[1] == "list"):
 	if (len(sys.argv) < 3):
-		om = dbus.Interface(bus.get_object("org.neard", "/"),
-					"org.freedesktop.DBus.ObjectManager")
-		objects = om.GetManagedObjects()
+		objects = neardutils.get_managed_objects()
 		for path, interfaces in objects.iteritems():
 			if "org.neard.Device" not in interfaces:
 				continue
@@ -59,9 +57,7 @@ if (sys.argv[1] == "list"):
 
 if (sys.argv[1] == "dump"):
 	if (len(sys.argv) < 3):
-		om = dbus.Interface(bus.get_object("org.neard", "/"),
-					"org.freedesktop.DBus.ObjectManager")
-		objects = om.GetManagedObjects()
+		objects = neardutils.get_managed_objects()
 		for path, interfaces in objects.iteritems():
 			if "org.neard.Device" not in interfaces:
 				continue
