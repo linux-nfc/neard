@@ -142,7 +142,6 @@ static int send_io(struct seel_se *se)
 {
 	GList *first;
 	struct seel_se_ioreq *req;
-	int err;
 
 	DBG("");
 
@@ -162,12 +161,13 @@ static int send_io(struct seel_se *se)
 	__seel_apdu_dump(__seel_apdu_data(req->apdu),
 				__seel_apdu_length(req->apdu));
 
-	err = se->io_driver->transceive(se->ctrl_idx, se->se_idx,
+	if (se->io_driver && se->io_driver->transceive)
+		return se->io_driver->transceive(se->ctrl_idx, se->se_idx,
 						__seel_apdu_data(req->apdu),
 						__seel_apdu_length(req->apdu),
 						io_cb, req);
 
-	return err;
+	return -EIO;
 }
 
 int __seel_se_queue_io(struct seel_se *se, struct seel_apdu *apdu,
