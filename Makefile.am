@@ -155,7 +155,7 @@ test_SCRIPTS = $(test_scripts)
 endif
 
 if TOOLS
-bin_PROGRAMS += tools/nfctool/nfctool
+bin_PROGRAMS += tools/nfctool/nfctool tools/nciattach
 
 noinst_PROGRAMS = tools/snep-send
 
@@ -190,6 +190,8 @@ tools_nfctool_nfctool_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS}
 			-DPLUGINDIR=\""$(plugindir)"\" \
 			-DCONFIGDIR=\""$(configdir)\"" \
 			-I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+
+tools_nciattach_SOURCES = tools/nciattach.c
 
 unit_tests = unit/test-ndef-parse unit/test-ndef-build unit/test-snep-read
 
