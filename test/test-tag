@@ -7,28 +7,32 @@ import neardutils
 bus = dbus.SystemBus()
 
 def usage():
-	print("Usage: %s <command>" % (sys.argv[0]) )
-	print("")
-	print("  list")
-	print("  dump <tag>")
-	print("  write <tag> <type> <...>")
-	print "		If type is Text, parameters are <encoding> <language> <representation>"
-	print "		If type is URI, parameters are <uri>"
-	print "		If type is SmartPoster, parameters are <uri>"
-	print "		If type is SMS, parameters are <phone number> <text>"
-	print "		If type is E-Mail, parameters are <e-mail address>"
-	print "		If type is MIME, and WiFi AP is passphrase protected"
-	print "		   Type is MIME, parameters are wifi_wsc <ssid> <passphrase>"
-	print "		If type is MIME, and WiFi AP is open network"
-	print "		   Type is MIME, parameters are wifi_wsc <ssid>"
-	print "e.g. < %s write /org/neard/nfc0/tag0 Text UTF-8 en-US hello,NFC! >" % (sys.argv[0])
-	print "e.g. < %s write /org/neard/nfc0/tag0 URI http://www.nfc-forum.com >" % (sys.argv[0])
-	print "e.g. < %s write /org/neard/nfc0/tag0 SmartPoster http://www.nfc-forum.com >" % (sys.argv[0])
-	print "e.g. < %s write /org/neard/nfc0/tag0 SMS 0102030405 YourSMSMessage >" % (sys.argv[0])
-	print "e.g. < %s write /org/neard/nfc0/tag0 E-Mail test@test.com >" % (sys.argv[0])
-	print "e.g. < %s write /org/neard/nfc0/tag0 MIME wifi_wsc YourAPname passphrase >" % (sys.argv[0])
-	print "e.g. < %s write /org/neard/nfc0/tag0 MIME wifi_wsc YourAPname >" % (sys.argv[0])
+	print("Usage: %s <command>" % sys.argv[0])
+	text = """
+list
+dump <tag>
+write <tag> <type> <...>
 
+	If type is Text, parameters are <encoding> <language> <representation>
+	If type is URI, parameters are <uri>
+	If type is SmartPoster, parameters are <uri>
+	If type is SMS, parameters are <phone number> <text>
+	If type is E-Mail, parameters are <e-mail address>
+	If type is MIME, and WiFi AP is passphrase protected
+		Type is MIME, parameters are wifi_wsc <ssid> <passphrase>
+	If type is MIME, and WiFi AP is open network
+		Type is MIME, parameters are wifi_wsc <ssid>
+
+For example: # %s write /org/neard/nfc0/tag0 \\
+	Text UTF-8 en-US hello,NFC!
+	URI http://www.nfc-forum.com
+	SmartPoster http://www.nfc-forum.com
+	SMS 0102030405 YourSMSMessage
+	E-Mail test@test.com
+	MIME wifi_wsc YourAPname passphrase
+	MIME wifi_wsc YourAPname
+"""
+	print(text % sys.argv[0])
 
 	sys.exit(1)
 
