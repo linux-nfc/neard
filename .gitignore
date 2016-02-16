@@ -4,6 +4,7 @@
 *.la
 *.so
 *.log
+*.pyc
 *.trs
 .deps
 .libs
