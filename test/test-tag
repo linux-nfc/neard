@@ -79,6 +79,26 @@ if (sys.argv[1] == "dump"):
 
 		sys.exit(0)
 
+def write_mime(args):
+
+	data = { "Type" : "MIME" }
+
+	if len(args) < 2:
+		usage()
+
+	if args[0] == "wifi_wsc":
+
+		data["MIME"] = "application/vnd.wfa.wsc"
+		data["SSID"] = args[1]
+
+		if len(args) > 2:
+
+			data["Passphrase"] = args[2]
+	else:
+		usage()
+
+	tag.Write(data)
+
 if (sys.argv[1] == "write"):
 	if (len(sys.argv) < 5):
 		usage()
@@ -110,17 +130,8 @@ if (sys.argv[1] == "write"):
 			"URI" : URI }))
 
 	elif sys.argv[3] in ["MIME"]:
-		if len(sys.argv) == 6:
-			if sys.argv[4] in ["wifi_wsc"]:
-				tag.Write(({ "Type" : "MIME",
-							 "MIME" : "application/vnd.wfa.wsc",
-							 "SSID" : sys.argv[5] }))
-		elif len(sys.argv) == 7:
-			if sys.argv[4] in ["wifi_wsc"]:
-				tag.Write(({ "Type" : "MIME",
-							 "MIME" : "application/vnd.wfa.wsc",
-							 "SSID" : sys.argv[5],
-							 "Passphrase" : sys.argv[6] }))
+		write_mime(sys.argv[4:])
+
 	else:
 		usage()
 
