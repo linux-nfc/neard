@@ -38,6 +38,7 @@ src/neard
 src/neard.service
 se/builtin.h
 se/seeld
+tools/nciattach
 tools/snep-send
 tools/nfctool/nfctool
 unit/test-ndef
