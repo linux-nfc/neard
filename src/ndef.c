@@ -375,7 +375,7 @@ static gboolean property_get_type(const GDBusPropertyTable *property,
 		type = "AAR";
 		break;
 	}
-	
+
 	if (!type)
 		return FALSE;
 
@@ -2974,7 +2974,7 @@ int near_ndef_count_records(uint8_t *ndef_in, size_t ndef_in_length,
 	int err;
 	size_t offset;
 	struct near_ndef_record *record = NULL;
-	int counted_records = 0 ;
+	int counted_records = 0;
 
 	DBG("");
 
