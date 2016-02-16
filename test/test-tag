@@ -99,32 +99,31 @@ if (sys.argv[1] == "write"):
 			"URI" : sys.argv[4] }))
 
 	elif sys.argv[3] in ["SmartPoster"]:
-	     tag.Write(({ "Type" : "SmartPoster",
+		tag.Write(({ "Type" : "SmartPoster",
 			"URI" : sys.argv[4] }))
 
 	elif sys.argv[3] in ["SMS"]:
-             URI = "sms:" + sys.argv[4] + "?body=" + sys.argv[5]
-	     tag.Write(({ "Type" : "URI",
+		URI = "sms:" + sys.argv[4] + "?body=" + sys.argv[5]
+		tag.Write(({ "Type" : "URI",
 			"URI" : URI }))
 
 	elif sys.argv[3] in ["E-Mail"]:
-             URI = "mailto:" + sys.argv[4]
-	     tag.Write(({ "Type" : "URI",
+		URI = "mailto:" + sys.argv[4]
+		tag.Write(({ "Type" : "URI",
 			"URI" : URI }))
 
 	elif sys.argv[3] in ["MIME"]:
-	     if len(sys.argv) == 6:
-		     if sys.argv[4] in ["wifi_wsc"]:
-			tag.Write(({ "Type" : "MIME",
-				"MIME" : "application/vnd.wfa.wsc",
-				"SSID" : sys.argv[5] }))
-
-	     elif len(sys.argv) == 7:
-		 if sys.argv[4] in ["wifi_wsc"]:
-			tag.Write(({ "Type" : "MIME",
-				"MIME" : "application/vnd.wfa.wsc",
-				"SSID" : sys.argv[5],
-				"Passphrase" : sys.argv[6] }))
+		if len(sys.argv) == 6:
+			if sys.argv[4] in ["wifi_wsc"]:
+				tag.Write(({ "Type" : "MIME",
+							 "MIME" : "application/vnd.wfa.wsc",
+							 "SSID" : sys.argv[5] }))
+		elif len(sys.argv) == 7:
+			if sys.argv[4] in ["wifi_wsc"]:
+				tag.Write(({ "Type" : "MIME",
+							 "MIME" : "application/vnd.wfa.wsc",
+							 "SSID" : sys.argv[5],
+							 "Passphrase" : sys.argv[6] }))
 	else:
 		usage()
 
