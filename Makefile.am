@@ -53,7 +53,7 @@ BUILT_SOURCES = src/builtin.h
 AM_CPPFLAGS = ${GLIB_CFLAGS} ${DBUS_CFLAGS} ${NETLINK_CFLAGS} \
 		-DNEAR_PLUGIN_BUILTIN -DPLUGINDIR=\""$(plugindir)"\" \
 		-DCONFIGDIR=\""$(configdir)\"" \
-		-I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
+		-I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus -I$(srcdir)/src
 
 AM_CFLAGS = ${builtin_cflags} -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/gdbus
 
