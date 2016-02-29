@@ -22,6 +22,8 @@ write <tag> <type> <...>
 		Type is MIME, parameters are wifi_wsc <ssid> <passphrase>
 	If type is MIME, and WiFi AP is open network
 		Type is MIME, parameters are wifi_wsc <ssid>
+	For MIME with arbitrary content, parameters are:
+			<ContentType> <Content>
 
 For example: # %s write /org/neard/nfc0/tag0 \\
 	Text UTF-8 en-US hello,NFC!
@@ -31,6 +33,7 @@ For example: # %s write /org/neard/nfc0/tag0 \\
 	E-Mail test@test.com
 	MIME wifi_wsc YourAPname passphrase
 	MIME wifi_wsc YourAPname
+	MIME 'application/octet-stream' 1234
 """
 	print(text % sys.argv[0])
 
@@ -95,7 +98,8 @@ def write_mime(args):
 
 			data["Passphrase"] = args[2]
 	else:
-		usage()
+		data["MIME"] = args[0]
+		data["MIMEPayload"] = dbus.ByteArray(args[1])
 
 	tag.Write(data)
 
