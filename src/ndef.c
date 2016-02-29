@@ -2,7 +2,7 @@
  *
  *  neard - Near Field Communication manager
  *
- *  Copyright (C) 2011  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2011-2016  Intel Corporation. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -149,6 +149,8 @@ struct near_ndef_mime_payload {
 		enum handover_carrier carrier_type;
 		uint16_t properties;	/* e.g.: NO_PAIRING_KEY */
 	} handover;
+	uint8_t *payload;
+	uint32_t payload_len;
 };
 
 /* Handover record definitions */
@@ -637,6 +639,34 @@ static gboolean property_get_aar(const GDBusPropertyTable *property,
 	return TRUE;
 }
 
+static gboolean mime_payload_exists(const GDBusPropertyTable *property,
+					void *data)
+{
+	struct near_ndef_record *record = data;
+	gboolean exists = record->mime->payload_len && record->mime->payload;
+
+	DBG("%s", exists ? "" : "No MIME payload");
+
+	return exists;
+}
+
+static gboolean property_get_mime_payload(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_ndef_record *record = user_data;
+	DBusMessageIter array;
+
+	DBG("");
+
+	dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY,
+			DBUS_TYPE_BYTE_AS_STRING, &array);
+	dbus_message_iter_append_fixed_array(&array, DBUS_TYPE_BYTE,
+			&record->mime->payload, record->mime->payload_len);
+	dbus_message_iter_close_container(iter, &array);
+
+	return TRUE;
+}
+
 static const GDBusPropertyTable record_properties[] = {
 
 	{ "Type", "s", property_get_type },
@@ -649,6 +679,8 @@ static const GDBusPropertyTable record_properties[] = {
 	{ "Size", "u", property_get_size, NULL, sp_size_exists },
 	{ "MIME", "s", property_get_mime, NULL, mime_exists },
 	{ "AAR", "s", property_get_aar, NULL, aar_exists },
+	{ "MIMEPayload", "ay", property_get_mime_payload, NULL,
+						mime_payload_exists },
 	{ }
 };
 
@@ -697,6 +729,7 @@ static void free_mime_payload(struct near_ndef_mime_payload *mime)
 	if (!mime)
 		return;
 
+	g_free(mime->payload);
 	g_free(mime->type);
 	g_free(mime);
 }
@@ -1518,10 +1551,20 @@ static struct near_ndef_mime_payload *parse_mime_type(
 	} else {
 		g_free(c_temp);
 		c_temp = NULL;
-		*c_data = NULL;
-		return mime;
-	}
 
+		if (!record->header->payload_len)
+			goto fail;
+
+		mime->payload = g_try_malloc0(record->header->payload_len);
+		if (!mime->payload) {
+			near_error("Memory allocation failed (MIME payload)");
+			goto fail;
+		}
+
+		mime->payload_len = record->header->payload_len;
+		memcpy(mime->payload, ndef_data + offset, mime->payload_len);
+	}
+fail:
 	*c_data = c_temp;
 
 	return mime;
@@ -3497,7 +3540,8 @@ static char *get_mime_payload_data(DBusMessageIter iter,
 		dbus_message_iter_next(&ent_iter);
 		dbus_message_iter_recurse(&ent_iter, &var_iter);
 
-		if (g_strcmp0(key, "Payload") == 0) {
+		if (g_strcmp0(key, "Payload") == 0 ||
+				g_strcmp0(key, "MIMEPayload") == 0) {
 			if (dbus_message_iter_get_arg_type(&var_iter) ==
 							DBUS_TYPE_ARRAY &&
 			    dbus_message_iter_get_element_type(&var_iter) ==
