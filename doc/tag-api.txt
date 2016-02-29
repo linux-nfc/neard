@@ -125,3 +125,8 @@ Properties	string Type [readonly]
 			towards launching an Android specific application.
 
 			It is only valid for AAR NDEFs.
+
+		array{byte} MIMEPayload [readonly]
+
+			This is the MIME payload for MIME records
+			with arbitrary payload.
