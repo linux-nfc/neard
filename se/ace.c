@@ -826,9 +826,24 @@ bool __seel_ace_apdu_allowed(struct seel_channel *channel, uint8_t *hash,
 	if (!ace->rules)
 		return false;
 
+	/* Ref. GP SE Access Control specification, Chapter 4: Device Interface
+	 * If the secure element is a uicc, a device application can access an SE
+	 * application in all of the following case:
+	 * - The ARA-M is accessible and provides a rule which explicitly allows the
+	 * access.
+	 * - The ARA-M is not accessible but the ARF contains a rule which allows the
+	 * access.
+	 *
+	 * If the secure element is not a uicc, a device application can access an SE
+	 * application in all of the following case:
+	 * - The ARA-M is not accessible on the SE (e.g not installed, not selectable,
+	 * or locked).
+	 * - The ARA-M is accessible and provides a rule which explicitly allows the
+	 * access.
+	 */
 	aid = __seel_channel_get_aid(channel, &aid_len);
 	if (!aid)
-		return false;
+		return __seel_se_get_type(se) != SEEL_SE_UICC;
 
 	/* a) Try to find a specific rule */
 	rule = find_specific_rule(ace, aid, aid_len, hash);

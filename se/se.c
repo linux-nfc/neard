@@ -276,6 +276,11 @@ const char *__seel_se_get_path(struct seel_se *se)
 	return se->path;
 }
 
+uint8_t __seel_se_get_type(struct seel_se *se)
+{
+	return se->se_type;
+}
+
 const GSList *__seel_se_get_hashes(struct seel_se *se, const char *owner)
 {
 	pid_t pid;

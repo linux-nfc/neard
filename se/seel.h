@@ -42,6 +42,7 @@ struct seel_cert_driver *__seel_driver_cert_get(void);
 struct seel_se *__seel_se_get(uint32_t se_idx, uint8_t ctrl_idx,
 			      uint8_t ctrl_type);
 const char *__seel_se_get_path(struct seel_se *se);
+uint8_t __seel_se_get_type(struct seel_se *se);
 const GSList *__seel_se_get_hashes(struct seel_se *se, const char *owner);
 int __seel_se_queue_io(struct seel_se *se, struct seel_apdu *apdu,
 		       transceive_cb_t cb, void *context);
