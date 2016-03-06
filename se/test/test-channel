@@ -12,7 +12,7 @@ def usage():
 	print "Usage: %s <command>" % (sys.argv[0])
 	print ""
 	print "  list"
-	print "  send_apdu nfcX_<se_type>_seX channelX <apdu>"
+	print "  send_apdu se/nfcX_<se_type>_seX channelX <apdu>"
 	sys.exit(1)
 
 if (len(sys.argv) < 2):
