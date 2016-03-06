@@ -12,49 +12,52 @@ import dbus.mainloop.glib
 
 import traceback
 
+import neardutils
+
 ##=================================================================
 class Neard:
 
-    #signal handler #1 for Manager
-    def manager_Added(self, name):
-        print (" Added %s") % name
-        self.manager_getDetails()
+    def interface_Added(self, path, interface):
+        print (" New interface added: %s") % path
+        self.objects = neardutils.get_managed_objects()
+        self.interface_updateDetails(interface, path)
 
-    #signal handler #2 for Manager
-    def manager_Removed(self, name):
-        print (" Removed %s") % name
-        if self.adapters_remove is not None:
-            self.adapter_update(name)
-            return
+    def interface_Removed(self, path, interface):
+        print (" Remove interface: %s") % path
+        self.objects = neardutils.get_managed_objects()
+        self.interface_updateDetails(interface)
 
-    #connect to the manager in order to be notified on
-    #add/remove adapter
-    def manager_Connect(self):
+
+    #connect to the object_manager in order to be notified on
+    #add/remove interface
+    def interfaces_Connect(self):
         try:
-            manager_obj = self.systemBus.get_object('org.neard', "/")
-            # Add 2 handlers to follow Adapters
-            manager_obj.connect_to_signal('AdapterAdded',
-                                           self.manager_Added,
-                                          'org.neard.Manager')
-            manager_obj.connect_to_signal('AdapterRemoved',
-                                          self.manager_Removed,
-                                          'org.neard.Manager')
-            self.iface_manager = dbus.Interface(manager_obj, 'org.neard.Manager')
-
+            print 'interfaces_Connect'
+            bus = dbus.SystemBus()
+            self.objects = neardutils.get_managed_objects()
+            bus.add_signal_receiver(self.interface_Added, bus_name=neardutils.SERVICE_NAME,
+                                    dbus_interface="org.freedesktop.DBus.ObjectManager",
+                                    signal_name="InterfacesAdded")
+            bus.add_signal_receiver(self.interface_Removed, bus_name=neardutils.SERVICE_NAME,
+                                    dbus_interface="org.freedesktop.DBus.ObjectManager",
+                                    signal_name="InterfacesRemoved")
         except:
-            print ("Can't connect to org.neard.Manager");
-            self.iface_manager = None
-        #Retrieve the manager informations
-        self.manager_getDetails()
+            print ("Can't connect to org.freedesktop.DBus.ObjectManager");
+            self.objects = None
 
-    def manager_getDetails(self):
-        #No iface_manager means adapter removed
-        if self.iface_manager is None:
-            if self.adapters_remove is not None:
-                self.adapters_remove()
-            return
-        #Need to update adapter's details
-        self.adapter_updateDetails(self.iface_manager.GetProperties())
+        #Retrieve the manager informations
+        self.interface_getDetails()
+
+    def interface_getDetails(self):
+        self.adapter_updateDetails()
+
+    def interface_updateDetails(self, interface, path=None):
+        if neardutils.ADAPTER_INTERFACE in interface:
+            self.adapter_updateDetails()
+        elif neardutils.TAG_INTERFACE in interface:
+            self.tag_updateDetails(path)
+        elif neardutils.RECORD_INTERFACE in interface:
+            self.record_updateDetails(path)
 
     def adapter_PropertyChanged(self, prop, value, adapt_path = None):
         print("Prop changed: %s") % prop
@@ -65,29 +68,33 @@ class Neard:
         else:
             self.adapter_update(adapt_path, adapt_properties)
 
-        #Update the records UI
-    def record_updateDetails(self, tag_properties):
-         for record_path in tag_properties["Records"]:
-            print ("REC %s ") % record_path
-            record_obj = self.systemBus.get_object('org.neard',
-                                                     record_path)
-            record_iface = dbus.Interface(record_obj,'org.neard.Record')
-            record_properties = record_iface.GetProperties()
+    #Update the records UI
+    def record_updateDetails(self, tag_path=None):
+        if tag_path is not None:
+            for record_path, record_iface in self.objects.iteritems():
 
-            self.recordregistered[record_path] = True
+                if neardutils.RECORD_INTERFACE not in record_iface:
+                    continue
 
-            # call UI update
-            self.records_update(record_path, record_properties)
+                record_properties = record_iface[neardutils.RECORD_INTERFACE]
+
+                self.recordregistered[record_path] = True
+
+                # call UI update
+                self.records_update(record_path, record_properties)
+        else:
+            self.records_update()
 
     #Update the tags UI
-    def tag_updateDetails(self, adapt_properties):
-        if adapt_properties["Tags"]:
-            for tag_path in adapt_properties["Tags"]:
-                print ("TAG %s ") % tag_path
-                tag_obj = self.systemBus.get_object('org.neard', tag_path)
+    def tag_updateDetails(self, adapter_path=None):
+        if adapter_path is not None:
+            for tag_path, interfaces in self.objects.iteritems():
+                if neardutils.TAG_INTERFACE not in interfaces:
+                    continue
 
-                tag_iface = dbus.Interface(tag_obj,'org.neard.Tag')
-                tag_properties = tag_iface.GetProperties()
+                print ("TAG %s ") % tag_path
+
+                tag_properties = interfaces[neardutils.TAG_INTERFACE]
 
                 self.tagregistered[tag_path] = True
                 # call UI update
@@ -101,42 +108,35 @@ class Neard:
 
 
     #Something changed, must update the UI
-    def adapter_updateDetails(self, properties):
-        if self.adapter_update is not None and "Adapters" in properties:
-            for adapt_path in properties["Adapters"]:
-                if adapt_path in self.adaptregistered:
-                    print (" already registered %s") % adapt_path
-                else:
-                    #Get valuable informations from the object
-                    adapter_obj = self.systemBus.get_object('org.neard',
-                                                         adapt_path)
-                    adapter_obj.connect_to_signal('PropertyChanged',
-                                               self.adapter_PropertyChanged,
-                                               'org.neard.Adapter',
-                                               path_keyword='adapt_path')
+    def adapter_updateDetails(self):
+        for adapt_path, interfaces in self.objects.iteritems():
+            if neardutils.ADAPTER_INTERFACE not in interfaces:
+                   continue
 
-                    adapt_iface = dbus.Interface(adapter_obj,'org.neard.Adapter')
-                    adapt_properties = adapt_iface.GetProperties()
+            if adapt_path in self.adaptregistered:
+                   print (" already registered %s") % adapt_path
+            else:
+                   adapt_properties = interfaces[neardutils.ADAPTER_INTERFACE]
 
-                    self.adaptregistered[adapt_path] = True
+                   self.adaptregistered[adapt_path] = True
 
-                    #Update display info
-                    self.adapter_update(adapt_path, adapt_properties)
+                   #Update display info
+                   self.adapter_update(adapt_path, adapt_properties)
 
-                    #udpate UI for tags
-                    self.tag_updateDetails(adapt_properties)
+                   #udpate UI for tags
+                   self.tag_updateDetails()
 
 
     #Search DBUS to find any neard instance
     def neardNameOwnerChanged(self, proxy):
         if proxy:
             print("Neard is connected to System bus")
-            self.manager_Connect()
+            self.interfaces_Connect()
         else:
             print("Neard is disconnected from System bus")
             self.iface_manager = None
             self.adaptregistered = {}
-            self.manager_getDetails()
+            self.interface_getDetails()
 
     #Main init function
     def __init__(self, adapter_update = None, adapters_remove = None,
@@ -154,8 +154,8 @@ class Neard:
         self.systemBus = dbus.SystemBus()
 
         #Prepare the first handler
-        self.systemBus.watch_name_owner('org.neard',
-                                         self.neardNameOwnerChanged)
+        self.systemBus.watch_name_owner(neardutils.SERVICE_NAME,
+                                        self.neardNameOwnerChanged)
 
 ##=================================================================
 class NeardUI(Neard):
@@ -166,21 +166,48 @@ class NeardUI(Neard):
             return self.adapters_list.get_value(i, col)
         return True
 
+    # Action: activate or not the adapter
+    def adapter_poweredToggled(self, poweredRendererToggle, path, user):
+        bus = dbus.SystemBus()
+
+        if path:
+            i = self.adapters_list.get_iter(path)
+            objpath = self.adapters_list.get_value(i, 0)
+            adapt_iface = neardutils.find_adapter(path)
+            adapter = dbus.Interface(bus.get_object(neardutils.SERVICE_NAME, adapt_iface.object_path),
+                                     "org.freedesktop.DBus.Properties")
+
+            try:
+                if self.adapters_actionToggle(i, 2):
+                    print ("Disable Adapter %s") % objpath
+                    adapter.Set(neardutils.ADAPTER_INTERFACE, "Powered", False)
+                    self.adapters_list.set_value(i, 2, 0)
+                else:
+                    print ("Enable Adapter %s") % objpath
+                    adapter.Set(neardutils.ADAPTER_INTERFACE, "Powered", True)
+                    self.adapters_list.set_value(i, 2, 1)
+
+            except:
+                print ("Can't toggle adapter %s") % objpath
+
     # Action: activate or not the polling mode
     def adapter_pollingToggled(self, poolingRendererToggle, path, user):
         if path:
             i = self.adapters_list.get_iter(path)
             objpath = self.adapters_list.get_value(i, 0)
-            adapter_obj = self.systemBus.get_object('org.neard', objpath)
-            adapt_iface = dbus.Interface(adapter_obj,'org.neard.Adapter')
+            adapt_iface = neardutils.find_adapter(path)
 
-            if self.adapters_actionToggle(i, 3):
-                print ("Stop Polling %s") % objpath
-                adapt_iface.StopPollLoop()
-            else:
-                print ("Start Polling %s") % objpath
-                adapt_iface.StartPollLoop("Initiator")
-
+            try:
+                if self.adapters_actionToggle(i, 3):
+                    print ("Stop Polling %s") % objpath
+                    adapt_iface.StopPollLoop()
+                    self.adapters_list.set_value(i, 3, 0)
+                else:
+                    print ("Start Polling %s") % objpath
+                    adapt_iface.StartPollLoop("Initiator")
+                    self.adapters_list.set_value(i, 3, 1)
+            except:
+                print ("Can't toggle polling on adapter %s") % objpath
 
     #------------------------------
     #Set the field values
@@ -251,15 +278,6 @@ class NeardUI(Neard):
         if name in tag_properties:
             value = tag_properties[name]
 
-            if name == "Records":
-                value = None
-                for tags in tag_properties[name]:
-                    #For each tag, add it to the tag lbox:
-                    if value is None:
-                        value = tags
-                    else:
-                        value = value + "-" + tags
-
             if name == "Type":
                 value = None
                 for tags in tag_properties[name]:
@@ -267,7 +285,7 @@ class NeardUI(Neard):
                     if value is None:
                         value = tags
                     else:
-                        value = value + "-" + tags
+                        value += tags
 
             if value is not None:
                 self.tags_list.set_value(i, col, value)
@@ -303,7 +321,6 @@ class NeardUI(Neard):
             print ("Update tag %s") % (path)
         self.tags_setUIList(tag_properties, i, 2, "ReadOnly")
         self.tags_setUIList(tag_properties, i, 3, "Type")
-        self.tags_setUIList(tag_properties, i, 4, "Records")
 
     #--------------------------------------------------
     def records_setUIList(self, record_properties, i, col, name):
@@ -379,6 +396,7 @@ class NeardUI(Neard):
 
         toggle = gtk.CellRendererToggle()
         column = gtk.TreeViewColumn("Powered", toggle, active=2)
+        toggle.connect('toggled', self.adapter_poweredToggled, None)
         tv_adapters.append_column(column)
 
         toggle = gtk.CellRendererToggle()
@@ -387,9 +405,6 @@ class NeardUI(Neard):
         tv_adapters.append_column(column)
 
         column = gtk.TreeViewColumn("Protocols",gtk.CellRendererText(), text=4)
-        tv_adapters.append_column(column)
-
-        column = gtk.TreeViewColumn("Tags", gtk.CellRendererText(), text=5)
         tv_adapters.append_column(column)
 
         tv_adapters.get_selection().connect("changed",
@@ -412,9 +427,6 @@ class NeardUI(Neard):
         column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=3)
         tv_tags.append_column(column)
 
-        column = gtk.TreeViewColumn("Record", gtk.CellRendererText(), text=4)
-        tv_tags.append_column(column)
-
         return tv_tags;#
 
     # Prepare TreeView  for Records
@@ -431,6 +443,22 @@ class NeardUI(Neard):
 
         column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
         tv_records.append_column(column)
+        return tv_records;
+
+    # Prepare TreeView  for Records
+    def createWriteWidgets(self, records_list):
+        #treeview Records
+        tv_records = gtk.TreeView(records_list)
+        #tv_records.connect("row-activated", self.on_record_activated)
+
+        #column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
+        #tv_records.append_column(column)
+
+        #column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=2)
+        #tv_records.append_column(column)
+
+        #column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
+        #tv_records.append_column(column)
         return tv_records;
 
     def on_record_activated(self, widget, row, col):
@@ -463,7 +491,6 @@ class NeardUI(Neard):
         scrolledwindow = gtk.ScrolledWindow()
         widget = self.createAdaptersWidgets(self.adapters_list)
         scrolledwindow.add(widget)
-#        notebook.append_page(widget, gtk.Label("Adapters"))
         notebook.append_page(scrolledwindow, gtk.Label("Adapters"))
 
         scrolledwindow = gtk.ScrolledWindow()
@@ -478,7 +505,6 @@ class NeardUI(Neard):
         notebook.append_page(scrolledwindow, gtk.Label("Records"))
 
         dialog.connect('response', self.dlg_onResponse)
-#        dialog.vbox.pack_end(vbox, True, True, 0)
         return dialog
 
     def show(self):
@@ -521,7 +547,7 @@ class RecordUI():
         bus = dbus.SystemBus()
         record_path = self.path
         tag_path = record_path[:record_path.rfind("/")]
-        tag = dbus.Interface(bus.get_object("org.neard", tag_path), "org.neard.Tag")
+        tag = dbus.Interface(bus.get_object(neardutils.SERVICE_NAME, tag_path), neardutils.TAG_INTERFACE)
         if type_name in ["Text"]:
             content1 = content.split()
             tag.Write({"Type" : type_name,
