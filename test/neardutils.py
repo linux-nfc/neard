@@ -8,7 +8,7 @@ RECORD_INTERFACE = SERVICE_NAME + ".Record"
 
 def get_managed_objects():
 	bus = dbus.SystemBus()
-	manager = dbus.Interface(bus.get_object("org.neard", "/"),
+	manager = dbus.Interface(bus.get_object(SERVICE_NAME, "/"),
 				"org.freedesktop.DBus.ObjectManager")
 	return manager.GetManagedObjects()
 
@@ -70,7 +70,7 @@ def find_record_in_objects(objects, pattern=None):
 
 def dump_record(record_path):
 	bus = dbus.SystemBus()
-	record_prop = dbus.Interface(bus.get_object("org.neard", record_path),
+	record_prop = dbus.Interface(bus.get_object(SERVICE_NAME, record_path),
 					"org.freedesktop.DBus.Properties")
 
 	properties = record_prop.GetAll(RECORD_INTERFACE)
@@ -84,11 +84,11 @@ def dump_record(record_path):
 
 def dump_all_records(path):
 	bus = dbus.SystemBus()
-	om = dbus.Interface(bus.get_object("org.neard", "/"),
+	om = dbus.Interface(bus.get_object(SERVICE_NAME, "/"),
 					"org.freedesktop.DBus.ObjectManager")
 	objects = om.GetManagedObjects()
 	for path, interfaces in objects.iteritems():
-		if "org.neard.Record" not in interfaces:
+		if RECORD_INTERFACE not in interfaces:
 			continue
 
 		if path.startswith(path):
