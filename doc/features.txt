@@ -44,4 +44,4 @@ Both initiator and target modes are supported.
 
 Handover
 ========
-WIP.
+WiFi and Bluetooth handover methods are supported.
