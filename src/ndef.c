@@ -3203,9 +3203,9 @@ fail:
 	return NULL;
 }
 
-static char *get_text_field(DBusMessage *msg, char *text)
+static char *get_text_field(DBusMessageIter *msg, char *text)
 {
-	DBusMessageIter iter, arr_iter;
+	DBusMessageIter arr_iter;
 	char *uri = NULL;
 
 	DBG("");
@@ -3213,8 +3213,7 @@ static char *get_text_field(DBusMessage *msg, char *text)
 	if (!text)
 		return NULL;
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &arr_iter);
+	dbus_message_iter_recurse(msg, &arr_iter);
 
 	while (dbus_message_iter_get_arg_type(&arr_iter) !=
 					DBUS_TYPE_INVALID) {
@@ -3241,12 +3240,12 @@ static char *get_text_field(DBusMessage *msg, char *text)
 	return uri;
 }
 
-static inline char *get_uri_field(DBusMessage *msg)
+static inline char *get_uri_field(DBusMessageIter *msg)
 {
 	return get_text_field(msg, "URI");
 }
 
-static GSList *get_carrier_field(DBusMessage *msg)
+static GSList *get_carrier_field(DBusMessageIter *msg)
 {
 	char *carrier;
 	char **arr;
@@ -3270,15 +3269,14 @@ static GSList *get_carrier_field(DBusMessage *msg)
 	return carriers;
 }
 
-static struct near_ndef_message *build_text_record(DBusMessage *msg)
+static struct near_ndef_message *build_text_record(DBusMessageIter *msg)
 {
-	DBusMessageIter iter, arr_iter;
+	DBusMessageIter arr_iter;
 	char *cod = NULL, *lang = NULL, *rep = NULL;
 
 	DBG("");
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &arr_iter);
+	dbus_message_iter_recurse(msg, &arr_iter);
 
 	while (dbus_message_iter_get_arg_type(&arr_iter) !=
 					DBUS_TYPE_INVALID) {
@@ -3309,7 +3307,7 @@ static struct near_ndef_message *build_text_record(DBusMessage *msg)
 	return near_ndef_prepare_text_record(cod, lang, rep);
 }
 
-static struct near_ndef_message *build_uri_record(DBusMessage *msg)
+static struct near_ndef_message *build_uri_record(DBusMessageIter *msg)
 {
 	char *uri = NULL;
 	const char *uri_prefix = NULL;
@@ -3343,7 +3341,7 @@ static struct near_ndef_message *build_uri_record(DBusMessage *msg)
 						(uint8_t *)(uri + id_len));
 }
 
-static struct near_ndef_message *build_sp_record(DBusMessage *msg)
+static struct near_ndef_message *build_sp_record(DBusMessageIter *msg)
 {
 	char *uri = NULL;
 	const char *uri_prefix;
@@ -3380,7 +3378,7 @@ static struct near_ndef_message *build_sp_record(DBusMessage *msg)
 }
 
 static struct near_ndef_message *build_ho_record(enum record_type type,
-							DBusMessage *msg)
+							DBusMessageIter *msg)
 {
 	struct near_ndef_message *ho;
 	GSList *carriers;
@@ -3581,15 +3579,14 @@ static struct near_ndef_message *near_ndef_prepare_mime_payload_record(
 	return mime;
 }
 
-static struct near_ndef_message *build_mime_record(DBusMessage *msg)
+static struct near_ndef_message *build_mime_record(DBusMessageIter *msg)
 {
 	DBusMessageIter iter, arr_iter;
 	char *key, *mime_str, *ssid, *passphrase;
 
 	DBG("");
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &arr_iter);
+	dbus_message_iter_recurse(msg, &arr_iter);
 
 	while (dbus_message_iter_get_arg_type(&arr_iter) !=
 					DBUS_TYPE_INVALID) {
@@ -3663,15 +3660,14 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 	return NULL;
 }
 
-static struct near_ndef_message *ndef_build_from_record(DBusMessage *msg,
-							DBusMessageIter *iter)
+static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg)
 {
 	struct near_ndef_message *ndef = NULL;
 	DBusMessageIter arr_iter;
 
 	DBG("");
 
-	dbus_message_iter_recurse(iter, &arr_iter);
+	dbus_message_iter_recurse(msg, &arr_iter);
 
 	while (dbus_message_iter_get_arg_type(&arr_iter) !=
 						DBUS_TYPE_INVALID) {
@@ -3737,7 +3733,7 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 
 	dbus_message_iter_init(msg, &iter);
 
-	return ndef_build_from_record(msg, &iter);
+	return ndef_build_from_record(&iter);
 }
 
 int __near_ndef_init(void)
