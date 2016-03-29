@@ -103,6 +103,33 @@ def write_mime(args):
 
 	tag.Write(data)
 
+def write_uri(args):
+
+	data = { }
+	records = [ ]
+
+	if len(args) > 1:
+
+		for i in args:
+
+			record = { }
+
+			record["Type"] = dbus.String("URI", variant_level = 1)
+			record["URI"] = dbus.String(i, variant_level = 1)
+
+			records.append(record)
+
+		data["Records"] = records
+
+	else:
+
+		data["Type"] = "URI"
+		data["URI"] = args[0]
+
+	print data
+
+	tag.Write(data)
+
 if (sys.argv[1] == "write"):
 	if (len(sys.argv) < 5):
 		usage()
@@ -115,9 +142,8 @@ if (sys.argv[1] == "write"):
 			"Language" : sys.argv[5],
 			"Representation" : sys.argv[6] }))
 
-	elif sys.argv[3] in ["URI"]:
-		tag.Write(({ "Type" : "URI",
-			"URI" : sys.argv[4] }))
+	elif sys.argv[3] == "URI":
+		write_uri(sys.argv[4:])
 
 	elif sys.argv[3] in ["SmartPoster"]:
 		tag.Write(({ "Type" : "SmartPoster",
