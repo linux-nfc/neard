@@ -643,7 +643,8 @@ static gboolean mime_payload_exists(const GDBusPropertyTable *property,
 					void *data)
 {
 	struct near_ndef_record *record = data;
-	gboolean exists = record->mime->payload_len && record->mime->payload;
+	gboolean exists = record->mime && record->mime->payload_len
+						&& record->mime->payload;
 
 	DBG("%s", exists ? "" : "No MIME payload");
 
