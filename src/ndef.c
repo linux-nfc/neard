@@ -3725,6 +3725,23 @@ again:
 	return found;
 }
 
+static struct near_ndef_message *build_multi_record_message(
+				DBusMessageIter *iter, const char *type)
+{
+	struct near_ndef_message *ndef = NULL;
+
+	DBG("");
+
+	if (g_strcmp0(type, "SmartPoster") == 0)
+		ndef = build_sp_record(iter);
+	else if (g_strcmp0(type, "Handover") == 0)
+		ndef = build_ho_record(RECORD_TYPE_WKT_HANDOVER_REQUEST, iter);
+	else if (g_strcmp0(type, "StaticHandover") == 0)
+		ndef = build_ho_record(RECORD_TYPE_WKT_HANDOVER_SELECT, iter);
+
+	return ndef;
+}
+
 static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg,
 							bool begin, bool end)
 {
@@ -3762,19 +3779,20 @@ static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg,
 			} else if (g_strcmp0(value, "URI") == 0) {
 				ndef = build_uri_record(msg);
 				break;
-			} else if (g_strcmp0(value, "SmartPoster") == 0) {
-				ndef = build_sp_record(msg);
-				break;
-			} else if (g_strcmp0(value, "Handover") == 0) {
-				ndef = build_ho_record(
-					RECORD_TYPE_WKT_HANDOVER_REQUEST, msg);
-				break;
-			} else if (g_strcmp0(value, "StaticHandover") == 0) {
-				ndef = build_ho_record(
-					RECORD_TYPE_WKT_HANDOVER_SELECT, msg);
-				break;
 			} else if (g_strcmp0(value, "MIME") == 0) {
 				ndef = build_mime_record(msg);
+				break;
+			} else if ((begin && end) &&
+					(g_strcmp0(value, "SmartPoster") == 0 ||
+					g_strcmp0(value, "Handover") == 0 ||
+					g_strcmp0(value, "StaticHandover")
+						== 0)) {
+				/*
+				 * Currently SmartPoster and Handover messages
+				 * are supported only in the single record mode
+				 * of the tag.write() method.
+				 */
+				ndef = build_multi_record_message(msg, value);
 				break;
 			} else {
 				near_error("%s not supported", value);
