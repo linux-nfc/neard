@@ -14,6 +14,13 @@ Method		void Write(dict attributes)
 			For example, one would add a type, a Language, an
 			Encoding and a Representation for a text record.
 
+			Multiple records can be written with the dictionary
+			entry "Records" and an array of multiple records
+			("aa{sv}") in its value part.
+
+			Currently SmartPoster and Handover messages are
+			supported only in the single record mode of this method.
+
 			Possible Errors: org.neard.Error.PermissionDenied
 					 org.neard.Error.InvalidArguments
 					 org.neard.Error.InProgress
