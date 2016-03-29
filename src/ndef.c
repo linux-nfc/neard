@@ -3663,18 +3663,15 @@ static struct near_ndef_message *build_mime_record(DBusMessage *msg)
 	return NULL;
 }
 
-struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
+static struct near_ndef_message *ndef_build_from_record(DBusMessage *msg,
+							DBusMessageIter *iter)
 {
-	DBusMessageIter iter;
+	struct near_ndef_message *ndef = NULL;
 	DBusMessageIter arr_iter;
-	struct near_ndef_message *ndef;
 
 	DBG("");
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &arr_iter);
-
-	ndef = NULL;
+	dbus_message_iter_recurse(iter, &arr_iter);
 
 	while (dbus_message_iter_get_arg_type(&arr_iter) !=
 						DBUS_TYPE_INVALID) {
@@ -3730,6 +3727,17 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 	}
 
 	return ndef;
+}
+
+struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
+{
+	DBusMessageIter iter;
+
+	DBG("");
+
+	dbus_message_iter_init(msg, &iter);
+
+	return ndef_build_from_record(msg, &iter);
 }
 
 int __near_ndef_init(void)
