@@ -3725,7 +3725,8 @@ again:
 	return found;
 }
 
-static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg)
+static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg,
+							bool begin, bool end)
 {
 	struct near_ndef_message *ndef = NULL;
 	DBusMessageIter arr_iter;
@@ -3790,10 +3791,34 @@ static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg)
 	return ndef;
 }
 
+static gboolean ndef_message_append(struct near_ndef_message *to,
+					struct near_ndef_message *from)
+{
+	gboolean ret = TRUE;
+	uint8_t *data = g_try_realloc(to->data, to->length + from->length);
+
+	if (!data) {
+		near_error("Memory re-allocation failed (NDEF message data)");
+		ret = FALSE;
+		goto exit;
+	}
+
+	to->data = data;
+
+	memcpy(to->data + to->length, from->data, from->length);
+
+	to->offset = to->length + from->offset;
+
+	to->length += from->length;
+exit:
+	return ret;
+}
+
 struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 {
-	struct near_ndef_message *ndef;
+	struct near_ndef_message *ndef, *record;
 	DBusMessageIter iter;
+	bool begin = TRUE, end = FALSE;
 
 	DBG("");
 
@@ -3805,13 +3830,36 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 
 	for (ndef = NULL ;; dbus_message_iter_next(&iter)) {
 
-		ndef = ndef_build_from_record(&iter);
+		end = !dbus_message_iter_has_next(&iter);
 
-		if (!dbus_message_iter_has_next(&iter))
+		record = ndef_build_from_record(&iter, begin, end);
+		if (!record)
+			goto err;
+
+		near_ndef_set_mb_me(record->data, begin, end);
+
+		if (!ndef) {
+			ndef = record;
+			goto next;
+		}
+
+		if (!ndef_message_append(ndef, record))
+			goto err;
+
+		free_ndef_message(record);
+	next:
+		if (end)
 			break;
+
+		begin = FALSE;
 	}
 exit:
 	return ndef;
+err:
+	free_ndef_message(ndef);
+	free_ndef_message(record);
+	ndef = NULL;
+	goto exit;
 }
 
 int __near_ndef_init(void)
