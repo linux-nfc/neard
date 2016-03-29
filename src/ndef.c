@@ -3660,6 +3660,71 @@ static struct near_ndef_message *build_mime_record(DBusMessageIter *msg)
 	return NULL;
 }
 
+static gboolean near_dbus_message_iter_recurse_to_signature(
+					DBusMessageIter *iter, char *sig)
+{
+	gboolean found = FALSE;
+	int type;
+
+	while ((type = dbus_message_iter_get_arg_type(iter))
+			!= DBUS_TYPE_INVALID) {
+
+		if (g_strcmp0(sig, dbus_message_iter_get_signature(iter))
+				== 0) {
+			found = TRUE;
+			break;
+		}
+
+		if (dbus_type_is_container(type))
+			dbus_message_iter_recurse(iter, iter);
+		else if (dbus_message_iter_has_next(iter))
+			dbus_message_iter_next(iter);
+		else break;
+	}
+
+	DBG("sig %s %s", sig, found ? "found" : "not found");
+
+	return found;
+}
+
+static gboolean near_dbus_message_with_multiple_records(DBusMessage *msg)
+{
+	DBusMessageIter iter;
+	char *s;
+
+	dbus_message_iter_init(msg, &iter);
+
+	near_dbus_message_iter_recurse_to_signature(&iter, "s");
+
+	dbus_message_iter_get_basic(&iter, &s);
+
+	return g_strcmp0(s, "Records") == 0;
+}
+
+static gboolean near_dbus_message_get_records(DBusMessage *msg,
+						DBusMessageIter *iter)
+{
+	gboolean found = FALSE;
+
+	dbus_message_iter_init(msg, iter);
+again:
+	if (near_dbus_message_iter_recurse_to_signature(iter, "a{sv}")) {
+
+		if (msg && near_dbus_message_with_multiple_records(msg)) {
+
+			near_dbus_message_iter_recurse_to_signature(iter, "v");
+
+			msg = NULL;
+
+			goto again;
+		}
+
+		found = TRUE;
+	}
+
+	return found;
+}
+
 static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg)
 {
 	struct near_ndef_message *ndef = NULL;
@@ -3727,13 +3792,26 @@ static struct near_ndef_message *ndef_build_from_record(DBusMessageIter *msg)
 
 struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 {
+	struct near_ndef_message *ndef;
 	DBusMessageIter iter;
 
 	DBG("");
 
-	dbus_message_iter_init(msg, &iter);
+	if (!near_dbus_message_get_records(msg, &iter)) {
+		near_error("No records found");
+		ndef = NULL;
+		goto exit;
+	}
 
-	return ndef_build_from_record(&iter);
+	for (ndef = NULL ;; dbus_message_iter_next(&iter)) {
+
+		ndef = ndef_build_from_record(&iter);
+
+		if (!dbus_message_iter_has_next(&iter))
+			break;
+	}
+exit:
+	return ndef;
 }
 
 int __near_ndef_init(void)
