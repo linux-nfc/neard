@@ -305,6 +305,9 @@ static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data)
 {
 	int err = 0;
 
+	if (idx != opts.adapter_idx)
+		return 0;
+
 	DBG("cmd: %d, idx: %d", cmd, idx);
 
 	switch (cmd) {
