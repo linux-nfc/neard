@@ -1,3 +1,15 @@
+ver 0.16
+	Added NDEF multi-record write support.
+	Added ST Type5 tags support.
+	Added nciattach tool for NCI UART configuration.
+	Added support for NFC_CMD_ACTIVATE_TARGET.
+	Added NDEF MIME payload exposure.
+	Fixed Mifare Ultralight C issue.
+	Fixed ACE starting logic.
+	Fixed an NDEF segmentation fault.
+	Fixed nfctool -d command line option handling.
+	Fixed several secure elements related bugs.
+
 ver 0.15
 	Added iso15693 (NFC type5) support.
 	Added Secure Element support (seeld).
