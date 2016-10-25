@@ -409,7 +409,10 @@ static const char *get_text_payload(const GDBusPropertyTable *property,
 	if (!strcmp(property->name, "Encoding"))
 		return text->encoding;
 	else if (!strcmp(property->name, "Language"))
-		return text->language_code;
+		if (!text->language_code)
+			return "en";
+		else
+			return text->language_code;
 	else if (!strcmp(property->name, "Representation"))
 		return text->data;
 	else
