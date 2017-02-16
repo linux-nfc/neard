@@ -2845,7 +2845,6 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 		case RECORD_TYPE_WKT_COLLISION_RESOLUTION:
 		case RECORD_TYPE_WKT_ERROR:
 		case RECORD_TYPE_UNKNOWN:
-		case RECORD_TYPE_ERROR:
 			break;
 
 		case RECORD_TYPE_WKT_HANDOVER_REQUEST:
@@ -2927,6 +2926,8 @@ GList *near_ndef_parse_msg(uint8_t *ndef_data, size_t ndef_length,
 				goto fail;
 
 			break;
+		case RECORD_TYPE_ERROR:
+			goto fail;
 		}
 
 		record->data_len = record->header->header_len +
