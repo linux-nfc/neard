@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <glib.h>
 
@@ -881,6 +882,8 @@ static enum record_type get_external_record_type(uint8_t *type,
 static enum record_type get_record_type(enum record_tnf tnf,
 				uint8_t *type, size_t type_length)
 {
+	unsigned int i;
+
 	DBG("");
 
 	switch (tnf) {
@@ -891,6 +894,10 @@ static enum record_type get_record_type(enum record_tnf tnf,
 		break;
 
 	case RECORD_TNF_WELLKNOWN:
+		for (i = 0; i < type_length; i++)
+			if (!isprint(type[i]))
+				return RECORD_TYPE_ERROR;
+
 		if (type_length == 1) {
 			if (type[0] == 'T')
 				return RECORD_TYPE_WKT_TEXT;
