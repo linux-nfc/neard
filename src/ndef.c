@@ -342,6 +342,7 @@ static gboolean property_get_type(const GDBusPropertyTable *property,
 	case RECORD_TYPE_WKT_ERROR:
 	case RECORD_TYPE_UNKNOWN:
 	case RECORD_TYPE_ERROR:
+	default:
 		type = NULL;
 		break;
 
