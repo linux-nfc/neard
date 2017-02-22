@@ -275,6 +275,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 	if (TAG_DATA_NFC(cc) != TYPE2_MAGIC) {
 		DBG("Mark as blank tag");
 		near_tag_set_blank(tag, TRUE);
+		goto out_tag;
 	} else {
 		near_tag_set_blank(tag, FALSE);
 	}
