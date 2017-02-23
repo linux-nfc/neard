@@ -358,6 +358,9 @@ static DBusMessage *start_poll_loop(DBusConnection *conn,
 		return __near_error_failed(msg, ENODEV);
 	}
 
+	if (g_hash_table_size(adapter->tags) > 0)
+		return __near_error_failed(msg, EBUSY);
+
 	dbus_message_get_args(msg, NULL, DBUS_TYPE_STRING, &dbus_mode,
 							DBUS_TYPE_INVALID);
 
