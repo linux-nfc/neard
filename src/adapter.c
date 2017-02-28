@@ -1054,7 +1054,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
 	if (err) {
 		close(sock);
-		return err;
+		return -errno;
 	}
 
 	adapter->tag_sock = sock;
