@@ -1044,7 +1044,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 
 	sock = socket(AF_NFC, SOCK_SEQPACKET, NFC_SOCKPROTO_RAW);
 	if (sock == -1)
-		return sock;
+		return -errno;
 
 	addr.sa_family = AF_NFC;
 	addr.dev_idx = idx;
