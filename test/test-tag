@@ -11,6 +11,7 @@ def usage():
 	text = """
 list
 dump <tag>
+deactivate <tag>
 write <tag> <type> <...>
 
 	If type is Text, parameters are <encoding> <language> <representation>
@@ -164,6 +165,18 @@ if (sys.argv[1] == "write"):
 
 	else:
 		usage()
+
+	sys.exit(0)
+
+if (sys.argv[1] == "deactivate"):
+	print sys.argv[2]
+	if (len(sys.argv) != 2):
+		tag = neardutils.find_tag(sys.argv[2])
+		tag.Deactivate()
+	else:
+		usage()
+
+	sys.exit(0)
 
 else:
 	usage()
