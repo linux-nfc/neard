@@ -578,6 +578,11 @@ void __near_adapter_destroy(struct near_adapter *adapter)
 	free_adapter(adapter);
 }
 
+bool __near_adapter_is_constant_poll(struct near_adapter *adapter)
+{
+	return adapter->constant_poll;
+}
+
 const char *__near_adapter_get_path(struct near_adapter *adapter)
 {
 	return adapter->path;

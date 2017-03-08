@@ -78,6 +78,7 @@ void __near_manager_cleanup(void);
 struct near_adapter *__near_adapter_create(uint32_t idx,
 		const char *name, uint32_t protocols, bool powered);
 void __near_adapter_destroy(struct near_adapter *adapter);
+bool __near_adapter_is_constant_poll(struct near_adapter *adapter);
 const char *__near_adapter_get_path(struct near_adapter *adapter);
 struct near_adapter *__near_adapter_get(uint32_t idx);
 int __near_adapter_add(struct near_adapter *adapter);
