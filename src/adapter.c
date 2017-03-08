@@ -615,8 +615,10 @@ int __near_adapter_set_dep_state(uint32_t idx, bool dep)
 		target_idx =  __neard_device_get_idx(adapter->device_link);
 		__near_adapter_remove_target(idx, target_idx);
 	} else {
-		if (adapter->dep_timer > 0)
+		if (adapter->dep_timer > 0) {
 			g_source_remove(adapter->dep_timer);
+			adapter->dep_timer = 0;
+		}
 
 		if (!__near_device_register_interface(adapter->device_link))
 			return -ENODEV;
