@@ -505,8 +505,10 @@ void __near_adapter_stop_check_presence(uint32_t adapter_idx,
 	if (!adapter)
 		return;
 
-	if (adapter->presence_timeout > 0)
+	if (adapter->presence_timeout > 0) {
 		g_source_remove(adapter->presence_timeout);
+		adapter->presence_timeout = 0;
+	}
 }
 
 static const GDBusMethodTable adapter_methods[] = {
