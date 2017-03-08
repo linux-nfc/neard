@@ -329,6 +329,39 @@ nla_put_failure:
 	return err;
 }
 
+int __near_netlink_deactivate_target(uint32_t idx, uint32_t target_idx)
+{
+	struct nl_msg *msg;
+	void *hdr;
+	int err;
+
+	DBG("");
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	hdr = genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nfc_state->nfc_id, 0,
+			NLM_F_REQUEST, NFC_CMD_DEACTIVATE_TARGET,
+			NFC_GENL_VERSION);
+	if (!hdr) {
+		err = -EINVAL;
+		goto nla_put_failure;
+	}
+
+	err = -EMSGSIZE;
+
+	NLA_PUT_U32(msg, NFC_ATTR_DEVICE_INDEX, idx);
+	NLA_PUT_U32(msg, NFC_ATTR_TARGET_INDEX, target_idx);
+
+	err = nl_send_msg(nfc_state->cmd_sock, msg, NULL, NULL);
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+	return err;
+}
+
 int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
 				uint8_t comm_mode, uint8_t rf_mode)
 {

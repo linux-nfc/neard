@@ -486,9 +486,38 @@ fail:
 	return __near_error_failed(msg, ENOMEM);
 }
 
+static DBusMessage *deactivate_tag(DBusConnection *conn,
+				   DBusMessage *msg, void *data)
+{
+	struct near_tag *tag = data;
+	struct near_adapter *adapter;
+	int err;
+
+	DBG("deactivating tag %p", conn);
+
+	adapter = __near_adapter_get(tag->adapter_idx);
+	if (!adapter)
+		return __near_error_failed(msg, EINVAL);
+
+	__near_adapter_stop_check_presence(tag->adapter_idx, tag->target_idx);
+
+	err = __near_netlink_deactivate_target(tag->adapter_idx,
+					       tag->target_idx);
+	if (err < 0)
+		return __near_error_failed(msg, -err);
+
+	near_adapter_disconnect(tag->adapter_idx);
+
+	if (__near_adapter_is_constant_poll(adapter))
+		__near_adapter_start_poll(adapter);
+
+	return g_dbus_create_reply(msg, DBUS_TYPE_INVALID);
+}
+
 static const GDBusMethodTable tag_methods[] = {
 	{ GDBUS_ASYNC_METHOD("Write", GDBUS_ARGS({"attributes", "a{sv}"}),
 							NULL, write_ndef) },
+	{ GDBUS_METHOD("Deactivate", NULL, NULL, deactivate_tag) },
 	{ },
 };
 

@@ -25,6 +25,14 @@ Method		void Write(dict attributes)
 					 org.neard.Error.InvalidArguments
 					 org.neard.Error.InProgress
 
+Method		void Deactivate()
+
+			Deactivates a tag.
+
+			Possible Errors: org.neard.Error.PermissionDenied
+					 org.neard.Error.OutOfMemory
+					 org.neard.Error.InvalidArguments
+					 org.neard.Error.NotSupported
 
 Properties	string Type [readonly]
 

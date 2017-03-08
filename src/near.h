@@ -166,6 +166,7 @@ int __near_netlink_start_poll(int idx,
 int __near_netlink_stop_poll(int idx);
 int __near_netlink_activate_target(uint32_t idx, uint32_t target_idx,
                                    uint32_t protocol);
+int __near_netlink_deactivate_target(uint32_t idx, uint32_t target_idx);
 int __near_netlink_dep_link_up(uint32_t idx, uint32_t target_idx,
 				uint8_t comm_mode, uint8_t rf_mode);
 int __near_netlink_dep_link_down(uint32_t idx);
