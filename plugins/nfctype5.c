@@ -226,7 +226,7 @@ static int t5_check_resp(uint8_t *resp, int length)
 	DBG("");
 
 	if (length < 0) {
-		near_error("Cmd failure: %d", length);
+		DBG("Cmd failure: %d", length);
 		err = length;
 	} else if (resp[0]) {
 		near_error("NFC Failure: 0x%x", resp[0]);
