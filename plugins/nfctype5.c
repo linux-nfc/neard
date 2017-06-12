@@ -117,6 +117,7 @@
 
 #define TYPE5_UID_MANUFAC_IDX		0x06
 #define TYPE5_UID_MANUFAC_ID_STMICRO	0x02
+#define TYPE5_UID_MANUFAC_ID_TI		0x07
 
 struct type5_cmd_hdr {
 	uint8_t			flags;
@@ -215,6 +216,49 @@ static bool t5_manufacturer_is(struct near_tag *tag, uint8_t manufacturer_id)
 static bool t5_manufacturer_is_stmicro(struct near_tag *tag)
 {
 	return t5_manufacturer_is(tag, TYPE5_UID_MANUFAC_ID_STMICRO);
+}
+
+static bool t5_manufacturer_is_ti(struct near_tag *tag)
+{
+	return t5_manufacturer_is(tag, TYPE5_UID_MANUFAC_ID_TI);
+}
+
+static bool t5_tag_is_ti_std(struct near_tag *tag)
+{
+	uint8_t *uid;
+	bool ret = false;
+
+	uid = near_tag_get_iso15693_uid(near_tag_get_adapter_idx(tag),
+					near_tag_get_target_idx(tag));
+	if (!uid) {
+		near_error("No type 5 UID");
+		return false;
+	}
+
+	if ((uid[5] == 0xc0) || (uid[5] == 0xc1))
+		ret = true;
+
+	g_free(uid);
+	return ret;
+}
+
+static bool t5_tag_is_ti_pro(struct near_tag *tag)
+{
+	uint8_t *uid;
+	bool ret;
+
+	uid = near_tag_get_iso15693_uid(near_tag_get_adapter_idx(tag),
+					near_tag_get_target_idx(tag));
+	if (!uid) {
+		near_error("No type 5 UID");
+		return false;
+	}
+
+	if ((uid[5] == 0xc4) || (uid[5] == 0xc5))
+		ret = true;
+
+	g_free(uid);
+	return ret;
 }
 
 static int t5_cmd_hdr_init(struct near_tag *tag, struct type5_cmd_hdr *cmd_hdr,
@@ -851,10 +895,23 @@ static int nfctype5_read(uint32_t adapter_idx, uint32_t target_idx,
 	 * num_blks once.  near_tag_get_blk_size() will return 0 if
 	 * t5_get_sys_info() hasn't been called yet.
 	 */
-	if (near_tag_get_blk_size(tag))
+	if (near_tag_get_blk_size(tag)) {
 		err = t5_read_meta(tag, cookie);
-	else
+	} else if (t5_manufacturer_is_ti(tag) &&
+		   (t5_tag_is_ti_std(tag) || t5_tag_is_ti_pro(tag))) {
+		/*
+		 * TI Standard and Pro tags do not support the Get System
+		 * Information command but are known to have eight, 4-byte
+		 * blocks so we can fill that info in and call t5_read_meta()
+		 * here.
+		 */
+		near_tag_set_blk_size(tag, 4);
+		near_tag_set_num_blks(tag, 8);
+
+		err = t5_read_meta(tag, cookie);
+	} else {
 		err = t5_get_sys_info(tag, cookie);
+	}
 
 	if (err < 0)
 		err = t5_cookie_release(err, cookie);
