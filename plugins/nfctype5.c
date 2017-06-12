@@ -116,7 +116,7 @@
 #define GET_SYS_INFO_FLAG_16B_NB_BLOCK	0x10
 
 #define TYPE5_UID_MANUFAC_IDX		0x06
-#define TYPE5_UID_STMICRO_MANUFAC_ID	0x02
+#define TYPE5_UID_MANUFAC_ID_STMICRO	0x02
 
 struct type5_cmd_hdr {
 	uint8_t			flags;
@@ -193,6 +193,29 @@ struct t5_cookie {
 	uint8_t			blk;
 	uint8_t			nb_requested_blocks;
 };
+
+static bool t5_manufacturer_is(struct near_tag *tag, uint8_t manufacturer_id)
+{
+	uint8_t *uid;
+	bool match;
+
+	uid = near_tag_get_iso15693_uid(near_tag_get_adapter_idx(tag),
+					near_tag_get_target_idx(tag));
+	if (!uid) {
+		near_error("No type 5 UID");
+		return false;
+	}
+
+	match = (uid[TYPE5_UID_MANUFAC_IDX] == manufacturer_id);
+
+	g_free(uid);
+	return match;
+}
+
+static bool t5_manufacturer_is_stmicro(struct near_tag *tag)
+{
+	return t5_manufacturer_is(tag, TYPE5_UID_MANUFAC_ID_STMICRO);
+}
 
 static int t5_cmd_hdr_init(struct near_tag *tag, struct type5_cmd_hdr *cmd_hdr,
 		int cmd)
@@ -392,26 +415,6 @@ static int t5_read(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 			cookie, t5_cookie_release_local);
 }
 
-static bool t5_manufacturer_stmicro(struct near_tag *tag)
-{
-        uint8_t *uid;
-
-        uid = near_tag_get_iso15693_uid(near_tag_get_adapter_idx(tag),
-                                        near_tag_get_target_idx(tag));
-        if (!uid) {
-                near_error("No type 5 UID");
-                return false;
-        }
-
-        if (uid[TYPE5_UID_MANUFAC_IDX] != TYPE5_UID_STMICRO_MANUFAC_ID) {
-                g_free(uid);
-                return false;
-        }
-
-        g_free(uid);
-        return true;
-}
-
 static int t5_write_resp(uint8_t *resp, int length, void *data)
 {
 	struct type5_write_single_block_resp *t5_resp =
@@ -456,7 +459,7 @@ static int t5_write_resp(uint8_t *resp, int length, void *data)
 		goto out_done;
 
 	/* CMD_FLAG_OPTION should be set for non ST tags */
-	if (!t5_manufacturer_stmicro(tag))
+	if (!t5_manufacturer_is_stmicro(tag))
 		t5_cmd->hdr.flags |= CMD_FLAG_OPTION;
 
 	t5_cmd->blk_no = cookie->blk;
@@ -515,7 +518,7 @@ static int t5_write(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 	 * does not work with ST Type5 tags.
 	 * So, implemeting OPTION flag set only for non ST tags.
 	 */
-	if (!t5_manufacturer_stmicro(tag))
+	if (!t5_manufacturer_is_stmicro(tag))
 		t5_cmd->hdr.flags |= CMD_FLAG_OPTION;
 
 	t5_cmd->blk_no = offset / blk_size;
@@ -1046,7 +1049,7 @@ static int t5_format_read_multiple_blocks_resp(uint8_t *resp, int length,
 	 * lying in different sectors. So, doing multi block read
 	 * support setting only for non ST tags.
 	 */
-	if (!t5_manufacturer_stmicro(tag)) {
+	if (!t5_manufacturer_is_stmicro(tag)) {
 		if (read_multiple_supported)
 			t5_cc.cc3 |= TYPE5_CC3_MBREAD_FLAG;
 	}
