@@ -456,7 +456,7 @@ static int t5_write_resp(uint8_t *resp, int length, void *data)
 		goto out_done;
 
 	/* CMD_FLAG_OPTION should be set for non ST tags */
-	if (!(t5_manufacturer_stmicro(tag)))
+	if (!t5_manufacturer_stmicro(tag))
 		t5_cmd->hdr.flags |= CMD_FLAG_OPTION;
 
 	t5_cmd->blk_no = cookie->blk;
@@ -515,7 +515,7 @@ static int t5_write(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 	 * does not work with ST Type5 tags.
 	 * So, implemeting OPTION flag set only for non ST tags.
 	 */
-	if (!(t5_manufacturer_stmicro(tag)))
+	if (!t5_manufacturer_stmicro(tag))
 		t5_cmd->hdr.flags |= CMD_FLAG_OPTION;
 
 	t5_cmd->blk_no = offset / blk_size;
@@ -1046,7 +1046,7 @@ static int t5_format_read_multiple_blocks_resp(uint8_t *resp, int length,
 	 * lying in different sectors. So, doing multi block read
 	 * support setting only for non ST tags.
 	 */
-	if (!(t5_manufacturer_stmicro(tag))) {
+	if (!t5_manufacturer_stmicro(tag)) {
 		if (read_multiple_supported)
 			t5_cc.cc3 |= TYPE5_CC3_MBREAD_FLAG;
 	}
