@@ -654,7 +654,7 @@ static int t5_read_multiple_blocks_resp(uint8_t *resp, int length, void *data)
 	uint8_t blk_size = near_tag_get_blk_size(tag);
 	size_t data_length;
 	GList *records;
-	int err;
+	int err, expected_len;
 
 	DBG("");
 
@@ -665,9 +665,16 @@ static int t5_read_multiple_blocks_resp(uint8_t *resp, int length, void *data)
 		goto out_done;
 
 	length -= NFC_HEADER_SIZE;
+	expected_len = sizeof(*t5_resp) +
+		       cookie->nb_requested_blocks * blk_size;
 
-	if (length != (int)(sizeof(*t5_resp) +
-			    (cookie->nb_requested_blocks * blk_size))) {
+	/*
+	 * Sometimes an extra byte is returned in RMB response data.
+	 * Discard the extra byte whenever that happens.
+	 */
+	if (length == (expected_len + 1)) {
+		length--;
+	} else if (length != expected_len) {
 		err = -EIO;
 		goto out_done;
 	}
