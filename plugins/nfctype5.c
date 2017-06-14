@@ -430,7 +430,7 @@ static int t5_read(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 		size_t len, t5_local_cb local_cb, void *local_data)
 {
 	struct type5_read_single_block_cmd t5_cmd;
-	struct t5_cookie *cookie = local_data;
+	struct t5_cookie *cookie;
 	uint8_t blk_size = near_tag_get_blk_size(tag);
 	int err;
 
@@ -529,7 +529,7 @@ static int t5_write(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 		size_t len, t5_local_cb local_cb, void *local_data)
 {
 	struct type5_write_single_block_cmd *t5_cmd;
-	struct t5_cookie *cookie = local_data;
+	struct t5_cookie *cookie;
 	uint8_t blk_size = near_tag_get_blk_size(tag);
 	int err;
 
