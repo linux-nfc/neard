@@ -1048,82 +1048,13 @@ static int nfctype5_format_resp(struct near_tag *tag, int err, void *data)
 	return t5_cookie_release(err, cookie);
 }
 
-static int t5_format_read_multiple_blocks_resp(uint8_t *resp, int length,
-						void *data)
-{
-	struct type5_read_multiple_blocks_resp *t5_resp =
-		(struct type5_read_multiple_blocks_resp *)
-					(resp + NFC_HEADER_SIZE);
-	struct t5_cookie *cookie = data;
-	struct type5_cc t5_cc;
-	struct near_tag *tag = cookie->tag;
-	uint8_t blk_size = near_tag_get_blk_size(tag);
-	size_t mem_size;
-	bool read_multiple_supported = false;
-	int err;
-
-	DBG("");
-
-	err = t5_check_resp(resp, length);
-	if (!err) {
-		length -= NFC_HEADER_SIZE;
-
-		if (length == (int)(sizeof(*t5_resp) + (2 * blk_size)))
-			read_multiple_supported = true;
-	}
-
-	t5_cc.cc0 = TYPE5_CC0_NDEF_MAGIC;
-
-	t5_cc.cc1 = TYPE5_VERSION_MAJOR << TYPE5_CC1_VER_MAJOR_SHIFT;
-	t5_cc.cc1 |= TYPE5_VERSION_MINOR << TYPE5_CC1_VER_MINOR_SHIFT;
-	t5_cc.cc1 |= TYPE5_CC1_READ_ACCESS_ALWAYS;
-
-	/*
-	 * Assume that the tag is *not* read only because if it is, the tag
-	 * would have to be formatted already and we wouldn't be here.
-	 * Besides, if it is read only then the write below will fail and
-	 * the CC won't be changed anyway.
-	 */
-	t5_cc.cc1 |= TYPE5_CC1_WRITE_ACCESS_ALWAYS;
-
-	mem_size = blk_size * near_tag_get_num_blks(tag);
-	mem_size = MIN(mem_size, TYPE5_MAX_MEM_SIZE);
-
-	t5_cc.cc2 = mem_size / 8;
-
-	/*
-	 * We cannot set the lock flag in CC3.  The reason is that to know
-	 * if LOCK operations are supported, we'd have to perform one.
-	 * But performing one will permanently LOCK that block so instead
-	 * just say that its not supported.  We also don't know whether
-	 * the tag needs a special frame format so just say "no" for that
-	 * one too.  If it does, we probably can't write to the tag anyway.
-	 */
-	t5_cc.cc3 = 0;
-
-	/*
-	 * ST Type5 tags does not support multiblock read for blocks
-	 * lying in different sectors. So, doing multi block read
-	 * support setting only for non ST tags.
-	 */
-	if (!t5_manufacturer_is_stmicro(tag)) {
-		if (read_multiple_supported)
-			t5_cc.cc3 |= TYPE5_CC3_MBREAD_FLAG;
-	}
-
-	err = t5_write(tag, TYPE5_META_START_OFFSET, (uint8_t *)&t5_cc,
-			sizeof(t5_cc), nfctype5_format_resp, cookie);
-	if (err < 0)
-		err = t5_cookie_release(err, cookie);
-
-	return err;
-}
-
 static int nfctype5_format(uint32_t adapter_idx, uint32_t target_idx,
 		near_tag_io_cb cb)
 {
+	struct type5_cc t5_cc;
 	struct t5_cookie *cookie;
 	struct near_tag *tag;
+	size_t mem_size;
 	int err;
 
 	DBG("");
@@ -1142,9 +1073,49 @@ static int nfctype5_format(uint32_t adapter_idx, uint32_t target_idx,
 
 	cookie->cb = cb;
 
-	return t5_read_multiple_blocks(tag, 0, 2,
-				       t5_format_read_multiple_blocks_resp,
-				       cookie);
+	t5_cc.cc0 = TYPE5_CC0_NDEF_MAGIC;
+
+	t5_cc.cc1 = TYPE5_VERSION_MAJOR << TYPE5_CC1_VER_MAJOR_SHIFT;
+	t5_cc.cc1 |= TYPE5_VERSION_MINOR << TYPE5_CC1_VER_MINOR_SHIFT;
+	t5_cc.cc1 |= TYPE5_CC1_READ_ACCESS_ALWAYS;
+
+	/*
+	 * Assume that the tag is *not* read only because if it is, the tag
+	 * would have to be formatted already and we wouldn't be here.
+	 * Besides, if it is read only then the write below will fail and
+	 * the CC won't be changed anyway.
+	 */
+	t5_cc.cc1 |= TYPE5_CC1_WRITE_ACCESS_ALWAYS;
+
+	mem_size = near_tag_get_blk_size(tag) * near_tag_get_num_blks(tag);
+	mem_size = MIN(mem_size, TYPE5_MAX_MEM_SIZE);
+
+	t5_cc.cc2 = mem_size / 8;
+
+	/*
+	 * We cannot set the lock flag in CC3.  The reason is that to know
+	 * if LOCK operations are supported, we'd have to perform one.
+	 * But performing one will permanently LOCK that block so instead
+	 * just say that its not supported.  We also don't know whether
+	 * the tag needs a special frame format so just say "no" for that
+	 * one too.  If it does, we probably can't write to the tag anyway.
+	 *
+	 * In order to know if the tag supports the Read Multiple Blocks
+	 * command, we would have to issue that command here to see if it
+	 * succeeds.  If it does succeed, then TYPE5_CC3_MBREAD_FLAG could
+	 * be set; however, if it fails, the adapter code will disconnect
+	 * from the tag and the format will fail making the tag unusable.
+	 * To avoid that possibility, indicate that Read Multiple Blocks
+	 * commands is not supported (i.e., do not set TYPE5_CC3_MBREAD_FLAG).
+	 */
+	t5_cc.cc3 = 0;
+
+	err = t5_write(tag, TYPE5_META_START_OFFSET, (uint8_t *)&t5_cc,
+			sizeof(t5_cc), nfctype5_format_resp, cookie);
+	if (err < 0)
+		err = t5_cookie_release(err, cookie);
+
+	return err;
 
 out_err:
 	if (cb)
