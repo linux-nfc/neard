@@ -50,6 +50,18 @@
 #define ENABLE_PM	1
 #define DISABLE_PM	0
 
+#ifndef N_NCI
+#define N_NCI  25
+#endif
+
+/* Ioctl */
+#define NCIUARTSETDRIVER       _IOW('U', 0, char *)
+
+enum nci_uart_driver {
+	NCI_UART_DRIVER_MARVELL = 0,
+	NCI_UART_DRIVER_MAX
+};
+
 struct nci_driver_info {
 	const char *name;
 	enum nci_uart_driver driver_id;

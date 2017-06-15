@@ -287,16 +287,4 @@ struct sockaddr_nfc_llcp {
 #define NFC_LLCP_REMOTE_LTO	3
 #define NFC_LLCP_REMOTE_RW	4
 
-#ifndef N_NCI
-#define N_NCI	25
-#endif
-
-/* Ioctl */
-#define NCIUARTSETDRIVER	_IOW('U', 0, char *)
-
-enum nci_uart_driver {
-	NCI_UART_DRIVER_MARVELL = 0,
-	NCI_UART_DRIVER_MAX
-};
-
 #endif /*__LINUX_NFC_H */
