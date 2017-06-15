@@ -96,10 +96,10 @@ static void snep_frag_rejected(struct sniffer_packet *packet)
 	guint8 direction;
 
 	/* reverse direction to delete the corresponding fragment */
-	if (packet->direction == NFC_LLCP_DIRECTION_RX)
-		direction = NFC_LLCP_DIRECTION_TX;
+	if (packet->direction == NFC_DIRECTION_RX)
+		direction = NFC_DIRECTION_TX;
 	else
-		direction = NFC_LLCP_DIRECTION_RX;
+		direction = NFC_DIRECTION_RX;
 
 	index = snep_make_frag_index(packet->adapter_idx,
 				     direction,
@@ -129,7 +129,7 @@ static int snep_frag_append(struct snep_frag *frag,
 	frag->count++;
 
 	snep_printf_msg("%s fragment #%hu of %u bytes (total %u/%u)",
-			packet->direction == NFC_LLCP_DIRECTION_RX ? "Received" : "Sent",
+			packet->direction == NFC_DIRECTION_RX ? "Received" : "Sent",
 		    frag->count, packet->llcp.data_len,
 		    frag->received, frag->buffer_size);
 
@@ -177,11 +177,11 @@ static int snep_decode_info(struct sniffer_packet *packet)
 	frag->index = snep_get_frag_index(packet);
 
 	snep_printf_msg("Start %s fragmented message of %u bytes",
-			packet->direction == NFC_LLCP_DIRECTION_RX ? "Receiving" : "Sending",
+			packet->direction == NFC_DIRECTION_RX ? "Receiving" : "Sending",
 			frag->buffer_size);
 
 	snep_printf_msg("%s fragment #%hu of %u bytes",
-			packet->direction == NFC_LLCP_DIRECTION_RX ? "Received" : "Sent",
+			packet->direction == NFC_DIRECTION_RX ? "Received" : "Sent",
 			frag->count, frag->received);
 
 	DBG("Adding frag with index 0x%x", frag->index);

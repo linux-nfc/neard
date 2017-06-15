@@ -189,7 +189,7 @@ static void llcp_check_cc(struct sniffer_packet *packet)
 		return;
 
 	/* Find the real destination SAP for this CC */
-	if (packet->direction == NFC_LLCP_DIRECTION_RX)
+	if (packet->direction == NFC_DIRECTION_RX)
 		dsap = packet->llcp.local_sap;
 	else
 		dsap = packet->llcp.remote_sap;
@@ -308,7 +308,7 @@ static int llcp_decode_packet(guint8 *data, guint32 data_len,
 	packet->direction = data[1] & 0x01;
 
 	/* LLCP header */
-	if (packet->direction == NFC_LLCP_DIRECTION_TX) {
+	if (packet->direction == NFC_DIRECTION_TX) {
 		packet->llcp.remote_sap = (data[2] & 0xFC) >> 2;
 		packet->llcp.local_sap = data[3] & 0x3F;
 	} else {
@@ -379,20 +379,20 @@ static int llcp_print_agf(struct sniffer_packet *packet,
 			goto exit;
 		}
 
-		if (size + NFC_LLCP_RAW_HEADER_SIZE > pdu_size) {
-			pdu_size = size + NFC_LLCP_RAW_HEADER_SIZE;
+		if (size + NFC_RAW_HEADER_SIZE > pdu_size) {
+			pdu_size = size + NFC_RAW_HEADER_SIZE;
 			pdu = g_realloc(pdu, pdu_size);
 
 			pdu[0] = packet->adapter_idx;
 			pdu[1] = packet->direction;
 		}
 
-		memcpy(pdu + NFC_LLCP_RAW_HEADER_SIZE,
+		memcpy(pdu + NFC_RAW_HEADER_SIZE,
 			packet->llcp.data + offset, size);
 
 		llcp_printf_msg("-- AGF LLC PDU %02u:", count++);
 
-		llcp_print_pdu(pdu, size + NFC_LLCP_RAW_HEADER_SIZE, timestamp);
+		llcp_print_pdu(pdu, size + NFC_RAW_HEADER_SIZE, timestamp);
 
 		offset += size;
 	}
@@ -530,7 +530,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 	if (!opts.dump_symm && packet.llcp.ptype == LLCP_PTYPE_SYMM)
 		return 0;
 
-	if (packet.direction == NFC_LLCP_DIRECTION_RX) {
+	if (packet.direction == NFC_DIRECTION_RX) {
 		direction_str = ">>";
 		direction_color = COLOR_RED;
 	} else {
