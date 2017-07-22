@@ -242,7 +242,7 @@ static int meta_recv(uint8_t *resp, int length, void *data)
 
 	/* Default to 48 bytes data size in case of blank tag */
 	err = near_tag_add_data(cookie->adapter_idx, cookie->target_idx,
-			NULL, (TAG_DATA_LENGTH(cc) ? TAG_DATA_LENGTH(cc) :
+			NULL, (TAG_DATA_LENGTH(cc) != 0 ? TAG_DATA_LENGTH(cc) :
 			TYPE2_DATA_SIZE_48 << 3));
 
 	if (err < 0)
