@@ -250,6 +250,7 @@ static int apdu_trailer_status(struct iso7816_apdu_resp *trailer)
 	case 0x90:
 		if (trailer->sw2 == 0)
 			return 0;
+		return -EIO;
 	case 0x63:
 	case 0x62:
 		return 0;
