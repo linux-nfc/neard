@@ -923,7 +923,8 @@ static enum record_type get_record_type(enum record_tnf tnf,
 			else
 				return RECORD_TYPE_UNKNOWN;
 
-		}
+		} else
+			return RECORD_TYPE_UNKNOWN;
 
 	case RECORD_TNF_MIME:
 		return RECORD_TYPE_MIME_TYPE;
