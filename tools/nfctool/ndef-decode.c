@@ -333,6 +333,7 @@ int ndef_print_records(guint8 *data, guint32 data_len)
 					ndef_printf_msg("Type: %s", mime_string);
 					break;
 				}
+				/* fall through */
 
 			default:
 				ndef_printf_msg("Type:");
