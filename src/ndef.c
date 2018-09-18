@@ -2593,8 +2593,22 @@ parse_aar_payload(uint8_t *payload, uint32_t length)
 
 int __near_ndef_record_register(struct near_ndef_record *record, char *path)
 {
-	record->path = path;
+	switch (record->header->rec_type) {
+	case RECORD_TYPE_WKT_TEXT:
+	case RECORD_TYPE_WKT_URI:
+	case RECORD_TYPE_WKT_SMART_POSTER:
+	case RECORD_TYPE_WKT_HANDOVER_REQUEST:
+	case RECORD_TYPE_WKT_HANDOVER_SELECT:
+	case RECORD_TYPE_WKT_HANDOVER_CARRIER:
+	case RECORD_TYPE_MIME_TYPE:
+	case RECORD_TYPE_EXT_AAR:
+		break;
+	default:
+		DBG("Unrecognized record type: %u", record->header->rec_type);
+		return 0;
+	}
 
+	record->path = path;
 	g_dbus_register_interface(connection, record->path,
 						NFC_RECORD_INTERFACE,
 						NULL, NULL, record_properties,
