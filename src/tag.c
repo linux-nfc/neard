@@ -53,6 +53,7 @@ struct near_tag {
 	uint8_t nfcid_len;
 
 	uint8_t iso15693_dsfid;
+	uint8_t iso15693_uid_len;
 	uint8_t iso15693_uid[NFC_MAX_ISO15693_UID_LEN];
 
 	size_t data_length;
@@ -168,6 +169,29 @@ static const char *type_string(struct near_tag *tag)
 	return type;
 }
 
+static const uint8_t uid_array(struct near_tag *tag, uint8_t **uid)
+{
+	if (tag->nfcid_len) {
+		DBG("NFCID: ");
+		for(int i = 0; i < tag->nfcid_len; i++)
+			DBG("%x", tag->nfcid[i]);
+
+		*uid = tag->nfcid;
+
+		return tag->nfcid_len;
+	} else if (tag->iso15693_uid_len) {
+		DBG("ISO-UID: ");
+		for(int i = 0; i < tag->iso15693_uid_len; i++)
+			DBG("%x", tag->iso15693_uid[i]);
+
+		*uid = tag->iso15693_uid;
+
+		return tag->iso15693_uid_len;
+	}
+
+	return 0;
+}
+
 static const char *protocol_string(struct near_tag *tag)
 {
 	const char *protocol;
@@ -215,6 +239,30 @@ static gboolean property_get_type(const GDBusPropertyTable *property,
 		return FALSE;
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &type);
+
+	return TRUE;
+}
+
+static gboolean property_get_uid(const GDBusPropertyTable *property,
+					DBusMessageIter *iter, void *user_data)
+{
+	struct near_tag *tag = user_data;
+	DBusMessageIter entry;
+	uint8_t *uid;
+	uint8_t len;
+
+	len = uid_array(tag, &uid);
+	if (!uid || !len)
+		return FALSE;
+
+	dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY,
+					 "{y}", &entry);
+
+	for (int i = 0; i < len; i++)
+		dbus_message_iter_append_basic(&entry, DBUS_TYPE_BYTE,
+					       (void *)&uid[i]);
+
+	dbus_message_iter_close_container(iter, &entry);
 
 	return TRUE;
 }
@@ -524,6 +572,7 @@ static const GDBusPropertyTable tag_properties[] = {
 	{ "Protocol", "s", property_get_protocol },
 	{ "ReadOnly", "b", property_get_readonly },
 	{ "Adapter", "o", property_get_adapter },
+	{ "Uid", "ay", property_get_uid },
 
 	{ }
 };
@@ -669,8 +718,10 @@ static int tag_initialize(struct near_tag *tag,
 	if (nfcid_len && nfcid_len <= NFC_MAX_NFCID1_LEN) {
 		tag->nfcid_len = nfcid_len;
 		memcpy(tag->nfcid, nfcid, nfcid_len);
-	} else if (iso15693_uid_len) {
+	} else if (iso15693_uid_len &&
+		   iso15693_uid_len <= NFC_MAX_ISO15693_UID_LEN) {
 		tag->iso15693_dsfid = iso15693_dsfid;
+		tag->iso15693_uid_len = iso15693_uid_len;
 		memcpy(tag->iso15693_uid, iso15693_uid, iso15693_uid_len);
 	}
 
@@ -835,11 +886,11 @@ uint8_t *near_tag_get_iso15693_uid(uint32_t adapter_idx, uint32_t target_idx)
 	if (!tag)
 		goto fail;
 
-	iso15693_uid = g_try_malloc0(NFC_MAX_ISO15693_UID_LEN);
+	iso15693_uid = g_try_malloc0(tag->iso15693_uid_len);
 	if (!iso15693_uid)
 		goto fail;
 
-	memcpy(iso15693_uid, tag->iso15693_uid, NFC_MAX_ISO15693_UID_LEN);
+	memcpy(iso15693_uid, tag->iso15693_uid, tag->iso15693_uid_len);
 
 	return iso15693_uid;
 
