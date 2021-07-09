@@ -57,9 +57,9 @@ int adapter_all_get_devices(void)
 	return 0;
 }
 
-static void adapter_print_target(guint32 idx, gchar *type)
+static void adapter_print_target(gpointer idx, gchar *type)
 {
-	printf("%s%d ", type, idx);
+	printf("%s%d ", type, GPOINTER_TO_INT(idx));
 }
 
 void adpater_print_targets(struct nfc_adapter *adapter, gchar *prefix)
