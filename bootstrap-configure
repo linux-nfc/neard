@@ -4,6 +4,11 @@ if [ -f config.status ]; then
 	make maintainer-clean
 fi
 
+CONFIGURE_CROSS=""
+if [ "$CROSS_COMPILE" ]; then
+	CONFIGURE_CROSS="--host=${CROSS_COMPILE}"
+fi
+
 ./bootstrap && \
     ./configure --enable-maintainer-mode \
 		--enable-debug \
@@ -11,4 +16,5 @@ fi
 		--prefix=/usr \
 		--enable-ese \
 		--sysconfdir=/etc \
+		"$CONFIGURE_CROSS" \
 		--enable-tools "$@"
