@@ -20,27 +20,49 @@ jobs:
           - container: "ubuntu:hirsute"
             env:
               CC: gcc
+              MODE: maintainer
+
+          - container: "ubuntu:hirsute"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: no-maintainer
 
           - container: "ubuntu:focal"
             env:
               CC: gcc
+              MODE: maintainer
+
+          - container: "ubuntu:focal"
+            env:
+              CC: gcc
+              MODE: no-maintainer
 
           - container: "ubuntu:bionic"
             env:
               CC: gcc
+              MODE: maintainer
 
           - container: "ubuntu:xenial"
             env:
               CC: gcc
+              MODE: maintainer
 
           # Ubuntu clang
           - container: "ubuntu:hirsute"
             env:
               CC: clang
+              MODE: maintainer
 
           - container: "ubuntu:focal"
             env:
               CC: clang
+              MODE: maintainer
+
+          - container: "ubuntu:focal"
+            env:
+              CC: clang
+              MODE: no-maintainer
 
     container:
       image: ${{ matrix.container }}
@@ -73,7 +95,19 @@ jobs:
         printenv
 
     - name: Configure
-      run: ./bootstrap-configure
+      run: |
+        echo "Bootstraping in mode: $MODE"
+        if [ "$MODE" = "maintainer" ]; then
+          ./bootstrap-configure
+        else
+          ./bootstrap && \
+            ./configure \
+            --disable-systemd \
+            --prefix=/usr \
+            --enable-ese \
+            --sysconfdir=/etc \
+            --enable-tools
+        fi
 
     - name: Compile
       run: make -j$(nproc)
