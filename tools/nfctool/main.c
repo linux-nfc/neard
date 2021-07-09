@@ -259,9 +259,9 @@ static int nfctool_snl(void)
 	return nfctool_snl_send_request(adapter);
 }
 
-static void nfctool_send_dep_link_up(guint32 target_idx, guint32 adapter_idx)
+static void nfctool_send_dep_link_up(gpointer target_idx, gpointer adapter_idx)
 {
-	nl_send_dep_link_up(adapter_idx, target_idx);
+	nl_send_dep_link_up(GPOINTER_TO_INT(adapter_idx), GPOINTER_TO_INT(target_idx));
 }
 
 static int nfctool_targets_found(guint32 adapter_idx)
