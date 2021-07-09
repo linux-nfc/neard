@@ -325,13 +325,13 @@ static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data)
 }
 
 static void nfctool_print_and_remove_snl(struct nfc_snl *sdres,
-					 guint32 adapter_idx)
+					 gpointer adapter_idx)
 {
 	GSList *elem;
 
 	printf(" uri: %s - sap: %d\n", sdres->uri, sdres->sap);
 
-	if (adapter_idx == opts.adapter_idx) {
+	if (GPOINTER_TO_UINT(adapter_idx) == opts.adapter_idx) {
 		elem = g_slist_find_custom(opts.snl_list, sdres->uri,
 					   (GCompareFunc)g_strcmp0);
 
