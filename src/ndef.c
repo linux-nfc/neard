@@ -1189,6 +1189,11 @@ parse_text_payload(uint8_t *payload, uint32_t length)
 
 	len = length - lang_length - 1;
 
+	if (status && (len % 2)) {
+		DBG("Payload not valid UTF-16 (length %d does not match)", len);
+		goto fail;
+	}
+
 	if (len > 0) {
 		txt = (char *)(payload + offset);
 

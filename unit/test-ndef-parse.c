@@ -150,6 +150,15 @@ static uint8_t text[] = {0xd1, 0x1, 0x13, 0x54, 0x5, 0x65, 0x6e, 0x2d,
 			 0x55, 0x53, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0xc5,
 			 0xbc, 0xc3, 0xb3, 0xc5, 0x82, 0x77};
 
+/* 'hello żółw' - UTF-16 - en-US Text NDEF UTF-16 malformed*/
+static uint8_t text_utf16_invalid[] = {0xd1, 0x1, 0x19, 0x54, 0x85,
+			/* en-US */
+			0x65, 0x6e, 0x2d, 0x55, 0x53,
+			/* hello żółw */
+			0x68, 0x00, 0x65, 0x00, 0x6c, 0x00, 0x6c, 0x00, 0x6f, 0x00,
+			/* Missing last byte */
+			0x20, 0x00, 0x7c, 0x01, 0xf3, 0x00, 0x42, 0x01, 0x77};
+
 /* Smart poster with a http://intel.com URI record */
 static uint8_t single_sp[] = {0xd1, 0x2, 0xe, 0x53, 0x70, 0xd1, 0x1, 0xa,
 			      0x55, 0x3, 0x69, 0x6e, 0x74, 0x65, 0x6c, 0x2e,
@@ -251,6 +260,15 @@ static void test_ndef_text(void)
 	g_free(record->text->language_code);
 	g_free(record->text);
 	test_ndef_free_record(record);
+}
+
+static void test_ndef_text_invalid_utf16(void)
+{
+	GList *records;
+
+	records = near_ndef_parse_msg(text_utf16_invalid, sizeof(text_utf16_invalid), NULL);
+
+	g_assert_null(records);
 }
 
 static void test_ndef_single_sp(void)
@@ -422,6 +440,7 @@ int main(int argc, char **argv)
 
 	g_test_add_func("/testNDEF-parse/Test URI NDEF", test_ndef_uri);
 	g_test_add_func("/testNDEF-parse/Test Text NDEF", test_ndef_text);
+	g_test_add_func("/testNDEF-parse/Test Text NDEF UTF-16 malformed", test_ndef_text_invalid_utf16);
 	g_test_add_func("/testNDEF-parse/Test Single record SmartPoster NDEF",
 							test_ndef_single_sp);
 	g_test_add_func("/testNDEF-parse/Test Title record SmartPoster NDEF",
