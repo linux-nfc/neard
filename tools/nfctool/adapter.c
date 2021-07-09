@@ -36,7 +36,7 @@ static GSList *adapters;
 
 static struct nfc_adapter *selected_adapter;
 
-static void adapter_get_devices(struct nfc_adapter *adapter)
+static void adapter_get_devices(struct nfc_adapter *adapter, gpointer user_data)
 {
 	if (adapter->rf_mode == NFC_RF_INITIATOR)
 		nl_get_targets(adapter);
