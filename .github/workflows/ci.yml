@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Copyright (c) 2021 Canonical Ltd.
+# Author: Krzysztof Kozlowski <krzysztof.kozlowski@canonical.com>
+#                             <krzk@kernel.org>
+# Loosely based on https://github.com/linux-test-project/ltp
+#
+name: "CI: docker based builds"
+on: [push, pull_request]
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: "ubuntu:hirsute"
+            env:
+              CC: gcc
+
+          - container: "ubuntu:focal"
+            env:
+              CC: gcc
+
+          - container: "ubuntu:bionic"
+            env:
+              CC: gcc
+
+          - container: "ubuntu:xenial"
+            env:
+              CC: gcc
+
+    container:
+      image: ${{ matrix.container }}
+      env: ${{ matrix.env }}
+
+    steps:
+    - name: Show OS
+      run: cat /etc/os-release
+
+    - name: Git checkout
+      uses: actions/checkout@v1
+
+    - name: Install additional packages
+      run: |
+        INSTALL=${{ matrix.container }}
+        INSTALL="${INSTALL%%:*}"
+        INSTALL="${INSTALL%%/*}"
+        ./ci/$INSTALL.sh
+        if [ "$VARIANT" ]; then ./ci/$INSTALL.$VARIANT.sh; fi
+
+    - name: Compiler version
+      run: $CC --version
+
+    - name: Display environment and Linux version
+      run: |
+        test -f /etc/issue && cat /etc/issue
+        lsb_release -a || true
+        uname -a
+        cat /proc/cmdline
+        printenv
+
+    - name: Configure
+      run: ./bootstrap-configure
+
+    - name: Compile
+      run: make -j$(nproc)
+
+    - name: Install
+      run: make install
+
+    - name: Distribution check
+      run: make distcheck
