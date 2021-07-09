@@ -139,9 +139,11 @@ void adapter_idx_print_info(guint32 idx)
 		g_slist_foreach(adapters, (GFunc)adapter_print_info, NULL);
 }
 
-static gint adapter_compare_idx(struct nfc_adapter *adapter, guint32 idx)
+static gint adapter_compare_idx(struct nfc_adapter *adapter, gpointer idx_ptr)
 {
-	return (gint)adapter->idx - (gint)idx;
+	gint idx = GPOINTER_TO_INT(idx_ptr);
+
+	return (gint)adapter->idx - idx;
 }
 
 struct nfc_adapter *adapter_get(guint32 idx)
