@@ -1198,7 +1198,8 @@ parse_text_payload(uint8_t *payload, uint32_t length)
 		txt = (char *)(payload + offset);
 
 		if (status)
-			g_str = g_utf16_to_utf8((gunichar2 *)txt, len, NULL,
+			/* Cast to void to silence the 1-to-2 alignment warning */
+			g_str = g_utf16_to_utf8((gunichar2 *)(void *)txt, len, NULL,
 						NULL, NULL);
 		else
 			g_str = txt;
