@@ -28,7 +28,7 @@
 struct seel_se;
 struct seel_channel;
 struct seel_ace;
-struct seel_apdu *apdu;
+struct seel_apdu;
 
 int __seel_manager_init(DBusConnection *conn);
 void __seel_manager_cleanup(void);
