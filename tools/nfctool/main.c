@@ -118,7 +118,7 @@ static int nfctool_set_params(void)
 
 	nl_get_params(adapter);
 
-	adapter_print_info(adapter);
+	adapter_print_info(adapter, NULL);
 
 exit:
 	return err;

@@ -78,7 +78,7 @@ void adpater_print_targets(struct nfc_adapter *adapter, gchar *prefix)
 	printf("]\n");
 }
 
-void adapter_print_info(struct nfc_adapter *adapter)
+void adapter_print_info(struct nfc_adapter *adapter, gpointer user_data)
 {
 	gchar *rf_mode_str;
 
@@ -134,7 +134,7 @@ void adapter_print_info(struct nfc_adapter *adapter)
 void adapter_idx_print_info(guint32 idx)
 {
 	if (idx != INVALID_ADAPTER_IDX)
-		adapter_print_info(adapter_get(idx));
+		adapter_print_info(adapter_get(idx), NULL);
 	else
 		g_slist_foreach(adapters, (GFunc)adapter_print_info, NULL);
 }

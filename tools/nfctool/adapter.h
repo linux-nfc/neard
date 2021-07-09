@@ -52,7 +52,7 @@ int adapter_all_get_devices(void);
 
 void adapter_idx_print_info(guint32 idx);
 
-void adapter_print_info(struct nfc_adapter *adapter);
+void adapter_print_info(struct nfc_adapter *adapter, gpointer user_data);
 
 void adpater_print_targets(struct nfc_adapter *adapter, gchar *prefix);
 
