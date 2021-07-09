@@ -16,6 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Ubuntu gcc
           - container: "ubuntu:hirsute"
             env:
               CC: gcc
@@ -31,6 +32,15 @@ jobs:
           - container: "ubuntu:xenial"
             env:
               CC: gcc
+
+          # Ubuntu clang
+          - container: "ubuntu:hirsute"
+            env:
+              CC: clang
+
+          - container: "ubuntu:focal"
+            env:
+              CC: clang
 
     container:
       image: ${{ matrix.container }}
