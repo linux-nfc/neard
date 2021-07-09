@@ -245,7 +245,7 @@ static bool t5_tag_is_ti_std(struct near_tag *tag)
 static bool t5_tag_is_ti_pro(struct near_tag *tag)
 {
 	uint8_t *uid;
-	bool ret;
+	bool ret = false;
 
 	uid = near_tag_get_iso15693_uid(near_tag_get_adapter_idx(tag),
 					near_tag_get_target_idx(tag));
