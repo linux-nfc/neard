@@ -98,11 +98,13 @@ jobs:
       run: |
         echo "Bootstraping in mode: $MODE"
         if [ "$MODE" = "maintainer" ]; then
-          ./bootstrap-configure
+          ./bootstrap-configure \
+            --disable-silent-rules
         else
           ./bootstrap && \
             ./configure \
             --disable-systemd \
+            --disable-silent-rules \
             --prefix=/usr \
             --enable-ese \
             --sysconfdir=/etc \
