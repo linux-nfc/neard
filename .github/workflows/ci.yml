@@ -16,9 +16,140 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ubuntu gcc
+          # Debian builds
+          # 32bit build
+          - container: "debian:stable"
+            env:
+              ARCH: i386
+              CC: gcc -m32
+              CROSS_COMPILE: i686-linux-gnu
+              VARIANT: i386
+              MODE: maintainer
+
+          # Debian cross compilation builds
+          - container: "debian:stable"
+            env:
+              ARCH: armel
+              CC: arm-linux-gnueabi-gcc
+              CROSS_COMPILE: arm-linux-gnueabi
+              VARIANT: cross-compile
+              MODE: maintainer
+
+          - container: "debian:stable"
+            env:
+              ARCH: arm64
+              CC: aarch64-linux-gnu-gcc
+              CROSS_COMPILE: aarch64-linux-gnu
+              VARIANT: cross-compile
+              MODE: maintainer
+
+          - container: "debian:stable"
+            env:
+              ARCH: ppc64el
+              CC: powerpc64le-linux-gnu-gcc
+              CROSS_COMPILE: powerpc64le-linux-gnu
+              VARIANT: cross-compile
+              MODE: maintainer
+
+          - container: "debian:stable"
+            env:
+              ARCH: s390x
+              CC: s390x-linux-gnu-gcc
+              CROSS_COMPILE: s390x-linux-gnu
+              VARIANT: cross-compile
+              MODE: maintainer
+
+          # Debian gcc
+          - container: "debian:stable"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: maintainer
+
+          - container: "debian:stable"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: no-maintainer
+
+          - container: "debian:testing"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: maintainer
+
+          - container: "debian:testing"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: no-maintainer
+
+          # Debian clang
+          - container: "debian:stable"
+            env:
+              ARCH: x86-64
+              CC: clang
+              MODE: maintainer
+
+          - container: "debian:stable"
+            env:
+              ARCH: x86-64
+              CC: clang
+              MODE: no-maintainer
+
+          - container: "debian:testing"
+            env:
+              ARCH: x86-64
+              CC: clang
+              MODE: maintainer
+
+          # musl (native)
+          - container: "alpine:latest"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: maintainer
+
+          # Fedora
+          - container: "fedora:latest"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: maintainer
+
+          - container: "fedora:latest"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              MODE: no-maintainer
+
+          - container: "fedora:latest"
+            env:
+              ARCH: x86-64
+              CC: clang
+              MODE: maintainer
+
+          # Ubuntu 32bit builds: gcc and clang
           - container: "ubuntu:hirsute"
             env:
+              ARCH: i386
+              CC: gcc -m32
+              CROSS_COMPILE: i686-linux-gnu
+              VARIANT: i386
+              MODE: maintainer
+
+          - container: "ubuntu:focal"
+            env:
+              ARCH: i386
+              CC: gcc -m32
+              CROSS_COMPILE: i686-linux-gnu
+              VARIANT: i386
+              MODE: maintainer
+
+          # Ubuntu x86-64 gcc
+          - container: "ubuntu:hirsute"
+            env:
+              ARCH: x86-64
               CC: gcc
               MODE: maintainer
 
@@ -30,37 +161,44 @@ jobs:
 
           - container: "ubuntu:focal"
             env:
+              ARCH: x86-64
               CC: gcc
               MODE: maintainer
 
           - container: "ubuntu:focal"
             env:
+              ARCH: x86-64
               CC: gcc
               MODE: no-maintainer
 
           - container: "ubuntu:bionic"
             env:
+              ARCH: x86-64
               CC: gcc
               MODE: maintainer
 
           - container: "ubuntu:xenial"
             env:
+              ARCH: x86-64
               CC: gcc
               MODE: maintainer
 
-          # Ubuntu clang
+          # Ubuntu x86-64 clang
           - container: "ubuntu:hirsute"
             env:
+              ARCH: x86-64
               CC: clang
               MODE: maintainer
 
           - container: "ubuntu:focal"
             env:
+              ARCH: x86-64
               CC: clang
               MODE: maintainer
 
           - container: "ubuntu:focal"
             env:
+              ARCH: x86-64
               CC: clang
               MODE: no-maintainer
 
@@ -114,8 +252,26 @@ jobs:
     - name: Compile
       run: make -j$(nproc)
 
+    - name: Check final binary
+      run: |
+        file src/neard
+        ARCH_CHECK="$ARCH"
+        case "$ARCH" in
+          armel) ARCH_CHECK="ARM, EABI";;
+          arm64) ARCH_CHECK="aarch64";;
+          i386) ARCH_CHECK="Intel 80386";;
+          ppc64el) ARCH_CHECK="64-bit PowerPC";;
+          s390x) ARCH_CHECK="IBM S/390";;
+          *) ARCH_CHECK="x86-64";;
+        esac
+        echo "Checking for built matching architecture: $ARCH_CHECK"
+        file src/neard | grep "$ARCH_CHECK"
+
     - name: Install
       run: make install
 
     - name: Distribution check
       run: make distcheck
+      # distcheck runs unit tests so no point for cross compile
+      # TODO: figure out how to re-configure during distcheck with --host for i386 (DISTCHECK_CONFIGURE_FLAGS)
+      if: ${{ (matrix.env['ARCH'] == 'x86-64')}}
