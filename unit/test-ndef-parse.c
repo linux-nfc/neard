@@ -290,8 +290,8 @@ static void test_ndef_single_sp(void)
 
 	g_assert(record->sp);
 	g_assert_cmpuint(record->sp->number_of_title_records, ==, 0);
-	g_assert(!record->sp->type);
-	g_assert(!record->sp->action);
+	g_assert_null(record->sp->type);
+	g_assert_null(record->sp->action);
 	g_assert_cmpuint(record->sp->size, ==, 0);
 	g_assert(record->sp->uri);
 
@@ -332,8 +332,8 @@ static void test_ndef_title_sp(void)
 
 	g_assert(record->sp);
 	g_assert_cmpuint(record->sp->number_of_title_records, ==, 1);
-	g_assert(!record->sp->type);
-	g_assert(!record->sp->action);
+	g_assert_null(record->sp->type);
+	g_assert_null(record->sp->action);
 	g_assert_cmpuint(record->sp->size, ==, 0);
 	g_assert(record->sp->uri);
 	g_assert(record->sp->title_records[0]);
