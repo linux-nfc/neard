@@ -144,7 +144,18 @@ static void dump_rule(gpointer data, gpointer user_data)
 		uint8_t *header, *mask;
 		size_t n_rules;
 
-		apdu_rule = (struct seel_ace_apdu_rule *)rule->apdu_rules;
+		/*
+		 * (void *) to silence -Wcast-align. Code should be safe
+		 * (assuming platform handles unaliagned access) as iterations
+		 * go up to n_rules.
+		 *
+		 * TODO: Fix the problem instead of silencing with cast, so
+		 * the code would be porable.
+		 */
+		if (rule->apdu_rules_len % sizeof(struct seel_ace_apdu_rule *)) {
+			DBG("  APDU: wrong alignment (Bug, code needs fixing)");
+		}
+		apdu_rule = (struct seel_ace_apdu_rule *)(void *)rule->apdu_rules;
 		n_rules = rule->apdu_rules_len /
 				sizeof(struct seel_ace_apdu_rule);
 
@@ -787,8 +798,21 @@ static bool apdu_allowed(struct seel_ace_rule *rule,
 
 	n_rules = rule->apdu_rules_len /
 				sizeof(struct seel_ace_apdu_rule);
-	apdu_header = *((uint32_t *) apdu);
-	apdu_rule = (struct seel_ace_apdu_rule *)rule->apdu_rules;
+	/*
+	 * FIXME: apdu comes from message and where is checking for apdu_len?
+	 * The (void *) is to fix -Wcast-align but the actual problem is
+	 * whether the apdu contains enough of data.
+	 */
+	apdu_header = *((uint32_t *)(void *) apdu);
+	/*
+	 * (void *) to silence -Wcast-align. Code should be safe
+	 * (assuming platform handles unaliagned access) as iterations
+	 * go up to n_rules.
+	 *
+	 * TODO: Fix the problem instead of silencing with cast, so
+	 * the code would be porable.
+	 */
+	apdu_rule = (struct seel_ace_apdu_rule *)(void *)rule->apdu_rules;
 
 	for (i = 0; i < n_rules; i++) {
 		if ((apdu_header & apdu_rule->mask) == apdu_rule->header)
