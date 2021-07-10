@@ -337,10 +337,11 @@ static bool test_snep_read_req_common(
 			near_server_io req_get, near_server_io req_put)
 {
 	bool ret;
-	size_t nbytes;
+	ssize_t nbytes;
 
 	nbytes = send(sockfd[client], req, frame_len, 0);
-	g_assert(nbytes == frame_len);
+	g_assert_cmpint(nbytes, >, 0);
+	g_assert_cmpuint(nbytes, ==, frame_len);
 
 	TEST_SNEP_LOG("sent 0x%02X request\n", req->request);
 
@@ -364,9 +365,10 @@ static bool test_snep_read_req_common(
 static bool test_snep_read_send_fragment(size_t frag_len,
 						uint8_t *data)
 {
-	size_t nbytes;
+	ssize_t nbytes;
 
 	nbytes = send(sockfd[client], data, frag_len, 0);
+	g_assert_cmpint(nbytes, >, 0);
 	g_assert_cmpuint(nbytes, ==, frag_len);
 
 	near_snep_core_read(sockfd[server], 0, 0, NULL,
@@ -439,7 +441,7 @@ static void test_snep_read_verify_resp(int exp_resp_code,
 		uint32_t exp_resp_info_len, uint8_t *exp_resp_info)
 {
 	struct p2p_snep_resp_frame *resp;
-	size_t nbytes, frame_len;
+	ssize_t nbytes, frame_len;
 
 	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + exp_resp_info_len;
 	resp = test_snep_build_resp_frame(frame_len, 0, 0, 0, NULL);
@@ -713,7 +715,7 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 	struct p2p_snep_resp_frame *resp;
 	uint32_t frame_len, payload_len;
 	bool ret;
-	size_t nbytes;
+	ssize_t nbytes;
 	uint8_t *data_recvd;
 	uint32_t offset;
 	uint32_t frag_len, info_len;
@@ -750,6 +752,7 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 
 	/* start receiving fragments */
 	nbytes = recv(sockfd[client], resp, frame_len, 0);
+	g_assert_cmpint(nbytes, >=, 0);
 	g_assert_cmpuint(nbytes, ==, frag_len);
 	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(ctx->req_info_len));
 	g_assert(resp->info);
@@ -829,7 +832,7 @@ static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
 static void test_snep_response_put_get_ndef(gpointer context,
 						gconstpointer gp)
 {
-	size_t nbytes;
+	ssize_t nbytes;
 
 	struct p2p_snep_req_frame *req;
 	struct p2p_snep_resp_frame *resp;
@@ -855,6 +858,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* Send PUT request with text record */
 	nbytes = send(sockfd[server], req, frame_len, 0);
+	g_assert_cmpint(nbytes, >=, 0);
 	g_assert_cmpuint(nbytes, ==, frame_len);
 
 	/* UUT */
