@@ -1164,8 +1164,8 @@ parse_text_payload(uint8_t *payload, uint32_t length)
 	if (!text_payload)
 		return NULL;
 
-	/* 0x80 is used to get 7th bit value (0th bit is LSB) */
-	status = ((payload[offset] & 0x80) >> 7);
+	/* 0th bit is LSB */
+	status = ((payload[offset] & NDEF_TEXT_RECORD_UTF16_STATUS) >> 7);
 
 	text_payload->encoding = (status == 0) ?
 					g_strdup("UTF-8") : g_strdup("UTF-16");
