@@ -206,16 +206,16 @@ static void test_ndef_uri(void)
 	records = near_ndef_parse_msg(uri, sizeof(uri), NULL);
 
 	g_assert(records);
-	g_assert(g_list_length(records) == 1);
+	g_assert_cmpuint(g_list_length(records), ==, 1);
 
 	record = (struct near_ndef_record *)(records->data);
 
-	g_assert(record->header->rec_type == RECORD_TYPE_WKT_URI);
-	g_assert(record->header->mb == 1);
-	g_assert(record->header->me == 1);
+	g_assert_cmpuint(record->header->rec_type, ==, RECORD_TYPE_WKT_URI);
+	g_assert_cmpuint(record->header->mb, ==, 1);
+	g_assert_cmpuint(record->header->me, ==, 1);
 
 	g_assert(record->uri);
-	g_assert(record->uri->field_length == strlen("intel.com"));
+	g_assert_cmpuint(record->uri->field_length, ==, strlen("intel.com"));
 	g_assert(strncmp((char *) record->uri->field, "intel.com",
 					record->uri->field_length) == 0);
 
@@ -235,13 +235,13 @@ static void test_ndef_text(void)
 	records = near_ndef_parse_msg(text, sizeof(text), NULL);
 
 	g_assert(records);
-	g_assert(g_list_length(records) == 1);
+	g_assert_cmpuint(g_list_length(records), ==, 1);
 
 	record = (struct near_ndef_record *)(records->data);
 
-	g_assert(record->header->rec_type == RECORD_TYPE_WKT_TEXT);
-	g_assert(record->header->mb == 1);
-	g_assert(record->header->me == 1);
+	g_assert_cmpuint(record->header->rec_type, ==, RECORD_TYPE_WKT_TEXT);
+	g_assert_cmpuint(record->header->mb, ==, 1);
+	g_assert_cmpuint(record->header->me, ==, 1);
 
 	g_assert(record->text);
 	g_assert_cmpstr(record->text->data, ==, "hello żółw");
@@ -280,24 +280,24 @@ static void test_ndef_single_sp(void)
 	records = near_ndef_parse_msg(single_sp, sizeof(single_sp), NULL);
 
 	g_assert(records);
-	g_assert(g_list_length(records) == 1);
+	g_assert_cmpuint(g_list_length(records), ==, 1);
 
 	record = (struct near_ndef_record *) records->data;
 
-	g_assert(record->header->rec_type == RECORD_TYPE_WKT_SMART_POSTER);
-	g_assert(record->header->mb == 1);
-	g_assert(record->header->me == 1);
+	g_assert_cmpuint(record->header->rec_type, ==, RECORD_TYPE_WKT_SMART_POSTER);
+	g_assert_cmpuint(record->header->mb, ==, 1);
+	g_assert_cmpuint(record->header->me, ==, 1);
 
 	g_assert(record->sp);
-	g_assert(record->sp->number_of_title_records == 0);
+	g_assert_cmpuint(record->sp->number_of_title_records, ==, 0);
 	g_assert(!record->sp->type);
 	g_assert(!record->sp->action);
-	g_assert(record->sp->size == 0);
+	g_assert_cmpuint(record->sp->size, ==, 0);
 	g_assert(record->sp->uri);
 
 	uri = (struct near_ndef_uri_payload *) record->sp->uri;
 
-	g_assert(uri->field_length == strlen("intel.com"));
+	g_assert_cmpuint(uri->field_length, ==, strlen("intel.com"));
 	g_assert(strncmp((char *) uri->field, "intel.com",
 					uri->field_length) == 0);
 
@@ -322,26 +322,26 @@ static void test_ndef_title_sp(void)
 	records = near_ndef_parse_msg(title_sp, sizeof(title_sp), NULL);
 
 	g_assert(records);
-	g_assert(g_list_length(records) == 1);
+	g_assert_cmpuint(g_list_length(records), ==, 1);
 
 	record = (struct near_ndef_record *) records->data;
 
-	g_assert(record->header->rec_type == RECORD_TYPE_WKT_SMART_POSTER);
-	g_assert(record->header->mb == 1);
-	g_assert(record->header->me == 1);
+	g_assert_cmpuint(record->header->rec_type, ==, RECORD_TYPE_WKT_SMART_POSTER);
+	g_assert_cmpuint(record->header->mb, ==, 1);
+	g_assert_cmpuint(record->header->me, ==, 1);
 
 	g_assert(record->sp);
-	g_assert(record->sp->number_of_title_records == 1);
+	g_assert_cmpuint(record->sp->number_of_title_records, ==, 1);
 	g_assert(!record->sp->type);
 	g_assert(!record->sp->action);
-	g_assert(record->sp->size == 0);
+	g_assert_cmpuint(record->sp->size, ==, 0);
 	g_assert(record->sp->uri);
 	g_assert(record->sp->title_records[0]);
 
 	uri = (struct near_ndef_uri_payload *) record->sp->uri;
 	text = (struct near_ndef_text_payload *) record->sp->title_records[0];
 
-	g_assert(uri->field_length == strlen("intel.com"));
+	g_assert_cmpuint(uri->field_length, ==, strlen("intel.com"));
 	g_assert(strncmp((char *) uri->field, "intel.com",
 					uri->field_length) == 0);
 
@@ -379,13 +379,13 @@ static void test_ndef_aar(void)
 	records = near_ndef_parse_msg(aar, sizeof(aar), NULL);
 
 	g_assert(records);
-	g_assert(g_list_length(records) == 1);
+	g_assert_cmpuint(g_list_length(records), ==, 1);
 
 	record = (struct near_ndef_record *)(records->data);
 
-	g_assert(record->header->rec_type == RECORD_TYPE_EXT_AAR);
-	g_assert(record->header->mb == 1);
-	g_assert(record->header->me == 1);
+	g_assert_cmpuint(record->header->rec_type, ==, RECORD_TYPE_EXT_AAR);
+	g_assert_cmpuint(record->header->mb, ==, 1);
+	g_assert_cmpuint(record->header->me, ==, 1);
 
 	g_assert(record->aar);
 	g_assert(record->aar->package);
@@ -417,16 +417,16 @@ static void test_ndef_ho_hs_bt(void)
 	records = near_ndef_parse_msg(ho_hs_bt, sizeof(ho_hs_bt), NULL);
 
 	g_assert(records);
-	g_assert(g_list_length(records) == 2);
+	g_assert_cmpuint(g_list_length(records), ==, 2);
 
 	record = records->data;
 	ho = record->ho;
 
-	g_assert(ho->number_of_ac_payloads == 1);
+	g_assert_cmpuint(ho->number_of_ac_payloads, ==, 1);
 
 	ac = ho->ac_payloads[0];
 
-	g_assert(ac->cdr_len == 1);
+	g_assert_cmpuint(ac->cdr_len, ==, 1);
 	g_assert(memcmp(ac->cdr, "0", ac->cdr_len) == 0);
 
 	records = g_list_next(records);

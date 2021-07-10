@@ -63,7 +63,7 @@ static void test_ndef_text_build(void)
 	ndef = near_ndef_prepare_text_record("UTF-8", "en-US", "hello");
 
 	g_assert(ndef);
-	g_assert(ndef->length == ARRAY_SIZE(text));
+	g_assert_cmpuint(ndef->length, ==, ARRAY_SIZE(text));
 	g_assert(!memcmp(ndef->data, text, ARRAY_SIZE(text)));
 }
 
@@ -74,7 +74,7 @@ static void test_ndef_wsc_with_passphrase_build(void)
 	ndef = near_ndef_prepare_wsc_record("TestSSID", "Testpass");
 
 	g_assert(ndef);
-	g_assert(ndef->length == ARRAY_SIZE(wsc));
+	g_assert_cmpuint(ndef->length, ==, ARRAY_SIZE(wsc));
 	g_assert(!memcmp(ndef->data, wsc, ARRAY_SIZE(wsc)));
 }
 
@@ -85,7 +85,7 @@ static void test_ndef_wsc_with_out_passphrase_build(void)
 	ndef = near_ndef_prepare_wsc_record("TestSSID", NULL);
 
 	g_assert(ndef);
-	g_assert(ndef->length == ARRAY_SIZE(wsc_wo));
+	g_assert_cmpuint(ndef->length, ==, ARRAY_SIZE(wsc_wo));
 	g_assert(!memcmp(ndef->data, wsc_wo, ARRAY_SIZE(wsc_wo)));
 }
 

@@ -367,7 +367,7 @@ static bool test_snep_read_send_fragment(size_t frag_len,
 	size_t nbytes;
 
 	nbytes = send(sockfd[client], data, frag_len, 0);
-	g_assert(nbytes == frag_len);
+	g_assert_cmpuint(nbytes, ==, frag_len);
 
 	near_snep_core_read(sockfd[server], 0, 0, NULL,
 			test_snep_dummy_req_get, test_snep_dummy_req_put,
@@ -400,7 +400,7 @@ static void test_snep_read_recv_fragments(uint32_t frag_len,
 
 		/* receive remaining fragments */
 		nbytes = recv(sockfd[client], resp, frag_len, 0);
-		g_assert(nbytes > 0); /* TODO use explicit value? */
+		g_assert_cmpint(nbytes, >, 0); /* TODO use explicit value? */
 
 		/* store received data (no header this time) */
 		memcpy(data_recvd + offset, resp, nbytes);
@@ -422,8 +422,8 @@ static void test_snep_read_no_response(void)
 	g_assert(resp);
 
 	nbytes = recv(sockfd[client], resp, sizeof(*resp), MSG_DONTWAIT);
-	g_assert(nbytes < 0);
-	g_assert(errno == EAGAIN);
+	g_assert_cmpint(nbytes, <, 0);
+	g_assert_cmpint(errno, ==, EAGAIN);
 
 	g_free(resp);
 }
@@ -446,14 +446,14 @@ static void test_snep_read_verify_resp(int exp_resp_code,
 	g_assert(resp);
 
 	nbytes = recv(sockfd[client], resp, frame_len, 0);
-	g_assert(nbytes == frame_len);
+	g_assert_cmpint(nbytes, ==, frame_len);
 
 	TEST_SNEP_LOG("received response = 0x%02X, exp = 0x%02X\n",
 			resp->response, exp_resp_code);
 
-	g_assert(resp->version == NEAR_SNEP_VERSION);
-	g_assert(resp->response == exp_resp_code);
-	g_assert(resp->length == GUINT_TO_BE(exp_resp_info_len));
+	g_assert_cmpuint(resp->version, ==, NEAR_SNEP_VERSION);
+	g_assert_cmpuint(resp->response, ==, exp_resp_code);
+	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(exp_resp_info_len));
 	g_assert(!memcmp(resp->info, exp_resp_info, exp_resp_info_len));
 
 	g_free(resp);
@@ -750,8 +750,8 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 
 	/* start receiving fragments */
 	nbytes = recv(sockfd[client], resp, frame_len, 0);
-	g_assert(nbytes == frag_len);
-	g_assert(resp->length == GUINT_TO_BE(ctx->req_info_len));
+	g_assert_cmpuint(nbytes, ==, frag_len);
+	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(ctx->req_info_len));
 	g_assert(resp->info);
 
 	data_recvd = g_try_malloc0(ctx->req_info_len);
@@ -817,10 +817,10 @@ static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
 	near_snep_core_response_noinfo(sockfd[client], NEAR_SNEP_RESP_SUCCESS);
 
 	bytes_recv = recv(sockfd[server], &resp, sizeof(resp), 0);
-	g_assert(bytes_recv == NEAR_SNEP_RESP_HEADER_LENGTH);
-	g_assert(resp.version == NEAR_SNEP_VERSION);
-	g_assert(resp.response == NEAR_SNEP_RESP_SUCCESS);
-	g_assert(resp.length == 0);
+	g_assert_cmpint(bytes_recv, ==, NEAR_SNEP_RESP_HEADER_LENGTH);
+	g_assert_cmpint(resp.version, ==, NEAR_SNEP_VERSION);
+	g_assert_cmpint(resp.response, ==, NEAR_SNEP_RESP_SUCCESS);
+	g_assert_cmpint(resp.length, ==, 0);
 }
 
 /*
@@ -841,7 +841,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 	ndef = near_ndef_prepare_text_record("UTF-8", "en-US", "neard");
 	g_assert(ndef);
 	g_assert(ndef->data);
-	g_assert(ndef->length > 0);
+	g_assert_cmpuint(ndef->length, >, 0);
 
 	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + ndef->length;
 
@@ -855,7 +855,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* Send PUT request with text record */
 	nbytes = send(sockfd[server], req, frame_len, 0);
-	g_assert(nbytes == frame_len);
+	g_assert_cmpuint(nbytes, ==, frame_len);
 
 	/* UUT */
 	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
@@ -867,14 +867,14 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* Get response from server */
 	nbytes = recv(sockfd[server], resp, frame_len, 0);
-	g_assert(nbytes > 0);
-	g_assert(resp->response == NEAR_SNEP_RESP_SUCCESS);
+	g_assert_cmpint(nbytes, >, 0);
+	g_assert_cmpuint(resp->response, ==, NEAR_SNEP_RESP_SUCCESS);
 
 	/* Send GET request to retrieve a record */
 	req->request = NEAR_SNEP_REQ_GET;
 	req->length = 0;
 	nbytes = send(sockfd[server], req, NEAR_SNEP_RESP_HEADER_LENGTH, 0);
-	g_assert(nbytes > 0);
+	g_assert_cmpint(nbytes, >, 0);
 
 	/* UUT */
 	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
@@ -883,9 +883,10 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* Get response and verify */
 	nbytes = recv(sockfd[server], resp, frame_len, 0);
-	g_assert(nbytes > 0);
-	g_assert(resp->response == NEAR_SNEP_RESP_SUCCESS);
-	g_assert(resp->length == GUINT_TO_BE(ndef->length));
+	g_assert_cmpint(nbytes, >, 0);
+	g_assert_cmpuint(resp->response, ==, NEAR_SNEP_RESP_SUCCESS);
+	g_assert_cmpint(resp->length, ==, GUINT_TO_BE(ndef->length));
+	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(ndef->length));
 	g_assert(!memcmp(resp->info, text, ndef->length));
 
 	g_free(req);
