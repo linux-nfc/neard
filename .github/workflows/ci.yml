@@ -252,6 +252,17 @@ jobs:
     - name: Compile
       run: make -j$(nproc)
 
+    - name: Run unit tests
+      id: unit_tests
+      run: |
+        make check
+      if: ${{ (matrix.env['ARCH'] == 'x86-64') || (matrix.env['ARCH'] == 'i386') }}
+
+    - name: Get unit tests logs
+      run: cat test-suite.log
+      if: ${{ always() && ((steps.unit_tests.outcome == 'failure') ||
+                           (steps.unit_tests.outcome == 'success')) }}
+
     - name: Check final binary
       run: |
         file src/neard
