@@ -6,7 +6,7 @@
 #                             <krzk@kernel.org>
 #
 
-set -eEx
+set -ex
 
 apt update
 
@@ -20,10 +20,11 @@ tzdata tzdata/Zones/Europe select Berlin
 debconf-set-selections /tmp/tzdata-preseed.txt
 
 PKGS_CC="build-essential"
-if [ "$CC" = "clang" ]; then
-	PKGS_CC="clang"
-fi
-
+case $CC in
+	clang*)
+		PKGS_CC="clang"
+	;;
+esac
 
 apt install -y --no-install-recommends \
 	autoconf \
@@ -36,3 +37,5 @@ apt install -y --no-install-recommends \
 	libtool \
 	make \
 	$PKGS_CC
+
+echo "Install finished: $0"
