@@ -232,7 +232,7 @@ static gboolean property_get_powered(const GDBusPropertyTable *property,
 }
 
 static void set_powered(GDBusPendingPropertySet id, dbus_bool_t powered,
-								void *data)
+			void *data)
 {
 	struct near_adapter *adapter = data;
 	int err;
@@ -284,7 +284,7 @@ static void property_set_powered(const GDBusPropertyTable *property,
 }
 
 static void append_protocols(DBusMessageIter *iter,
-					struct near_adapter *adapter)
+			     struct near_adapter *adapter)
 {
 	const char *str;
 
@@ -405,7 +405,7 @@ static DBusMessage *stop_poll_loop(DBusConnection *conn,
 }
 
 static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
-								int status);
+			   int status);
 
 static gboolean check_presence(gpointer user_data)
 {
@@ -453,7 +453,7 @@ static gboolean dep_timer(gpointer user_data)
 }
 
 static void tag_present_cb(uint32_t adapter_idx, uint32_t target_idx,
-								int status)
+			   int status)
 {
 	struct near_adapter *adapter;
 
@@ -704,7 +704,7 @@ static void tag_read_cb(uint32_t adapter_idx, uint32_t target_idx, int status)
 }
 
 static void device_read_cb(uint32_t adapter_idx, uint32_t target_idx,
-								int status)
+			   int status)
 {
 	struct near_adapter *adapter;
 
@@ -996,7 +996,7 @@ static gboolean execute_recv_cb(gpointer user_data)
 }
 
 static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
-							gpointer user_data)
+				   gpointer user_data)
 {
 	struct near_adapter *adapter = user_data;
 	struct near_adapter_ioreq *req;
