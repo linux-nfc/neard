@@ -427,7 +427,7 @@ static void test_ndef_ho_hs_bt(void)
 	ac = ho->ac_payloads[0];
 
 	g_assert_cmpuint(ac->cdr_len, ==, 1);
-	g_assert(memcmp(ac->cdr, "0", ac->cdr_len) == 0);
+	g_assert_cmpmem(ac->cdr, ac->cdr_len, "0", sizeof("0"));
 
 	records = g_list_next(records);
 	record = records->data;

@@ -456,7 +456,8 @@ static void test_snep_read_verify_resp(int exp_resp_code,
 	g_assert_cmpuint(resp->version, ==, NEAR_SNEP_VERSION);
 	g_assert_cmpuint(resp->response, ==, exp_resp_code);
 	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(exp_resp_info_len));
-	g_assert(!memcmp(resp->info, exp_resp_info, exp_resp_info_len));
+	g_assert_cmpmem(resp->info, GUINT_FROM_BE(resp->length),
+			exp_resp_info, exp_resp_info_len);
 
 	g_free(resp);
 }
@@ -786,8 +787,8 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 					data_recvd + offset);
 
 		/* verify data */
-		g_assert(!memcmp(data_recvd, ctx->req_info,
-				ctx->req_info_len));
+		g_assert_cmpmem(data_recvd, ctx->req_info_len, ctx->req_info,
+				ctx->req_info_len);
 	}
 
 	g_free(data_recvd);
@@ -891,7 +892,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 	g_assert_cmpuint(resp->response, ==, NEAR_SNEP_RESP_SUCCESS);
 	g_assert_cmpint(resp->length, ==, GUINT_TO_BE(ndef->length));
 	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(ndef->length));
-	g_assert(!memcmp(resp->info, text, ndef->length));
+	g_assert_cmpmem(resp->info, GUINT_FROM_BE(resp->length), text, ndef->length);
 
 	g_free(req);
 	g_free(resp);
