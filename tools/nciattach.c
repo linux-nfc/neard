@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -39,7 +40,6 @@
 #include <termios.h>
 #include <time.h>
 #include <sys/time.h>
-#include <sys/poll.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <termios.h>
