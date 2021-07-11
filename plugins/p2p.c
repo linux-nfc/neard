@@ -256,9 +256,9 @@ static gboolean p2p_listener_event(GIOChannel *channel, GIOCondition condition,
 		return FALSE;
 	}
 
-	DBG("client dsap %d ssap %d",
+	DBG("client dsap %u ssap %u",
 		client_addr.dsap, client_addr.ssap);
-	DBG("target idx %d", client_addr.target_idx);
+	DBG("target idx %u", client_addr.target_idx);
 
 	client_data = g_try_malloc0(sizeof(struct p2p_data));
 	if (!client_data) {
