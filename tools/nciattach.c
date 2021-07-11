@@ -269,16 +269,16 @@ int main(int argc, char *argv[])
 	}
 
 	for (n = 0; optind < argc; n++, optind++) {
-		char *opt;
+		char *option;
 
-		opt = argv[optind];
+		option = argv[optind];
 
 		switch(n) {
 		case 0:
 			dev[0] = 0;
-			if (!strchr(opt, '/'))
+			if (!strchr(option, '/'))
 				strcpy(dev, "/dev/");
-			strcat(dev, opt);
+			strcat(dev, option);
 			break;
 
 		case 1:
