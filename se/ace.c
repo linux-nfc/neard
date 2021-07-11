@@ -126,7 +126,7 @@ static void dump_rule(gpointer data, gpointer user_data)
 		for (i = 0; i < rule->aid_len; i++)
 			sprintf(aid + (3 * i), "%02X ", rule->aid[i]);
 		aid[3 * i] = 0;
-		DBG("  AID [%zd]: %s", rule->aid_len, aid);
+		DBG("  AID [%zu]: %s", rule->aid_len, aid);
 	}
 
 	if (rule->hash_len == 0) {
@@ -135,7 +135,7 @@ static void dump_rule(gpointer data, gpointer user_data)
 		for (i = 0; i < rule->hash_len; i++)
 			sprintf(hash + (3 * i), "%02X ", rule->hash[i]);
 		hash[3 * i] = 0;
-		DBG("  Hash [%zd]: %s", rule->hash_len, hash);
+		DBG("  Hash [%zu]: %s", rule->hash_len, hash);
 	}
 
 	if (rule->apdu_rules_len == 1) {
@@ -159,7 +159,7 @@ static void dump_rule(gpointer data, gpointer user_data)
 		n_rules = rule->apdu_rules_len /
 				sizeof(struct seel_ace_apdu_rule);
 
-		DBG("  APDU rules (%zd)", n_rules);
+		DBG("  APDU rules (%zu)", n_rules);
 		for (i = 0; i < n_rules; i++) {
 			header = (uint8_t *)&apdu_rule->header;
 			mask = (uint8_t *)&apdu_rule->mask;
@@ -197,7 +197,7 @@ static int build_ref(struct seel_ace_rule *ace_rule,
 		switch (rule_ptr[0]) {
 		case AID_REF_DO:
 			do_length = rule_ptr[1];
-			DBG("AID_REF_DO %zd", do_length);
+			DBG("AID_REF_DO %zu", do_length);
 			rule_ptr += 2;
 
 			if (remaining < do_length)
@@ -216,7 +216,7 @@ static int build_ref(struct seel_ace_rule *ace_rule,
 
 		case HASH_REF_DO:
 			do_length = rule_ptr[1];
-			DBG("HASH_REF_DO %zd", do_length);
+			DBG("HASH_REF_DO %zu", do_length);
 			rule_ptr += 2;
 
 			if (remaining < do_length)
@@ -254,7 +254,7 @@ static int build_ar(struct seel_ace_rule *ace_rule,
 		switch (rule_ptr[0]) {
 		case APDU_AR_DO:
 			do_length = rule_ptr[1];
-			DBG("APDU_AR_DO %zd", do_length);
+			DBG("APDU_AR_DO %zu", do_length);
 			rule_ptr += 2;
 
 			if (remaining < do_length)
@@ -274,7 +274,7 @@ static int build_ar(struct seel_ace_rule *ace_rule,
 
 		case NFC_AR_DO:
 			do_length = rule_ptr[1];
-			DBG("NFC_AR_DO %zd", do_length);
+			DBG("NFC_AR_DO %zu", do_length);
 			rule_ptr += 2;
 
 			if (do_length != 1)
@@ -316,7 +316,7 @@ static struct seel_ace_rule *build_rule(struct seel_ace *ace,
 		switch (rule_ptr[0]) {
 		case REF_DO:
 			do_length = rule_ptr[1];
-			DBG("REF_DO %zd", do_length);
+			DBG("REF_DO %zu", do_length);
 			rule_ptr += 2;
 
 			err = build_ref(ace_rule, rule_ptr, do_length);
@@ -330,7 +330,7 @@ static struct seel_ace_rule *build_rule(struct seel_ace *ace,
 
 		case AR_DO:
 			do_length = rule_ptr[1];
-			DBG("AR_DO %zd", do_length);
+			DBG("AR_DO %zu", do_length);
 			rule_ptr += 2;
 
 			err = build_ar(ace_rule, rule_ptr, do_length);
@@ -378,7 +378,7 @@ static int build_ace_rules(struct seel_ace *ace,
 		remaining -= ref_ar_do_length + 2;
 		rule_ptr += 2;
 
-		DBG("REF_AR_DO %zd bytes", ref_ar_do_length);
+		DBG("REF_AR_DO %zu bytes", ref_ar_do_length);
 
 		rule = build_rule(ace, rule_ptr, ref_ar_do_length);
 		if (!rule) {
@@ -412,7 +412,7 @@ static int ace_rule_length(uint8_t *apdu, size_t apdu_length,
 	if (length & 0x80) {
 		size_t _length = length & 0x7f, i, base;
 
-		DBG("%zd", _length);
+		DBG("%zu", _length);
 
 		if (apdu_length < 3 + _length)
 			return -EINVAL;
@@ -441,7 +441,7 @@ static void get_next_gp_data_cb(void *context,
 	struct seel_ace *ace  = context;
 	size_t payload_length;
 
-	DBG("Current %zd Total %zd Got %zd",
+	DBG("Current %zu Total %zu Got %zu",
 		ace->current_rules_length, ace->rules_length, apdu_length);
 
 	if (err)
@@ -523,7 +523,7 @@ static void get_all_gp_data_cb(void *context,
 	payload_length = apdu_length - GET_ALL_DATA_CMD_LEN -
 					length_length - APDU_STATUS_LEN;
 
-	DBG("Received %zd bytes of payload", payload_length);
+	DBG("Received %zu bytes of payload", payload_length);
 
 	if (payload_length < (size_t)rule_length) {
 		ace->rules_length = rule_length;
@@ -655,7 +655,7 @@ static struct seel_ace_rule *find_specific_rule(struct seel_ace *ace,
 {
 	GSList *list;
 
-	DBG("%zd", aid_len);
+	DBG("%zu", aid_len);
 
 	if (!hash || !aid)
 		return false;
@@ -684,7 +684,7 @@ static bool find_specific_rule_for_aid(struct seel_ace *ace,
 {
 	GSList *list;
 
-	DBG("%zd", aid_len);
+	DBG("%zu", aid_len);
 
 	if (!aid)
 		return false;
@@ -713,7 +713,7 @@ static struct seel_ace_rule *find_generic_rule_for_aid(struct seel_ace *ace,
 {
 	GSList *list;
 
-	DBG("%zd", aid_len);
+	DBG("%zu", aid_len);
 
 	if (!aid)
 		return false;
@@ -833,7 +833,7 @@ bool __seel_ace_apdu_allowed(struct seel_channel *channel, uint8_t *hash,
 	uint8_t *aid;
 	size_t aid_len;
 
-	DBG("%zd", apdu_len);
+	DBG("%zu", apdu_len);
 
 	/* XXX Do we need to do some filtering on the basic channel ?*/
 	if (__seel_channel_is_basic(channel))

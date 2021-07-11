@@ -116,7 +116,7 @@ static void io_cb(void *context,
 	struct seel_se_ioreq *req = context;
 	struct seel_se *se = req->se;
 
-	DBG("%zd %d", apdu_length, err);
+	DBG("%zu %d", apdu_length, err);
 
 	/* Check response status */
 	if (!err)
@@ -247,7 +247,7 @@ static char *se_path(uint32_t se_idx, uint8_t ctrl_idx,
 	if (type == NULL)
 		return NULL;
 
-	return g_strdup_printf("%s/se/%s%d_%s_se%d", SEEL_PATH,
+	return g_strdup_printf("%s/se/%s%u_%s_se%u", SEEL_PATH,
 					ctrl, ctrl_idx, type, se_idx);
 }
 
@@ -538,7 +538,7 @@ static void open_channel_cb(void *context,
 
 	ctx->channel = apdu[0];
 
-	DBG("Channel %d", ctx->channel);
+	DBG("Channel %u", ctx->channel);
 
 	select_aid = __seel_apdu_select_aid(ctx->channel,
 						ctx->aid, ctx->aid_len);
