@@ -462,7 +462,7 @@ static gboolean bt_adapter_property_changed(DBusConnection *conn,
 		dbus_message_iter_get_basic(&var, &class);
 		bt_def_oob_data.class_of_device = class;
 
-		DBG("%s: %x", property, bt_def_oob_data.class_of_device);
+		DBG("%s: %x", property, (unsigned int)bt_def_oob_data.class_of_device);
 	} else if (g_str_equal(property, "Powered")) {
 		dbus_bool_t powered;
 
@@ -472,7 +472,7 @@ static gboolean bt_adapter_property_changed(DBusConnection *conn,
 		dbus_message_iter_get_basic(&var, &powered);
 		bt_def_oob_data.powered = powered;
 
-		DBG("%s: %u", property, bt_def_oob_data.powered);
+		DBG("%s: %d", property, bt_def_oob_data.powered);
 	}
 
 	return TRUE;
