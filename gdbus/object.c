@@ -283,14 +283,14 @@ static GSList *pending_security = NULL;
 static const GDBusSecurityTable *security_table = NULL;
 
 void g_dbus_pending_success(DBusConnection *connection,
-					GDBusPendingReply pending)
+			    GDBusPendingReply pending_reply)
 {
 	GSList *list;
 
 	for (list = pending_security; list; list = list->next) {
 		struct security_data *secdata = list->data;
 
-		if (secdata->pending != pending)
+		if (secdata->pending != pending_reply)
 			continue;
 
 		pending_security = g_slist_remove(pending_security, secdata);
@@ -305,7 +305,7 @@ void g_dbus_pending_success(DBusConnection *connection,
 }
 
 void g_dbus_pending_error_valist(DBusConnection *connection,
-				GDBusPendingReply pending, const char *name,
+				GDBusPendingReply pending_reply, const char *name,
 					const char *format, va_list args)
 {
 	GSList *list;
@@ -313,7 +313,7 @@ void g_dbus_pending_error_valist(DBusConnection *connection,
 	for (list = pending_security; list; list = list->next) {
 		struct security_data *secdata = list->data;
 
-		if (secdata->pending != pending)
+		if (secdata->pending != pending_reply)
 			continue;
 
 		pending_security = g_slist_remove(pending_security, secdata);
@@ -328,14 +328,14 @@ void g_dbus_pending_error_valist(DBusConnection *connection,
 }
 
 void g_dbus_pending_error(DBusConnection *connection,
-				GDBusPendingReply pending,
+			  GDBusPendingReply pending_reply,
 				const char *name, const char *format, ...)
 {
 	va_list args;
 
 	va_start(args, format);
 
-	g_dbus_pending_error_valist(connection, pending, name, format, args);
+	g_dbus_pending_error_valist(connection, pending_reply, name, format, args);
 
 	va_end(args);
 }
@@ -365,19 +365,19 @@ static void builtin_security_result(dbus_bool_t authorized, void *user_data)
 }
 
 static void builtin_security_function(DBusConnection *conn,
-						const char *action,
-						gboolean interaction,
-						GDBusPendingReply pending)
+				      const char *action,
+				      gboolean interaction,
+				      GDBusPendingReply pending_reply)
 {
 	struct builtin_security_data *data;
 
 	data = g_new0(struct builtin_security_data, 1);
 	data->conn = conn;
-	data->pending = pending;
+	data->pending = pending_reply;
 
 	if (polkit_check_authorization(conn, action, interaction,
 				builtin_security_result, data, 30000) < 0)
-		g_dbus_pending_error(conn, pending, NULL, NULL);
+		g_dbus_pending_error(conn, pending_reply, NULL, NULL);
 }
 
 static gboolean check_privilege(DBusConnection *conn, DBusMessage *msg,
