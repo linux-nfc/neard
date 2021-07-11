@@ -386,7 +386,7 @@ static bool test_snep_read_send_fragment(size_t frag_len,
  * @param[out] data             Must be preallocated
  */
 static void test_snep_read_recv_fragments(uint32_t frag_len,
-				uint32_t remaining_bytes, void *data_recvd)
+				uint32_t remaining_bytes, uint8_t *data_recvd)
 {
 	struct p2p_snep_resp_frame *resp;
 	uint32_t offset = 0;
