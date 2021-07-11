@@ -5,17 +5,18 @@ Hacking on Near Field Communication manager
 Build tools requirements
 ========================
 
-When building and testing directly from the repository it is important to
-have at least automake version 1.10 or later installed. All modern
-distributions should default to the latest version, but it seems that
-Debian's default is still an earlier version:
+Required packages and tools:
+  autoconf
+  automake
+  dbus
+  gcc/clang
+  glib 2.0
+  libtool
+  libnl-3
+  libnl-genl-3
+  make
 
-  Check version
-    # dpkg -l '*automake*'
-
-  Install new version
-    # apt-get install automake1.10
-    # update-alternatives --config automake
+See also installation scripts for  Continuous Integration in ci/ directory.
 
 
 Working with the source code repository
