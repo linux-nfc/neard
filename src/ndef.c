@@ -503,8 +503,8 @@ static gboolean property_get_uri(const GDBusPropertyTable *property,
 
 	DBG("URI prefix %s", prefix);
 
-	value = g_strdup_printf("%s%.*s", prefix, uri->field_length,
-							 uri->field);
+	value = g_strdup_printf("%s%.*s", prefix, (int)uri->field_length,
+				uri->field);
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &value);
 
@@ -585,7 +585,7 @@ static gboolean property_get_size(const GDBusPropertyTable *property,
 {
 	struct near_ndef_record *record = user_data;
 
-	DBG("%d", record->sp->size);
+	DBG("%u", record->sp->size);
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_UINT32, &record->sp->size);
 
@@ -1042,7 +1042,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 	uint8_t *type = NULL;
 	uint32_t header_len = 0;
 
-	DBG("length %d", length);
+	DBG("length %u", length);
 
 	if (!rec || offset >= length)
 		return NULL;
@@ -1081,7 +1081,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 			goto fail;
 	}
 
-	DBG("payload length %d", rec_header->payload_len);
+	DBG("payload length %u", rec_header->payload_len);
 
 	if (rec_header->il == 1) {
 		rec_header->il_length = rec[offset++];
@@ -1274,7 +1274,7 @@ parse_uri_payload(uint8_t *payload, uint32_t length)
 	}
 
 	DBG("Identifier  '0X%X'", uri_payload->identifier);
-	DBG("Field  '%.*s'", uri_payload->field_length, uri_payload->field);
+	DBG("Field  '%.*s'", (int)uri_payload->field_length, uri_payload->field);
 
 	return uri_payload;
 
