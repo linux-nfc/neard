@@ -142,7 +142,7 @@ struct near_ndef_ac_payload {
 };
 
 /* http://www.intel.com URI NDEF */
-static uint8_t uri[] = {0xd1, 0x1, 0xa, 0x55, 0x1, 0x69, 0x6e, 0x74,
+static uint8_t test_uri[] = {0xd1, 0x1, 0xa, 0x55, 0x1, 0x69, 0x6e, 0x74,
 			0x65, 0x6c, 0x2e, 0x63, 0x6f, 0x6d};
 
 /* 'hello żółw' - UTF-8 - en-US Text NDEF */
@@ -203,7 +203,7 @@ static void test_ndef_uri(void)
 	GList *records;
 	struct near_ndef_record *record;
 
-	records = near_ndef_parse_msg(uri, sizeof(uri), NULL);
+	records = near_ndef_parse_msg(test_uri, sizeof(test_uri), NULL);
 
 	g_assert(records);
 	g_assert_cmpuint(g_list_length(records), ==, 1);
