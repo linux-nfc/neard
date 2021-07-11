@@ -96,7 +96,7 @@ struct near_tag *near_tag_get_tag(uint32_t adapter_idx, uint32_t target_idx)
 	struct near_tag *tag;
 	char *path;
 
-	path = g_strdup_printf("%s/nfc%d/tag%d", NFC_PATH,
+	path = g_strdup_printf("%s/nfc%u/tag%u", NFC_PATH,
 					adapter_idx, target_idx);
 	if (!path)
 		return NULL;
@@ -658,7 +658,7 @@ static int tag_initialize(struct near_tag *tag,
 {
 	DBG("");
 
-	tag->path = g_strdup_printf("%s/nfc%d/tag%d", NFC_PATH,
+	tag->path = g_strdup_printf("%s/nfc%u/tag%u", NFC_PATH,
 					adapter_idx, target_idx);
 	if (!tag->path)
 		return -ENOMEM;
@@ -788,7 +788,7 @@ int near_tag_set_nfcid(uint32_t adapter_idx, uint32_t target_idx,
 {
 	struct near_tag *tag;
 
-	DBG("NFCID len %zd", nfcid_len);
+	DBG("NFCID len %zu", nfcid_len);
 
 	tag = near_tag_get_tag(adapter_idx, target_idx);
 	if (!tag)
@@ -881,7 +881,7 @@ int near_tag_add_records(struct near_tag *tag, GList *records,
 	for (list = records; list; list = list->next) {
 		record = list->data;
 
-		path = g_strdup_printf("%s/nfc%d/tag%d/record%d",
+		path = g_strdup_printf("%s/nfc%u/tag%u/record%u",
 					NFC_PATH, tag->adapter_idx,
 					tag->target_idx, tag->next_record);
 
