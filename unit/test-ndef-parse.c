@@ -302,8 +302,8 @@ static void test_ndef_single_sp(void)
 					uri->field_length) == 0);
 
 	if (g_test_verbose())
-		g_print("NDEF SP URI field: %.*s\n", uri->field_length,
-							(char *) uri->field);
+		g_print("NDEF SP URI field: %.*s\n", (int)uri->field_length,
+			(char *) uri->field);
 
 	g_free(uri->field);
 	g_free(uri);
@@ -346,8 +346,8 @@ static void test_ndef_title_sp(void)
 					uri->field_length) == 0);
 
 	if (g_test_verbose())
-		g_print("NDEF SP URI field: %.*s\n", uri->field_length,
-							(char *) uri->field);
+		g_print("NDEF SP URI field: %.*s\n", (int)uri->field_length,
+			(char *) uri->field);
 
 	g_assert_cmpstr(text->data, ==, "Intel");
 	g_assert_cmpstr(text->encoding, ==, "UTF-8");

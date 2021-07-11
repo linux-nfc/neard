@@ -114,7 +114,7 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 		static int frag_cnt;
 		struct p2p_snep_data *fragment = test_fragments->data;
 
-		TEST_SNEP_LOG("\tdummy_req_put frag=%d, len=%d, current=%d\n",
+		TEST_SNEP_LOG("\tdummy_req_put frag=%d, len=%u, current=%u\n",
 				frag_cnt, fragment->nfc_data_length,
 				fragment->nfc_data_current_length);
 		test_fragments = g_slist_remove(test_fragments, fragment);
@@ -437,7 +437,7 @@ static void test_snep_read_no_response(void)
  * @param[in] exp_resp_info_len  Expected response info length
  * @param[in] exp_resp_info      Expected response info
  */
-static void test_snep_read_verify_resp(int exp_resp_code,
+static void test_snep_read_verify_resp(uint8_t exp_resp_code,
 		uint32_t exp_resp_info_len, uint8_t *exp_resp_info)
 {
 	struct p2p_snep_resp_frame *resp;
@@ -467,7 +467,7 @@ static void test_snep_read_verify_resp(int exp_resp_code,
  *
  * @param[in] exp_resp_code  Expected response code
  */
-static void test_snep_read_verify_resp_code(int exp_resp_code)
+static void test_snep_read_verify_resp_code(uint8_t exp_resp_code)
 {
 	test_snep_read_verify_resp(exp_resp_code, 0, NULL);
 }
