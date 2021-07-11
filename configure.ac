@@ -22,8 +22,6 @@ AC_SUBST(se_plugindir)
 
 PKG_PROG_PKG_CONFIG
 
-NEARD_COMPILER_FLAGS
-
 AC_LANG([C])
 
 AC_PROG_CC
@@ -33,6 +31,9 @@ AC_PROG_MKDIR_P
 
 m4_define([_LT_AC_TAGCONFIG], [])
 m4_ifdef([AC_LIBTOOL_TAGS], [AC_LIBTOOL_TAGS([])])
+
+m4_include([accflags.m4])
+NEARD_COMPILER_FLAGS
 
 LT_INIT([disable-static])
 
