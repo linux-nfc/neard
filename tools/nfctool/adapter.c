@@ -85,7 +85,7 @@ void adapter_print_info(struct nfc_adapter *adapter, gpointer user_data)
 	if (!adapter)
 		return;
 
-	printf("nfc%d:\n", adapter->idx);
+	printf("nfc%u:\n", adapter->idx);
 
 	adpater_print_targets(adapter, "          ");
 
@@ -164,7 +164,7 @@ struct nfc_adapter *adapter_get(guint32 idx)
 
 void adapter_add_target(struct nfc_adapter *adapter, guint8 type, guint32 idx)
 {
-	DBG("adapter_idx: %d, target_type: %d, target_idx: %d",
+	DBG("adapter_idx: %u, target_type: %u, target_idx: %u",
 	    adapter->idx, type, idx);
 
 	if (type == TARGET_TYPE_TAG)

@@ -369,7 +369,7 @@ int sniffer_init(void)
 	if (err)
 		goto exit;
 
-	printf("Start sniffer on nfc%d\n\n", opts.adapter_idx);
+	printf("Start sniffer on nfc%u\n\n", opts.adapter_idx);
 
 exit:
 	if (err)

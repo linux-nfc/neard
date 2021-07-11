@@ -70,7 +70,7 @@ static int nfctool_start_poll(void)
 	adapter = adapter_get(opts.adapter_idx);
 
 	if (!adapter) {
-		print_error("Invalid adapter index: %d", opts.adapter_idx);
+		print_error("Invalid adapter index: %u", opts.adapter_idx);
 
 		return -ENODEV;
 	}
@@ -81,7 +81,7 @@ static int nfctool_start_poll(void)
 	err = nl_start_poll(adapter, opts.poll_mode);
 
 	if (err == 0) {
-		printf("Start polling on nfc%d as %s\n\n",
+		printf("Start polling on nfc%u as %s\n\n",
 			adapter->idx, nfctool_poll_mode_str(opts.poll_mode));
 		return 0;
 	}
@@ -90,9 +90,9 @@ static int nfctool_start_poll(void)
 		return err;
 
 	if (adapter->rf_mode == NFC_RF_NONE)
-		printf("nfc%d already in polling mode\n\n", adapter->idx);
+		printf("nfc%u already in polling mode\n\n", adapter->idx);
 	else
-		printf("nfc%d already activated\n\n", adapter->idx);
+		printf("nfc%u already activated\n\n", adapter->idx);
 
 	/* Don't fail if there is a pending SNL request */
 	if (opts.snl)
@@ -201,7 +201,7 @@ static int nfctool_dep_link_up_cb(guint8 cmd, guint32 idx, gpointer data)
 {
 	struct nfc_adapter *adapter;
 
-	printf("Link is UP for adapter nfc%d\n\n", idx);
+	printf("Link is UP for adapter nfc%u\n\n", idx);
 
 	if (idx != opts.adapter_idx)
 		return -ENODEV;
@@ -220,7 +220,7 @@ static int nfctool_dep_link_down_cb(guint8 cmd, guint32 idx, gpointer data)
 	if (idx != opts.adapter_idx)
 		return -ENODEV;
 
-	printf("Link is DOWN for adapter nfc%d\n\n", idx);
+	printf("Link is DOWN for adapter nfc%u\n\n", idx);
 
 	opts.snl = false;
 
@@ -269,7 +269,7 @@ static int nfctool_targets_found(guint32 adapter_idx)
 	int err;
 	struct nfc_adapter *adapter;
 
-	DBG("adapter_idx: %d", adapter_idx);
+	DBG("adapter_idx: %u", adapter_idx);
 
 	if (adapter_idx == INVALID_ADAPTER_IDX)
 		return -ENODEV;
@@ -285,7 +285,7 @@ static int nfctool_targets_found(guint32 adapter_idx)
 		goto exit;
 	}
 
-	printf("Targets found for nfc%d\n", adapter_idx);
+	printf("Targets found for nfc%u\n", adapter_idx);
 	adpater_print_targets(adapter, "  ");
 	printf("\n");
 
@@ -308,7 +308,7 @@ static int nfctool_poll_cb(guint8 cmd, guint32 idx, gpointer data)
 	if (idx != opts.adapter_idx)
 		return 0;
 
-	DBG("cmd: %d, idx: %d", cmd, idx);
+	DBG("cmd: %u, idx: %u", cmd, idx);
 
 	switch (cmd) {
 	case NFC_EVENT_TARGETS_FOUND:
@@ -347,7 +347,7 @@ static int nfctool_snl_cb(guint8 cmd, guint32 idx, gpointer data)
 {
 	GSList *sdres_list = (GSList *)data;
 
-	printf("nfc%d: Service Name lookup:\n", idx);
+	printf("nfc%u: Service Name lookup:\n", idx);
 
 	g_slist_foreach(sdres_list, (GFunc)nfctool_print_and_remove_snl,
 			GINT_TO_POINTER(idx));
