@@ -566,7 +566,7 @@ struct near_adapter *__near_adapter_create(uint32_t idx,
 							NULL, free_device);
 	adapter->device_sock = -1;
 
-	adapter->path = g_strdup_printf("%s/nfc%d", NFC_PATH, idx);
+	adapter->path = g_strdup_printf("%s/nfc%u", NFC_PATH, idx);
 
 	return adapter;
 }
@@ -597,7 +597,7 @@ int __near_adapter_set_dep_state(uint32_t idx, bool dep)
 {
 	struct near_adapter *adapter;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -639,7 +639,7 @@ bool __near_adapter_get_dep_state(uint32_t idx)
 {
 	struct near_adapter *adapter;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -821,7 +821,7 @@ int __near_adapter_add_target(uint32_t idx, uint32_t target_idx,
 	struct near_adapter *adapter;
 	int ret;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -852,7 +852,7 @@ int __near_adapter_remove_target(uint32_t idx, uint32_t target_idx)
 {
 	struct near_adapter *adapter;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -875,11 +875,11 @@ static gboolean poll_error(gpointer user_data)
 	struct near_adapter *adapter = user_data;
 	bool reset;
 
-	DBG("adapter %d", adapter->idx);
+	DBG("adapter %u", adapter->idx);
 
 	reset = near_setting_get_bool("ResetOnError");
 	if (reset) {
-		near_error("Resetting nfc%d", adapter->idx);
+		near_error("Resetting nfc%u", adapter->idx);
 		 __near_netlink_adapter_enable(adapter->idx, false);
 		 __near_netlink_adapter_enable(adapter->idx, true);
 	}
@@ -893,7 +893,7 @@ int __near_adapter_get_targets_done(uint32_t idx)
 {
 	struct near_adapter *adapter;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -920,7 +920,7 @@ int __near_adapter_add_device(uint32_t idx, uint8_t *nfcid, uint8_t nfcid_len)
 	struct near_adapter *adapter;
 	int ret;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -944,7 +944,7 @@ int __near_adapter_remove_device(uint32_t idx)
 	struct near_adapter *adapter;
 	uint32_t device_idx = 0;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -1040,7 +1040,7 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	struct sockaddr_nfc addr;
 	int err, sock;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -1092,7 +1092,7 @@ int near_adapter_disconnect(uint32_t idx)
 	uint32_t target_idx;
 	uint16_t tag_type;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter)
@@ -1106,7 +1106,7 @@ int near_adapter_disconnect(uint32_t idx)
 	tag_type = __near_tag_get_type(adapter->tag_link);
 	target_idx = near_tag_get_target_idx(adapter->tag_link);
 
-	DBG("tag type %d", tag_type);
+	DBG("tag type %u", tag_type);
 
 	__near_adapter_remove_target(adapter->idx, target_idx);
 
@@ -1133,7 +1133,7 @@ int near_adapter_send(uint32_t idx, uint8_t *buf, size_t length,
 	struct near_adapter_ioreq *req = NULL;
 	int err;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = g_hash_table_lookup(adapter_hash, GINT_TO_POINTER(idx));
 	if (!adapter) {
