@@ -833,7 +833,7 @@ int mifare_read(uint32_t adapter_idx, uint32_t target_idx,
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
 		break;
 	default:
-		near_error("Mifare tag type [%d] not supported.", tgt_subtype);
+		near_error("Mifare tag type [%u] not supported.", tgt_subtype);
 		return -1;
 	}
 
@@ -900,7 +900,7 @@ int mifare_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
 		break;
 	default:
-		near_error("Mifare tag type %d not supported.", tgt_subtype);
+		near_error("Mifare tag type %u not supported.", tgt_subtype);
 		return -1;
 	}
 
@@ -1228,7 +1228,7 @@ static int writing_not_permitted(void *data)
 		}
 	}
 
-	DBG("TAG writable sectors' size: [%d].", new_tag_size);
+	DBG("TAG writable sectors' size: [%u].", new_tag_size);
 
 	/* Check if there's enough space on tag */
 	if (new_tag_size < mf_ck->ndef->length) {
@@ -1293,7 +1293,7 @@ int mifare_write(uint32_t adapter_idx, uint32_t target_idx,
 	case NEAR_TAG_NFC_T2_MIFARE_CLASSIC_4K:
 		break;
 	default:
-		near_error("Mifare tag type %d not supported.", tgt_subtype);
+		near_error("Mifare tag type %u not supported.", tgt_subtype);
 		return -1;
 	}
 
