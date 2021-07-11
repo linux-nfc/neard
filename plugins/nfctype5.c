@@ -434,7 +434,7 @@ static int t5_read(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 	uint8_t blk_size = near_tag_get_blk_size(tag);
 	int err;
 
-	DBG("Reading %zd bytes starting at offset %d\n", len, offset);
+	DBG("Reading %zu bytes starting at offset %u\n", len, offset);
 
 	err = t5_cmd_hdr_init(tag, &t5_cmd.hdr, CMD_READ_SINGLE_BLOCK);
 	if (err)
@@ -532,10 +532,10 @@ static int t5_write(struct near_tag *tag, uint8_t offset, uint8_t *buf,
 	uint8_t blk_size = near_tag_get_blk_size(tag);
 	int err;
 
-	DBG("Writing %zd bytes starting at offset %d\n", len, offset);
+	DBG("Writing %zu bytes starting at offset %u\n", len, offset);
 
 	if (offset % blk_size) {
-		near_error("Write - Invalid offset - offset: %d, blk_size: %d",
+		near_error("Write - Invalid offset - offset: %u, blk_size: %u",
 			   offset, blk_size);
 		return -EINVAL;
 	}
