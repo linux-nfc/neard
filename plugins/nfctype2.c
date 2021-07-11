@@ -192,7 +192,7 @@ static int data_recv(uint8_t *resp, int length, void *data)
 	cmd.cmd = CMD_READ;
 	cmd.block = DATA_BLOCK_START + tag->current_block;
 
-	DBG("adapter %d", adapter_idx);
+	DBG("adapter %u", adapter_idx);
 
 	return near_adapter_send(adapter_idx,
 				(uint8_t *) &cmd, CMD_READ_SIZE,
@@ -341,7 +341,7 @@ static int nfctype2_read(uint32_t adapter_idx,
 			cb, tgt_subtype);
 
 	default:
-		DBG("Unknown Tag Type 2 subtype %d", tgt_subtype);
+		DBG("Unknown Tag Type 2 subtype %u", tgt_subtype);
 		return -1;
 	}
 }
@@ -455,7 +455,7 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 		 */
 		if (near_tag_get_memory_layout(tag) == NEAR_TAG_MEMORY_STATIC) {
 			if ((ndef->length + 3) > near_tag_get_data_length(tag)) {
-				near_error("Not enough space on tag %zd %zd",
+				near_error("Not enough space on tag %zu %zu",
 						ndef->length,
 						near_tag_get_data_length(tag));
 				err = -ENOSPC;
@@ -471,7 +471,7 @@ static int nfctype2_write(uint32_t adapter_idx, uint32_t target_idx,
 		return mifare_write(adapter_idx, target_idx, ndef,
 				cb, tgt_subtype);
 	default:
-		DBG("Unknown TAG Type 2 subtype %d", tgt_subtype);
+		DBG("Unknown TAG Type 2 subtype %u", tgt_subtype);
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -533,7 +533,7 @@ static int nfctype2_check_presence(uint32_t adapter_idx, uint32_t target_idx,
 							cb, tgt_subtype);
 
 	default:
-		DBG("Unknown TAG Type 2 subtype %d", tgt_subtype);
+		DBG("Unknown TAG Type 2 subtype %u", tgt_subtype);
 
 		return -1;
 	}
@@ -586,7 +586,7 @@ static int nfctype2_format(uint32_t adapter_idx, uint32_t target_idx,
 	tgt_subtype = near_tag_get_subtype(adapter_idx, target_idx);
 
 	if (tgt_subtype != NEAR_TAG_NFC_T2_MIFARE_ULTRALIGHT) {
-		DBG("Unknown Tag Type 2 subtype %d", tgt_subtype);
+		DBG("Unknown Tag Type 2 subtype %u", tgt_subtype);
 		return -1;
 	}
 
