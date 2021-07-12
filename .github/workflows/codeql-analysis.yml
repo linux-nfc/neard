@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Copyright (c) 2021 Canonical Ltd.
+# Author: Krzysztof Kozlowski <krzysztof.kozlowski@canonical.com>
+#                             <krzk@kernel.org>
+#
+name: "CodeQL"
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp', 'python' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Install additional packages
+      run: sudo ./ci/ubuntu.sh
+
+    - name: Configure
+      run: ./bootstrap-configure
+
+    - name: Compile
+      run: |
+        make -j$(nproc)
+        make check
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
