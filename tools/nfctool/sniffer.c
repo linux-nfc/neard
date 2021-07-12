@@ -168,7 +168,6 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	gchar *hexa = NULL, *human = NULL;
 	guint8 offset_len;
 	guint8 human_offset;
-	gchar *fmt;
 
 	if (len == 0)
 		return;
@@ -185,11 +184,9 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 	if (output_len > 0xFFFF) {
 		offset_len = 8;
 		human_offset = HUMAN_READABLE_OFFSET + 4;
-		fmt = "%08X: ";
 	} else {
 		offset_len = 4;
 		human_offset = HUMAN_READABLE_OFFSET;
-		fmt = "%04X: ";
 	}
 
 	if (print_len) {
@@ -203,7 +200,10 @@ void sniffer_print_hexdump(FILE *file, guint8 *data, guint32 len,
 		if (digits == 0) {
 			memset(line, ' ', human_offset);
 
-			sprintf(line, fmt, offset);
+			if (offset_len == 8)
+				sprintf(line, "%08X: ", offset);
+			else
+				sprintf(line, "%04X: ", offset);
 
 			offset += 16;
 
