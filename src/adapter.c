@@ -252,6 +252,7 @@ static void set_powered(GDBusPendingPropertySet id, dbus_bool_t powered,
 
 		g_dbus_pending_property_error(id,
 						NFC_ERROR_INTERFACE ".Failed",
+						"%s",
 						strerror(err));
 
 		return;
