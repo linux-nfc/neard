@@ -560,7 +560,7 @@ static int mifare_process_MADs(void *data)
 	struct mifare_cookie *mf_ck = data;
 	int err;
 	int i;
-	int global_tag_size = 0;
+	unsigned int global_tag_size = 0;
 	int ioffset;
 	uint8_t *tag_data;
 	size_t data_size;
@@ -626,13 +626,13 @@ done_mad:
 	if (global_tag_size == 0) {
 
 		/* no NFC sectors - mark tag as blank */
-		near_error("TAG Global size: [%d], not valid NFC tag.",
+		near_error("TAG Global size: [%u], not valid NFC tag.",
 				global_tag_size);
 		return -ENODEV;
 	}
 
 	/* n sectors, each sector is 3 blocks, each block is 16 bytes */
-	DBG("TAG Global size: [%d]", global_tag_size);
+	DBG("TAG Global size: [%u]", global_tag_size);
 
 	mf_ck->tag = near_tag_get_tag(mf_ck->adapter_idx, mf_ck->target_idx);
 	if (!mf_ck->tag) {
