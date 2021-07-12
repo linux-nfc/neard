@@ -14,6 +14,7 @@ AC_DEFUN([NEARD_COMPILER_FLAGS], [
 		CFLAGS="$CFLAGS -Wmissing-declarations"
 		CFLAGS="$CFLAGS -Wredundant-decls"
 		CFLAGS="$CFLAGS -Wcast-align"
+		CFLAGS="$CFLAGS -Wformat=2"
 		CFLAGS="$CFLAGS -DG_DISABLE_DEPRECATED"
 
 		AX_CHECK_COMPILE_FLAG([-Wdouble-promotion], [CFLAGS="$CFLAGS -Wdouble-promotion"])
