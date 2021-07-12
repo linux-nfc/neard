@@ -24,6 +24,7 @@ AC_DEFUN([NEARD_COMPILER_FLAGS], [
 		AX_CHECK_COMPILE_FLAG([-Wjump-misses-init], [CFLAGS="$CFLAGS -Wjump-misses-init"])
 		AX_CHECK_COMPILE_FLAG([-Wpointer-arith], [CFLAGS="$CFLAGS -Wpointer-arith"])
 		AX_CHECK_COMPILE_FLAG([-Wshadow], [CFLAGS="$CFLAGS -Wshadow"])
+		AX_CHECK_COMPILE_FLAG([-Wstrict-overflow=2], [CFLAGS="$CFLAGS -Wstrict-overflow=2"])
 
 		# GCC v5.0
 		AX_CHECK_COMPILE_FLAG([-Wformat-signedness], [CFLAGS="$CFLAGS -Wformat-signedness"])
@@ -36,10 +37,16 @@ AC_DEFUN([NEARD_COMPILER_FLAGS], [
 		AX_CHECK_COMPILE_FLAG([-Walloc-zero], [CFLAGS="$CFLAGS -Walloc-zero"])
 		# GCC v8.0
 		AX_CHECK_COMPILE_FLAG([-Wstringop-truncation], [CFLAGS="$CFLAGS -Wstringop-truncation"])
+
+		# GCC v7.5 from Ubuntu Bionic incorrectly assumes several loops can overflow, so enable
+		# -Wunsafe-loop-optimizations only on newer GCC.
+		CC_VERSION=`$CC --version | head -n 1 | sed -e 's/.*\ \(@<:@0-9@:>@\+\.@<:@0-9@:>@\+\.@<:@0-9@:>@\+\)\(-@<:@0-9@:>@\+\)\?$/\1/'`
+		AX_COMPARE_VERSION([$CC_VERSION],[ge],[8.0.0],
+			[AX_CHECK_COMPILE_FLAG([-Wunsafe-loop-optimizations], [CFLAGS="$CFLAGS -Wunsafe-loop-optimizations"])], [])
 	fi
 	if (test "$USE_MAINTAINER_MODE" = "pedantic"); then
-		AX_CHECK_COMPILE_FLAG([-Wstrict-overflow=3], [CFLAGS="$CFLAGS -Wstrict-overflow=3"])
 		AX_CHECK_COMPILE_FLAG([-Wcast-qual], [CFLAGS="$CFLAGS -Wcast-qual"])
-		AX_CHECK_COMPILE_FLAG([-Wunsafe-loop-optimizations], [CFLAGS="$CFLAGS -Wunsafe-loop-optimizations"])
+		# Instead of -Wstrict-overflow=2
+		AX_CHECK_COMPILE_FLAG([-Wstrict-overflow=3], [CFLAGS="$CFLAGS -Wstrict-overflow=3"])
 	fi
 ])
