@@ -70,12 +70,26 @@ jobs:
             env:
               ARCH: x86-64
               CC: gcc
+              VARIANT: sanitizers
+              MODE: maintainer
+
+          - container: "debian:stable"
+            env:
+              ARCH: x86-64
+              CC: gcc
               MODE: no-maintainer
 
           - container: "debian:testing"
             env:
               ARCH: x86-64
               CC: gcc
+              MODE: maintainer
+
+          - container: "debian:testing"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              VARIANT: sanitizers
               MODE: maintainer
 
           - container: "debian:testing"
@@ -157,12 +171,26 @@ jobs:
             env:
               ARCH: x86-64
               CC: gcc
+              VARIANT: sanitizers
+              MODE: maintainer
+
+          - container: "ubuntu:hirsute"
+            env:
+              ARCH: x86-64
+              CC: gcc
               MODE: no-maintainer
 
           - container: "ubuntu:focal"
             env:
               ARCH: x86-64
               CC: gcc
+              MODE: maintainer
+
+          - container: "ubuntu:focal"
+            env:
+              ARCH: x86-64
+              CC: gcc
+              VARIANT: sanitizers
               MODE: maintainer
 
           - container: "ubuntu:focal"
@@ -235,9 +263,14 @@ jobs:
     - name: Configure
       run: |
         echo "Bootstraping in mode: $MODE"
+        CONFIGURE_ARGS=""
+        if [ "$VARIANT" = "sanitizers" ]; then
+          CONFIGURE_ARGS="--enable-asan --enable-lsan --enable-ubsan --enable-pie"
+        fi
         if [ "$MODE" = "maintainer" ]; then
           ./bootstrap-configure \
-            --disable-silent-rules
+            --disable-silent-rules \
+            $CONFIGURE_ARGS
         else
           ./bootstrap && \
             ./configure \
@@ -246,7 +279,8 @@ jobs:
             --prefix=/usr \
             --enable-ese \
             --sysconfdir=/etc \
-            --enable-tools
+            --enable-tools \
+            $CONFIGURE_ARGS
         fi
 
     - name: Compile
@@ -277,6 +311,12 @@ jobs:
         esac
         echo "Checking for built matching architecture: $ARCH_CHECK"
         file src/neard | grep "$ARCH_CHECK"
+        if [ "$VARIANT" = "sanitizers" ]; then
+          echo "Checking for linking against sanitizer libraries"
+          ldd src/neard | grep libasan.so
+          # liblsan won't appear if asan is used
+          ldd src/neard | grep libubsan.so
+        fi
 
     - name: Install
       run: make install
