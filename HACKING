@@ -51,8 +51,11 @@ like this:
     # git clone git://git.kernel.org/pub/scm/network/.../neard.git
     # cd neard
 
-  Configure and build
+  Configure (choose only one)
     # ./bootstrap-configure
+    # ./bootstrap-configure --enable-asan --enable-lsan --enable-ubsan
+
+  Build
     # make
 
   Check installation
