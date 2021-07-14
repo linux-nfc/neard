@@ -832,15 +832,6 @@ static void free_ndef_record(struct near_ndef_record *record)
 	g_free(record);
 }
 
-static void free_ndef_message(struct near_ndef_message *msg)
-{
-	if (!msg)
-		return;
-
-	g_free(msg->data);
-	g_free(msg);
-}
-
 void __near_ndef_record_free(struct near_ndef_record *record)
 {
 	g_dbus_unregister_interface(connection, record->path,
@@ -1746,7 +1737,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 
 fail:
 	near_error("ndef message struct allocation failed");
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -2009,8 +2000,8 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 	g_free(local_carrier);
 
 	if (!*cfg || !*ac) {
-		free_ndef_message(*ac);
-		free_ndef_message(*cfg);
+		near_ndef_msg_free(*ac);
+		near_ndef_msg_free(*cfg);
 
 		return -ENOMEM;
 	}
@@ -2022,7 +2013,7 @@ static void free_ndef_list(gpointer data)
 {
 	struct near_ndef_message *msg = data;
 
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 }
 
 static struct near_ndef_message *prepare_handover_message_header(char *type,
@@ -2143,13 +2134,13 @@ static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
 	if (hs_msg->offset > hs_msg->length)
 		goto fail;
 
-	free_ndef_message(ac_msg);
+	near_ndef_msg_free(ac_msg);
 
 	return hs_msg;
 
 fail:
-	free_ndef_message(ac_msg);
-	free_ndef_message(hs_msg);
+	near_ndef_msg_free(ac_msg);
+	near_ndef_msg_free(hs_msg);
 
 	return NULL;
 }
@@ -2266,7 +2257,7 @@ fail:
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
 
-	free_ndef_message(hs_msg);
+	near_ndef_msg_free(hs_msg);
 
 	return NULL;
 }
@@ -2400,7 +2391,7 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 
 	DBG("Handover message preparation is done");
 
-	free_ndef_message(cr_msg);
+	near_ndef_msg_free(cr_msg);
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
 
@@ -2411,8 +2402,8 @@ fail:
 
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
-	free_ndef_message(cr_msg);
-	free_ndef_message(ho_msg);
+	near_ndef_msg_free(cr_msg);
+	near_ndef_msg_free(ho_msg);
 
 	return NULL;
 }
@@ -2993,6 +2984,15 @@ void near_ndef_records_free(GList *records)
 	g_list_free(records);
 }
 
+void near_ndef_msg_free(struct near_ndef_message *msg)
+{
+	if (!msg)
+		return;
+
+	g_free(msg->data);
+	g_free(msg);
+}
+
 /*
  * Compute ndef records length, even though the submitted frame is incomplete.
  * This code is used in the handover read function, as we have to "guess" the
@@ -3160,7 +3160,7 @@ struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 
 fail:
 	near_error("text record preparation failed");
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -3199,7 +3199,7 @@ struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 
 fail:
 	near_error("uri record preparation failed");
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -3228,15 +3228,15 @@ near_ndef_prepare_smartposter_record(uint8_t uri_identifier,
 	if (msg->offset > msg->length)
 		goto fail;
 
-	free_ndef_message(uri);
+	near_ndef_msg_free(uri);
 
 	return msg;
 
 fail:
 	near_error("smartposter record preparation failed");
 
-	free_ndef_message(uri);
-	free_ndef_message(msg);
+	near_ndef_msg_free(uri);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -3902,7 +3902,7 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 		if (!ndef_message_append(ndef, record))
 			goto err;
 
-		free_ndef_message(record);
+		near_ndef_msg_free(record);
 	next:
 		if (end)
 			break;
@@ -3912,8 +3912,8 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 exit:
 	return ndef;
 err:
-	free_ndef_message(ndef);
-	free_ndef_message(record);
+	near_ndef_msg_free(ndef);
+	near_ndef_msg_free(record);
 	ndef = NULL;
 	goto exit;
 }
