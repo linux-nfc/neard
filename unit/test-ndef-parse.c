@@ -189,15 +189,6 @@ static uint8_t ho_hs_bt[] = {0x91, 0x02, 0x0A, 0x48, 0x73, 0x12, 0xD1, 0x02,
 			      0x09, 0x44, 0x65, 0x79, 0x69, 0x63, 0x65, 0x4e,
 			      0x61, 0x6d, 0x65};
 
-static void test_ndef_free_record(struct near_ndef_record *record)
-{
-	g_free(record->header);
-	g_free(record->type);
-	g_free(record->data);
-	g_free(record);
-
-}
-
 static void test_ndef_uri(void)
 {
 	GList *records;
@@ -222,9 +213,7 @@ static void test_ndef_uri(void)
 	if (g_test_verbose())
 		g_print("NDEF URI field: %s\n", record->uri->field);
 
-	g_free(record->uri->field);
-	g_free(record->uri);
-	test_ndef_free_record(record);
+	near_ndef_records_free(records);
 }
 
 static void test_ndef_text(void)
@@ -255,11 +244,7 @@ static void test_ndef_text(void)
 						record->text->language_code);
 	}
 
-	g_free(record->text->data);
-	g_free(record->text->encoding);
-	g_free(record->text->language_code);
-	g_free(record->text);
-	test_ndef_free_record(record);
+	near_ndef_records_free(records);
 }
 
 static void test_ndef_text_invalid_utf16(void)
@@ -305,10 +290,7 @@ static void test_ndef_single_sp(void)
 		g_print("NDEF SP URI field: %.*s\n", (int)uri->field_length,
 			(char *) uri->field);
 
-	g_free(uri->field);
-	g_free(uri);
-	g_free(record->sp);
-	test_ndef_free_record(record);
+	near_ndef_records_free(records);
 }
 
 static void test_ndef_title_sp(void)
@@ -359,16 +341,7 @@ static void test_ndef_title_sp(void)
 		g_print("NDEF SP Title Language: %s\n", text->language_code);
 	}
 
-	g_free(uri->field);
-	g_free(uri);
-
-	g_free(text->data);
-	g_free(text->encoding);
-	g_free(text->language_code);
-	g_free(text);
-
-	g_free(record->sp);
-	test_ndef_free_record(record);
+	near_ndef_records_free(records);
 }
 
 static void test_ndef_aar(void)
@@ -395,9 +368,7 @@ static void test_ndef_aar(void)
 	if (g_test_verbose())
 		g_print("NDEF AAR package: %s\n", record->aar->package);
 
-	g_free(record->aar->package);
-	g_free(record->aar);
-	test_ndef_free_record(record);
+	near_ndef_records_free(records);
 }
 
 static void test_ndef_ho_hs_bt(void)
