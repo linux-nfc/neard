@@ -222,10 +222,8 @@ static void test_snep_cleanup(gpointer context, gconstpointer data)
 	if (stored_recd)
 		test_ndef_free_record(stored_recd);
 
-	if (ctx->test_recd_msg) {
-		g_free(ctx->test_recd_msg->data);
-		g_free(ctx->test_recd_msg);
-	}
+	if (ctx->test_recd_msg)
+		near_ndef_msg_free(ctx->test_recd_msg);
 
 	g_slist_free(test_fragments);
 
@@ -896,8 +894,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	g_free(req);
 	g_free(resp);
-	g_free(ndef->data);
-	g_free(ndef);
+	near_ndef_msg_free(ndef);
 }
 
 int main(int argc, char **argv)
