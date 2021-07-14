@@ -459,14 +459,12 @@ static DBusMessage *write_ndef(DBusConnection *conn,
 		break;
 
 	default:
-		g_free(ndef->data);
-		g_free(ndef);
+		near_ndef_msg_free(ndef);
 
 		return __near_error_failed(msg, EOPNOTSUPP);
 	}
 
-	g_free(ndef->data);
-	g_free(ndef);
+	near_ndef_msg_free(ndef);
 
 	tag->write_ndef = ndef_with_header;
 	err = __near_tag_write(tag, ndef_with_header, write_cb);
