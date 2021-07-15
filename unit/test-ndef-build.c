@@ -65,6 +65,8 @@ static void test_ndef_text_build(void)
 	g_assert(ndef);
 	g_assert_cmpuint(ndef->length, ==, ARRAY_SIZE(text));
 	g_assert_cmpmem(ndef->data, ARRAY_SIZE(text), text, ARRAY_SIZE(text));
+
+	near_ndef_msg_free(ndef);
 }
 
 static void test_ndef_wsc_with_passphrase_build(void)
@@ -76,6 +78,8 @@ static void test_ndef_wsc_with_passphrase_build(void)
 	g_assert(ndef);
 	g_assert_cmpuint(ndef->length, ==, ARRAY_SIZE(wsc));
 	g_assert_cmpmem(ndef->data, ARRAY_SIZE(wsc), wsc, ARRAY_SIZE(wsc));
+
+	near_ndef_msg_free(ndef);
 }
 
 static void test_ndef_wsc_with_out_passphrase_build(void)
@@ -87,6 +91,8 @@ static void test_ndef_wsc_with_out_passphrase_build(void)
 	g_assert(ndef);
 	g_assert_cmpuint(ndef->length, ==, ARRAY_SIZE(wsc_wo));
 	g_assert_cmpmem(ndef->data, ARRAY_SIZE(wsc_wo), wsc_wo, ARRAY_SIZE(wsc_wo));
+
+	near_ndef_msg_free(ndef);
 }
 
 static void test_ndef_wsc_with_out_ssid_build(void)
