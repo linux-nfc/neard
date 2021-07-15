@@ -436,7 +436,6 @@ static bool snep_core_process_request(int client_fd,
 
 		g_slist_free_full(snep_data->req->fragments,
 						free_snep_core_fragment);
-		g_slist_free(snep_data->req->fragments);
 
 		g_hash_table_remove(snep_client_hash,
 						GINT_TO_POINTER(client_fd));
@@ -476,7 +475,6 @@ leave_cont:
 		/* No more fragment to send, clean memory */
 		g_slist_free_full(snep_data->req->fragments,
 						free_snep_core_fragment);
-		g_slist_free(snep_data->req->fragments);
 
 		g_hash_table_remove(snep_client_hash,
 						GINT_TO_POINTER(client_fd));
