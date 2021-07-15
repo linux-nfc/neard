@@ -224,7 +224,7 @@ static void test_snep_cleanup(gpointer context, gconstpointer data)
 	__near_snep_core_cleanup();
 
 	if (stored_recd)
-		test_ndef_free_record(stored_recd);
+		__near_ndef_record_free(stored_recd);
 
 	if (ctx->test_recd_msg)
 		near_ndef_msg_free(ctx->test_recd_msg);

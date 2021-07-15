@@ -20,14 +20,6 @@
 
 #include "test-utils.h"
 
-void test_ndef_free_record(struct near_ndef_record *record)
-{
-	g_free(record->header);
-	g_free(record->type);
-	g_free(record->data);
-	g_free(record);
-}
-
 struct near_ndef_message *test_ndef_create_test_record(const char *str)
 {
 	struct near_ndef_message *ndef;

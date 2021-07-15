@@ -143,8 +143,6 @@ struct near_ndef_record {
 	size_t data_len;
 };
 
-void test_ndef_free_record(struct near_ndef_record *record);
-
 struct near_ndef_message *test_ndef_create_test_record(const char *str);
 
 #endif
