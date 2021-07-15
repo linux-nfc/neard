@@ -131,12 +131,12 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 	records = near_ndef_parse_msg(nfc_data, nfc_data_length, NULL);
 	if (!records) {
 		TEST_SNEP_LOG("\tdummy_req_put parsing ndef failed\n");
-		goto error;
+		goto error_free_nfc_data;
 	}
 
 	if (g_list_length(records) != 1) {
 		TEST_SNEP_LOG("\tdummy_req_put records number mismatch");
-		goto error;
+		goto error_free_records;
 	}
 
 	g_free(nfc_data);
@@ -149,6 +149,10 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 	near_snep_core_response_noinfo(fd, NEAR_SNEP_RESP_SUCCESS);
 	return true;
 
+error_free_records:
+	near_ndef_records_free(records);
+error_free_nfc_data:
+	g_free(nfc_data);
 error:
 	TEST_SNEP_LOG("\tdummy_req_put error!!!\n");
 	return false;
