@@ -147,8 +147,7 @@ void near_snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
 	near_snep_core_response_with_info(client_fd, NEAR_SNEP_RESP_SUCCESS,
 								msg->data, msg->length);
 
-	g_free(msg->data);
-	g_free(msg);
+	near_ndef_msg_free(msg);
 }
 
 /*
@@ -787,9 +786,7 @@ done:
 		}
 	}
 
-	if (ndef)
-		g_free(ndef->data);
-	g_free(ndef);
+	near_ndef_msg_free(ndef);
 }
 
 /* SNEP Core: on P2P push */
