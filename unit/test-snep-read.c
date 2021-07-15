@@ -142,6 +142,7 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 	g_free(nfc_data);
 
 	stored_recd = records->data;
+	g_list_free(records);
 
 	TEST_SNEP_LOG("\t\tdummy_req_put STORED REC data=%p length=%zu\n",
 			stored_recd->data, stored_recd->data_len);
