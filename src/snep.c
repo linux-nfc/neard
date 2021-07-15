@@ -206,7 +206,6 @@ static void free_snep_core_fragment(gpointer data)
 		g_free(fragment->data);
 
 	g_free(fragment);
-	fragment = NULL;
 }
 
 static void free_snep_core_push_data(gpointer userdata, int status)
