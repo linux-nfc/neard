@@ -35,6 +35,8 @@
 
 #include <near/types.h>
 
+#include <src/near.h>
+#include <src/ndef-private.h>
 #include "test-utils.h"
 
 #define TEST_SNEP_LOG(fmt, ...) do { \
