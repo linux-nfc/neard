@@ -30,8 +30,8 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 
-#include "src/near.h"
-#include "include/ndef.h"
+#include <near/ndef.h>
+#include <src/near.h>
 
 enum record_type {
 	RECORD_TYPE_WKT_SMART_POSTER          =   0x01,

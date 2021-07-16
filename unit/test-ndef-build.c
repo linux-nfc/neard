@@ -30,8 +30,8 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 
-#include "src/near.h"
-#include "include/ndef.h"
+#include <near/ndef.h>
+#include <src/near.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
