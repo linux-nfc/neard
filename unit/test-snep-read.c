@@ -261,7 +261,8 @@ static struct p2p_snep_req_frame *test_snep_build_req_frame(
 	req->version = ver;
 	req->request = req_type;
 	req->length = GUINT_TO_BE(info_len);
-	memcpy(req->ndef, data, payload_len);
+	if (data)
+		memcpy(req->ndef, data, payload_len);
 
 	return req;
 }
@@ -320,7 +321,8 @@ static struct p2p_snep_resp_frame *test_snep_build_resp_frame(
 	resp->version = ver;
 	resp->response = resp_type;
 	resp->length = GUINT_TO_BE(info_len);
-	memcpy(resp->info, data, info_len);
+	if (data)
+		memcpy(resp->info, data, info_len);
 
 	return resp;
 }
