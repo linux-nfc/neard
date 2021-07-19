@@ -182,7 +182,7 @@ static int npp_push(int fd, uint32_t adapter_idx, uint32_t target_idx,
 	entry->ndef_length = GINT_TO_BE(ndef->length);
 	memcpy(entry->ndef, ndef->data, ndef->length);
 
-	DBG("Sending %zd bytes", frame_length);
+	DBG("Sending %zu bytes", frame_length);
 
 	err = send(fd, frame, frame_length, MSG_DONTWAIT);
 

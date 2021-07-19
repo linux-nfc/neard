@@ -131,7 +131,7 @@ struct seel_apdu *__seel_apdu_build(uint8_t *apdu, size_t length, uint8_t channe
 	}
 
 	if (channel > 3) {
-		DBG("Invalid channel number %d", channel);
+		DBG("Invalid channel number %u", channel);
 		channel = 0;
 	}
 
@@ -159,7 +159,7 @@ void __seel_apdu_dump(uint8_t *apdu, size_t length)
 		sprintf(str + (3 * i), "%02X ", apdu[i]);
 	str[3 * length] = 0;
 
-	DBG("[%zd] %s", length, str);
+	DBG("[%zu] %s", length, str);
 
 	g_free(str);
 }
@@ -188,7 +188,7 @@ struct seel_apdu *__seel_apdu_open_logical_channel(void)
 
 struct seel_apdu *__seel_apdu_close_logical_channel(uint8_t channel)
 {
-	DBG("%d", channel);
+	DBG("%u", channel);
 
 	return alloc_apdu(CLA_CHANNEL_STANDARD, 0, INS_MANAGE_CHANNEL, 0x80,
 							channel, 0, NULL, -1);
@@ -197,7 +197,7 @@ struct seel_apdu *__seel_apdu_close_logical_channel(uint8_t channel)
 struct seel_apdu *__seel_apdu_select_aid(uint8_t channel,
 						uint8_t *aid, size_t aid_length)
 {
-	DBG("%zd", aid_length);
+	DBG("%zu", aid_length);
 
 	if (aid_length < MIN_AID_LENGTH ||
 			aid_length > MAX_AID_LENGTH)

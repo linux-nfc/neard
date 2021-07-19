@@ -35,6 +35,8 @@
 
 #include <near/types.h>
 
+#include <src/near.h>
+#include <src/ndef-private.h>
 #include "test-utils.h"
 
 #define TEST_SNEP_LOG(fmt, ...) do { \
@@ -114,7 +116,7 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 		static int frag_cnt;
 		struct p2p_snep_data *fragment = test_fragments->data;
 
-		TEST_SNEP_LOG("\tdummy_req_put frag=%d, len=%d, current=%d\n",
+		TEST_SNEP_LOG("\tdummy_req_put frag=%d, len=%u, current=%u\n",
 				frag_cnt, fragment->nfc_data_length,
 				fragment->nfc_data_current_length);
 		test_fragments = g_slist_remove(test_fragments, fragment);
@@ -131,17 +133,18 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 	records = near_ndef_parse_msg(nfc_data, nfc_data_length, NULL);
 	if (!records) {
 		TEST_SNEP_LOG("\tdummy_req_put parsing ndef failed\n");
-		goto error;
+		goto error_free_nfc_data;
 	}
 
 	if (g_list_length(records) != 1) {
 		TEST_SNEP_LOG("\tdummy_req_put records number mismatch");
-		goto error;
+		goto error_free_records;
 	}
 
 	g_free(nfc_data);
 
 	stored_recd = records->data;
+	g_list_free(records);
 
 	TEST_SNEP_LOG("\t\tdummy_req_put STORED REC data=%p length=%zu\n",
 			stored_recd->data, stored_recd->data_len);
@@ -149,6 +152,10 @@ static bool test_snep_dummy_req_put(int fd, void *data)
 	near_snep_core_response_noinfo(fd, NEAR_SNEP_RESP_SUCCESS);
 	return true;
 
+error_free_records:
+	near_ndef_records_free(records);
+error_free_nfc_data:
+	g_free(nfc_data);
 error:
 	TEST_SNEP_LOG("\tdummy_req_put error!!!\n");
 	return false;
@@ -198,7 +205,7 @@ static void test_snep_init(gpointer context, gconstpointer data)
 	if (ret != 0)
 		TEST_SNEP_LOG("set sock SO_RCVTIMEO failed");
 
-	__near_snep_core_init();
+	g_assert_cmpint(__near_snep_core_init(), ==, 0);
 
 	stored_recd = NULL;
 
@@ -220,12 +227,10 @@ static void test_snep_cleanup(gpointer context, gconstpointer data)
 	__near_snep_core_cleanup();
 
 	if (stored_recd)
-		test_ndef_free_record(stored_recd);
+		__near_ndef_record_free(stored_recd);
 
-	if (ctx->test_recd_msg) {
-		g_free(ctx->test_recd_msg->data);
-		g_free(ctx->test_recd_msg);
-	}
+	if (ctx->test_recd_msg)
+		near_ndef_msg_free(ctx->test_recd_msg);
 
 	g_slist_free(test_fragments);
 
@@ -258,7 +263,8 @@ static struct p2p_snep_req_frame *test_snep_build_req_frame(
 	req->version = ver;
 	req->request = req_type;
 	req->length = GUINT_TO_BE(info_len);
-	memcpy(req->ndef, data, payload_len);
+	if (data)
+		memcpy(req->ndef, data, payload_len);
 
 	return req;
 }
@@ -317,7 +323,8 @@ static struct p2p_snep_resp_frame *test_snep_build_resp_frame(
 	resp->version = ver;
 	resp->response = resp_type;
 	resp->length = GUINT_TO_BE(info_len);
-	memcpy(resp->info, data, info_len);
+	if (data)
+		memcpy(resp->info, data, info_len);
 
 	return resp;
 }
@@ -337,10 +344,11 @@ static bool test_snep_read_req_common(
 			near_server_io req_get, near_server_io req_put)
 {
 	bool ret;
-	size_t nbytes;
+	ssize_t nbytes;
 
 	nbytes = send(sockfd[client], req, frame_len, 0);
-	g_assert(nbytes == frame_len);
+	g_assert_cmpint(nbytes, >, 0);
+	g_assert_cmpuint(nbytes, ==, frame_len);
 
 	TEST_SNEP_LOG("sent 0x%02X request\n", req->request);
 
@@ -364,10 +372,11 @@ static bool test_snep_read_req_common(
 static bool test_snep_read_send_fragment(size_t frag_len,
 						uint8_t *data)
 {
-	size_t nbytes;
+	ssize_t nbytes;
 
 	nbytes = send(sockfd[client], data, frag_len, 0);
-	g_assert(nbytes == frag_len);
+	g_assert_cmpint(nbytes, >, 0);
+	g_assert_cmpuint(nbytes, ==, frag_len);
 
 	near_snep_core_read(sockfd[server], 0, 0, NULL,
 			test_snep_dummy_req_get, test_snep_dummy_req_put,
@@ -384,7 +393,7 @@ static bool test_snep_read_send_fragment(size_t frag_len,
  * @param[out] data             Must be preallocated
  */
 static void test_snep_read_recv_fragments(uint32_t frag_len,
-				uint32_t remaining_bytes, void *data_recvd)
+				uint32_t remaining_bytes, uint8_t *data_recvd)
 {
 	struct p2p_snep_resp_frame *resp;
 	uint32_t offset = 0;
@@ -400,7 +409,7 @@ static void test_snep_read_recv_fragments(uint32_t frag_len,
 
 		/* receive remaining fragments */
 		nbytes = recv(sockfd[client], resp, frag_len, 0);
-		g_assert(nbytes > 0); /* TODO use explicit value? */
+		g_assert_cmpint(nbytes, >, 0); /* TODO use explicit value? */
 
 		/* store received data (no header this time) */
 		memcpy(data_recvd + offset, resp, nbytes);
@@ -422,8 +431,8 @@ static void test_snep_read_no_response(void)
 	g_assert(resp);
 
 	nbytes = recv(sockfd[client], resp, sizeof(*resp), MSG_DONTWAIT);
-	g_assert(nbytes < 0);
-	g_assert(errno == EAGAIN);
+	g_assert_cmpint(nbytes, <, 0);
+	g_assert_cmpint(errno, ==, EAGAIN);
 
 	g_free(resp);
 }
@@ -435,26 +444,27 @@ static void test_snep_read_no_response(void)
  * @param[in] exp_resp_info_len  Expected response info length
  * @param[in] exp_resp_info      Expected response info
  */
-static void test_snep_read_verify_resp(int exp_resp_code,
+static void test_snep_read_verify_resp(uint8_t exp_resp_code,
 		uint32_t exp_resp_info_len, uint8_t *exp_resp_info)
 {
 	struct p2p_snep_resp_frame *resp;
-	size_t nbytes, frame_len;
+	ssize_t nbytes, frame_len;
 
 	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + exp_resp_info_len;
 	resp = test_snep_build_resp_frame(frame_len, 0, 0, 0, NULL);
 	g_assert(resp);
 
 	nbytes = recv(sockfd[client], resp, frame_len, 0);
-	g_assert(nbytes == frame_len);
+	g_assert_cmpint(nbytes, ==, frame_len);
 
 	TEST_SNEP_LOG("received response = 0x%02X, exp = 0x%02X\n",
 			resp->response, exp_resp_code);
 
-	g_assert(resp->version == NEAR_SNEP_VERSION);
-	g_assert(resp->response == exp_resp_code);
-	g_assert(resp->length == GUINT_TO_BE(exp_resp_info_len));
-	g_assert(!memcmp(resp->info, exp_resp_info, exp_resp_info_len));
+	g_assert_cmpuint(resp->version, ==, NEAR_SNEP_VERSION);
+	g_assert_cmpuint(resp->response, ==, exp_resp_code);
+	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(exp_resp_info_len));
+	g_assert_cmpmem(resp->info, GUINT_FROM_BE(resp->length),
+			exp_resp_info, exp_resp_info_len);
 
 	g_free(resp);
 }
@@ -464,7 +474,7 @@ static void test_snep_read_verify_resp(int exp_resp_code,
  *
  * @param[in] exp_resp_code  Expected response code
  */
-static void test_snep_read_verify_resp_code(int exp_resp_code)
+static void test_snep_read_verify_resp_code(uint8_t exp_resp_code)
 {
 	test_snep_read_verify_resp(exp_resp_code, 0, NULL);
 }
@@ -489,6 +499,7 @@ static void test_snep_read_put_req_ok(gpointer context, gconstpointer gp)
 	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
 					NEAR_SNEP_REQ_PUT, ctx->req_info_len,
 					ctx->req_info, payload_len);
+	g_assert(req);
 
 	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
 					test_snep_dummy_req_put);
@@ -519,6 +530,7 @@ static void test_snep_read_put_req_unsupp_ver(gpointer context,
 
 	req = test_snep_build_req_frame(frame_len, 0xF8, NEAR_SNEP_REQ_PUT,
 				ctx->req_info_len, ctx->req_info, payload_len);
+	g_assert(req);
 
 	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
 					test_snep_dummy_req_put);
@@ -552,6 +564,7 @@ static void test_snep_read_put_req_not_impl(gpointer context,
 	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
 					NEAR_SNEP_REQ_PUT, ctx->req_info_len,
 					ctx->req_info, payload_len);
+	g_assert(req);
 
 	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
 					NULL);
@@ -587,6 +600,7 @@ static void test_snep_read_put_req_fragmented(gpointer context,
 	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
 					NEAR_SNEP_REQ_PUT, ctx->req_info_len,
 					ctx->req_info, payload_len);
+	g_assert(req);
 
 	/* send 1st fragment within PUT request */
 	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
@@ -644,6 +658,7 @@ static void test_snep_read_get_req_ok(gpointer context, gconstpointer gp)
 	req = test_snep_build_req_get_frame(frame_len, NEAR_SNEP_VERSION,
 				NEAR_SNEP_REQ_GET, info_len,
 				ctx->acc_len, ctx->req_info, payload_len);
+	g_assert(req);
 
 	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
 					test_snep_dummy_req_put);
@@ -683,6 +698,7 @@ static void test_snep_read_get_req_not_impl(gpointer context,
 	req = test_snep_build_req_get_frame(frame_len, NEAR_SNEP_VERSION,
 			NEAR_SNEP_REQ_GET, ctx->req_info_len, ctx->acc_len,
 			ctx->req_info, payload_len);
+	g_assert(req);
 
 	/* call snep_core_read with NULL req_get handler */
 	ret = test_snep_read_req_common(req, frame_len, NULL,
@@ -713,7 +729,7 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 	struct p2p_snep_resp_frame *resp;
 	uint32_t frame_len, payload_len;
 	bool ret;
-	size_t nbytes;
+	ssize_t nbytes;
 	uint8_t *data_recvd;
 	uint32_t offset;
 	uint32_t frag_len, info_len;
@@ -738,6 +754,7 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 	req = test_snep_build_req_get_frame(frame_len, NEAR_SNEP_VERSION,
 				NEAR_SNEP_REQ_GET, info_len,
 				ctx->acc_len, ctx->req_info, payload_len);
+	g_assert(req);
 
 	/* send GET request */
 	ret = test_snep_read_req_common(req, frame_len, test_snep_dummy_req_get,
@@ -747,11 +764,13 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 
 	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + payload_len;
 	resp = test_snep_build_resp_frame(frame_len, 0, 0, 0, NULL);
+	g_assert(resp);
 
 	/* start receiving fragments */
 	nbytes = recv(sockfd[client], resp, frame_len, 0);
-	g_assert(nbytes == frag_len);
-	g_assert(resp->length == GUINT_TO_BE(ctx->req_info_len));
+	g_assert_cmpint(nbytes, >=, 0);
+	g_assert_cmpuint(nbytes, ==, frag_len);
+	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(ctx->req_info_len));
 	g_assert(resp->info);
 
 	data_recvd = g_try_malloc0(ctx->req_info_len);
@@ -767,6 +786,7 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 	frame_len = NEAR_SNEP_REQ_PUT_HEADER_LENGTH;
 	req = test_snep_build_req_frame(frame_len, NEAR_SNEP_VERSION,
 					client_resp, 0, NULL, 0);
+	g_assert(req);
 
 	ret = test_snep_read_req_common(req, frame_len, NULL, NULL);
 	g_free(req);
@@ -783,8 +803,8 @@ static void test_snep_read_get_req_frags_client_resp(gpointer context,
 					data_recvd + offset);
 
 		/* verify data */
-		g_assert(!memcmp(data_recvd, ctx->req_info,
-				ctx->req_info_len));
+		g_assert_cmpmem(data_recvd, ctx->req_info_len, ctx->req_info,
+				ctx->req_info_len);
 	}
 
 	g_free(data_recvd);
@@ -817,10 +837,10 @@ static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
 	near_snep_core_response_noinfo(sockfd[client], NEAR_SNEP_RESP_SUCCESS);
 
 	bytes_recv = recv(sockfd[server], &resp, sizeof(resp), 0);
-	g_assert(bytes_recv == NEAR_SNEP_RESP_HEADER_LENGTH);
-	g_assert(resp.version == NEAR_SNEP_VERSION);
-	g_assert(resp.response == NEAR_SNEP_RESP_SUCCESS);
-	g_assert(resp.length == 0);
+	g_assert_cmpint(bytes_recv, ==, NEAR_SNEP_RESP_HEADER_LENGTH);
+	g_assert_cmpint(resp.version, ==, NEAR_SNEP_VERSION);
+	g_assert_cmpint(resp.response, ==, NEAR_SNEP_RESP_SUCCESS);
+	g_assert_cmpint(resp.length, ==, 0);
 }
 
 /*
@@ -829,7 +849,7 @@ static void test_snep_response_noinfo(gpointer context, gconstpointer gp)
 static void test_snep_response_put_get_ndef(gpointer context,
 						gconstpointer gp)
 {
-	size_t nbytes;
+	ssize_t nbytes;
 
 	struct p2p_snep_req_frame *req;
 	struct p2p_snep_resp_frame *resp;
@@ -841,7 +861,7 @@ static void test_snep_response_put_get_ndef(gpointer context,
 	ndef = near_ndef_prepare_text_record("UTF-8", "en-US", "neard");
 	g_assert(ndef);
 	g_assert(ndef->data);
-	g_assert(ndef->length > 0);
+	g_assert_cmpuint(ndef->length, >, 0);
 
 	frame_len = NEAR_SNEP_RESP_HEADER_LENGTH + ndef->length;
 
@@ -855,7 +875,8 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* Send PUT request with text record */
 	nbytes = send(sockfd[server], req, frame_len, 0);
-	g_assert(nbytes == frame_len);
+	g_assert_cmpint(nbytes, >=, 0);
+	g_assert_cmpuint(nbytes, ==, frame_len);
 
 	/* UUT */
 	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
@@ -867,14 +888,14 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* Get response from server */
 	nbytes = recv(sockfd[server], resp, frame_len, 0);
-	g_assert(nbytes > 0);
-	g_assert(resp->response == NEAR_SNEP_RESP_SUCCESS);
+	g_assert_cmpint(nbytes, >, 0);
+	g_assert_cmpuint(resp->response, ==, NEAR_SNEP_RESP_SUCCESS);
 
 	/* Send GET request to retrieve a record */
 	req->request = NEAR_SNEP_REQ_GET;
 	req->length = 0;
 	nbytes = send(sockfd[server], req, NEAR_SNEP_RESP_HEADER_LENGTH, 0);
-	g_assert(nbytes > 0);
+	g_assert_cmpint(nbytes, >, 0);
 
 	/* UUT */
 	ret = near_snep_core_read(sockfd[client], 0, 0, NULL,
@@ -883,15 +904,15 @@ static void test_snep_response_put_get_ndef(gpointer context,
 
 	/* Get response and verify */
 	nbytes = recv(sockfd[server], resp, frame_len, 0);
-	g_assert(nbytes > 0);
-	g_assert(resp->response == NEAR_SNEP_RESP_SUCCESS);
-	g_assert(resp->length == GUINT_TO_BE(ndef->length));
-	g_assert(!memcmp(resp->info, text, ndef->length));
+	g_assert_cmpint(nbytes, >, 0);
+	g_assert_cmpuint(resp->response, ==, NEAR_SNEP_RESP_SUCCESS);
+	g_assert_cmpint(resp->length, ==, GUINT_TO_BE(ndef->length));
+	g_assert_cmpuint(resp->length, ==, GUINT_TO_BE(ndef->length));
+	g_assert_cmpmem(resp->info, GUINT_FROM_BE(resp->length), text, ndef->length);
 
 	g_free(req);
 	g_free(resp);
-	g_free(ndef->data);
-	g_free(ndef);
+	near_ndef_msg_free(ndef);
 }
 
 int main(int argc, char **argv)

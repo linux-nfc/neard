@@ -82,7 +82,7 @@ struct near_device *near_device_get_device(uint32_t adapter_idx,
 
 	DBG("");
 
-	path = g_strdup_printf("%s/nfc%d/device%d", NFC_PATH,
+	path = g_strdup_printf("%s/nfc%u/device%u", NFC_PATH,
 					adapter_idx, target_idx);
 	if (!path)
 		return NULL;
@@ -305,7 +305,7 @@ int near_device_add_records(struct near_device *device, GList *records,
 	for (list = records; list; list = list->next) {
 		record = list->data;
 
-		path = g_strdup_printf("%s/nfc%d/device%d/record%d",
+		path = g_strdup_printf("%s/nfc%u/device%u/record%u",
 					NFC_PATH, device->adapter_idx,
 					device->target_idx, device->n_records);
 
@@ -342,7 +342,7 @@ struct near_device *__near_device_add(uint32_t adapter_idx, uint32_t target_idx,
 	if (!device)
 		return NULL;
 
-	device->path = g_strdup_printf("%s/nfc%d/device%d", NFC_PATH,
+	device->path = g_strdup_printf("%s/nfc%u/device%u", NFC_PATH,
 					adapter_idx, target_idx);
 	if (!device->path) {
 		g_free(device);

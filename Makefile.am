@@ -37,7 +37,7 @@ pkglibexecdir = ${libexecdir}/nfc
 pkglibexec_PROGRAMS = src/neard
 
 src_neard_SOURCES = $(gdbus_sources) $(gweb_sources) $(builtin_sources) \
-			src/main.c src/error.c src/near.h src/log.c \
+			src/main.c src/error.c src/ndef-private.h src/near.h src/log.c \
 			src/dbus.c src/manager.c src/adapter.c src/device.c \
 			src/tag.c src/plugin.c src/netlink.c src/ndef.c \
 			src/tlv.c src/bluetooth.c src/agent.c src/snep.c

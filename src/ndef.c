@@ -34,6 +34,7 @@
 #include <gdbus.h>
 
 #include "near.h"
+#include "ndef-private.h"
 
 enum record_tnf {
 	RECORD_TNF_EMPTY     = 0x00,
@@ -77,142 +78,6 @@ enum record_tnf {
 #define NDEF_TEXT_RECORD_UTF16_STATUS 0x80
 
 #define AC_CPS_MASK 0x03
-
-enum record_type {
-	RECORD_TYPE_WKT_SMART_POSTER          =   0x01,
-	RECORD_TYPE_WKT_URI                   =   0x02,
-	RECORD_TYPE_WKT_TEXT                  =   0x03,
-	RECORD_TYPE_WKT_SIZE                  =   0x04,
-	RECORD_TYPE_WKT_TYPE                  =   0x05,
-	RECORD_TYPE_WKT_ACTION                =   0x06,
-	RECORD_TYPE_WKT_HANDOVER_REQUEST      =   0x07,
-	RECORD_TYPE_WKT_HANDOVER_SELECT       =   0x08,
-	RECORD_TYPE_WKT_HANDOVER_CARRIER      =   0x09,
-	RECORD_TYPE_WKT_ALTERNATIVE_CARRIER   =   0x0a,
-	RECORD_TYPE_WKT_COLLISION_RESOLUTION  =   0x0b,
-	RECORD_TYPE_WKT_ERROR                 =   0x0c,
-	RECORD_TYPE_MIME_TYPE                 =   0x0d,
-	RECORD_TYPE_EXT_AAR                   =   0x0e,
-	RECORD_TYPE_UNKNOWN                   =   0xfe,
-	RECORD_TYPE_ERROR                     =   0xff
-};
-
-#define RECORD_TYPE_WKT "urn:nfc:wkt:"
-#define RECORD_TYPE_EXTERNAL "urn:nfc:ext:"
-#define AAR_STRING "android.com:pkg"
-
-struct near_ndef_record_header {
-	uint8_t mb;
-	uint8_t me;
-	uint8_t cf;
-	uint8_t sr;
-	uint8_t il;
-	uint8_t tnf;
-	uint8_t il_length;
-	uint8_t *il_field;
-	uint32_t payload_len;
-	uint32_t offset;
-	uint8_t	type_len;
-	enum record_type rec_type;
-	char *type_name;
-	uint32_t header_len;
-};
-
-struct near_ndef_text_payload {
-	char *encoding;
-	char *language_code;
-	char *data;
-};
-
-struct near_ndef_uri_payload {
-	uint8_t identifier;
-
-	uint32_t  field_length;
-	uint8_t  *field;
-};
-
-struct near_ndef_sp_payload {
-	struct near_ndef_uri_payload *uri;
-
-	uint8_t number_of_title_records;
-	struct near_ndef_text_payload **title_records;
-
-	uint32_t size; /* from Size record*/
-	char *type;    /* from Type record*/
-	char *action;
-	/* TODO add icon and other records fields*/
-};
-
-struct near_ndef_mime_payload {
-	char *type;
-
-	struct {
-		enum handover_carrier carrier_type;
-		uint16_t properties;	/* e.g.: NO_PAIRING_KEY */
-	} handover;
-	uint8_t *payload;
-	uint32_t payload_len;
-};
-
-/* Handover record definitions */
-
-/* alternative record (AC) length based on cdr length without adata */
-#define AC_RECORD_PAYLOAD_LEN(cdr_len) (3 + cdr_len)
-
-struct near_ndef_ac_payload {
-	enum carrier_power_state cps;	/* carrier power state */
-
-	uint8_t cdr_len;	/* carrier data reference length */
-	uint8_t *cdr;		/* carrier data reference */
-	uint8_t adata_refcount;	/* auxiliary data reference count */
-
-	/* !: if adata_refcount == 0, then there's no data reference */
-	uint16_t **adata;	/* auxiliary data reference */
-};
-
-/* Default Handover version */
-#define HANDOVER_VERSION	0x12
-#define HANDOVER_MAJOR(version) (((version) >> 4) & 0xf)
-#define HANDOVER_MINOR(version) ((version) & 0xf)
-
-
-/* General Handover Request/Select record */
-struct near_ndef_ho_payload {
-	uint8_t version;		/* version id */
-	uint16_t collision_record;	/* collision record */
-
-	uint8_t number_of_ac_payloads;	/* At least 1 ac is needed */
-	struct near_ndef_ac_payload **ac_payloads;
-
-	/* Optional records */
-	uint16_t *err_record;	/* not NULL if present */
-
-	uint8_t number_of_cfg_payloads;	/* extra NDEF records */
-	struct near_ndef_mime_payload **cfg_payloads;
-};
-
-struct near_ndef_aar_payload {
-	char *package;
-};
-
-struct near_ndef_record {
-	char *path;
-
-	struct near_ndef_record_header *header;
-
-	/* specific payloads */
-	struct near_ndef_text_payload *text;
-	struct near_ndef_uri_payload  *uri;
-	struct near_ndef_sp_payload   *sp;
-	struct near_ndef_mime_payload *mime;
-	struct near_ndef_ho_payload   *ho;	/* handover payload */
-	struct near_ndef_aar_payload  *aar;
-
-	char *type;
-
-	uint8_t *data;
-	size_t data_len;
-};
 
 static DBusConnection *connection = NULL;
 
@@ -503,8 +368,8 @@ static gboolean property_get_uri(const GDBusPropertyTable *property,
 
 	DBG("URI prefix %s", prefix);
 
-	value = g_strdup_printf("%s%.*s", prefix, uri->field_length,
-							 uri->field);
+	value = g_strdup_printf("%s%.*s", prefix, (int)uri->field_length,
+				uri->field);
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &value);
 
@@ -585,7 +450,7 @@ static gboolean property_get_size(const GDBusPropertyTable *property,
 {
 	struct near_ndef_record *record = user_data;
 
-	DBG("%d", record->sp->size);
+	DBG("%u", record->sp->size);
 
 	dbus_message_iter_append_basic(iter, DBUS_TYPE_UINT32, &record->sp->size);
 
@@ -832,15 +697,6 @@ static void free_ndef_record(struct near_ndef_record *record)
 	g_free(record);
 }
 
-static void free_ndef_message(struct near_ndef_message *msg)
-{
-	if (!msg)
-		return;
-
-	g_free(msg->data);
-	g_free(msg);
-}
-
 void __near_ndef_record_free(struct near_ndef_record *record)
 {
 	g_dbus_unregister_interface(connection, record->path,
@@ -1042,7 +898,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 	uint8_t *type = NULL;
 	uint32_t header_len = 0;
 
-	DBG("length %d", length);
+	DBG("length %u", length);
 
 	if (!rec || offset >= length)
 		return NULL;
@@ -1081,7 +937,7 @@ static struct near_ndef_record_header *parse_record_header(uint8_t *rec,
 			goto fail;
 	}
 
-	DBG("payload length %d", rec_header->payload_len);
+	DBG("payload length %u", rec_header->payload_len);
 
 	if (rec_header->il == 1) {
 		rec_header->il_length = rec[offset++];
@@ -1164,8 +1020,8 @@ parse_text_payload(uint8_t *payload, uint32_t length)
 	if (!text_payload)
 		return NULL;
 
-	/* 0x80 is used to get 7th bit value (0th bit is LSB) */
-	status = ((payload[offset] & 0x80) >> 7);
+	/* 0th bit is LSB */
+	status = ((payload[offset] & NDEF_TEXT_RECORD_UTF16_STATUS) >> 7);
 
 	text_payload->encoding = (status == 0) ?
 					g_strdup("UTF-8") : g_strdup("UTF-16");
@@ -1189,11 +1045,17 @@ parse_text_payload(uint8_t *payload, uint32_t length)
 
 	len = length - lang_length - 1;
 
+	if (status && (len % 2)) {
+		DBG("Payload not valid UTF-16 (length %d does not match)", len);
+		goto fail;
+	}
+
 	if (len > 0) {
 		txt = (char *)(payload + offset);
 
 		if (status)
-			g_str = g_utf16_to_utf8((gunichar2 *)txt, len, NULL,
+			/* Cast to void to silence the 1-to-2 alignment warning */
+			g_str = g_utf16_to_utf8((gunichar2 *)(void *)txt, len, NULL,
 						NULL, NULL);
 		else
 			g_str = txt;
@@ -1268,7 +1130,7 @@ parse_uri_payload(uint8_t *payload, uint32_t length)
 	}
 
 	DBG("Identifier  '0X%X'", uri_payload->identifier);
-	DBG("Field  '%.*s'", uri_payload->field_length, uri_payload->field);
+	DBG("Field  '%.*s'", (int)uri_payload->field_length, uri_payload->field);
 
 	return uri_payload;
 
@@ -1740,7 +1602,7 @@ static struct near_ndef_message *ndef_message_alloc_complete(char *type_name,
 
 fail:
 	near_error("ndef message struct allocation failed");
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -2003,8 +1865,8 @@ static int near_ndef_prepare_ac_and_cfg_records(enum record_type type,
 	g_free(local_carrier);
 
 	if (!*cfg || !*ac) {
-		free_ndef_message(*ac);
-		free_ndef_message(*cfg);
+		near_ndef_msg_free(*ac);
+		near_ndef_msg_free(*cfg);
 
 		return -ENOMEM;
 	}
@@ -2016,7 +1878,7 @@ static void free_ndef_list(gpointer data)
 {
 	struct near_ndef_message *msg = data;
 
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 }
 
 static struct near_ndef_message *prepare_handover_message_header(char *type,
@@ -2137,13 +1999,13 @@ static struct near_ndef_message *near_ndef_prepare_empty_hs_message(void)
 	if (hs_msg->offset > hs_msg->length)
 		goto fail;
 
-	free_ndef_message(ac_msg);
+	near_ndef_msg_free(ac_msg);
 
 	return hs_msg;
 
 fail:
-	free_ndef_message(ac_msg);
-	free_ndef_message(hs_msg);
+	near_ndef_msg_free(ac_msg);
+	near_ndef_msg_free(hs_msg);
 
 	return NULL;
 }
@@ -2260,7 +2122,7 @@ fail:
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
 
-	free_ndef_message(hs_msg);
+	near_ndef_msg_free(hs_msg);
 
 	return NULL;
 }
@@ -2394,7 +2256,7 @@ near_ndef_prepare_ho_message(enum record_type type, GSList *carriers)
 
 	DBG("Handover message preparation is done");
 
-	free_ndef_message(cr_msg);
+	near_ndef_msg_free(cr_msg);
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
 
@@ -2405,8 +2267,8 @@ fail:
 
 	g_list_free_full(ac_msgs, free_ndef_list);
 	g_list_free_full(cfg_msgs, free_ndef_list);
-	free_ndef_message(cr_msg);
-	free_ndef_message(ho_msg);
+	near_ndef_msg_free(cr_msg);
+	near_ndef_msg_free(ho_msg);
 
 	return NULL;
 }
@@ -2987,6 +2849,15 @@ void near_ndef_records_free(GList *records)
 	g_list_free(records);
 }
 
+void near_ndef_msg_free(struct near_ndef_message *msg)
+{
+	if (!msg)
+		return;
+
+	g_free(msg->data);
+	g_free(msg);
+}
+
 /*
  * Compute ndef records length, even though the submitted frame is incomplete.
  * This code is used in the handover read function, as we have to "guess" the
@@ -3154,7 +3025,7 @@ struct near_ndef_message *near_ndef_prepare_text_record(char *encoding,
 
 fail:
 	near_error("text record preparation failed");
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -3193,7 +3064,7 @@ struct near_ndef_message *near_ndef_prepare_uri_record(uint8_t identifier,
 
 fail:
 	near_error("uri record preparation failed");
-	free_ndef_message(msg);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -3222,15 +3093,15 @@ near_ndef_prepare_smartposter_record(uint8_t uri_identifier,
 	if (msg->offset > msg->length)
 		goto fail;
 
-	free_ndef_message(uri);
+	near_ndef_msg_free(uri);
 
 	return msg;
 
 fail:
 	near_error("smartposter record preparation failed");
 
-	free_ndef_message(uri);
-	free_ndef_message(msg);
+	near_ndef_msg_free(uri);
+	near_ndef_msg_free(msg);
 
 	return NULL;
 }
@@ -3896,7 +3767,7 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 		if (!ndef_message_append(ndef, record))
 			goto err;
 
-		free_ndef_message(record);
+		near_ndef_msg_free(record);
 	next:
 		if (end)
 			break;
@@ -3906,8 +3777,8 @@ struct near_ndef_message *__ndef_build_from_message(DBusMessage *msg)
 exit:
 	return ndef;
 err:
-	free_ndef_message(ndef);
-	free_ndef_message(record);
+	near_ndef_msg_free(ndef);
+	near_ndef_msg_free(record);
 	ndef = NULL;
 	goto exit;
 }

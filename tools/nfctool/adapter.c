@@ -36,7 +36,7 @@ static GSList *adapters;
 
 static struct nfc_adapter *selected_adapter;
 
-static void adapter_get_devices(struct nfc_adapter *adapter)
+static void adapter_get_devices(struct nfc_adapter *adapter, gpointer user_data)
 {
 	if (adapter->rf_mode == NFC_RF_INITIATOR)
 		nl_get_targets(adapter);
@@ -57,9 +57,9 @@ int adapter_all_get_devices(void)
 	return 0;
 }
 
-static void adapter_print_target(guint32 idx, gchar *type)
+static void adapter_print_target(gpointer idx, gchar *type)
 {
-	printf("%s%d ", type, idx);
+	printf("%s%d ", type, GPOINTER_TO_INT(idx));
 }
 
 void adpater_print_targets(struct nfc_adapter *adapter, gchar *prefix)
@@ -78,14 +78,14 @@ void adpater_print_targets(struct nfc_adapter *adapter, gchar *prefix)
 	printf("]\n");
 }
 
-void adapter_print_info(struct nfc_adapter *adapter)
+void adapter_print_info(struct nfc_adapter *adapter, gpointer user_data)
 {
 	gchar *rf_mode_str;
 
 	if (!adapter)
 		return;
 
-	printf("nfc%d:\n", adapter->idx);
+	printf("nfc%u:\n", adapter->idx);
 
 	adpater_print_targets(adapter, "          ");
 
@@ -134,14 +134,16 @@ void adapter_print_info(struct nfc_adapter *adapter)
 void adapter_idx_print_info(guint32 idx)
 {
 	if (idx != INVALID_ADAPTER_IDX)
-		adapter_print_info(adapter_get(idx));
+		adapter_print_info(adapter_get(idx), NULL);
 	else
 		g_slist_foreach(adapters, (GFunc)adapter_print_info, NULL);
 }
 
-static gint adapter_compare_idx(struct nfc_adapter *adapter, guint32 idx)
+static gint adapter_compare_idx(struct nfc_adapter *adapter, gpointer idx_ptr)
 {
-	return (gint)adapter->idx - (gint)idx;
+	gint idx = GPOINTER_TO_INT(idx_ptr);
+
+	return (gint)adapter->idx - idx;
 }
 
 struct nfc_adapter *adapter_get(guint32 idx)
@@ -162,7 +164,7 @@ struct nfc_adapter *adapter_get(guint32 idx)
 
 void adapter_add_target(struct nfc_adapter *adapter, guint8 type, guint32 idx)
 {
-	DBG("adapter_idx: %d, target_type: %d, target_idx: %d",
+	DBG("adapter_idx: %u, target_type: %u, target_idx: %u",
 	    adapter->idx, type, idx);
 
 	if (type == TARGET_TYPE_TAG)

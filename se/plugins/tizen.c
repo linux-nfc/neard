@@ -375,7 +375,7 @@ static void tapi_transfer_apdu_reply(DBusPendingCall *call, void *user_data)
 	if (apdu_length == 0 || apdu == NULL)
 		DBG("data is NULL");
 
-	DBG("apdu_length %d", apdu_length);
+	DBG("apdu_length %u", apdu_length);
 
 done:
 	ctx->cb(ctx->context, apdu, apdu_length, result);

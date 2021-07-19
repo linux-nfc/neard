@@ -147,8 +147,7 @@ void near_snep_core_parse_handover_record(int client_fd, uint8_t *ndef,
 	near_snep_core_response_with_info(client_fd, NEAR_SNEP_RESP_SUCCESS,
 								msg->data, msg->length);
 
-	g_free(msg->data);
-	g_free(msg);
+	near_ndef_msg_free(msg);
 }
 
 /*
@@ -207,7 +206,6 @@ static void free_snep_core_fragment(gpointer data)
 		g_free(fragment->data);
 
 	g_free(fragment);
-	fragment = NULL;
 }
 
 static void free_snep_core_push_data(gpointer userdata, int status)
@@ -438,7 +436,8 @@ static bool snep_core_process_request(int client_fd,
 
 		g_slist_free_full(snep_data->req->fragments,
 						free_snep_core_fragment);
-		g_slist_free(snep_data->req->fragments);
+		g_free(snep_data->req);
+		snep_data->req = NULL;
 
 		g_hash_table_remove(snep_client_hash,
 						GINT_TO_POINTER(client_fd));
@@ -478,7 +477,8 @@ leave_cont:
 		/* No more fragment to send, clean memory */
 		g_slist_free_full(snep_data->req->fragments,
 						free_snep_core_fragment);
-		g_slist_free(snep_data->req->fragments);
+		g_free(snep_data->req);
+		snep_data->req = NULL;
 
 		g_hash_table_remove(snep_client_hash,
 						GINT_TO_POINTER(client_fd));
@@ -787,9 +787,7 @@ done:
 		}
 	}
 
-	if (ndef)
-		g_free(ndef->data);
-	g_free(ndef);
+	near_ndef_msg_free(ndef);
 }
 
 /* SNEP Core: on P2P push */

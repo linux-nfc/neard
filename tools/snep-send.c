@@ -91,6 +91,7 @@ int main(int argc, char *argv[])
 	frame = g_try_malloc0(frame_length);
 	if (!frame) {
 		close(fd);
+		near_ndef_msg_free(ndef);
 		near_error("Could not allocate SNEP frame");
 		return -1;
 	}
@@ -100,6 +101,7 @@ int main(int argc, char *argv[])
 	frame->length = GUINT_TO_BE(ndef->length);
 
 	memcpy(frame->ndef, ndef->data, ndef->length);
+	near_ndef_msg_free(ndef);
 
 	len = send(fd, (uint8_t *)frame, frame_length, 0);
 	if (len < 0) {

@@ -22,17 +22,21 @@ AC_SUBST(se_plugindir)
 
 PKG_PROG_PKG_CONFIG
 
-NEARD_COMPILER_FLAGS
-
 AC_LANG([C])
 
 AC_PROG_CC
 NEARD_PROG_CC_PIE
+NEARD_PROG_CC_ASAN
+NEARD_PROG_CC_LSAN
+NEARD_PROG_CC_UBSAN
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
 
 m4_define([_LT_AC_TAGCONFIG], [])
 m4_ifdef([AC_LIBTOOL_TAGS], [AC_LIBTOOL_TAGS([])])
+
+m4_include([accflags.m4])
+NEARD_COMPILER_FLAGS
 
 LT_INIT([disable-static])
 
@@ -88,7 +92,7 @@ AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],
 AC_ARG_ENABLE(pie, AS_HELP_STRING([--enable-pie],
 			[enable position independent executables flag]), [
 	if (test "${enableval}" = "yes" &&
-				test "${ac_cv_prog_cc_pie}" = "yes"); then
+				test "${neard_cv_prog_cc_pie}" = "yes"); then
 		CFLAGS="$CFLAGS -fPIE"
 		LDFLAGS="$LDFLAGS -pie"
 	fi
@@ -96,6 +100,48 @@ AC_ARG_ENABLE(pie, AS_HELP_STRING([--enable-pie],
 
 AC_CHECK_LIB(dl, dlopen, dummy=yes,
 			AC_MSG_ERROR(dynamic linking loader is required))
+
+save_LIBS=$LIBS
+AC_CHECK_LIB(asan, _init)
+LIBS=$save_LIBS
+
+AC_ARG_ENABLE(asan, AC_HELP_STRING([--enable-asan],
+			[enable linking with address sanitizer]), [
+	if (test "${enableval}" = "yes" &&
+				test "${ac_cv_lib_asan__init}" = "yes" &&
+				test "${neard_cv_prog_cc_asan}" = "yes"); then
+		CFLAGS="$CFLAGS -fsanitize=address";
+		LDFLAGS="$LDFLAGS -fsanitize=address"
+	fi
+])
+
+save_LIBS=$LIBS
+AC_CHECK_LIB(lsan, _init)
+LIBS=$save_LIBS
+
+AC_ARG_ENABLE(lsan, AC_HELP_STRING([--enable-lsan],
+			[enable linking with leak sanitizer]), [
+	if (test "${enableval}" = "yes" &&
+				test "${ac_cv_lib_lsan__init}" = "yes" &&
+				test "${neard_cv_prog_cc_lsan}" = "yes"); then
+		CFLAGS="$CFLAGS -fsanitize=leak";
+		LDFLAGS="$LDFLAGS -fsanitize=leak"
+	fi
+])
+
+save_LIBS=$LIBS
+AC_CHECK_LIB(ubsan, _init)
+LIBS=$save_LIBS
+
+AC_ARG_ENABLE(ubsan, AC_HELP_STRING([--enable-ubsan],
+			[enable linking with undefined behavior sanitizer]), [
+	if (test "${enableval}" = "yes" &&
+				test "${ac_cv_lib_ubsan__init}" = "yes" &&
+				test "${neard_cv_prog_cc_ubsan}" = "yes"); then
+		CFLAGS="$CFLAGS -fsanitize=undefined";
+		LDFLAGS="$LDFLAGS -fsanitize=undefined"
+	fi
+])
 
 GLIB_DEPS="glib-2.0 >= 2.28"
 PKG_CHECK_MODULES(GLIB, [${GLIB_DEPS}], dummy=yes,

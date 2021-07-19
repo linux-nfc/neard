@@ -567,7 +567,7 @@ static int get_targets_handler(struct nl_msg *n, void *arg)
 		iso15693_uid_len = 0;
 	}
 
-	DBG("target idx %d proto 0x%x sens_res 0x%x sel_res 0x%x NFCID len %d",
+	DBG("target idx %u proto 0x%x sens_res 0x%x sel_res 0x%x NFCID len %d",
 	    target_idx, protocols, sens_res, sel_res, nfcid_len);
 	DBG("\tiso15693_uid_len %d", iso15693_uid_len);
 
@@ -607,7 +607,7 @@ static int nfc_netlink_event_targets_found(struct genlmsghdr *gnlh)
 
 	adapter_idx = nla_get_u32(attr[NFC_ATTR_DEVICE_INDEX]);
 
-	DBG("adapter %d", adapter_idx);
+	DBG("adapter %u", adapter_idx);
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -653,7 +653,7 @@ static int nfc_netlink_event_target_lost(struct genlmsghdr *gnlh)
 	adapter_idx = nla_get_u32(attr[NFC_ATTR_DEVICE_INDEX]);
 	target_idx = nla_get_u32(attr[NFC_ATTR_TARGET_INDEX]);
 
-	DBG("adapter %d target %d", adapter_idx, target_idx);
+	DBG("adapter %u target %u", adapter_idx, target_idx);
 
 	return __near_adapter_remove_target(adapter_idx, target_idx);
 }
@@ -690,7 +690,7 @@ static int nfc_netlink_event_dep_up(struct genlmsghdr *gnlh)
 
 		target_idx = nla_get_u32(attrs[NFC_ATTR_TARGET_INDEX]);
 
-		DBG("%d %d", idx, target_idx);
+		DBG("%u %u", idx, target_idx);
 
 		return __near_adapter_set_dep_state(idx, true);
 	} else {
@@ -735,7 +735,7 @@ static int nfc_netlink_event_tm_activated(struct genlmsghdr *gnlh)
 
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 
-	DBG("%d", idx);
+	DBG("%u", idx);
 
 	return __near_adapter_add_device(idx, NULL, 0);
 }
@@ -756,7 +756,7 @@ static int nfc_netlink_event_tm_deactivated(struct genlmsghdr *gnlh)
 
 	idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 
-	DBG("%d", idx);
+	DBG("%u", idx);
 
 	return __near_adapter_remove_device(idx);
 }
@@ -769,8 +769,8 @@ static int nfc_netlink_event(struct nl_msg *n, void *arg)
 	DBG("event 0x%x", gnlh->cmd);
 
 	if (src->nl_pid) {
-		near_error("WARNING: Wrong netlink message sender %d",
-								src->nl_pid);
+		near_error("WARNING: Wrong netlink message sender %u",
+			   src->nl_pid);
 		return NL_SKIP;
 	}
 

@@ -273,7 +273,7 @@ static void llcp_print_params(struct sniffer_packet *packet)
 			break;
 
 		case LLCP_PARAM_OPT:
-			sprintf(param_str, "0x%X", param[2] & 0x03);
+			sprintf(param_str, "0x%X", (unsigned int)param[2] & 0x03);
 			break;
 
 		case LLCP_PARAM_SDREQ:
@@ -550,7 +550,7 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 			prefix = '+';
 		}
 
-		sprintf(time_str,  "%c%lu.%06lus", prefix, msg_timestamp.tv_sec,
+		sprintf(time_str,  "%c%ld.%06lds", prefix, msg_timestamp.tv_sec,
 							msg_timestamp.tv_usec);
 	}
 

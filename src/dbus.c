@@ -68,7 +68,7 @@ char *near_dbus_encode_string(const char *value)
 		const char tmp = value[i];
 		if ((tmp < '0' || tmp > '9') && (tmp < 'A' || tmp > 'Z') &&
 						(tmp < 'a' || tmp > 'z'))
-			g_string_append_printf(str, "_%02x", tmp);
+			g_string_append_printf(str, "_%02x", (unsigned int)tmp);
 		else
 			str = g_string_append_c(str, tmp);
 	}

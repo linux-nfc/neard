@@ -197,7 +197,7 @@ static int nfc_netlink_event_se(struct genlmsghdr *gnlh, bool add)
 	nfc_idx = nla_get_u32(attrs[NFC_ATTR_DEVICE_INDEX]);
 	se_idx = nla_get_u32(attrs[NFC_ATTR_SE_INDEX]);
 
-	DBG("NFC %d SE %d", nfc_idx, se_idx);
+	DBG("NFC %u SE %u", nfc_idx, se_idx);
 
 	if (add) {
 		uint8_t se_type, seel_se_type;
@@ -209,7 +209,7 @@ static int nfc_netlink_event_se(struct genlmsghdr *gnlh, bool add)
 
 		se_type = nla_get_u8(attrs[NFC_ATTR_SE_TYPE]);
 		seel_se_type = nfc_se_type(se_type);
-		DBG("NFC SE type %d %d", se_type, seel_se_type);
+		DBG("NFC SE type %u %u", se_type, seel_se_type);
 
 		return seel_manager_se_add(se_idx, nfc_idx, seel_se_type,
 						SEEL_CONTROLLER_NFC);
@@ -267,7 +267,7 @@ static int nfc_netlink_event_io(struct genlmsghdr *gnlh)
 		goto out;
 	}
 
-	DBG("NFC %d SE %d APDU len %zd", nfc_idx, se_idx, apdu_len);
+	DBG("NFC %u SE %u APDU len %zu", nfc_idx, se_idx, apdu_len);
 
 	nfc_state->ctx->cb(nfc_state->ctx->context, apdu, apdu_len, 0);
 
@@ -550,7 +550,7 @@ static int nfc_transceive(uint8_t ctrl_idx, uint32_t se_idx,
 	void *hdr;
 	int err;
 
-	DBG("%zd APDU %p", apdu_length, apdu);
+	DBG("%zu APDU %p", apdu_length, apdu);
 
 	if (nfc_state->ctx)
 		return -EALREADY;

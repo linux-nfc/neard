@@ -42,7 +42,7 @@ int __near_manager_adapter_add(uint32_t idx, const char *name,
 	const char *path;
 	int err;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = __near_adapter_create(idx, name, protocols, powered);
 	if (!adapter)
@@ -66,7 +66,7 @@ void __near_manager_adapter_remove(uint32_t idx)
 	struct near_adapter *adapter;
 	const char *path;
 
-	DBG("idx %d", idx);
+	DBG("idx %u", idx);
 
 	adapter = __near_adapter_get(idx);
 	if (!adapter)
