@@ -19,228 +19,140 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86-64]
+        compiler: [gcc, clang]
+        container:
+          - alpine:latest
+          - debian:testing
+          - debian:stable
+          - fedora:latest
+          - ubuntu:hirsute
+          - ubuntu:focal
+          - ubuntu:bionic
+          - ubuntu:xenial
+        cross_compile: [""]
+        mode: [maintainer, no-maintainer]
+        variant: [""]
         include:
-          # Debian builds
-          # 32bit build
+          # Debian 32-bit builds
           - container: "debian:stable"
-            env:
-              ARCH: i386
-              CC: gcc -m32
-              CROSS_COMPILE: i686-linux-gnu
-              VARIANT: i386
-              MODE: maintainer
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:stable"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
 
           # Debian cross compilation builds
           - container: "debian:stable"
-            env:
-              ARCH: armel
-              CC: arm-linux-gnueabi-gcc
-              CROSS_COMPILE: arm-linux-gnueabi
-              VARIANT: cross-compile
-              MODE: maintainer
+            arch: armel
+            compiler: arm-linux-gnueabi-gcc
+            cross_compile: arm-linux-gnueabi
+            mode: maintainer
+            variant: cross-compile
 
           - container: "debian:stable"
-            env:
-              ARCH: arm64
-              CC: aarch64-linux-gnu-gcc
-              CROSS_COMPILE: aarch64-linux-gnu
-              VARIANT: cross-compile
-              MODE: maintainer
+            arch: arm64
+            compiler: aarch64-linux-gnu-gcc
+            cross_compile: aarch64-linux-gnu
+            mode: maintainer
+            variant: cross-compile
 
           - container: "debian:stable"
-            env:
-              ARCH: ppc64el
-              CC: powerpc64le-linux-gnu-gcc
-              CROSS_COMPILE: powerpc64le-linux-gnu
-              VARIANT: cross-compile
-              MODE: maintainer
+            arch: ppc64el
+            compiler: powerpc64le-linux-gnu-gcc
+            cross_compile: powerpc64le-linux-gnu
+            mode: maintainer
+            variant: cross-compile
 
           - container: "debian:stable"
-            env:
-              ARCH: s390x
-              CC: s390x-linux-gnu-gcc
-              CROSS_COMPILE: s390x-linux-gnu
-              VARIANT: cross-compile
-              MODE: maintainer
+            arch: s390x
+            compiler: s390x-linux-gnu-gcc
+            cross_compile: s390x-linux-gnu
+            mode: maintainer
+            variant: cross-compile
 
-          # Debian gcc
+          # Debian GCC sanitizer builds
           - container: "debian:stable"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
-
-          - container: "debian:stable"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              VARIANT: sanitizers
-              MODE: maintainer
-
-          - container: "debian:stable"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: no-maintainer
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
 
           - container: "debian:testing"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
 
-          - container: "debian:testing"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              VARIANT: sanitizers
-              MODE: maintainer
-
-          - container: "debian:testing"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: no-maintainer
-
-          # Debian clang
-          - container: "debian:stable"
-            env:
-              ARCH: x86-64
-              CC: clang
-              MODE: maintainer
-
-          - container: "debian:stable"
-            env:
-              ARCH: x86-64
-              CC: clang
-              MODE: no-maintainer
-
-          - container: "debian:testing"
-            env:
-              ARCH: x86-64
-              CC: clang
-              MODE: maintainer
-
-          # musl (native)
-          - container: "alpine:latest"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
-
-          # Fedora
-          - container: "fedora:latest"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
-
-          - container: "fedora:latest"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: no-maintainer
-
-          - container: "fedora:latest"
-            env:
-              ARCH: x86-64
-              CC: clang
-              MODE: maintainer
-
-          # Ubuntu 32bit builds: gcc and clang
+          # Ubuntu 32-bit builds
           - container: "ubuntu:hirsute"
-            env:
-              ARCH: i386
-              CC: gcc -m32
-              CROSS_COMPILE: i686-linux-gnu
-              VARIANT: i386
-              MODE: maintainer
-
-          - container: "ubuntu:focal"
-            env:
-              ARCH: i386
-              CC: gcc -m32
-              CROSS_COMPILE: i686-linux-gnu
-              VARIANT: i386
-              MODE: maintainer
-
-          # Ubuntu x86-64 gcc
-          - container: "ubuntu:hirsute"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
 
           - container: "ubuntu:hirsute"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              VARIANT: sanitizers
-              MODE: maintainer
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
 
+          - container: "ubuntu:focal"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "ubuntu:focal"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          # Ubuntu GCC sanitizer builds
           - container: "ubuntu:hirsute"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: no-maintainer
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
 
           - container: "ubuntu:focal"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
-
-          - container: "ubuntu:focal"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              VARIANT: sanitizers
-              MODE: maintainer
-
-          - container: "ubuntu:focal"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: no-maintainer
-
-          - container: "ubuntu:bionic"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
-
-          - container: "ubuntu:xenial"
-            env:
-              ARCH: x86-64
-              CC: gcc
-              MODE: maintainer
-
-          # Ubuntu x86-64 clang
-          - container: "ubuntu:hirsute"
-            env:
-              ARCH: x86-64
-              CC: clang
-              MODE: maintainer
-
-          - container: "ubuntu:focal"
-            env:
-              ARCH: x86-64
-              CC: clang
-              MODE: maintainer
-
-          - container: "ubuntu:focal"
-            env:
-              ARCH: x86-64
-              CC: clang
-              MODE: no-maintainer
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
 
     container:
       image: ${{ matrix.container }}
-      env: ${{ matrix.env }}
+      env:
+        ARCH: ${{ matrix.arch }}
+        CC: ${{ matrix.compiler }}
+        CROSS_COMPILE: ${{ matrix.cross_compile }}
+        MODE: ${{ matrix.mode }}
+        VARIANT: ${{ matrix.variant }}
 
     steps:
     - name: Show OS
       run: cat /etc/os-release
+
+    - name: Show env (matrix settings)
+      run: |
+        echo "ARCH: $ARCH"
+        echo "CC: $CC"
+        echo "CROSS_COMPILE: $CROSS_COMPILE"
+        echo "MODE: $MODE"
+        echo "VARIANT: $VARIANT"
 
     - name: Git checkout
       uses: actions/checkout@v2
@@ -272,11 +184,16 @@ jobs:
         if [ "$VARIANT" = "sanitizers" ]; then
           CONFIGURE_ARGS="--enable-asan --enable-lsan --enable-ubsan --enable-pie"
         fi
+        CONFIGURE_CROSS=""
+        if [ "$CROSS_COMPILE" ]; then
+          CONFIGURE_CROSS="--host=${CROSS_COMPILE}"
+        fi
         if [ "$MODE" = "maintainer" ]; then
           ./bootstrap-configure \
             --disable-silent-rules \
             $CONFIGURE_ARGS
         else
+          CONFIGURE_ARGS="$CONFIGURE_ARGS $CONFIGURE_CROSS"
           ./bootstrap && \
             ./configure \
             --disable-systemd \
@@ -300,7 +217,7 @@ jobs:
       id: unit_tests
       run: |
         make check
-      if: ${{ (matrix.env['ARCH'] == 'x86-64') || (matrix.env['ARCH'] == 'i386') }}
+      if: ${{ (matrix.arch == 'x86-64') || (matrix.arch == 'i386') }}
 
     - name: Get unit tests logs
       run: cat test-suite.log
@@ -335,4 +252,4 @@ jobs:
       run: make distcheck
       # distcheck runs unit tests so no point for cross compile
       # TODO: figure out how to re-configure during distcheck with --host for i386 (DISTCHECK_CONFIGURE_FLAGS)
-      if: ${{ (matrix.env['ARCH'] == 'x86-64')}}
+      if: ${{ (matrix.arch == 'x86-64')}}

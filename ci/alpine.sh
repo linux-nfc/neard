@@ -12,13 +12,20 @@ set -ex
 apk update
 
 PKGS_CC="gcc"
+case $CC in
+	clang*)
+		# On Alpine v3.14 clang fails without gcc:
+		# cannot find crtbeginS.o: No such file or directory
+		PKGS_CC="clang gcc"
+	;;
+esac
 
 # gzip: for distcheck
 apk add \
 	autoconf \
 	autoconf-archive \
 	automake \
-	gcc \
+	binutils \
 	gzip \
 	dbus-dev \
 	glib-dev \
