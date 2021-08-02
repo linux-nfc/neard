@@ -265,6 +265,7 @@ jobs:
         printenv
 
     - name: Configure
+      id: configure
       run: |
         echo "Bootstraping in mode: $MODE"
         CONFIGURE_ARGS=""
@@ -286,6 +287,11 @@ jobs:
             --enable-tools \
             $CONFIGURE_ARGS
         fi
+
+    - name: Get configure logs
+      run: cat config.log
+      if: ${{ always() && ((steps.configure.outcome == 'failure') ||
+                           (steps.configure.outcome == 'success')) }}
 
     - name: Compile
       run: make -j$(nproc)
