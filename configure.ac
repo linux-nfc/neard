@@ -15,6 +15,10 @@ if (test "${libdir}" = '${exec_prefix}/lib'); then
 	libdir='${prefix}/lib'
 fi
 
+# pkglibdir is defined by automake but autoconf parses the neard.pc.in
+# which uses pkglibdir, therefore define it manually in autoconf.
+AC_SUBST([pkglibdir], ["\${libdir}/${PACKAGE_NAME}"])
+
 plugindir='${pkglibdir}/plugins'
 se_plugindir='${pkglibdir}/plugins-se'
 AC_SUBST(plugindir)
