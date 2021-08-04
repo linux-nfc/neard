@@ -54,3 +54,21 @@ disabled with the following configuration options:
 Running ./bootstrap-configure will build the configure script and then
 run it, with maintainer mode enabled. bootstrap-configure will configure
 neard with all features enabled.
+
+Bugs and contributing
+=====================
+
+Please send bug reports to mailing list:
+	linux-nfc@lists.01.org
+
+The project development happens on GitHub:
+	https://github.com/linux-nfc/neard
+
+However for historical reasons the releases are also mirrored on kernel.org
+repository:
+	https://git.kernel.org/pub/scm/network/nfc/neard.git/
+
+Contributions can come in a form of patches sent to linux-nfc@lists.01.org or
+GitHub pull requests on mentioned GitHub repository.
+
+See also HACKING and doc/coding-style.txt files.
