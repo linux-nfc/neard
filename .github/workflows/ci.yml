@@ -25,7 +25,11 @@ jobs:
           - alpine:latest
           - debian:testing
           - debian:stable
+          # Fails on configure on GCC and clang (process restrictions?)
+          # - fedora:rawhide
           - fedora:latest
+          - fedora:33
+          - fedora:32
           - ubuntu:hirsute
           - ubuntu:focal
           - ubuntu:bionic

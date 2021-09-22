@@ -15,19 +15,22 @@ case $CC in
 	;;
 esac
 
+# Packages needed by CI
+PKGS_MORE="file"
+
+# diffutils: Rawhide/35 needs "cmp" for configure
 dnf -y install \
 	autoconf \
 	autoconf-archive \
 	automake \
 	dbus-devel \
+	diffutils \
 	glib2-devel \
 	libnl3-devel \
 	libtool \
 	make \
-	$PKGS_CC
-
-# Packages needed by CI
-dnf -y install \
-	file
+	pkg-config \
+	$PKGS_CC \
+	$PKGS_MORE
 
 echo "Install finished: $0"
