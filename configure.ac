@@ -109,7 +109,7 @@ save_LIBS=$LIBS
 AC_CHECK_LIB(asan, _init)
 LIBS=$save_LIBS
 
-AC_ARG_ENABLE(asan, AC_HELP_STRING([--enable-asan],
+AC_ARG_ENABLE(asan, AS_HELP_STRING([--enable-asan],
 			[enable linking with address sanitizer]), [
 	if (test "${enableval}" = "yes" &&
 				test "${ac_cv_lib_asan__init}" = "yes" &&
@@ -123,7 +123,7 @@ save_LIBS=$LIBS
 AC_CHECK_LIB(lsan, _init)
 LIBS=$save_LIBS
 
-AC_ARG_ENABLE(lsan, AC_HELP_STRING([--enable-lsan],
+AC_ARG_ENABLE(lsan, AS_HELP_STRING([--enable-lsan],
 			[enable linking with leak sanitizer]), [
 	if (test "${enableval}" = "yes" &&
 				test "${ac_cv_lib_lsan__init}" = "yes" &&
@@ -137,7 +137,7 @@ save_LIBS=$LIBS
 AC_CHECK_LIB(ubsan, _init)
 LIBS=$save_LIBS
 
-AC_ARG_ENABLE(ubsan, AC_HELP_STRING([--enable-ubsan],
+AC_ARG_ENABLE(ubsan, AS_HELP_STRING([--enable-ubsan],
 			[enable linking with undefined behavior sanitizer]), [
 	if (test "${enableval}" = "yes" &&
 				test "${ac_cv_lib_ubsan__init}" = "yes" &&
