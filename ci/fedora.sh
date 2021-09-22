@@ -15,7 +15,7 @@ case $CC in
 	;;
 esac
 
-yum -y install \
+dnf -y install \
 	autoconf \
 	autoconf-archive \
 	automake \
@@ -27,7 +27,7 @@ yum -y install \
 	$PKGS_CC
 
 # Packages needed by CI
-yum -y install \
+dnf -y install \
 	file
 
 echo "Install finished: $0"
