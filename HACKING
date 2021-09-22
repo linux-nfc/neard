@@ -18,7 +18,7 @@ Required packages and tools:
   make
   pkg-config
 
-See also installation scripts for  Continuous Integration in ci/ directory.
+See also installation scripts for different systems in ci/ directory.
 
 
 Working with the source code repository
