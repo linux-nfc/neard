@@ -33,6 +33,7 @@ apk add \
 	libtool \
 	make \
 	musl-dev \
+	pkgconfig \
 	$PKGS_CC
 
 # Packages needed by CI

@@ -16,6 +16,7 @@ Required packages and tools:
   libnl-3
   libnl-genl-3
   make
+  pkg-config
 
 See also installation scripts for  Continuous Integration in ci/ directory.
 

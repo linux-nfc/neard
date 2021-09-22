@@ -36,6 +36,7 @@ apt install -y --no-install-recommends \
 	libnl-genl-3-dev \
 	libtool \
 	make \
+	pkg-config \
 	$PKGS_CC
 
 echo "Install finished: $0"
