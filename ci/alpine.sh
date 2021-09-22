@@ -20,6 +20,9 @@ case $CC in
 	;;
 esac
 
+# Packages needed by CI
+PKGS_MORE="file"
+
 # gzip: for distcheck
 apk add \
 	autoconf \
@@ -34,10 +37,7 @@ apk add \
 	make \
 	musl-dev \
 	pkgconfig \
-	$PKGS_CC
-
-# Packages needed by CI
-apk add \
-	file
+	$PKGS_CC \
+	$PKGS_MORE
 
 echo "Install finished: $0"
