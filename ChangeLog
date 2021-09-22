@@ -1,3 +1,11 @@
+ver 0.17
+	Added support for TI Standard and Pro Type 5 tag.
+	Fixed several bugs (memory leaks, double frees, uninitialized
+		stack/variables and more) and compiler warnings.
+	Improved unit tests.
+	Added support for GCC sanitizers.
+	Added Continuous Integration using GitHub Actions.
+
 ver 0.16
 	Added NDEF multi-record write support.
 	Added ST Type5 tags support.
