@@ -23,6 +23,7 @@ jobs:
         compiler: [gcc, clang]
         container:
           - alpine:latest
+          - archlinux:latest
           - debian:testing
           - debian:stable
           # Fails on configure on GCC and clang (process restrictions?)
