@@ -1,7 +1,9 @@
 AC_DEFUN([NEARD_COMPILER_FLAGS], [
 	# AX_CHECK_COMPILE_FLAG comes from autoconf-archive
 	AC_REQUIRE([AC_PROG_CC])
-	AC_REQUIRE([AX_CHECK_COMPILE_FLAG])
+	m4_ifndef([AX_CHECK_COMPILE_FLAG],[
+		AC_MSG_ERROR([You need to install the autoconf-archive package.])
+	])
 
 	if (test "${CFLAGS}" = ""); then
 		CFLAGS="-Wall -O2 -D_FORTIFY_SOURCE=2"
