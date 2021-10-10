@@ -1036,9 +1036,10 @@ static gboolean adapter_recv_event(GIOChannel *channel, GIOCondition condition,
 
 int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 {
+	struct sockaddr_storage addr_storage = {};
 	struct near_adapter *adapter;
+	struct sockaddr_nfc *addr;
 	struct near_tag *tag;
-	struct sockaddr_nfc addr;
 	int err, sock;
 
 	DBG("idx %u", idx);
@@ -1059,12 +1060,13 @@ int near_adapter_connect(uint32_t idx, uint32_t target_idx, uint8_t protocol)
 	if (sock == -1)
 		return -errno;
 
-	addr.sa_family = AF_NFC;
-	addr.dev_idx = idx;
-	addr.target_idx = target_idx;
-	addr.nfc_protocol = protocol;
+	addr = (struct sockaddr_nfc *)&addr_storage;
+	addr->sa_family = AF_NFC;
+	addr->dev_idx = idx;
+	addr->target_idx = target_idx;
+	addr->nfc_protocol = protocol;
 
-	err = connect(sock, (struct sockaddr *) &addr, sizeof(addr));
+	err = connect(sock, (struct sockaddr *) addr, sizeof(*addr));
 	if (err) {
 		close(sock);
 		return -errno;
