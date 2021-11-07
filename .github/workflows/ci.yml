@@ -26,6 +26,9 @@ jobs:
           - archlinux:latest
           - debian:testing
           - debian:stable
+          - debian:bullseye
+          - debian:buster
+          - debian:stretch
           # Fails on configure on GCC and clang (process restrictions?)
           # - fedora:rawhide
           - fedora:latest
@@ -49,6 +52,34 @@ jobs:
             variant: i386
 
           - container: "debian:stable"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "debian:buster"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:buster"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "debian:stretch"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:stretch"
             arch: i386
             compiler: gcc -m32
             cross_compile: i686-linux-gnu
@@ -85,13 +116,19 @@ jobs:
             variant: cross-compile
 
           # Debian GCC sanitizer builds
+          - container: "debian:testing"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
           - container: "debian:stable"
             arch: x86-64
             compiler: gcc
             mode: maintainer
             variant: sanitizers
 
-          - container: "debian:testing"
+          - container: "debian:buster"
             arch: x86-64
             compiler: gcc
             mode: maintainer
