@@ -23,6 +23,7 @@
 #define __NEAR_TYPES_H
 
 #include <byteswap.h>
+#include <endian.h>
 
 #define near_get_unaligned(ptr)			\
 ({						\
