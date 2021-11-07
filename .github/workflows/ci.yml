@@ -44,6 +44,20 @@ jobs:
         variant: [""]
         include:
           # Debian 32-bit builds
+          - container: "debian:testing"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:testing"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
           - container: "debian:stable"
             arch: i386
             compiler: gcc -m32
@@ -87,6 +101,34 @@ jobs:
             variant: i386
 
           # Debian cross compilation builds
+          - container: "debian:testing"
+            arch: armel
+            compiler: arm-linux-gnueabi-gcc
+            cross_compile: arm-linux-gnueabi
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:testing"
+            arch: arm64
+            compiler: aarch64-linux-gnu-gcc
+            cross_compile: aarch64-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:testing"
+            arch: ppc64el
+            compiler: powerpc64le-linux-gnu-gcc
+            cross_compile: powerpc64le-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:testing"
+            arch: s390x
+            compiler: s390x-linux-gnu-gcc
+            cross_compile: s390x-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
           - container: "debian:stable"
             arch: armel
             compiler: arm-linux-gnueabi-gcc
