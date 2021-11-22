@@ -1,3 +1,10 @@
+ver 0.18
+	Fixed configure with newer autoconf v2.71.
+	Made missing autoconf-archive messages nicer.
+	Fixed minor uninitialized access reported by Valgrind.
+	Fixed build on Debian Stretch.
+	Extended Continuous Integration builds.
+
 ver 0.17
 	Added support for TI Standard and Pro Type 5 tag.
 	Fixed several bugs (memory leaks, double frees, uninitialized
