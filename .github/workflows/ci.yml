@@ -276,10 +276,19 @@ jobs:
     - name: Display environment and Linux version
       run: |
         test -f /etc/issue && cat /etc/issue
+        echo "############################################"
         lsb_release -a || true
+        echo "############################################"
+        cat /usr/include/linux/version.h
+        echo "############################################"
         uname -a
+        echo "############################################"
         cat /proc/cmdline
+        echo "############################################"
         printenv
+
+    - name: Display nfc.h differences between local and Linux kernel headers
+      run: diff -uBb /usr/include/linux/nfc.h include/nfc_copy.h || true
 
     - name: Configure
       id: configure
