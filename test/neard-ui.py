@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 
+import neardutils
+import traceback
+import dbus.mainloop.glib
+import dbus.service
+import dbus
 import pdb
 import sys
 
-import gobject
-import gtk
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
+from gi.repository import GLib
+from gi.repository import GObject
 
-import dbus
-import dbus.service
-import dbus.mainloop.glib
-
-import traceback
-
-import neardutils
 
 # =================================================================
 
@@ -392,23 +393,23 @@ class NeardUI(Neard):
     def createAdaptersWidgets(self, adaptlist):
 
         # treeview adapters
-        tv_adapters = gtk.TreeView(adaptlist)
+        tv_adapters = Gtk.TreeView(model=adaptlist)
 
-        column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
+        column = Gtk.TreeViewColumn("Path", Gtk.CellRendererText(), text=0)
         tv_adapters.append_column(column)
 
-        toggle = gtk.CellRendererToggle()
-        column = gtk.TreeViewColumn("Powered", toggle, active=2)
-        toggle.connect('toggled', self.adapter_poweredToggled, None)
+        toggle = Gtk.CellRendererToggle()
+        column = Gtk.TreeViewColumn("Powered", toggle, active=2)
+        toggle.connect("toggled", self.adapter_poweredToggled, None)
         tv_adapters.append_column(column)
 
-        toggle = gtk.CellRendererToggle()
-        column = gtk.TreeViewColumn("Polling", toggle, active=3)
-        toggle.connect('toggled', self.adapter_pollingToggled, None)
+        toggle = Gtk.CellRendererToggle()
+        column = Gtk.TreeViewColumn("Polling", toggle, active=3)
+        toggle.connect("toggled", self.adapter_pollingToggled, None)
         tv_adapters.append_column(column)
 
-        column = gtk.TreeViewColumn(
-            "Protocols", gtk.CellRendererText(), text=4)
+        column = Gtk.TreeViewColumn(
+            "Protocols", Gtk.CellRendererText(), text=4)
         tv_adapters.append_column(column)
 
         tv_adapters.get_selection().connect("changed",
@@ -419,15 +420,15 @@ class NeardUI(Neard):
     # Prepare TreeView  for Tags
     def createTagsWidgets(self, tags_list):
 
-        tv_tags = gtk.TreeView(tags_list)
+        tv_tags = Gtk.TreeView(model=tags_list)
 
-        column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
+        column = Gtk.TreeViewColumn("Path", Gtk.CellRendererText(), text=0)
         tv_tags.append_column(column)
-        toggle = gtk.CellRendererToggle()
-        column = gtk.TreeViewColumn("ReadOnly", toggle, active=2)
+        toggle = Gtk.CellRendererToggle()
+        column = Gtk.TreeViewColumn("ReadOnly", toggle, active=2)
         tv_tags.append_column(column)
 
-        column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=3)
+        column = Gtk.TreeViewColumn("Type", Gtk.CellRendererText(), text=3)
         tv_tags.append_column(column)
 
         return tv_tags
@@ -436,32 +437,32 @@ class NeardUI(Neard):
     # Prepare TreeView  for Records
     def createRecordsWidgets(self, records_list):
         # treeview Records
-        tv_records = gtk.TreeView(records_list)
+        tv_records = Gtk.TreeView(model=records_list)
         tv_records.connect("row-activated", self.on_record_activated)
 
-        column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
+        column = Gtk.TreeViewColumn("Path", Gtk.CellRendererText(), text=0)
         tv_records.append_column(column)
 
-        column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=2)
+        column = Gtk.TreeViewColumn("Type", Gtk.CellRendererText(), text=2)
         tv_records.append_column(column)
 
-        column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
+        column = Gtk.TreeViewColumn("Data", Gtk.CellRendererText(), text=3)
         tv_records.append_column(column)
         return tv_records
 
     # Prepare TreeView  for Records
     def createWriteWidgets(self, records_list):
         # treeview Records
-        tv_records = gtk.TreeView(records_list)
-        #tv_records.connect("row-activated", self.on_record_activated)
+        tv_records = Gtk.TreeView(model=records_list)
+        # tv_records.connect("row-activated", self.on_record_activated)
 
-        #column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
+        # column = Gtk.TreeViewColumn("Path", Gtk.CellRendererText(), text=0)
         # tv_records.append_column(column)
 
-        #column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=2)
+        # column = Gtk.TreeViewColumn("Type", Gtk.CellRendererText(), text=2)
         # tv_records.append_column(column)
 
-        #column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
+        # column = Gtk.TreeViewColumn("Data", Gtk.CellRendererText(), text=3)
         # tv_records.append_column(column)
         return tv_records
 
@@ -481,32 +482,31 @@ class NeardUI(Neard):
     def createDialog(self, title=None):
         if self.title is not None:
             title = self.title
-        dialog = gtk.Dialog(title, None,
-                            gtk.DIALOG_MODAL |
-                            gtk.DIALOG_DESTROY_WITH_PARENT,
-                            (gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        dialog = Gtk.Dialog(title, None, modal=True, destroy_with_parent=True)
+        dialog.add_button("_OK", Gtk.ResponseType.ACCEPT)
         dialog.set_property("resizable", True)
         dialog.set_default_size(800, 300)
 
-        notebook = gtk.Notebook()
-        dialog.child.add(notebook)
+        notebook = Gtk.Notebook()
+        dialog.get_content_area().add(notebook)
+        notebook.set_vexpand(True)
 
         # Create the first tab...an adapters's list
-        scrolledwindow = gtk.ScrolledWindow()
+        scrolledwindow = Gtk.ScrolledWindow()
         widget = self.createAdaptersWidgets(self.adapters_list)
         scrolledwindow.add(widget)
-        notebook.append_page(scrolledwindow, gtk.Label("Adapters"))
+        notebook.append_page(scrolledwindow, Gtk.Label(label="Adapters"))
 
-        scrolledwindow = gtk.ScrolledWindow()
+        scrolledwindow = Gtk.ScrolledWindow()
         widget = self.createTagsWidgets(self.tags_list)
         scrolledwindow.add(widget)
 
-        notebook.append_page(scrolledwindow, gtk.Label("Tags"))
+        notebook.append_page(scrolledwindow, Gtk.Label(label="Tags"))
 
-        scrolledwindow = gtk.ScrolledWindow()
+        scrolledwindow = Gtk.ScrolledWindow()
         widget = self.createRecordsWidgets(self.records_list)
         scrolledwindow.add(widget)
-        notebook.append_page(scrolledwindow, gtk.Label("Records"))
+        notebook.append_page(scrolledwindow, Gtk.Label(label="Records"))
 
         dialog.connect('response', self.dlg_onResponse)
         return dialog
@@ -521,23 +521,29 @@ class NeardUI(Neard):
         self.response_callback = response_callback
         self.neardDialog = None
 
-        self.adapters_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
-                                           gobject.TYPE_STRING,  # Name = 1
-                                           gobject.TYPE_BOOLEAN,  # powered = 2
-                                           gobject.TYPE_BOOLEAN,  # polling = 3
-                                           gobject.TYPE_STRING,  # protocols = 4
-                                           gobject.TYPE_STRING)  # tags = 5
+        self.adapters_list = Gtk.ListStore(
+            GObject.TYPE_STRING,  # path =0
+            GObject.TYPE_STRING,  # Name = 1
+            GObject.TYPE_BOOLEAN,  # powered = 2
+            GObject.TYPE_BOOLEAN,  # polling = 3
+            GObject.TYPE_STRING,  # protocols = 4
+            GObject.TYPE_STRING  # tags = 5
+        )
 
-        self.tags_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
-                                       gobject.TYPE_STRING,      # Name = 1
-                                       gobject.TYPE_BOOLEAN,     # Read Only 2
-                                       gobject.TYPE_STRING,      # Type = 3
-                                       gobject.TYPE_STRING)     # Record = 4
+        self.tags_list = Gtk.ListStore(
+            GObject.TYPE_STRING,  # path =0
+            GObject.TYPE_STRING,  # Name = 1
+            GObject.TYPE_BOOLEAN,  # Read Only 2
+            GObject.TYPE_STRING,  # Type = 3
+            GObject.TYPE_STRING  # Record = 4
+        )
 
-        self.records_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
-                                          gobject.TYPE_STRING,      # Name = 1
-                                          gobject.TYPE_STRING,      # Type = 2
-                                          gobject.TYPE_STRING)        # content = 3
+        self.records_list = Gtk.ListStore(
+            GObject.TYPE_STRING,  # path =0
+            GObject.TYPE_STRING,  # Name = 1
+            GObject.TYPE_STRING,  # Type = 2
+            GObject.TYPE_STRING  # content = 3
+        )
 
         Neard.__init__(
             self,
@@ -549,7 +555,7 @@ class NeardUI(Neard):
 
 class RecordUI():
     def wr_onResponse(self, dialog, response):
-        if response != gtk.RESPONSE_ACCEPT:
+        if response != Gtk.RESPONSE_ACCEPT:
             return
         content = self.content_entry.get_text()
         type_name = self.type_combo.get_active_text()
@@ -574,31 +580,36 @@ class RecordUI():
 
     def __init__(self, parent=None, path=None, type_name=None):
         self.path = path
-        type_combo = gtk.combo_box_new_text()
-        type_combo.append_text('Text')
-        type_combo.append_text('URI')
-        type_combo.append_text('SmartPoster')
-        if type_name == 'Text':
+        type_combo = Gtk.combo_box_new_text()
+        type_combo.append_text("Text")
+        type_combo.append_text("URI")
+        type_combo.append_text("SmartPoster")
+        if type_name == "Text":
             type_combo.set_active(0)
         elif type_name == 'URI':
             type_combo.set_active(1)
         elif type_name == 'SmartPoster':
             type_combo.set_active(2)
-        fixed = gtk.Fixed()
-        content_entry = gtk.Entry()
+        fixed = Gtk.Fixed()
+        content_entry = Gtk.Entry()
         fixed.put(type_combo, 20, 40)
         fixed.put(content_entry, 150, 40)
-        type_label = gtk.Label("Type")
-        content_label = gtk.Label("Content")
+        type_label = Gtk.Label("Type")
+        content_label = Gtk.Label("Content")
         fixed.put(type_label, 20, 15)
         fixed.put(content_label, 150, 15)
 
-        record_dialog = gtk.Dialog("Write Record", parent,
-                                   gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                                   (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        record_dialog = Gtk.Dialog(
+            "Write Record",
+            parent,
+            modal=True,
+            destroy_with_parent=True
+        )
+        record_dialog.add_button("_Cancel", Gtk.RESPONSE_REJECT)
+        record_dialog.add_button("_OK", Gtk.RESPONSE_ACCEPT)
         self.record_dialog = record_dialog
         record_dialog.set_default_size(280, 120)
-        record_dialog.set_position(gtk.WIN_POS_CENTER)
+        record_dialog.set_position(Gtk.WindowPosition.CENTER)
         record_dialog.connect('response', self.wr_onResponse)
         hbox = record_dialog.get_content_area()
         hbox.pack_start(fixed)
@@ -618,7 +629,7 @@ if __name__ == "__main__":
         mainloop.quit()
 
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-    mainloop = gobject.MainLoop()
+    mainloop = GLib.MainLoop()
 
     m = NeardUI("Neard", endmainloop)
     m.show()
