@@ -111,6 +111,10 @@ dbusdir = ${sysconfdir}/dbus-1/system.d/
 
 dist_dbus_DATA = src/org.neard.conf
 
+if SE
+dist_dbus_DATA += se/org.neard.se.conf
+endif
+
 if MAINTAINER_MODE
 
 if SE
