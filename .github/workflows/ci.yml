@@ -32,8 +32,8 @@ jobs:
           # Fails on configure on GCC and clang (process restrictions?)
           # - fedora:rawhide
           - fedora:latest
-          - fedora:33
-          - fedora:32
+          - fedora:35
+          - fedora:34
           - ubuntu:impish
           - ubuntu:hirsute
           - ubuntu:focal
