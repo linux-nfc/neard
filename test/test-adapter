@@ -6,102 +6,105 @@ import neardutils
 
 bus = dbus.SystemBus()
 
+
 def extract_list(list):
-	val = "["
-	for i in list:
-		val += " " + str(i)
-	val += " ]"
-	return val
+    val = "["
+    for i in list:
+        val += " " + str(i)
+    val += " ]"
+    return val
+
 
 def usage():
-	print("Usage: %s <command>" % (sys.argv[0]) )
-	print("")
-	print("  list")
-	print("  powered nfcX [on/off]")
-	print("  poll nfcX [on/off] [Initiator/Target/Dual]")
-	sys.exit(1)
+    print("Usage: %s <command>" % (sys.argv[0]))
+    print("")
+    print("  list")
+    print("  powered nfcX [on/off]")
+    print("  poll nfcX [on/off] [Initiator/Target/Dual]")
+    sys.exit(1)
+
 
 if (len(sys.argv) < 2):
-	usage()
+    usage()
 
 if (sys.argv[1] == "list"):
-	if (len(sys.argv) < 3):
-		objects = neardutils.get_managed_objects()
-		for path, interfaces in objects.iteritems():
-			if "org.neard.Adapter" not in interfaces:
-				continue
+    if (len(sys.argv) < 3):
+        objects = neardutils.get_managed_objects()
+        for path, interfaces in objects.iteritems():
+            if "org.neard.Adapter" not in interfaces:
+                continue
 
-			print(" [ %s ]" % (path))
+            print(" [ %s ]" % (path))
 
-			props = interfaces["org.neard.Adapter"]
+            props = interfaces["org.neard.Adapter"]
 
-			for (key, value) in props.items():
-				if (key == "Protocols"):
-					val = extract_list(value)
-					print("    %s = %s" % (key, val))
+            for (key, value) in props.items():
+                if (key == "Protocols"):
+                    val = extract_list(value)
+                    print("    %s = %s" % (key, val))
 
-				elif key in ["Powered", "Polling"]:
-					if value == dbus.Boolean(1):
-						val = "true"
-					else:
-						val = "false"
-					print("    %s = %s" % (key, val))
+                elif key in ["Powered", "Polling"]:
+                    if value == dbus.Boolean(1):
+                        val = "true"
+                    else:
+                        val = "false"
+                    print("    %s = %s" % (key, val))
 
-				else:
-					print("    %s = %s" % (key, value))
+                else:
+                    print("    %s = %s" % (key, value))
 
-		sys.exit(0)
+        sys.exit(0)
 
 if (sys.argv[1] == "powered"):
-	if (len(sys.argv) < 4):
-		usage()
-	else:
-		path = "/org/neard/" + sys.argv[2]
+    if (len(sys.argv) < 4):
+        usage()
+    else:
+        path = "/org/neard/" + sys.argv[2]
 
-		adapter_path = neardutils.find_adapter(path).object_path
-		adapter = dbus.Interface(bus.get_object("org.neard", adapter_path),
-					"org.freedesktop.DBus.Properties")
+        adapter_path = neardutils.find_adapter(path).object_path
+        adapter = dbus.Interface(bus.get_object("org.neard", adapter_path),
+                                 "org.freedesktop.DBus.Properties")
 
-		if (sys.argv[3] == "on"):
-			value = dbus.Boolean(1)
-		elif (sys.argv[3] == "off"):
-			value = dbus.Boolean(0)
-		else:
-			value = dbus.Boolean(sys.argv[3])
-		try:
-			adapter.Set("org.neard.Adapter", "Powered", value)
-		except dbus.DBusException, error:
-			print "%s: %s" % (error._dbus_error_name, error.message)
-	sys.exit(0)
+        if (sys.argv[3] == "on"):
+            value = dbus.Boolean(1)
+        elif (sys.argv[3] == "off"):
+            value = dbus.Boolean(0)
+        else:
+            value = dbus.Boolean(sys.argv[3])
+        try:
+            adapter.Set("org.neard.Adapter", "Powered", value)
+        except dbus.DBusException as error:
+            print "%s: %s" % (error._dbus_error_name, error.message)
+    sys.exit(0)
 
 if (sys.argv[1] == "poll"):
-	if (len(sys.argv) < 4):
-		usage()
-	else:
-		path = "/org/neard/" + sys.argv[2]
+    if (len(sys.argv) < 4):
+        usage()
+    else:
+        path = "/org/neard/" + sys.argv[2]
 
-		adapter = neardutils.find_adapter(path)
+        adapter = neardutils.find_adapter(path)
 
-		if (sys.argv[3] == "on"):
-			if (len(sys.argv) == 4):
-				mode = "Initiator"
-			else:
-				mode = sys.argv[4]
+        if (sys.argv[3] == "on"):
+            if (len(sys.argv) == 4):
+                mode = "Initiator"
+            else:
+                mode = sys.argv[4]
 
-			try:
-				adapter.StartPollLoop(mode)
-			except dbus.DBusException, error:
-				print "%s: %s" % (error._dbus_error_name, error.message)
+            try:
+                adapter.StartPollLoop(mode)
+            except dbus.DBusException as error:
+                print "%s: %s" % (error._dbus_error_name, error.message)
 
-		elif (sys.argv[3] == "off"):
-			try:
-				adapter.StopPollLoop()
-			except dbus.DBusException, error:
-				print "%s: %s" % (error._dbus_error_name, error.message)
+        elif (sys.argv[3] == "off"):
+            try:
+                adapter.StopPollLoop()
+            except dbus.DBusException as error:
+                print "%s: %s" % (error._dbus_error_name, error.message)
 
-		else:
-			usage()
+        else:
+            usage()
 
-	sys.exit(0)
+    sys.exit(0)
 
 usage()
