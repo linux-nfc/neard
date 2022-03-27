@@ -13,119 +13,124 @@ from dbus.lowlevel import MethodCallMessage, HANDLER_RESULT_NOT_YET_HANDLED
 
 mainloop = gobject.MainLoop()
 
+
 def device_added(path, interfaces):
-	for iface, props in interfaces.iteritems():
-		if "org.neard.Device" in interfaces:
-			print("Pairing with %s" % (path))
-			device = dbus.Interface(bus.get_object("org.neard", path),
-							"org.neard.Device")
-			device.Push(({ "Type" : "Handover", "Carrier" : "bluetooth"}))
-			break
+    for iface, props in interfaces.iteritems():
+        if "org.neard.Device" in interfaces:
+            print("Pairing with %s" % (path))
+            device = dbus.Interface(bus.get_object("org.neard", path),
+                                    "org.neard.Device")
+            device.Push(({"Type": "Handover", "Carrier": "bluetooth"}))
+            break
+
 
 def device_removed(path, interfaces):
-	for iface in interfaces:
-		if "org.neard.Device" in interfaces:
-			print("Lost device %s" % (path))
-			mainloop.quit()
-			break
+    for iface in interfaces:
+        if "org.neard.Device" in interfaces:
+            print("Lost device %s" % (path))
+            mainloop.quit()
+            break
+
 
 def remove_paired_devices(bt_adapter):
-	manager = dbus.Interface(bus.get_object("org.bluez", "/"),
-					"org.freedesktop.DBus.ObjectManager")
-	objects = manager.GetManagedObjects()
+    manager = dbus.Interface(bus.get_object("org.bluez", "/"),
+                             "org.freedesktop.DBus.ObjectManager")
+    objects = manager.GetManagedObjects()
 
-	all_adapters = (path for path, interfaces in objects.iteritems() if
-				"org.bluez.Adapter1" in interfaces.keys()
-				and path.endswith(bt_adapter))
+    all_adapters = (path for path, interfaces in objects.iteritems() if
+                    "org.bluez.Adapter1" in interfaces.keys()
+                    and path.endswith(bt_adapter))
 
-	bluez_adapter = None
-	for adapter in sorted(all_adapters):
-		bluez_adapter = dbus.Interface(bus.get_object("org.bluez",
-							adapter),
-							"org.bluez.Adapter1")
-		break
+    bluez_adapter = None
+    for adapter in sorted(all_adapters):
+        bluez_adapter = dbus.Interface(bus.get_object("org.bluez",
+                                                      adapter),
+                                       "org.bluez.Adapter1")
+        break
 
-	if(bluez_adapter is None):
-		print("Bluetooth adapter %s could not be found" % bluez_adapter)
-		exit()
+    if(bluez_adapter is None):
+        print("Bluetooth adapter %s could not be found" % bluez_adapter)
+        exit()
 
-	adapter_path = bluez_adapter.object_path
-	print("Using %s" % adapter_path)
+    adapter_path = bluez_adapter.object_path
+    print("Using %s" % adapter_path)
 
-	adapter_props = dbus.Interface(bus.get_object("org.bluez", adapter_path),
-					"org.freedesktop.DBus.Properties")
+    adapter_props = dbus.Interface(bus.get_object("org.bluez", adapter_path),
+                                   "org.freedesktop.DBus.Properties")
 
-	powered = adapter_props.Get("org.bluez.Adapter1", "Powered")
-	if (powered == dbus.Boolean(0)):
-		print("Bluetooth adapter %s is not powered" % adapter_path )
-		exit()
+    powered = adapter_props.Get("org.bluez.Adapter1", "Powered")
+    if (powered == dbus.Boolean(0)):
+        print("Bluetooth adapter %s is not powered" % adapter_path)
+        exit()
 
-	all_devices = (path for path, interfaces in objects.iteritems() if
-				("org.bluez.Device1" in interfaces.keys()
-				and path.startswith(bluez_adapter.object_path)))
+    all_devices = (path for path, interfaces in objects.iteritems() if
+                   ("org.bluez.Device1" in interfaces.keys()
+                    and path.startswith(bluez_adapter.object_path)))
 
-	for device in all_devices:
-		print("Removing %s" % (device))
-		bluez_adapter.RemoveDevice(device)
+    for device in all_devices:
+        print("Removing %s" % (device))
+        bluez_adapter.RemoveDevice(device)
+
 
 def remove_paired_devices_bluez4():
-	bluez_manager = dbus.Interface(bus.get_object("org.bluez", "/"),
-					"org.bluez.Manager")
+    bluez_manager = dbus.Interface(bus.get_object("org.bluez", "/"),
+                                   "org.bluez.Manager")
 
-	bluez_adapter_path = bluez_manager.DefaultAdapter()
-	bluez_adapter = dbus.Interface(bus.get_object("org.bluez",
-						bluez_adapter_path),
-						"org.bluez.Adapter")
+    bluez_adapter_path = bluez_manager.DefaultAdapter()
+    bluez_adapter = dbus.Interface(bus.get_object("org.bluez",
+                                                  bluez_adapter_path),
+                                   "org.bluez.Adapter")
 
-	print("Using %s" % bluez_adapter.object_path)
+    print("Using %s" % bluez_adapter.object_path)
 
-	for bluez_path in bluez_adapter.ListDevices():
-		print("Removing %s" % (bluez_path))
-		bluez_adapter.RemoveDevice(bluez_path)
+    for bluez_path in bluez_adapter.ListDevices():
+        print("Removing %s" % (bluez_path))
+        bluez_adapter.RemoveDevice(bluez_path)
+
 
 if __name__ == '__main__':
-	parser = OptionParser()
-	parser.add_option("", "--bluez4", action="store_true",
-				dest="use_bluez4",
-				help="Use BlueZ 4 to remove paired devices.")
-	parser.add_option("-a", "--adapter", metavar="BT_ADAPTER",
-				dest="bt_adapter", default="",
-				help="The bluetooth adapter that is used by "
-					"the bluetooth stack. This options is "
-					"ignored when using BlueZ 4, instead "
-					"the default adapter is used.")
-	(options, args) = parser.parse_args()
+    parser = OptionParser()
+    parser.add_option("", "--bluez4", action="store_true",
+                      dest="use_bluez4",
+                      help="Use BlueZ 4 to remove paired devices.")
+    parser.add_option("-a", "--adapter", metavar="BT_ADAPTER",
+                            dest="bt_adapter", default="",
+                            help="The bluetooth adapter that is used by "
+                      "the bluetooth stack. This options is "
+                      "ignored when using BlueZ 4, instead "
+                      "the default adapter is used.")
+    (options, args) = parser.parse_args()
 
-	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-	bus = dbus.SystemBus()
+    bus = dbus.SystemBus()
 
-	adapter_path = neardutils.find_adapter().object_path
-	print("Adapter path %s" % (adapter_path))
-	adapter = dbus.Interface(bus.get_object("org.neard", adapter_path),
-							"org.neard.Adapter")
+    adapter_path = neardutils.find_adapter().object_path
+    print("Adapter path %s" % (adapter_path))
+    adapter = dbus.Interface(bus.get_object("org.neard", adapter_path),
+                             "org.neard.Adapter")
 
-	adapter_props = dbus.Interface(bus.get_object("org.neard", adapter_path),
-					"org.freedesktop.DBus.Properties")
-	powered = adapter_props.Get("org.neard.Adapter", "Powered")
-	if (powered == dbus.Boolean(0)):
-		adapter_props.Set("org.neard.Adapter", "Powered", dbus.Boolean(1))
+    adapter_props = dbus.Interface(bus.get_object("org.neard", adapter_path),
+                                   "org.freedesktop.DBus.Properties")
+    powered = adapter_props.Get("org.neard.Adapter", "Powered")
+    if (powered == dbus.Boolean(0)):
+        adapter_props.Set("org.neard.Adapter", "Powered", dbus.Boolean(1))
 
-	if (options.use_bluez4):
-		remove_paired_devices_bluez4()
-	else:
-		remove_paired_devices(options.bt_adapter)
+    if (options.use_bluez4):
+        remove_paired_devices_bluez4()
+    else:
+        remove_paired_devices(options.bt_adapter)
 
-	polling = adapter_props.Get("org.neard.Adapter", "Polling")
-	if (polling == dbus.Boolean(0)):
-		adapter.StartPollLoop("Initiator")
+    polling = adapter_props.Get("org.neard.Adapter", "Polling")
+    if (polling == dbus.Boolean(0)):
+        adapter.StartPollLoop("Initiator")
 
-	bus.add_signal_receiver(device_added, bus_name="org.neard",
-			dbus_interface="org.freedesktop.DBus.ObjectManager",
-			signal_name="InterfacesAdded")
+    bus.add_signal_receiver(device_added, bus_name="org.neard",
+                            dbus_interface="org.freedesktop.DBus.ObjectManager",
+                            signal_name="InterfacesAdded")
 
-	bus.add_signal_receiver(device_removed, bus_name="org.neard",
-			dbus_interface="org.freedesktop.DBus.ObjectManager",
-			signal_name="InterfacesRemoved")
+    bus.add_signal_receiver(device_removed, bus_name="org.neard",
+                            dbus_interface="org.freedesktop.DBus.ObjectManager",
+                            signal_name="InterfacesRemoved")
 
-	mainloop.run()
+    mainloop.run()
