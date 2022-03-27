@@ -6,9 +6,10 @@ import neardutils
 
 bus = dbus.SystemBus()
 
+
 def usage():
-	print("Usage: %s <command>" % sys.argv[0])
-	text = """
+    print("Usage: %s <command>" % sys.argv[0])
+    text = """
 list
 dump <tag>
 deactivate <tag>
@@ -36,147 +37,151 @@ For example: # %s write /org/neard/nfc0/tag0 \\
 	MIME wifi_wsc YourAPname
 	MIME 'application/octet-stream' 1234
 """
-	print(text % sys.argv[0])
+    print(text % sys.argv[0])
 
-	sys.exit(1)
+    sys.exit(1)
+
 
 if (len(sys.argv) < 2):
-	usage()
+    usage()
 
 if (sys.argv[1] == "list"):
-	if (len(sys.argv) < 3):
-		objects = neardutils.get_managed_objects()
-		for path, interfaces in objects.iteritems():
-			if "org.neard.Tag" not in interfaces:
-				continue
+    if (len(sys.argv) < 3):
+        objects = neardutils.get_managed_objects()
+        for path, interfaces in objects.iteritems():
+            if "org.neard.Tag" not in interfaces:
+                continue
 
-			print(" [ %s ]" % (path))
+            print(" [ %s ]" % (path))
 
-			props = interfaces["org.neard.Tag"]
+            props = interfaces["org.neard.Tag"]
 
-			for (key, value) in props.items():
-				if key in ["ReadOnly"]:
-					if value == dbus.Boolean(1):
-						val = "true"
-					else:
-						val = "false"
-					print("    %s = %s" % (key, val))
+            for (key, value) in props.items():
+                if key in ["ReadOnly"]:
+                    if value == dbus.Boolean(1):
+                        val = "true"
+                    else:
+                        val = "false"
+                    print("    %s = %s" % (key, val))
 
-				else:
-					print("    %s = %s" % (key, value))
+                else:
+                    print("    %s = %s" % (key, value))
 
-		sys.exit(0)
+        sys.exit(0)
 
 if (sys.argv[1] == "dump"):
-	if (len(sys.argv) < 3):
-		objects = neardutils.get_managed_objects()
-		for path, interfaces in objects.iteritems():
-			if "org.neard.Tag" not in interfaces:
-				continue
+    if (len(sys.argv) < 3):
+        objects = neardutils.get_managed_objects()
+        for path, interfaces in objects.iteritems():
+            if "org.neard.Tag" not in interfaces:
+                continue
 
-			print("[ %s ]" % (path))
-			neardutils.dump_all_records(path)
+            print("[ %s ]" % (path))
+            neardutils.dump_all_records(path)
 
-		sys.exit(0)
-	else:
-		neardutils.dump_all_records(sys.argv[2])
+        sys.exit(0)
+    else:
+        neardutils.dump_all_records(sys.argv[2])
 
-		sys.exit(0)
+        sys.exit(0)
+
 
 def write_mime(args):
 
-	data = { "Type" : "MIME" }
+    data = {"Type": "MIME"}
 
-	if len(args) < 2:
-		usage()
+    if len(args) < 2:
+        usage()
 
-	if args[0] == "wifi_wsc":
+    if args[0] == "wifi_wsc":
 
-		data["MIME"] = "application/vnd.wfa.wsc"
-		data["SSID"] = args[1]
+        data["MIME"] = "application/vnd.wfa.wsc"
+        data["SSID"] = args[1]
 
-		if len(args) > 2:
+        if len(args) > 2:
 
-			data["Passphrase"] = args[2]
-	else:
-		data["MIME"] = args[0]
-		data["MIMEPayload"] = dbus.ByteArray(args[1])
+            data["Passphrase"] = args[2]
+    else:
+        data["MIME"] = args[0]
+        data["MIMEPayload"] = dbus.ByteArray(args[1])
 
-	tag.Write(data)
+    tag.Write(data)
+
 
 def write_uri(args):
 
-	data = { }
-	records = [ ]
+    data = {}
+    records = []
 
-	if len(args) > 1:
+    if len(args) > 1:
 
-		for i in args:
+        for i in args:
 
-			record = { }
+            record = {}
 
-			record["Type"] = dbus.String("URI", variant_level = 1)
-			record["URI"] = dbus.String(i, variant_level = 1)
+            record["Type"] = dbus.String("URI", variant_level=1)
+            record["URI"] = dbus.String(i, variant_level=1)
 
-			records.append(record)
+            records.append(record)
 
-		data["Records"] = records
+        data["Records"] = records
 
-	else:
+    else:
 
-		data["Type"] = "URI"
-		data["URI"] = args[0]
+        data["Type"] = "URI"
+        data["URI"] = args[0]
 
-	print data
+    print data
 
-	tag.Write(data)
+    tag.Write(data)
+
 
 if (sys.argv[1] == "write"):
-	if (len(sys.argv) < 5):
-		usage()
+    if (len(sys.argv) < 5):
+        usage()
 
-	tag = neardutils.find_tag(sys.argv[2])
+    tag = neardutils.find_tag(sys.argv[2])
 
-	if sys.argv[3] in ["Text"]:
-		tag.Write(({ "Type" : "Text",
-			"Encoding" : sys.argv[4],
-			"Language" : sys.argv[5],
-			"Representation" : sys.argv[6] }))
+    if sys.argv[3] in ["Text"]:
+        tag.Write(({"Type": "Text",
+                    "Encoding": sys.argv[4],
+                    "Language": sys.argv[5],
+                    "Representation": sys.argv[6]}))
 
-	elif sys.argv[3] == "URI":
-		write_uri(sys.argv[4:])
+    elif sys.argv[3] == "URI":
+        write_uri(sys.argv[4:])
 
-	elif sys.argv[3] in ["SmartPoster"]:
-		tag.Write(({ "Type" : "SmartPoster",
-			"URI" : sys.argv[4] }))
+    elif sys.argv[3] in ["SmartPoster"]:
+        tag.Write(({"Type": "SmartPoster",
+                    "URI": sys.argv[4]}))
 
-	elif sys.argv[3] in ["SMS"]:
-		URI = "sms:" + sys.argv[4] + "?body=" + sys.argv[5]
-		tag.Write(({ "Type" : "URI",
-			"URI" : URI }))
+    elif sys.argv[3] in ["SMS"]:
+        URI = "sms:" + sys.argv[4] + "?body=" + sys.argv[5]
+        tag.Write(({"Type": "URI",
+                    "URI": URI}))
 
-	elif sys.argv[3] in ["E-Mail"]:
-		URI = "mailto:" + sys.argv[4]
-		tag.Write(({ "Type" : "URI",
-			"URI" : URI }))
+    elif sys.argv[3] in ["E-Mail"]:
+        URI = "mailto:" + sys.argv[4]
+        tag.Write(({"Type": "URI",
+                    "URI": URI}))
 
-	elif sys.argv[3] in ["MIME"]:
-		write_mime(sys.argv[4:])
+    elif sys.argv[3] in ["MIME"]:
+        write_mime(sys.argv[4:])
 
-	else:
-		usage()
+    else:
+        usage()
 
-	sys.exit(0)
+    sys.exit(0)
 
 if (sys.argv[1] == "deactivate"):
-	print sys.argv[2]
-	if (len(sys.argv) != 2):
-		tag = neardutils.find_tag(sys.argv[2])
-		tag.Deactivate()
-	else:
-		usage()
+    print sys.argv[2]
+    if (len(sys.argv) != 2):
+        tag = neardutils.find_tag(sys.argv[2])
+        tag.Deactivate()
+    else:
+        usage()
 
-	sys.exit(0)
+    sys.exit(0)
 
 else:
-	usage()
+    usage()

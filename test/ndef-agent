@@ -7,72 +7,75 @@ import dbus.service
 import dbus.mainloop.glib
 import sys
 
+
 class NDEFAgent(dbus.service.Object):
 
-	@dbus.service.method("org.neard.NDEFAgent",
-					in_signature='', out_signature='')
-	def Release(self):
-		print "Release"
-		mainloop.quit()
+    @dbus.service.method("org.neard.NDEFAgent",
+                         in_signature='', out_signature='')
+    def Release(self):
+        print "Release"
+        mainloop.quit()
 
-	@dbus.service.method("org.neard.NDEFAgent",
-					in_signature='a{sv}',
-					out_signature='')
-	def GetNDEF(self, fields):
-		print "GetNDEF"
+    @dbus.service.method("org.neard.NDEFAgent",
+                         in_signature='a{sv}',
+                         out_signature='')
+    def GetNDEF(self, fields):
+        print "GetNDEF"
 
-		if fields.has_key("Record"):
-			print "Record path %s" % (fields["Record"])
+        if "Record" in fields:
+            print "Record path %s" % (fields["Record"])
 
-		if fields.has_key("Payload"):
-			val = "["
-			for i in fields["Payload"]:
-				val += " 0x%x" % i
-			val += " ]"
-			print "Record payload %s" % val
+        if "Payload" in fields:
+            val = "["
+            for i in fields["Payload"]:
+                val += " 0x%x" % i
+            val += " ]"
+            print "Record payload %s" % val
 
-		if fields.has_key("NDEF"):
-			val = "["
-			for i in fields["NDEF"]:
-				val += " 0x%x" % i
-			val += " ]"
-			print "Complete NDEF %s" % val
+        if "NDEF" in fields:
+            val = "["
+            for i in fields["NDEF"]:
+                val += " 0x%x" % i
+            val += " ]"
+            print "Complete NDEF %s" % val
 
-		return
+        return
 
-	@dbus.service.method("org.neard.NDEFAgent",
-					in_signature='', out_signature='')
-	def Cancel(self):
-		print "Cancel"
+    @dbus.service.method("org.neard.NDEFAgent",
+                         in_signature='', out_signature='')
+    def Cancel(self):
+        print "Cancel"
+
 
 def print_usage():
-	print "Usage:"
-	print "%s Type=<record type>" % (sys.argv[0])
-	print "Help: %s help" % (sys.argv[0])
-	sys.exit(1)
+    print "Usage:"
+    print "%s Type=<record type>" % (sys.argv[0])
+    print "Help: %s help" % (sys.argv[0])
+    sys.exit(1)
+
 
 if __name__ == '__main__':
-	if len(sys.argv) != 2:
-		print_usage()
+    if len(sys.argv) != 2:
+        print_usage()
 
-	if len(sys.argv) == 2 and sys.argv[1] == "help":
-		print_usage()
+    if len(sys.argv) == 2 and sys.argv[1] == "help":
+        print_usage()
 
-	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-	bus = dbus.SystemBus()
-	obj = bus.get_object("org.neard", "/org/neard");
-	manager = dbus.Interface(obj, "org.neard.AgentManager")
+    bus = dbus.SystemBus()
+    obj = bus.get_object("org.neard", "/org/neard")
+    manager = dbus.Interface(obj, "org.neard.AgentManager")
 
-	path = "/test/ndef/agent"
-	object = NDEFAgent(bus, path)
-	rec_type = sys.argv[1].replace("Type=", "", 1)
+    path = "/test/ndef/agent"
+    object = NDEFAgent(bus, path)
+    rec_type = sys.argv[1].replace("Type=", "", 1)
 
-	manager.RegisterNDEFAgent(path, rec_type)
+    manager.RegisterNDEFAgent(path, rec_type)
 
-	mainloop = gobject.MainLoop()
+    mainloop = gobject.MainLoop()
 
-	try:
-		mainloop.run()
-	except (KeyboardInterrupt):
-		manager.UnregisterNDEFAgent(path, rec_type)
+    try:
+        mainloop.run()
+    except (KeyboardInterrupt):
+        manager.UnregisterNDEFAgent(path, rec_type)
