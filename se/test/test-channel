@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 import dbus
@@ -11,10 +11,10 @@ def extract_byte_array(byte_array):
 
 
 def usage():
-    print "Usage: %s <command>" % (sys.argv[0])
-    print ""
-    print "  list"
-    print "  send_apdu se/nfcX_<se_type>_seX channelX <apdu>"
+    print("Usage: %s <command>" % (sys.argv[0]))
+    print("")
+    print("  list")
+    print("  send_apdu se/nfcX_<se_type>_seX channelX <apdu>")
     sys.exit(1)
 
 
@@ -32,7 +32,7 @@ if (sys.argv[1] == "list"):
         properties = seel.GetProperties()
 
         for path in properties["Channels"]:
-            print "[ %s ]" % (path)
+            print("[ %s ]" % path)
 
             channel = dbus.Interface(bus.get_object("org.neard.se", path),
                                      "org.neard.se.Channel")
@@ -44,10 +44,11 @@ if (sys.argv[1] == "list"):
                         val = "true"
                     else:
                         val = "false"
-                    print "    %s = %s" % (key, val)
+                    print("    %s = %s" % (key, val))
 
                 if key in ["AID"]:
-                    print "    %s = %s" % (key, extract_byte_array(properties[key]))
+                    print("    %s = %s" %
+                          (key, extract_byte_array(properties[key])))
     sys.exit(0)
 
 if (sys.argv[1] == "send_apdu"):
@@ -61,7 +62,7 @@ if (sys.argv[1] == "send_apdu"):
 
         response = channel.SendAPDU(sys.argv[4].decode("hex"))
 
-        print "--> %s" % extract_byte_array(response)
+        print("--> %s" % extract_byte_array(response))
     sys.exit(0)
 
 usage()
