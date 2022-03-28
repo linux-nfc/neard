@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 import dbus
@@ -21,20 +21,34 @@ def usage():
     print("  list")
     print("  dump <device>")
     print("  push <device> <type> <...>")
-    print "	   If type is Text, parameters are <encoding> <language> <representation>"
-    print "	   If type is URI, parameters are <uri>"
-    print "	   If type is SmartPoster, parameters are <uri>"
-    print "	   If type is Handover, parameters are <carrier>"
-    print "	   If type is StaticHandover, parameters are <carrier>"
-    print "    If type is MIME, parameters are <mime_type> (only wifi_wsc and raw)"
-    print "       raw is for sending raw payload, parameters are <mime_type> <payload>"
-    print "e.g. < %s push /org/neard/nfc0/device0 Text UTF-8 en-US hello,Type2! >" % (sys.argv[0])
-    print "e.g. < %s push /org/neard/nfc0/device0 URI http://www.nfc-forum.com >" % (sys.argv[0])
-    print "e.g. < %s push /org/neard/nfc0/device0 SmartPoster http://www.nfc-forum.com >" % (sys.argv[0])
-    print "e.g. < %s push /org/neard/nfc0/device0 Handover bluetooth,wifi >" % (sys.argv[0])
-    print "e.g. < %s push /org/neard/nfc0/device0 StaticHandover bluetooth,wifi >" % (sys.argv[0])
-    print "e.g. < %s push /org/neard/nfc0/device0 MIME wifi_wsc>" % (sys.argv[0])
-    print "e.g. < %s push /org/neard/nfc0/device0 MIME raw application/xml '<your><xml tags></your>' >" % (sys.argv[0])
+    print("	   If type is Text, parameters are <encoding> <language> <representation>")
+    print("	   If type is URI, parameters are <uri>")
+    print("	   If type is SmartPoster, parameters are <uri>")
+    print("	   If type is Handover, parameters are <carrier>")
+    print("	   If type is StaticHandover, parameters are <carrier>")
+    print("    If type is MIME, parameters are <mime_type> (only wifi_wsc and raw)")
+    print("       raw is for sending raw payload, parameters are <mime_type> <payload>")
+    print(
+        "e.g. < %s push /org/neard/nfc0/device0 Text UTF-8 en-US hello,Type2! >" %
+        (sys.argv[0]))
+    print(
+        "e.g. < %s push /org/neard/nfc0/device0 URI http://www.nfc-forum.com >" %
+        (sys.argv[0]))
+    print(
+        "e.g. < %s push /org/neard/nfc0/device0 SmartPoster http://www.nfc-forum.com >" %
+        (sys.argv[0]))
+    print(
+        "e.g. < %s push /org/neard/nfc0/device0 Handover bluetooth,wifi >" %
+        (sys.argv[0]))
+    print(
+        "e.g. < %s push /org/neard/nfc0/device0 StaticHandover bluetooth,wifi >" %
+        (sys.argv[0]))
+    print(
+        "e.g. < %s push /org/neard/nfc0/device0 MIME wifi_wsc>" %
+        (sys.argv[0]))
+    print(
+        "e.g. < %s push /org/neard/nfc0/device0 MIME raw application/xml '<your><xml tags></your>' >" %
+        (sys.argv[0]))
 
     sys.exit(1)
 
@@ -45,7 +59,7 @@ if (len(sys.argv) < 2):
 if (sys.argv[1] == "list"):
     if (len(sys.argv) < 3):
         objects = neardutils.get_managed_objects()
-        for path, interfaces in objects.iteritems():
+        for path, interfaces in objects.items():
             if "org.neard.Device" not in interfaces:
                 continue
 
@@ -61,7 +75,7 @@ if (sys.argv[1] == "list"):
 if (sys.argv[1] == "dump"):
     if (len(sys.argv) < 3):
         objects = neardutils.get_managed_objects()
-        for path, interfaces in objects.iteritems():
+        for path, interfaces in objects.items():
             if "org.neard.Device" not in interfaces:
                 continue
 

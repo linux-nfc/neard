@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 import sys
 import dbus
@@ -48,8 +48,8 @@ def hexdump(chars, sep, width):
         line = chars[:width]
         chars = chars[width:]
         line = line.ljust(width, '\000')
-        print "%s%s%s" % (sep.join("%02x" % ord(c) for c in line),
-                          sep, quotechars(line))
+        print("%s%s%s" % (sep.join("%02x" % ord(c) for c in line),
+                          sep, quotechars(line)))
 
 
 def quotechars(chars):
@@ -61,26 +61,26 @@ def quotechars(chars):
 class PhdcPeerManager:
     def __init__(self, agent_fd):
         # Grab the agent ....
-        print 'Init PhdcPeerManager thread'
+        print('Init PhdcPeerManager thread')
         self.r_fd = agent_fd.take()
-        print 'Agent fd:', str(self.r_fd)
+        print('Agent fd:', str(self.r_fd))
 
     def run(self):
-        print 'Run PhdcPeerManager thread: ', str(self.r_fd)
+        print('Run PhdcPeerManager thread: ', str(self.r_fd))
         self.sock = socket.fromfd(self.r_fd, AF_NFC, socket.SOCK_STREAM)
         try:
             while True:
                 miu = self.sock.getsockopt(SOL_NFC, NFC_LLCP_MIUX)
-                print 'MIU=', miu
+                print('MIU=', miu)
 
                 while True:
                     data = self.sock.recv(16)
                     if data is None:
-                        print 'no data'
+                        print('no data')
                         break
 
                     # analyze frame
-                    print 'analyze'
+                    print('analyze')
                     size = struct.unpack(">H", data[0:2])[0]
                     apdu = data[2:]
 
@@ -91,7 +91,7 @@ class PhdcPeerManager:
                             break
                         hexdump(data, ':', 16)
                         apdu += data
-                    print "[ieee] <<< {0}".format(str(apdu).encode("hex"))
+                    print("[ieee] <<< {0}".format(str(apdu).encode("hex")))
                     if apdu.startswith("\xE2\x00"):
                         apdu = bytearray.fromhex(thermometer_assoc_res)
                     elif apdu.startswith("\xE4\x00"):
@@ -99,26 +99,26 @@ class PhdcPeerManager:
                     else:
                         apdu = apdu[::-1]
                     time.sleep(0.2)
-                    print "[ieee] >>> {0}".format(str(apdu).encode("hex"))
+                    print("[ieee] >>> {0}".format(str(apdu).encode("hex")))
                     data = struct.pack(">H", len(apdu)) + apdu
                     for i in range(0, len(data), miu):
                         self.sock.send(str(data[i:i + miu]))
 
-                print "remote peer {0} closed connection".format(agent_fd)
-                print "leaving ieee manager"
+                print("remote peer {0} closed connection".format(agent_fd))
+                print("leaving ieee manager")
                 self.sock.close()
 
         except IOError as e:
             if e.errno == errno.EPIPE:
-                print 'Remote disconnect'
+                print('Remote disconnect')
             else:
-                print "I/O error({0}): {1}".format(e.errno, e.strerror)
+                print("I/O error({0}): {1}".format(e.errno, e.strerror))
         finally:
-            print 'Finally exit'
+            print('Finally exit')
             stop()
 
         def stop(self):
-            print 'Stop PhdcPeerManager:', str(self.r_fd)
+            print('Stop PhdcPeerManager:', str(self.r_fd))
             self._Thread__stop()
 
 
@@ -133,7 +133,7 @@ class SimplePhdcManager(dbus.service.Object):
                          in_signature='',
                          out_signature='')
     def Release(self):
-        print 'Release'
+        print('Release')
         mainloop.quit()
 
     ''' Called on incoming agents
@@ -142,11 +142,11 @@ class SimplePhdcManager(dbus.service.Object):
                          in_signature='h',
                          out_signature='')
     def NewConnection(self, agent_fd):
-        print'Launch Phdc Manager thread for fd:', str(agent_fd)
+        print('Launch Phdc Manager thread for fd:', str(agent_fd))
         self.server = PhdcPeerManager(agent_fd)
-        print'Run Server'
+        print('Run Server')
         self.server.run()
-        print'Leave Server'
+        print('Leave Server')
         return
 
     ''' Called when the agent ends (from phdc_close)
@@ -154,7 +154,7 @@ class SimplePhdcManager(dbus.service.Object):
     @dbus.service.method('org.neard.PHDC.Manager',
                          in_signature='hi', out_signature='')
     def Disconnection(self, agent_fd, i_err):
-        print'Stop Phdc Manager thread'
+        print('Stop Phdc Manager thread')
         self.server.stop()
         return
 
@@ -167,7 +167,7 @@ This sample installs two PHDC Managers:
 if "__main__" == __name__:
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-    print 'PHDC Simple Manager Test'
+    print('PHDC Simple Manager Test')
     bus = dbus.SystemBus()
     obj = bus.get_object("org.neard", "/org/neard")
     neard_manager = dbus.Interface(obj, "org.neard.PHDC")
@@ -175,14 +175,14 @@ if "__main__" == __name__:
     simple_path = '/Simple'
     valid_path = '/Validation'
 
-    print 'Creating & registering PHDC Simple Manager'
+    print('Creating & registering PHDC Simple Manager')
     simpleobject = SimplePhdcManager(bus, simple_path)
 
     d = dbus.Dictionary({'Role': 'Manager', 'Path': simple_path,
                          'ServiceName': 'urn:nfc:sn:phdc'}, signature='sv')
     neard_manager.RegisterAgent(d)
 
-    print 'Creating & Registering Validation Manager'
+    print('Creating & Registering Validation Manager')
 
     validationobj = SimplePhdcManager(bus, valid_path)
     d = dbus.Dictionary({'Role': 'Manager', 'Path': valid_path,
