@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import gobject
 
@@ -66,18 +66,18 @@ power_state = None
 def print_fields(fields):
     if 'EIR' in fields:
         s = ' '.join('{:#02x}'.format(i) for i in fields['EIR'])
-        print '  EIR:  %s' % s
+        print('  EIR:  %s' % s)
 
     if 'nokia.com:bt' in fields:
         s = ' '.join('{:#02x}'.format(i) for i in fields['nokia.com:bt'])
-        print '  nokia.com:bt:  %s' % s
+        print('  nokia.com:bt:  %s' % s)
 
     if 'State' in fields:
-        print '  State: %s' % fields['State']
+        print('  State: %s' % fields['State'])
 
     if 'WSC' in fields:
         s = ' '.join('{:#02x}'.format(i) for i in fields['WSC'])
-        print '  WSC:  %s' % s
+        print('  WSC:  %s' % s)
 
 
 class BTHOAgent(dbus.service.Object):
@@ -86,29 +86,29 @@ class BTHOAgent(dbus.service.Object):
                          in_signature='',
                          out_signature='')
     def Release(self):
-        print 'Release'
+        print('Release')
         mainloop.quit()
 
     @dbus.service.method('org.neard.HandoverAgent',
                          in_signature='a{sv}',
                          out_signature='')
     def PushOOB(self, fields):
-        print 'PushOOB'
+        print('PushOOB')
         print_fields(fields)
 
     @dbus.service.method('org.neard.HandoverAgent',
                          in_signature='a{sv}',
                          out_signature='a{sv}')
     def RequestOOB(self, fields):
-        print 'RequestOOB'
+        print('RequestOOB')
         print_fields(fields)
 
-        print '  Replying with'
+        print('  Replying with')
         s = ' '.join('{:#02x}'.format(i) for i in eir_test_data)
-        print '    EIR: %s' % s
+        print('    EIR: %s' % s)
 
         if power_state != 'unknown':
-            print '    State: %s' % power_state
+            print('    State: %s' % power_state)
             return {'EIR': eir_test_data, 'State': power_state}
         else:
             return {'EIR': eir_test_data}
@@ -120,29 +120,29 @@ class WiFiHOAgent(dbus.service.Object):
                          in_signature='',
                          out_signature='')
     def Release(self):
-        print 'Release'
+        print('Release')
         mainloop.quit()
 
     @dbus.service.method('org.neard.HandoverAgent',
                          in_signature='a{sv}',
                          out_signature='')
     def PushOOB(self, fields):
-        print 'PushOOB'
+        print('PushOOB')
         print_fields(fields)
 
     @dbus.service.method('org.neard.HandoverAgent',
                          in_signature='a{sv}',
                          out_signature='a{sv}')
     def RequestOOB(self, fields):
-        print 'RequestOOB'
+        print('RequestOOB')
         print_fields(fields)
 
-        print '  Replying with'
+        print('  Replying with')
         s = ' '.join('{:#02x}'.format(i) for i in wsc_test_data)
-        print '    WSC: %s' % s
+        print('    WSC: %s' % s)
 
         if power_state != 'unknown':
-            print '    State: %s' % power_state
+            print('    State: %s' % power_state)
             return {'WSC': wsc_test_data, 'State': power_state}
         else:
             return {'WSC': wsc_test_data}

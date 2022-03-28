@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import os
 import sys
@@ -15,7 +15,7 @@ mainloop = gobject.MainLoop()
 
 
 def device_added(path, interfaces):
-    for iface, props in interfaces.iteritems():
+    for iface, props in interfaces.items():
         if "org.neard.Device" in interfaces:
             print("Pairing with %s" % (path))
             device = dbus.Interface(bus.get_object("org.neard", path),
@@ -37,7 +37,7 @@ def remove_paired_devices(bt_adapter):
                              "org.freedesktop.DBus.ObjectManager")
     objects = manager.GetManagedObjects()
 
-    all_adapters = (path for path, interfaces in objects.iteritems() if
+    all_adapters = (path for path, interfaces in objects.items() if
                     "org.bluez.Adapter1" in interfaces.keys()
                     and path.endswith(bt_adapter))
 
@@ -63,7 +63,7 @@ def remove_paired_devices(bt_adapter):
         print("Bluetooth adapter %s is not powered" % adapter_path)
         exit()
 
-    all_devices = (path for path, interfaces in objects.iteritems() if
+    all_devices = (path for path, interfaces in objects.items() if
                    ("org.bluez.Device1" in interfaces.keys()
                     and path.startswith(bluez_adapter.object_path)))
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import pdb
 import sys
@@ -20,12 +20,12 @@ import neardutils
 class Neard:
 
     def interface_Added(self, path, interface):
-        print(" New interface added: %s") % path
+        print(" New interface added: %s" % path)
         self.objects = neardutils.get_managed_objects()
         self.interface_updateDetails(interface, path)
 
     def interface_Removed(self, path, interface):
-        print(" Remove interface: %s") % path
+        print(" Remove interface: %s" % path)
         self.objects = neardutils.get_managed_objects()
         self.interface_updateDetails(interface)
 
@@ -34,7 +34,7 @@ class Neard:
 
     def interfaces_Connect(self):
         try:
-            print 'interfaces_Connect'
+            print('interfaces_Connect')
             bus = dbus.SystemBus()
             self.objects = neardutils.get_managed_objects()
             bus.add_signal_receiver(self.interface_Added, bus_name=neardutils.SERVICE_NAME,
@@ -62,7 +62,7 @@ class Neard:
             self.record_updateDetails(path)
 
     def adapter_PropertyChanged(self, prop, value, adapt_path=None):
-        print("Prop changed: %s") % prop
+        print("Prop changed: %s" % prop)
         adapt_properties = {}
         adapt_properties[prop] = value
         if prop == "Tags":
@@ -73,7 +73,7 @@ class Neard:
     # Update the records UI
     def record_updateDetails(self, tag_path=None):
         if tag_path is not None:
-            for record_path, record_iface in self.objects.iteritems():
+            for record_path, record_iface in self.objects.items():
 
                 if neardutils.RECORD_INTERFACE not in record_iface:
                     continue
@@ -90,11 +90,11 @@ class Neard:
     # Update the tags UI
     def tag_updateDetails(self, adapter_path=None):
         if adapter_path is not None:
-            for tag_path, interfaces in self.objects.iteritems():
+            for tag_path, interfaces in self.objects.items():
                 if neardutils.TAG_INTERFACE not in interfaces:
                     continue
 
-                print("TAG %s ") % tag_path
+                print("TAG %s " % tag_path)
 
                 tag_properties = interfaces[neardutils.TAG_INTERFACE]
 
@@ -111,12 +111,12 @@ class Neard:
     # Something changed, must update the UI
 
     def adapter_updateDetails(self):
-        for adapt_path, interfaces in self.objects.iteritems():
+        for adapt_path, interfaces in self.objects.items():
             if neardutils.ADAPTER_INTERFACE not in interfaces:
                 continue
 
             if adapt_path in self.adaptregistered:
-                print(" already registered %s") % adapt_path
+                print(" already registered %s" % adapt_path)
             else:
                 adapt_properties = interfaces[neardutils.ADAPTER_INTERFACE]
 
@@ -183,16 +183,16 @@ class NeardUI(Neard):
 
             try:
                 if self.adapters_actionToggle(i, 2):
-                    print("Disable Adapter %s") % objpath
+                    print("Disable Adapter %s" % objpath)
                     adapter.Set(neardutils.ADAPTER_INTERFACE, "Powered", False)
                     self.adapters_list.set_value(i, 2, 0)
                 else:
-                    print("Enable Adapter %s") % objpath
+                    print("Enable Adapter %s" % objpath)
                     adapter.Set(neardutils.ADAPTER_INTERFACE, "Powered", True)
                     self.adapters_list.set_value(i, 2, 1)
 
             except BaseException:
-                print("Can't toggle adapter %s") % objpath
+                print("Can't toggle adapter %s" % objpath)
 
     # Action: activate or not the polling mode
     def adapter_pollingToggled(self, poolingRendererToggle, path, user):
@@ -203,15 +203,15 @@ class NeardUI(Neard):
 
             try:
                 if self.adapters_actionToggle(i, 3):
-                    print("Stop Polling %s") % objpath
+                    print("Stop Polling %s" % objpath)
                     adapt_iface.StopPollLoop()
                     self.adapters_list.set_value(i, 3, 0)
                 else:
-                    print("Start Polling %s") % objpath
+                    print("Start Polling %s" % objpath)
                     adapt_iface.StartPollLoop("Initiator")
                     self.adapters_list.set_value(i, 3, 1)
             except BaseException:
-                print("Can't toggle polling on adapter %s") % objpath
+                print("Can't toggle polling on adapter %s" % objpath)
 
     # ------------------------------
     # Set the field values
@@ -242,7 +242,7 @@ class NeardUI(Neard):
 
             if value is not None:
                 self.adapters_list.set_value(i, col, value)
-            print("  property %s, value %s") % (name, value)
+            print("  property %s, value %s" % (name, value))
 
     # Clear one or all the adapters present in list
     def adapter_RemoveUI(self):
@@ -258,18 +258,18 @@ class NeardUI(Neard):
 
         if adapt_properties is None:
             if i:
-                print("Delete adapter %s") % path
+                print("Delete adapter %s" % path)
                 self.adapters_list.remove(i)
             else:
-                print("Already deleted adapter %s") % path
+                print("Already deleted adapter %s" % path)
             return
 
         if i is None:
             i = self.adapters_list.append()
             self.adapters_list.set_value(i, 0, path)
-            print("Add adapter %s") % (path)
+            print("Add adapter %s" % path)
         else:
-            print("Update adapter %s") % (path)
+            print("Update adapter %s" % path)
 
         self.adapters_setUIList(adapt_properties, i, 2, "Powered")
         self.adapters_setUIList(adapt_properties, i, 3, "Polling")
@@ -292,11 +292,11 @@ class NeardUI(Neard):
 
             if value is not None:
                 self.tags_list.set_value(i, col, value)
-            print("  property %s, value %s") % (name, value)
+            print("  property %s, value %s" % (name, value))
 
     # Add, Update or delete a list entry
     def tag_UpdateUI(self, path=None, tag_properties=None):
-        print("Tag Update %s") % path
+        print("Tag Update %s" % path)
         i = self.tags_list.get_iter_first()
         while i is not None:
             if self.tags_list.get_value(i, 0) == path:
@@ -308,7 +308,7 @@ class NeardUI(Neard):
             i = self.tags_list.get_iter_first()
             while i is not None:
                 path_name = self.tags_list.get_value(i, 0)
-                print("Deleted tag %s") % path_name
+                print("Deleted tag %s" % path_name)
                 self.tags_list.remove(i)
                 if self.tags_list.iter_is_valid(i):
                     i = self.tags_list.iter_next(i)
@@ -319,9 +319,9 @@ class NeardUI(Neard):
         if i is None:
             i = self.tags_list.append()
             self.tags_list.set_value(i, 0, path)
-            print("Add tag %s") % (path)
+            print("Add tag %s" % path)
         else:
-            print("Update tag %s") % (path)
+            print("Update tag %s" % path)
         self.tags_setUIList(tag_properties, i, 2, "ReadOnly")
         self.tags_setUIList(tag_properties, i, 3, "Type")
 
@@ -340,11 +340,11 @@ class NeardUI(Neard):
 
         if value is not None:
             self.records_list.set_value(i, col, value)
-        print("  property %s, value %s") % (name, value)
+        print("  property %s, value %s" % (name, value))
 
     # Add, Update or delete a list entry
     def record_UpdateUI(self, path=None, record_properties=None):
-        print("Record Update %s") % path
+        print("Record Update %s" % path)
         i = self.records_list.get_iter_first()
         while i is not None:
             if self.records_list.get_value(i, 0) == path:
@@ -356,7 +356,7 @@ class NeardUI(Neard):
             i = self.records_list.get_iter_first()
             while i is not None:
                 path_name = self.records_list.get_value(i, 0)
-                print("Delete record %s") % path_name
+                print("Delete record %s" % path_name)
                 self.records_list.remove(i)
                 if self.records_list.iter_is_valid(i):
                     i = self.records_list.iter_next(i)
@@ -367,9 +367,9 @@ class NeardUI(Neard):
         if i is None:
             i = self.records_list.append()
             self.records_list.set_value(i, 0, path)
-            print("Add record %s") % (path)
+            print("Add record %s" % path)
         else:
-            print("Update record %s") % (path)
+            print("Update record %s" % path)
 
         self.records_setUIList(record_properties, i, 2, "Type")
         self.records_setUIList(record_properties, i, 3, "Data")
@@ -382,9 +382,9 @@ class NeardUI(Neard):
         model, iter = selection.get_selected()
         if iter:
             value = self.adapters_list.get_value(iter, 0)
-            print("value %s") % value
+            print("value %s" % value)
             value = self.adapters_list.get_value(iter, 5)
-            print("tag: %s") % value
+            print("tag: %s" % value)
 
     # -----------------------------------------------------
     # Prepare TreeView  for Adapters

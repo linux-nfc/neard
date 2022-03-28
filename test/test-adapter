@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 import dbus
@@ -30,7 +30,7 @@ if (len(sys.argv) < 2):
 if (sys.argv[1] == "list"):
     if (len(sys.argv) < 3):
         objects = neardutils.get_managed_objects()
-        for path, interfaces in objects.iteritems():
+        for path, interfaces in objects.items():
             if "org.neard.Adapter" not in interfaces:
                 continue
 
@@ -74,7 +74,7 @@ if (sys.argv[1] == "powered"):
         try:
             adapter.Set("org.neard.Adapter", "Powered", value)
         except dbus.DBusException as error:
-            print "%s: %s" % (error._dbus_error_name, error.message)
+            print("%s: %s" % (error._dbus_error_name, error.message))
     sys.exit(0)
 
 if (sys.argv[1] == "poll"):
@@ -94,13 +94,13 @@ if (sys.argv[1] == "poll"):
             try:
                 adapter.StartPollLoop(mode)
             except dbus.DBusException as error:
-                print "%s: %s" % (error._dbus_error_name, error.message)
+                print("%s: %s" % (error._dbus_error_name, error.message))
 
         elif (sys.argv[3] == "off"):
             try:
                 adapter.StopPollLoop()
             except dbus.DBusException as error:
-                print "%s: %s" % (error._dbus_error_name, error.message)
+                print("%s: %s" % (error._dbus_error_name, error.message))
 
         else:
             usage()
