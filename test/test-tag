@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 import dbus
@@ -48,7 +48,7 @@ if (len(sys.argv) < 2):
 if (sys.argv[1] == "list"):
     if (len(sys.argv) < 3):
         objects = neardutils.get_managed_objects()
-        for path, interfaces in objects.iteritems():
+        for path, interfaces in objects.items():
             if "org.neard.Tag" not in interfaces:
                 continue
 
@@ -72,7 +72,7 @@ if (sys.argv[1] == "list"):
 if (sys.argv[1] == "dump"):
     if (len(sys.argv) < 3):
         objects = neardutils.get_managed_objects()
-        for path, interfaces in objects.iteritems():
+        for path, interfaces in objects.items():
             if "org.neard.Tag" not in interfaces:
                 continue
 
@@ -131,7 +131,7 @@ def write_uri(args):
         data["Type"] = "URI"
         data["URI"] = args[0]
 
-    print data
+    print(data)
 
     tag.Write(data)
 
@@ -174,7 +174,7 @@ if (sys.argv[1] == "write"):
     sys.exit(0)
 
 if (sys.argv[1] == "deactivate"):
-    print sys.argv[2]
+    print(sys.argv[2])
     if (len(sys.argv) != 2):
         tag = neardutils.find_tag(sys.argv[2])
         tag.Deactivate()
