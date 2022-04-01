@@ -2,7 +2,7 @@
 
 import os
 import sys
-import gobject
+from gi.repository import GLib
 
 import dbus
 import dbus.mainloop.glib
@@ -11,7 +11,7 @@ import neardutils
 
 from dbus.lowlevel import MethodCallMessage, HANDLER_RESULT_NOT_YET_HANDLED
 
-mainloop = gobject.MainLoop()
+mainloop = GLib.MainLoop()
 
 
 def device_added(path, interfaces):

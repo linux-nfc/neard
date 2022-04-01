@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import gobject
+from gi.repository import GLib
 
 import dbus
 import dbus.service
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     manager.RegisterHandoverAgent(btpath, btcarrier)
     manager.RegisterHandoverAgent(wifipath, wificarrier)
 
-    mainloop = gobject.MainLoop()
+    mainloop = GLib.MainLoop()
 
     try:
         mainloop.run()

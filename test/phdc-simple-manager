@@ -3,14 +3,13 @@
 import sys
 import dbus
 import dbus.service
-import dbus.glib
-import gobject
 import socket
 import string
 import struct
 import threading
 from threading import Thread
 import time
+from gi.repository import GLib
 from dbus.mainloop.glib import DBusGMainLoop
 
 # IDs specific to Linux nfc
@@ -190,7 +189,7 @@ if "__main__" == __name__:
                         signature='sv')
     neard_manager.RegisterAgent(d)
 
-    mainloop = gobject.MainLoop()
+    mainloop = GLib.MainLoop()
 
 try:
     mainloop.run()
