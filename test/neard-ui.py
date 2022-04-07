@@ -16,36 +16,40 @@ import neardutils
 
 ##=================================================================
 class Neard:
-
     def interface_Added(self, path, interface):
-        print (" New interface added: %s") % path
+        print((" New interface added: %s") % path)
         self.objects = neardutils.get_managed_objects()
         self.interface_updateDetails(interface, path)
 
     def interface_Removed(self, path, interface):
-        print (" Remove interface: %s") % path
+        print((" Remove interface: %s") % path)
         self.objects = neardutils.get_managed_objects()
         self.interface_updateDetails(interface)
 
-
-    #connect to the object_manager in order to be notified on
-    #add/remove interface
+    # connect to the object_manager in order to be notified on
+    # add/remove interface
     def interfaces_Connect(self):
         try:
-            print 'interfaces_Connect'
+            print("interfaces_Connect")
             bus = dbus.SystemBus()
             self.objects = neardutils.get_managed_objects()
-            bus.add_signal_receiver(self.interface_Added, bus_name=neardutils.SERVICE_NAME,
-                                    dbus_interface="org.freedesktop.DBus.ObjectManager",
-                                    signal_name="InterfacesAdded")
-            bus.add_signal_receiver(self.interface_Removed, bus_name=neardutils.SERVICE_NAME,
-                                    dbus_interface="org.freedesktop.DBus.ObjectManager",
-                                    signal_name="InterfacesRemoved")
+            bus.add_signal_receiver(
+                self.interface_Added,
+                bus_name=neardutils.SERVICE_NAME,
+                dbus_interface="org.freedesktop.DBus.ObjectManager",
+                signal_name="InterfacesAdded",
+            )
+            bus.add_signal_receiver(
+                self.interface_Removed,
+                bus_name=neardutils.SERVICE_NAME,
+                dbus_interface="org.freedesktop.DBus.ObjectManager",
+                signal_name="InterfacesRemoved",
+            )
         except:
-            print ("Can't connect to org.freedesktop.DBus.ObjectManager");
+            print("Can't connect to org.freedesktop.DBus.ObjectManager")
             self.objects = None
 
-        #Retrieve the manager informations
+        # Retrieve the manager informations
         self.interface_getDetails()
 
     def interface_getDetails(self):
@@ -59,8 +63,8 @@ class Neard:
         elif neardutils.RECORD_INTERFACE in interface:
             self.record_updateDetails(path)
 
-    def adapter_PropertyChanged(self, prop, value, adapt_path = None):
-        print("Prop changed: %s") % prop
+    def adapter_PropertyChanged(self, prop, value, adapt_path=None):
+        print(("Prop changed: %s") % prop)
         adapt_properties = {}
         adapt_properties[prop] = value
         if prop == "Tags":
@@ -68,10 +72,10 @@ class Neard:
         else:
             self.adapter_update(adapt_path, adapt_properties)
 
-    #Update the records UI
+    # Update the records UI
     def record_updateDetails(self, tag_path=None):
         if tag_path is not None:
-            for record_path, record_iface in self.objects.iteritems():
+            for record_path, record_iface in self.objects.items():
 
                 if neardutils.RECORD_INTERFACE not in record_iface:
                     continue
@@ -85,49 +89,47 @@ class Neard:
         else:
             self.records_update()
 
-    #Update the tags UI
+    # Update the tags UI
     def tag_updateDetails(self, adapter_path=None):
         if adapter_path is not None:
-            for tag_path, interfaces in self.objects.iteritems():
+            for tag_path, interfaces in self.objects.items():
                 if neardutils.TAG_INTERFACE not in interfaces:
                     continue
 
-                print ("TAG %s ") % tag_path
+                print(("TAG %s ") % tag_path)
 
                 tag_properties = interfaces[neardutils.TAG_INTERFACE]
 
                 self.tagregistered[tag_path] = True
                 # call UI update
                 self.tags_update(tag_path, tag_properties)
-                #Process the records
+                # Process the records
                 self.record_updateDetails(tag_properties)
         else:
-            print ("remove tags and records")
+            print("remove tags and records")
             self.tags_update()
             self.records_update()
 
-
-    #Something changed, must update the UI
+    # Something changed, must update the UI
     def adapter_updateDetails(self):
-        for adapt_path, interfaces in self.objects.iteritems():
+        for adapt_path, interfaces in self.objects.items():
             if neardutils.ADAPTER_INTERFACE not in interfaces:
-                   continue
+                continue
 
             if adapt_path in self.adaptregistered:
-                   print (" already registered %s") % adapt_path
+                print((" already registered %s") % adapt_path)
             else:
-                   adapt_properties = interfaces[neardutils.ADAPTER_INTERFACE]
+                adapt_properties = interfaces[neardutils.ADAPTER_INTERFACE]
 
-                   self.adaptregistered[adapt_path] = True
+                self.adaptregistered[adapt_path] = True
 
-                   #Update display info
-                   self.adapter_update(adapt_path, adapt_properties)
+                # Update display info
+                self.adapter_update(adapt_path, adapt_properties)
 
-                   #udpate UI for tags
-                   self.tag_updateDetails()
+                # udpate UI for tags
+                self.tag_updateDetails()
 
-
-    #Search DBUS to find any neard instance
+    # Search DBUS to find any neard instance
     def neardNameOwnerChanged(self, proxy):
         if proxy:
             print("Neard is connected to System bus")
@@ -138,9 +140,14 @@ class Neard:
             self.adaptregistered = {}
             self.interface_getDetails()
 
-    #Main init function
-    def __init__(self, adapter_update = None, adapters_remove = None,
-                  tags_update = None, records_update = None):
+    # Main init function
+    def __init__(
+        self,
+        adapter_update=None,
+        adapters_remove=None,
+        tags_update=None,
+        records_update=None,
+    ):
         self.test = False
         self.adapter_update = adapter_update
         self.adapters_remove = adapters_remove
@@ -153,9 +160,11 @@ class Neard:
 
         self.systemBus = dbus.SystemBus()
 
-        #Prepare the first handler
-        self.systemBus.watch_name_owner(neardutils.SERVICE_NAME,
-                                        self.neardNameOwnerChanged)
+        # Prepare the first handler
+        self.systemBus.watch_name_owner(
+            neardutils.SERVICE_NAME, self.neardNameOwnerChanged
+        )
+
 
 ##=================================================================
 class NeardUI(Neard):
@@ -174,21 +183,23 @@ class NeardUI(Neard):
             i = self.adapters_list.get_iter(path)
             objpath = self.adapters_list.get_value(i, 0)
             adapt_iface = neardutils.find_adapter(path)
-            adapter = dbus.Interface(bus.get_object(neardutils.SERVICE_NAME, adapt_iface.object_path),
-                                     "org.freedesktop.DBus.Properties")
+            adapter = dbus.Interface(
+                bus.get_object(neardutils.SERVICE_NAME, adapt_iface.object_path),
+                "org.freedesktop.DBus.Properties",
+            )
 
             try:
                 if self.adapters_actionToggle(i, 2):
-                    print ("Disable Adapter %s") % objpath
+                    print(("Disable Adapter %s") % objpath)
                     adapter.Set(neardutils.ADAPTER_INTERFACE, "Powered", False)
                     self.adapters_list.set_value(i, 2, 0)
                 else:
-                    print ("Enable Adapter %s") % objpath
+                    print(("Enable Adapter %s") % objpath)
                     adapter.Set(neardutils.ADAPTER_INTERFACE, "Powered", True)
                     self.adapters_list.set_value(i, 2, 1)
 
             except:
-                print ("Can't toggle adapter %s") % objpath
+                print(("Can't toggle adapter %s") % objpath)
 
     # Action: activate or not the polling mode
     def adapter_pollingToggled(self, poolingRendererToggle, path, user):
@@ -199,28 +210,28 @@ class NeardUI(Neard):
 
             try:
                 if self.adapters_actionToggle(i, 3):
-                    print ("Stop Polling %s") % objpath
+                    print(("Stop Polling %s") % objpath)
                     adapt_iface.StopPollLoop()
                     self.adapters_list.set_value(i, 3, 0)
                 else:
-                    print ("Start Polling %s") % objpath
+                    print(("Start Polling %s") % objpath)
                     adapt_iface.StartPollLoop("Initiator")
                     self.adapters_list.set_value(i, 3, 1)
             except:
-                print ("Can't toggle polling on adapter %s") % objpath
+                print(("Can't toggle polling on adapter %s") % objpath)
 
-    #------------------------------
-    #Set the field values
-    def adapters_setUIList(self, adapt_properties, i, col, name, path = None):
+    # ------------------------------
+    # Set the field values
+    def adapters_setUIList(self, adapt_properties, i, col, name, path=None):
         if name in adapt_properties:
             value = adapt_properties[name]
 
             if name == "Tags":
                 value = "{"
                 for tgts in adapt_properties[name]:
-                    #For each tag, add it to the tag lbox:
-                    #Trim path....
-                    short_tgt = tgts[len(path)+1:]
+                    # For each tag, add it to the tag lbox:
+                    # Trim path....
+                    short_tgt = tgts[len(path) + 1 :]
 
                     if value == "{":
                         value = "{" + short_tgt
@@ -238,14 +249,14 @@ class NeardUI(Neard):
 
             if value is not None:
                 self.adapters_list.set_value(i, col, value)
-            print ("  property %s, value %s") % (name, value)
+            print(("  property %s, value %s") % (name, value))
 
     # Clear one or all the adapters present in list
     def adapter_RemoveUI(self):
         self.adapters_list.clear()
 
-    #Add, Update or delete a list entry
-    def adapter_UpdateUI(self, path = None, adapt_properties = None):
+    # Add, Update or delete a list entry
+    def adapter_UpdateUI(self, path=None, adapt_properties=None):
         i = self.adapters_list.get_iter_first()
         while i is not None:
             if self.adapters_list.get_value(i, 0) == path:
@@ -254,26 +265,25 @@ class NeardUI(Neard):
 
         if adapt_properties is None:
             if i:
-                print ("Delete adapter %s") % path
+                print(("Delete adapter %s") % path)
                 self.adapters_list.remove(i)
             else:
-                print ("Already deleted adapter %s") % path
+                print(("Already deleted adapter %s") % path)
             return
 
         if i is None:
             i = self.adapters_list.append()
             self.adapters_list.set_value(i, 0, path)
-            print ("Add adapter %s") % (path)
+            print(("Add adapter %s") % (path))
         else:
-            print ("Update adapter %s") % (path)
-
+            print(("Update adapter %s") % (path))
 
         self.adapters_setUIList(adapt_properties, i, 2, "Powered")
         self.adapters_setUIList(adapt_properties, i, 3, "Polling")
         self.adapters_setUIList(adapt_properties, i, 4, "Protocols")
         self.adapters_setUIList(adapt_properties, i, 5, "Tags", path)
 
-    #--------------------------------------------------
+    # --------------------------------------------------
     def tags_setUIList(self, tag_properties, i, col, name):
         if name in tag_properties:
             value = tag_properties[name]
@@ -281,7 +291,7 @@ class NeardUI(Neard):
             if name == "Type":
                 value = None
                 for tags in tag_properties[name]:
-                    #For each tag, add it to the tag lbox:
+                    # For each tag, add it to the tag lbox:
                     if value is None:
                         value = tags
                     else:
@@ -289,23 +299,23 @@ class NeardUI(Neard):
 
             if value is not None:
                 self.tags_list.set_value(i, col, value)
-            print ("  property %s, value %s") % (name, value)
+            print(("  property %s, value %s") % (name, value))
 
-    #Add, Update or delete a list entry
-    def tag_UpdateUI(self, path = None, tag_properties = None):
-        print("Tag Update %s") % path
+    # Add, Update or delete a list entry
+    def tag_UpdateUI(self, path=None, tag_properties=None):
+        print(("Tag Update %s") % path)
         i = self.tags_list.get_iter_first()
         while i is not None:
             if self.tags_list.get_value(i, 0) == path:
                 break
             i = self.tags_list.iter_next(i)
 
-        #Delete mode: Remove all
+        # Delete mode: Remove all
         if tag_properties is None:
             i = self.tags_list.get_iter_first()
             while i is not None:
                 path_name = self.tags_list.get_value(i, 0)
-                print ("Deleted tag %s") % path_name
+                print(("Deleted tag %s") % path_name)
                 self.tags_list.remove(i)
                 if self.tags_list.iter_is_valid(i):
                     i = self.tags_list.iter_next(i)
@@ -316,13 +326,13 @@ class NeardUI(Neard):
         if i is None:
             i = self.tags_list.append()
             self.tags_list.set_value(i, 0, path)
-            print ("Add tag %s") % (path)
+            print(("Add tag %s") % (path))
         else:
-            print ("Update tag %s") % (path)
+            print(("Update tag %s") % (path))
         self.tags_setUIList(tag_properties, i, 2, "ReadOnly")
         self.tags_setUIList(tag_properties, i, 3, "Type")
 
-    #--------------------------------------------------
+    # --------------------------------------------------
     def records_setUIList(self, record_properties, i, col, name):
         if name in record_properties:
             value = record_properties[name]
@@ -330,29 +340,29 @@ class NeardUI(Neard):
             value = ""
             for rec_data in record_properties:
                 if rec_data != "Type":
-                     if value != "":
-                         value = value + "\n"
-                     value = value + rec_data + " :   " +record_properties[rec_data]
+                    if value != "":
+                        value = value + "\n"
+                    value = value + rec_data + " :   " + record_properties[rec_data]
 
         if value is not None:
             self.records_list.set_value(i, col, value)
-        print ("  property %s, value %s") % (name, value)
+        print(("  property %s, value %s") % (name, value))
 
-    #Add, Update or delete a list entry
-    def record_UpdateUI(self, path = None, record_properties = None):
-        print("Record Update %s") % path
+    # Add, Update or delete a list entry
+    def record_UpdateUI(self, path=None, record_properties=None):
+        print(("Record Update %s") % path)
         i = self.records_list.get_iter_first()
         while i is not None:
             if self.records_list.get_value(i, 0) == path:
                 break
             i = self.records_list.iter_next(i)
 
-         #Delete mode: Remove all records
+        # Delete mode: Remove all records
         if record_properties is None:
             i = self.records_list.get_iter_first()
             while i is not None:
                 path_name = self.records_list.get_value(i, 0)
-                print ("Delete record %s") % path_name
+                print(("Delete record %s") % path_name)
                 self.records_list.remove(i)
                 if self.records_list.iter_is_valid(i):
                     i = self.records_list.iter_next(i)
@@ -363,32 +373,30 @@ class NeardUI(Neard):
         if i is None:
             i = self.records_list.append()
             self.records_list.set_value(i, 0, path)
-            print ("Add record %s") % (path)
+            print(("Add record %s") % (path))
         else:
-            print ("Update record %s") % (path)
+            print(("Update record %s") % (path))
 
         self.records_setUIList(record_properties, i, 2, "Type")
         self.records_setUIList(record_properties, i, 3, "Data")
 
-
     def tag_RemoveUI(self):
         printf("Tag Remove")
 
-    #Adapter selected on lbox
-    def on_adapter_sel_changed(self, selection = None):
+    # Adapter selected on lbox
+    def on_adapter_sel_changed(self, selection=None):
         model, iter = selection.get_selected()
         if iter:
-             value = self.adapters_list.get_value(iter, 0)
-             print ("value %s") % value
-             value = self.adapters_list.get_value(iter, 5)
-             print ("tag: %s") % value
+            value = self.adapters_list.get_value(iter, 0)
+            print(("value %s") % value)
+            value = self.adapters_list.get_value(iter, 5)
+            print(("tag: %s") % value)
 
-
-    #-----------------------------------------------------
+    # -----------------------------------------------------
     # Prepare TreeView  for Adapters
     def createAdaptersWidgets(self, adaptlist):
 
-        #treeview adapters
+        # treeview adapters
         tv_adapters = gtk.TreeView(adaptlist)
 
         column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
@@ -396,25 +404,23 @@ class NeardUI(Neard):
 
         toggle = gtk.CellRendererToggle()
         column = gtk.TreeViewColumn("Powered", toggle, active=2)
-        toggle.connect('toggled', self.adapter_poweredToggled, None)
+        toggle.connect("toggled", self.adapter_poweredToggled, None)
         tv_adapters.append_column(column)
 
         toggle = gtk.CellRendererToggle()
         column = gtk.TreeViewColumn("Polling", toggle, active=3)
-        toggle.connect('toggled', self.adapter_pollingToggled, None)
+        toggle.connect("toggled", self.adapter_pollingToggled, None)
         tv_adapters.append_column(column)
 
-        column = gtk.TreeViewColumn("Protocols",gtk.CellRendererText(), text=4)
+        column = gtk.TreeViewColumn("Protocols", gtk.CellRendererText(), text=4)
         tv_adapters.append_column(column)
 
-        tv_adapters.get_selection().connect("changed",
-                                            self.on_adapter_sel_changed)
+        tv_adapters.get_selection().connect("changed", self.on_adapter_sel_changed)
 
-        return tv_adapters;
+        return tv_adapters
 
     # Prepare TreeView  for Tags
     def createTagsWidgets(self, tags_list):
-
 
         tv_tags = gtk.TreeView(tags_list)
 
@@ -427,11 +433,12 @@ class NeardUI(Neard):
         column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=3)
         tv_tags.append_column(column)
 
-        return tv_tags;#
+        return tv_tags
+        #
 
     # Prepare TreeView  for Records
     def createRecordsWidgets(self, records_list):
-        #treeview Records
+        # treeview Records
         tv_records = gtk.TreeView(records_list)
         tv_records.connect("row-activated", self.on_record_activated)
 
@@ -443,23 +450,23 @@ class NeardUI(Neard):
 
         column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
         tv_records.append_column(column)
-        return tv_records;
+        return tv_records
 
     # Prepare TreeView  for Records
     def createWriteWidgets(self, records_list):
-        #treeview Records
+        # treeview Records
         tv_records = gtk.TreeView(records_list)
-        #tv_records.connect("row-activated", self.on_record_activated)
+        # tv_records.connect("row-activated", self.on_record_activated)
 
-        #column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
-        #tv_records.append_column(column)
+        # column = gtk.TreeViewColumn("Path", gtk.CellRendererText(), text=0)
+        # tv_records.append_column(column)
 
-        #column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=2)
-        #tv_records.append_column(column)
+        # column = gtk.TreeViewColumn("Type", gtk.CellRendererText(), text=2)
+        # tv_records.append_column(column)
 
-        #column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
-        #tv_records.append_column(column)
-        return tv_records;
+        # column = gtk.TreeViewColumn("Data", gtk.CellRendererText(), text=3)
+        # tv_records.append_column(column)
+        return tv_records
 
     def on_record_activated(self, widget, row, col):
         model = widget.get_model()
@@ -472,15 +479,17 @@ class NeardUI(Neard):
         if self.response_callback is not None:
             self.response_callback(response)
 
-    #------------------------------
-    #Prepare the dialog
-    def createDialog(self, title = None):
+    # ------------------------------
+    # Prepare the dialog
+    def createDialog(self, title=None):
         if self.title is not None:
             title = self.title
-        dialog = gtk.Dialog(title, None,
-                            gtk.DIALOG_MODAL |
-                            gtk.DIALOG_DESTROY_WITH_PARENT,
-                            (gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        dialog = gtk.Dialog(
+            title,
+            None,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            (gtk.STOCK_OK, gtk.RESPONSE_ACCEPT),
+        )
         dialog.set_property("resizable", True)
         dialog.set_default_size(800, 300)
 
@@ -504,7 +513,7 @@ class NeardUI(Neard):
         scrolledwindow.add(widget)
         notebook.append_page(scrolledwindow, gtk.Label("Records"))
 
-        dialog.connect('response', self.dlg_onResponse)
+        dialog.connect("response", self.dlg_onResponse)
         return dialog
 
     def show(self):
@@ -512,33 +521,45 @@ class NeardUI(Neard):
             self.neardDialog = self.createDialog()
         self.neardDialog.show_all()
 
-    def __init__(self, title = None, response_callback = None):
+    def __init__(self, title=None, response_callback=None):
         self.title = title
         self.response_callback = response_callback
         self.neardDialog = None
 
-        self.adapters_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
-                                      gobject.TYPE_STRING,  # Name = 1
-                                      gobject.TYPE_BOOLEAN, # powered = 2
-                                      gobject.TYPE_BOOLEAN, # polling = 3
-                                      gobject.TYPE_STRING,  # protocols = 4
-                                      gobject.TYPE_STRING)  # tags = 5
+        self.adapters_list = gtk.ListStore(
+            gobject.TYPE_STRING,  # path =0
+            gobject.TYPE_STRING,  # Name = 1
+            gobject.TYPE_BOOLEAN,  # powered = 2
+            gobject.TYPE_BOOLEAN,  # polling = 3
+            gobject.TYPE_STRING,  # protocols = 4
+            gobject.TYPE_STRING,
+        )  # tags = 5
 
-        self.tags_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
-                                      gobject.TYPE_STRING,      # Name = 1
-                                      gobject.TYPE_BOOLEAN,     # Read Only 2
-                                      gobject.TYPE_STRING,      # Type = 3
-                                      gobject.TYPE_STRING)     # Record = 4
+        self.tags_list = gtk.ListStore(
+            gobject.TYPE_STRING,  # path =0
+            gobject.TYPE_STRING,  # Name = 1
+            gobject.TYPE_BOOLEAN,  # Read Only 2
+            gobject.TYPE_STRING,  # Type = 3
+            gobject.TYPE_STRING,
+        )  # Record = 4
 
-        self.records_list = gtk.ListStore(gobject.TYPE_STRING,  # path =0
-                                      gobject.TYPE_STRING,      # Name = 1
-                                      gobject.TYPE_STRING,      # Type = 2
-                                      gobject.TYPE_STRING)        # content = 3
+        self.records_list = gtk.ListStore(
+            gobject.TYPE_STRING,  # path =0
+            gobject.TYPE_STRING,  # Name = 1
+            gobject.TYPE_STRING,  # Type = 2
+            gobject.TYPE_STRING,
+        )  # content = 3
 
-        Neard.__init__(self, self.adapter_UpdateUI, self.adapter_RemoveUI
-                       , self.tag_UpdateUI, self.record_UpdateUI)
+        Neard.__init__(
+            self,
+            self.adapter_UpdateUI,
+            self.adapter_RemoveUI,
+            self.tag_UpdateUI,
+            self.record_UpdateUI,
+        )
 
-class RecordUI():
+
+class RecordUI:
     def wr_onResponse(self, dialog, response):
         if response != gtk.RESPONSE_ACCEPT:
             return
@@ -546,30 +567,35 @@ class RecordUI():
         type_name = self.type_combo.get_active_text()
         bus = dbus.SystemBus()
         record_path = self.path
-        tag_path = record_path[:record_path.rfind("/")]
-        tag = dbus.Interface(bus.get_object(neardutils.SERVICE_NAME, tag_path), neardutils.TAG_INTERFACE)
+        tag_path = record_path[: record_path.rfind("/")]
+        tag = dbus.Interface(
+            bus.get_object(neardutils.SERVICE_NAME, tag_path), neardutils.TAG_INTERFACE
+        )
         if type_name in ["Text"]:
             content1 = content.split()
-            tag.Write({"Type" : type_name,
-                      "Encoding" : content1[0],
-                      "Language" : content1[1],
-                      "Representation" : ' '.join(content1[2:])})
+            tag.Write(
+                {
+                    "Type": type_name,
+                    "Encoding": content1[0],
+                    "Language": content1[1],
+                    "Representation": " ".join(content1[2:]),
+                }
+            )
         else:
-            tag.Write({"Type" : type_name,
-                       "URI" : content})
+            tag.Write({"Type": type_name, "URI": content})
         dialog.destroy()
 
-    def __init__(self, parent = None, path = None, type_name = None):
+    def __init__(self, parent=None, path=None, type_name=None):
         self.path = path
         type_combo = gtk.combo_box_new_text()
-        type_combo.append_text('Text')
-        type_combo.append_text('URI')
-        type_combo.append_text('SmartPoster')
-        if type_name == 'Text':
+        type_combo.append_text("Text")
+        type_combo.append_text("URI")
+        type_combo.append_text("SmartPoster")
+        if type_name == "Text":
             type_combo.set_active(0)
-        elif type_name == 'URI':
+        elif type_name == "URI":
             type_combo.set_active(1)
-        elif type_name == 'SmartPoster':
+        elif type_name == "SmartPoster":
             type_combo.set_active(2)
         fixed = gtk.Fixed()
         content_entry = gtk.Entry()
@@ -580,13 +606,16 @@ class RecordUI():
         fixed.put(type_label, 20, 15)
         fixed.put(content_label, 150, 15)
 
-        record_dialog = gtk.Dialog("Write Record", parent,
-                        gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                        (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+        record_dialog = gtk.Dialog(
+            "Write Record",
+            parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT),
+        )
         self.record_dialog = record_dialog
         record_dialog.set_default_size(280, 120)
         record_dialog.set_position(gtk.WIN_POS_CENTER)
-        record_dialog.connect('response', self.wr_onResponse)
+        record_dialog.connect("response", self.wr_onResponse)
         hbox = record_dialog.get_content_area()
         hbox.pack_start(fixed)
         self.type_combo = type_combo
@@ -596,6 +625,7 @@ class RecordUI():
     def show(self):
         self.record_dialog.run()
         self.record_dialog.destroy()
+
 
 ##=================================================================
 if __name__ == "__main__":

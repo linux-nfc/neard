@@ -7,134 +7,180 @@ import dbus.service
 import dbus.mainloop.glib
 from optparse import OptionParser
 
-eir_test_data = [0x16,0x00\
-		,0x01,0x02,0x03,0x04,0x05,0x06\
-		,0x08,0x09,0x41,0x72,0x72,0x61,0x6b,0x69,0x73\
-		,0x04,0x0d,0x6e,0x01,0x00]
+eir_test_data = [
+    0x16,
+    0x00,
+    0x01,
+    0x02,
+    0x03,
+    0x04,
+    0x05,
+    0x06,
+    0x08,
+    0x09,
+    0x41,
+    0x72,
+    0x72,
+    0x61,
+    0x6B,
+    0x69,
+    0x73,
+    0x04,
+    0x0D,
+    0x6E,
+    0x01,
+    0x00,
+]
 
-wsc_test_data = [0x10,0x4A,0x00,0x01,0x10\
-		,0x10,0x45,0x00,0x08\
-		,0x74,0x65,0x73,0x74,0x73,0x73,0x69,0x64\
-		,0x10,0x27,0x00,0x06\
-		,0x62,0x6C,0x61,0x62,0x6C,0x61]
+wsc_test_data = [
+    0x10,
+    0x4A,
+    0x00,
+    0x01,
+    0x10,
+    0x10,
+    0x45,
+    0x00,
+    0x08,
+    0x74,
+    0x65,
+    0x73,
+    0x74,
+    0x73,
+    0x73,
+    0x69,
+    0x64,
+    0x10,
+    0x27,
+    0x00,
+    0x06,
+    0x62,
+    0x6C,
+    0x61,
+    0x62,
+    0x6C,
+    0x61,
+]
 
 power_state = None
 
+
 def print_fields(fields):
-	if 'EIR' in fields:
-		s = ' '.join('{:#02x}'.format(i) for i in fields['EIR'])
-		print '  EIR:  %s' % s
+    if "EIR" in fields:
+        s = " ".join("{:#02x}".format(i) for i in fields["EIR"])
+        print("  EIR:  %s" % s)
 
-	if 'nokia.com:bt' in fields:
-		s = ' '.join('{:#02x}'.format(i) for i in fields['nokia.com:bt'])
-		print '  nokia.com:bt:  %s' % s
+    if "nokia.com:bt" in fields:
+        s = " ".join("{:#02x}".format(i) for i in fields["nokia.com:bt"])
+        print("  nokia.com:bt:  %s" % s)
 
-	if 'State' in fields:
-		print '  State: %s' % fields['State']
+    if "State" in fields:
+        print("  State: %s" % fields["State"])
 
-	if 'WSC' in fields:
-		s = ' '.join('{:#02x}'.format(i) for i in fields['WSC'])
-		print '  WSC:  %s' % s
+    if "WSC" in fields:
+        s = " ".join("{:#02x}".format(i) for i in fields["WSC"])
+        print("  WSC:  %s" % s)
+
 
 class BTHOAgent(dbus.service.Object):
+    @dbus.service.method("org.neard.HandoverAgent", in_signature="", out_signature="")
+    def Release(self):
+        print("Release")
+        mainloop.quit()
 
-	@dbus.service.method('org.neard.HandoverAgent',
-					in_signature='',
-					out_signature='')
-	def Release(self):
-		print 'Release'
-		mainloop.quit()
+    @dbus.service.method(
+        "org.neard.HandoverAgent", in_signature="a{sv}", out_signature=""
+    )
+    def PushOOB(self, fields):
+        print("PushOOB")
+        print_fields(fields)
 
-	@dbus.service.method('org.neard.HandoverAgent',
-					in_signature='a{sv}',
-					out_signature='')
-	def PushOOB(self, fields):
-		print 'PushOOB'
-		print_fields(fields)
+    @dbus.service.method(
+        "org.neard.HandoverAgent", in_signature="a{sv}", out_signature="a{sv}"
+    )
+    def RequestOOB(self, fields):
+        print("RequestOOB")
+        print_fields(fields)
 
-	@dbus.service.method('org.neard.HandoverAgent',
-					in_signature='a{sv}',
-					out_signature='a{sv}')
+        print("  Replying with")
+        s = " ".join("{:#02x}".format(i) for i in eir_test_data)
+        print("    EIR: %s" % s)
 
-	def RequestOOB(self, fields):
-		print 'RequestOOB'
-		print_fields(fields)
+        if power_state != "unknown":
+            print("    State: %s" % power_state)
+            return {"EIR": eir_test_data, "State": power_state}
+        else:
+            return {"EIR": eir_test_data}
 
-		print '  Replying with'
-		s = ' '.join('{:#02x}'.format(i) for i in eir_test_data)
-		print '    EIR: %s' % s
-
-		if power_state != 'unknown':
-			print '    State: %s' % power_state
-			return {'EIR' : eir_test_data, 'State' : power_state}
-		else:
-			return {'EIR' : eir_test_data}
 
 class WiFiHOAgent(dbus.service.Object):
+    @dbus.service.method("org.neard.HandoverAgent", in_signature="", out_signature="")
+    def Release(self):
+        print("Release")
+        mainloop.quit()
 
-	@dbus.service.method('org.neard.HandoverAgent',
-					in_signature='',
-					out_signature='')
-	def Release(self):
-		print 'Release'
-		mainloop.quit()
+    @dbus.service.method(
+        "org.neard.HandoverAgent", in_signature="a{sv}", out_signature=""
+    )
+    def PushOOB(self, fields):
+        print("PushOOB")
+        print_fields(fields)
 
-	@dbus.service.method('org.neard.HandoverAgent',
-					in_signature='a{sv}',
-					out_signature='')
-	def PushOOB(self, fields):
-		print 'PushOOB'
-		print_fields(fields)
+    @dbus.service.method(
+        "org.neard.HandoverAgent", in_signature="a{sv}", out_signature="a{sv}"
+    )
+    def RequestOOB(self, fields):
+        print("RequestOOB")
+        print_fields(fields)
 
-	@dbus.service.method('org.neard.HandoverAgent',
-					in_signature='a{sv}',
-					out_signature='a{sv}')
+        print("  Replying with")
+        s = " ".join("{:#02x}".format(i) for i in wsc_test_data)
+        print("    WSC: %s" % s)
 
-	def RequestOOB(self, fields):
-		print 'RequestOOB'
-		print_fields(fields)
+        if power_state != "unknown":
+            print("    State: %s" % power_state)
+            return {"WSC": wsc_test_data, "State": power_state}
+        else:
+            return {"WSC": wsc_test_data}
 
-		print '  Replying with'
-		s = ' '.join('{:#02x}'.format(i) for i in wsc_test_data)
-		print '    WSC: %s' % s
 
-		if power_state != 'unknown':
-			print '    State: %s' % power_state
-			return {'WSC' : wsc_test_data, 'State' : power_state}
-		else:
-			return {'WSC' : wsc_test_data}
+if __name__ == "__main__":
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-if __name__ == '__main__':
-	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    bus = dbus.SystemBus()
 
-	bus = dbus.SystemBus()
+    parser = OptionParser()
+    parser.add_option(
+        "-s",
+        "--power-state",
+        action="store",
+        type="string",
+        dest="power_state",
+        default="active",
+        help="active inactive activating unknown",
+    )
+    (options, args) = parser.parse_args()
 
-	parser = OptionParser()
-	parser.add_option("-s", "--power-state", action="store", type="string",
-				dest="power_state", default="active",
-				help="active inactive activating unknown")
-	(options, args) = parser.parse_args()
+    power_state = options.power_state
 
-	power_state = options.power_state
+    obj = bus.get_object("org.neard", "/org/neard")
+    manager = dbus.Interface(obj, "org.neard.AgentManager")
 
-	obj = bus.get_object("org.neard", "/org/neard");
-	manager = dbus.Interface(obj, "org.neard.AgentManager")
+    btpath = "/test/handover/bt/agent"
+    btcarrier = "bluetooth"
+    btobject = BTHOAgent(bus, btpath)
 
-	btpath = '/test/handover/bt/agent'
-	btcarrier = 'bluetooth'
-	btobject = BTHOAgent(bus, btpath)
+    wifipath = "/test/handover/wifi/agent"
+    wificarrier = "wifi"
+    wifiobject = WiFiHOAgent(bus, wifipath)
 
-	wifipath = '/test/handover/wifi/agent'
-	wificarrier = 'wifi'
-	wifiobject = WiFiHOAgent(bus, wifipath)
+    manager.RegisterHandoverAgent(btpath, btcarrier)
+    manager.RegisterHandoverAgent(wifipath, wificarrier)
 
-	manager.RegisterHandoverAgent(btpath, btcarrier)
-	manager.RegisterHandoverAgent(wifipath, wificarrier)
+    mainloop = gobject.MainLoop()
 
-	mainloop = gobject.MainLoop()
-
-	try:
-		mainloop.run()
-	except (KeyboardInterrupt):
-		manager.UnregisterHandoverAgent(btpath, btcarrier)
-		manager.UnregisterHandoverAgent(wifipath, wificarrier)
+    try:
+        mainloop.run()
+    except (KeyboardInterrupt):
+        manager.UnregisterHandoverAgent(btpath, btcarrier)
+        manager.UnregisterHandoverAgent(wifipath, wificarrier)
