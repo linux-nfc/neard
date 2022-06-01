@@ -34,6 +34,7 @@ jobs:
           - fedora:latest
           - fedora:35
           - fedora:34
+          - ubuntu:jammy
           - ubuntu:impish
           - ubuntu:hirsute
           - ubuntu:focal
@@ -177,6 +178,20 @@ jobs:
             variant: sanitizers
 
           # Ubuntu 32-bit builds
+          - container: "ubuntu:jammy"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "ubuntu:jammy"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
           - container: "ubuntu:impish"
             arch: i386
             compiler: gcc -m32
@@ -220,6 +235,12 @@ jobs:
             variant: i386
 
           # Ubuntu GCC sanitizer builds
+          - container: "ubuntu:jammy"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
           - container: "ubuntu:impish"
             arch: x86-64
             compiler: gcc
