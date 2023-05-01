@@ -30,14 +30,16 @@ jobs:
           - debian:bookworm
           - debian:bullseye
           - debian:buster
-          - debian:stretch
           # Fails on configure on GCC and clang (process restrictions?)
           # - fedora:rawhide
           - fedora:latest
+          - fedora:39
+          - fedora:38
           - fedora:37
           - fedora:36
           - fedora:35
           - fedora:34
+          - ubuntu:lunar
           - ubuntu:kinetic
           - ubuntu:jammy
           - ubuntu:focal
@@ -98,20 +100,6 @@ jobs:
             variant: i386
 
           - container: "debian:buster"
-            arch: i386
-            compiler: gcc -m32
-            cross_compile: i686-linux-gnu
-            mode: no-maintainer
-            variant: i386
-
-          - container: "debian:stretch"
-            arch: i386
-            compiler: gcc -m32
-            cross_compile: i686-linux-gnu
-            mode: maintainer
-            variant: i386
-
-          - container: "debian:stretch"
             arch: i386
             compiler: gcc -m32
             cross_compile: i686-linux-gnu
