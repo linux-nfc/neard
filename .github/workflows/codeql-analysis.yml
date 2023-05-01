@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0
 #
 # Copyright (c) 2021 Canonical Ltd.
-# Author: Krzysztof Kozlowski <krzysztof.kozlowski@canonical.com>
+# Copyright (c) 2023 Linaro Ltd.
+# Author: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
 #                             <krzk@kernel.org>
 #
 name: "CodeQL"
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   analyze:
