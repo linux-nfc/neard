@@ -7,7 +7,13 @@
 # Loosely based on https://github.com/linux-test-project/ltp
 #
 name: "Builds"
-on: [push, pull_request, workflow_dispatch]
+on:
+  pull_request:
+  push:
+  schedule:
+    # Run at 1:01 AM, every Tuesday
+    - cron: '1 1 * * 2'
+  workflow_dispatch:
 
 jobs:
   job:
