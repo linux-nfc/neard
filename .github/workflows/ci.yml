@@ -98,6 +98,20 @@ jobs:
             mode: no-maintainer
             variant: i386
 
+          - container: "debian:bullseye"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:bullseye"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
           - container: "debian:buster"
             arch: i386
             compiler: gcc -m32
@@ -183,6 +197,12 @@ jobs:
             variant: sanitizers
 
           - container: "debian:bookworm"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "debian:bullseye"
             arch: x86-64
             compiler: gcc
             mode: maintainer
