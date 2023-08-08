@@ -54,6 +54,9 @@ Properties	string Type [readonly]
 
 			The object path of the adapter the tag belongs to.
 
+		array{byte} Uid [readonly]
+
+			The NFC tag UID.
 
 Record hierarchy
 ================

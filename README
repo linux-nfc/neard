@@ -12,6 +12,15 @@ In order to compile neard you need following software packages:
 	- D-Bus library
 	- GLib library
 	- Netlink (libnl) library, version 1 or 2.
+	- libtool 
+	- automake
+
+To setup the configure file:
+	libtoolize --force
+	aclocal
+	autoheader
+	automake --force-missing --add-missing
+	autoconf
 
 To configure run:
 	./configure --prefix=/usr
