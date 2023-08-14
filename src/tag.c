@@ -169,7 +169,7 @@ static const char *type_string(struct near_tag *tag)
 	return type;
 }
 
-static const uint8_t uid_array(struct near_tag *tag, uint8_t **uid)
+static uint8_t uid_array(struct near_tag *tag, uint8_t **uid)
 {
 	if (tag->nfcid_len) {
 		DBG("NFCID: ");
