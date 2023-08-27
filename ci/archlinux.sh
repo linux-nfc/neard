@@ -15,7 +15,7 @@ case $CC in
 	;;
 esac
 
-pacman -Sy --noconfirm \
+pacman -Syu --noconfirm \
 	autoconf \
 	autoconf-archive \
 	automake \
