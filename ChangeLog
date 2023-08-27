@@ -1,3 +1,8 @@
+ver 0.19
+	Fixed missing DBus org.neard.se.conf.
+	Sync Linux kernel UAPI nfc.h header with newer kernel.
+	NFC tag: Implement readout of tag UID via DBus interface.
+
 ver 0.18
 	Fixed configure with newer autoconf v2.71.
 	Made missing autoconf-archive messages nicer.
