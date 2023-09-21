@@ -134,6 +134,13 @@ jobs:
             variant: cross-compile
 
           - container: "debian:testing"
+            arch: armhf
+            compiler: arm-linux-gnueabihf-gcc
+            cross_compile: arm-linux-gnueabihf
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:testing"
             arch: arm64
             compiler: aarch64-linux-gnu-gcc
             cross_compile: aarch64-linux-gnu
@@ -162,6 +169,13 @@ jobs:
             variant: cross-compile
 
           - container: "debian:stable"
+            arch: armhf
+            compiler: arm-linux-gnueabihf-gcc
+            cross_compile: arm-linux-gnueabihf
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:stable"
             arch: arm64
             compiler: aarch64-linux-gnu-gcc
             cross_compile: aarch64-linux-gnu
@@ -190,6 +204,13 @@ jobs:
             variant: cross-compile
 
           - container: "debian:bookworm"
+            arch: armhf
+            compiler: arm-linux-gnueabihf-gcc
+            cross_compile: arm-linux-gnueabihf
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:bookworm"
             arch: arm64
             compiler: aarch64-linux-gnu-gcc
             cross_compile: aarch64-linux-gnu
@@ -207,6 +228,13 @@ jobs:
             arch: s390x
             compiler: s390x-linux-gnu-gcc
             cross_compile: s390x-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:bullseye"
+            arch: armhf
+            compiler: arm-linux-gnueabihf-gcc
+            cross_compile: arm-linux-gnueabihf
             mode: maintainer
             variant: cross-compile
 
@@ -425,6 +453,7 @@ jobs:
         ARCH_CHECK="$ARCH"
         case "$ARCH" in
           armel) ARCH_CHECK="ARM, EABI";;
+          armhf) ARCH_CHECK="ARM, EABI";;
           arm64) ARCH_CHECK="aarch64";;
           i386) ARCH_CHECK="Intel 80386";;
           ppc64el) ARCH_CHECK="64-bit PowerPC";;
