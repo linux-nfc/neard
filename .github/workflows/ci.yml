@@ -127,13 +127,6 @@ jobs:
 
           # Debian cross compilation builds
           - container: "debian:testing"
-            arch: armel
-            compiler: arm-linux-gnueabi-gcc
-            cross_compile: arm-linux-gnueabi
-            mode: maintainer
-            variant: cross-compile
-
-          - container: "debian:testing"
             arch: armhf
             compiler: arm-linux-gnueabihf-gcc
             cross_compile: arm-linux-gnueabihf
@@ -162,13 +155,6 @@ jobs:
             variant: cross-compile
 
           - container: "debian:stable"
-            arch: armel
-            compiler: arm-linux-gnueabi-gcc
-            cross_compile: arm-linux-gnueabi
-            mode: maintainer
-            variant: cross-compile
-
-          - container: "debian:stable"
             arch: armhf
             compiler: arm-linux-gnueabihf-gcc
             cross_compile: arm-linux-gnueabihf
@@ -193,13 +179,6 @@ jobs:
             arch: s390x
             compiler: s390x-linux-gnu-gcc
             cross_compile: s390x-linux-gnu
-            mode: maintainer
-            variant: cross-compile
-
-          - container: "debian:bookworm"
-            arch: armel
-            compiler: arm-linux-gnueabi-gcc
-            cross_compile: arm-linux-gnueabi
             mode: maintainer
             variant: cross-compile
 
@@ -235,13 +214,6 @@ jobs:
             arch: armhf
             compiler: arm-linux-gnueabihf-gcc
             cross_compile: arm-linux-gnueabihf
-            mode: maintainer
-            variant: cross-compile
-
-          - container: "debian:bullseye"
-            arch: armel
-            compiler: arm-linux-gnueabi-gcc
-            cross_compile: arm-linux-gnueabi
             mode: maintainer
             variant: cross-compile
 
@@ -452,7 +424,6 @@ jobs:
         file src/neard
         ARCH_CHECK="$ARCH"
         case "$ARCH" in
-          armel) ARCH_CHECK="ARM, EABI";;
           armhf) ARCH_CHECK="ARM, EABI";;
           arm64) ARCH_CHECK="aarch64";;
           i386) ARCH_CHECK="Intel 80386";;
