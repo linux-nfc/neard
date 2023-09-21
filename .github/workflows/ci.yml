@@ -46,7 +46,6 @@ jobs:
           - fedora:35
           - fedora:34
           - ubuntu:lunar
-          - ubuntu:kinetic
           - ubuntu:jammy
           - ubuntu:focal
           - ubuntu:bionic
