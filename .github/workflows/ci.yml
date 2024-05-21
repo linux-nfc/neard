@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 #
 # Copyright (c) 2021 Canonical Ltd.
-# Copyright (c) 2023 Linaro Ltd.
+# Copyright (c) 2023-2024 Linaro Ltd.
 # Author: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
 #                             <krzk@kernel.org>
 # Loosely based on https://github.com/linux-test-project/ltp
@@ -45,7 +45,9 @@ jobs:
           - fedora:36
           - fedora:35
           - fedora:34
-          - ubuntu:lunar
+          - ubuntu:latest
+          - ubuntu:noble
+          - ubuntu:mantic
           - ubuntu:jammy
           - ubuntu:focal
           - ubuntu:bionic
@@ -278,6 +280,20 @@ jobs:
             variant: sanitizers
 
           # Ubuntu 32-bit builds
+          - container: "ubuntu:noble"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "ubuntu:noble"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
           - container: "ubuntu:jammy"
             arch: i386
             compiler: gcc -m32
@@ -307,6 +323,12 @@ jobs:
             variant: i386
 
           # Ubuntu GCC sanitizer builds
+          - container: "ubuntu:noble"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
           - container: "ubuntu:jammy"
             arch: x86-64
             compiler: gcc
