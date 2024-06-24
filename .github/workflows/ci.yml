@@ -51,8 +51,6 @@ jobs:
           - ubuntu:mantic
           - ubuntu:jammy
           - ubuntu:focal
-          - ubuntu:bionic
-          - ubuntu:xenial
         cross_compile: [""]
         mode: [maintainer, no-maintainer]
         variant: [""]
