@@ -48,7 +48,7 @@ def remove_paired_devices(bt_adapter):
                                        "org.bluez.Adapter1")
         break
 
-    if(bluez_adapter is None):
+    if (bluez_adapter is None):
         print("Bluetooth adapter %s could not be found" % bluez_adapter)
         exit()
 

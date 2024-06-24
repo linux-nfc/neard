@@ -194,7 +194,7 @@ if "__main__" == __name__:
 try:
     mainloop.run()
 
-except(KeyboardInterrupt):
+except (KeyboardInterrupt):
     # Call for unregister...
     neard_manager.UnregisterAgent(simple_path, 'Manager')
     neard_manager.UnregisterAgent(valid_path, 'Manager')
