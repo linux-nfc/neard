@@ -1005,9 +1005,10 @@ static struct near_ndef_text_payload *
 parse_text_payload(uint8_t *payload, uint32_t length)
 {
 	struct near_ndef_text_payload *text_payload = NULL;
-	uint8_t status, lang_length, len;
+	uint8_t status, lang_length;
 	char *g_str, *txt;
 	uint32_t offset;
+	int len;
 	gboolean valid;
 
 	DBG("");
