@@ -8,10 +8,34 @@ Compilation and installation
 ----------------------------
 
 In order to compile neard you need following software packages:
-	- GCC compiler
-	- D-Bus library
-	- GLib library
-	- Netlink (libnl) library, version 1 or 2.
+
+  <details>
+  <summary>GCC compiler</summary>
+
+  - Ubuntu - `gcc`
+
+  </details>
+
+  <details>
+  <summary>D-Bus library</summary>
+
+  - Ubuntu - `libdbus-1-dev`
+
+  </details>
+
+  <details>
+  <summary>GLib library</summary>
+
+  - Ubuntu - `libglib2.0-dev`
+
+  </details>
+
+  <details>
+  <summary>Netlink (libnl) library, version 1 or 2.</summary>
+
+  - Ubuntu - `libnl-3-dev`
+
+  </details>
 
 To configure run:
 
