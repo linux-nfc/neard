@@ -31,31 +31,16 @@ Configuration and options
 ----------------------------
 
 By default all neard plugins and features are built in. They can be
-disabled with the following configuration options:
+**disabled** with the following configuration options:
 
-	--disable-nfctype1
-
-		Disable support for type 1 NFC tags.
-
-	--disable-nfctype2
-
-		Disable support for type 2 NFC tags.
-
-	--disable-nfctype3
-
-		Disable support for type 3 NFC tags.
-
-	--disable-nfctype4
-
-		Disable support for type 1 NFC tags.
-
-	--disable-nfctype5
-
-		Disable support for type 5 ISO 15693 tags.
-
-	--disable-p2p
-
-		Disable support for peer to peer mode.
+| Option                | Description                                |
+| --------------------- | ------------------------------------------ |
+| `--disable-nfctype1`  | Disable support for type 1 NFC tags.       |
+| `--disable-nfctype2`  | Disable support for type 2 NFC tags.       |
+| `--disable-nfctype3`  | Disable support for type 3 NFC tags.       |
+| `--disable-nfctype4`  | Disable support for type 4 NFC tags.       |
+| `--disable-nfctype5`  | Disable support for type 5 ISO 15693 tags. |
+| `--disable-p2p`       | Disable support for peer to peer mode.     |
 
 Running `./bootstrap-configure` will build the configure script and then run it, with maintainer mode enabled. `bootstrap-configure` will configure neard with all features enabled.
 
