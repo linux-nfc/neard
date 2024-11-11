@@ -59,16 +59,13 @@ Bugs and contributing
 ----------------------------
 
 Please send bug reports to mailing list:
-	linux-nfc@lists.01.org
+  [linux-nfc@lists.01.org](mailto:linux-nfc@lists.01.org)
 
 The project development happens on GitHub:
-	https://github.com/linux-nfc/neard
+  [https://github.com/linux-nfc/neard](https://github.com/linux-nfc/neard)
 
-However for historical reasons the releases are also mirrored on kernel.org
-repository:
-	https://git.kernel.org/pub/scm/network/nfc/neard.git/
+  [https://git.kernel.org/pub/scm/network/nfc/neard.git/](https://git.kernel.org/pub/scm/network/nfc/neard.git/)
 
-Contributions can come in a form of patches sent to linux-nfc@lists.01.org or
-GitHub pull requests on mentioned GitHub repository.
+Contributions can come in a form of patches sent to [linux-nfc@lists.01.org](mailto:linux-nfc@lists.01.org) or GitHub pull requests on mentioned GitHub repository.
 
-See also HACKING and doc/coding-style.txt files.
+See also [HACKING](HACKING) and [doc/coding-style.txt](doc/coding-style.txt) files.
