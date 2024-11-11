@@ -1,11 +1,11 @@
 Near Field Communication manager
-********************************
+============================
 
 Copyright (C) 2011  Intel Corporation. All rights reserved.
 
 
 Compilation and installation
-============================
+----------------------------
 
 In order to compile neard you need following software packages:
 	- GCC compiler
@@ -22,7 +22,7 @@ To compile and install run:
 	make && make install
 
 Configuration and options
-=========================
+----------------------------
 
 By default all neard plugins and features are built in. They can be
 disabled with the following configuration options:
@@ -56,7 +56,7 @@ run it, with maintainer mode enabled. bootstrap-configure will configure
 neard with all features enabled.
 
 Bugs and contributing
-=====================
+----------------------------
 
 Please send bug reports to mailing list:
 	linux-nfc@lists.01.org
