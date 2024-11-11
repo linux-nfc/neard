@@ -14,12 +14,18 @@ In order to compile neard you need following software packages:
 	- Netlink (libnl) library, version 1 or 2.
 
 To configure run:
-	./configure --prefix=/usr
+
+```bash
+  ./configure --prefix=/usr
+```
 
 Configure automatically searches for all required components and packages.
 
 To compile and install run:
-	make && make install
+
+  ```bash
+  make && make install
+  ```
 
 Configuration and options
 ----------------------------
@@ -51,9 +57,8 @@ disabled with the following configuration options:
 
 		Disable support for peer to peer mode.
 
-Running ./bootstrap-configure will build the configure script and then
-run it, with maintainer mode enabled. bootstrap-configure will configure
-neard with all features enabled.
+Running `./bootstrap-configure` will build the configure script and then
+run it, with maintainer mode enabled. `bootstrap-configure` will configure neard with all features enabled.
 
 Bugs and contributing
 ----------------------------
