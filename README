@@ -3,7 +3,6 @@ Near Field Communication manager
 
 Copyright (C) 2011  Intel Corporation. All rights reserved.
 
-
 Compilation and installation
 ----------------------------
 
@@ -37,13 +36,13 @@ In order to compile neard you need following software packages:
 
   </details>
 
-To configure run:
+Running `./bootstrap-configure` will build the configure script and then run it, with maintainer mode enabled. `bootstrap-configure` will configure neard with all features enabled.
 
-```bash
+To configure and automatically searches for all required components and packages run:
+
+  ```bash
   ./configure --prefix=/usr
-```
-
-Configure automatically searches for all required components and packages.
+  ```
 
 To compile and install run:
 
@@ -65,8 +64,6 @@ By default all neard plugins and features are built in. They can be
 | `--disable-nfctype4`  | Disable support for type 4 NFC tags.       |
 | `--disable-nfctype5`  | Disable support for type 5 ISO 15693 tags. |
 | `--disable-p2p`       | Disable support for peer to peer mode.     |
-
-Running `./bootstrap-configure` will build the configure script and then run it, with maintainer mode enabled. `bootstrap-configure` will configure neard with all features enabled.
 
 Bugs and contributing
 ----------------------------
