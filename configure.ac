@@ -64,20 +64,6 @@ if (test "${enable_systemd}" != "no" && test -z "${path_systemunitdir}"); then
 fi
 AC_SUBST(SYSTEMD_SYSTEMUNITDIR, [${path_systemunitdir}])
 
-AC_ARG_WITH([systemduserunitdir],
-                        AS_HELP_STRING([--with-systemduserunitdir=DIR],
-                        [path to systemd user unit directory]),
-                                        [path_userunitdir=${withval}])
-if (test "${enable_systemd}" != "no" && test -z "${path_userunitdir}"); then
-        AC_MSG_CHECKING([systemd user unit dir])
-        path_userunitdir="`$PKG_CONFIG --variable=systemduserunitdir systemd`"
-        if (test -z "${path_userunitdir}"); then
-                AC_MSG_ERROR([systemd user unit directory is required])
-        fi
-        AC_MSG_RESULT([${path_userunitdir}])
-fi
-AC_SUBST(SYSTEMD_USERUNITDIR, [${path_userunitdir}])
-
 AC_ARG_ENABLE(optimization, AS_HELP_STRING([--disable-optimization],
 			[disable code optimization through compiler]), [
 	if (test "${enableval}" = "no"); then
