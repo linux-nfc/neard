@@ -341,8 +341,12 @@ jobs:
         INSTALL=${{ matrix.container }}
         INSTALL="${INSTALL%%:*}"
         INSTALL="${INSTALL%%/*}"
+        echo "Running ./ci/$INSTALL.sh"
         ./ci/$INSTALL.sh
-        if [ "$VARIANT" ]; then ./ci/$INSTALL.$VARIANT.sh; fi
+        if [ "$VARIANT" ]; then
+          echo "Running ./ci/$INSTALL.$VARIANT.sh"
+          ./ci/$INSTALL.$VARIANT.sh;
+        fi
 
     - name: Compiler version
       run: $CC --version
