@@ -4,6 +4,7 @@
 # Copyright (c) 2023-2024 Linaro Ltd.
 # Author: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
 #                             <krzk@kernel.org>
+# Copyright (c) 2025 Krzysztof Kozlowski <krzk@kernel.org>
 # Loosely based on https://github.com/linux-test-project/ltp
 #
 name: "Builds"
@@ -418,13 +419,14 @@ jobs:
         case "$ARCH" in
           armhf) ARCH_CHECK="ARM, EABI";;
           arm64) ARCH_CHECK="aarch64";;
-          i386) ARCH_CHECK="Intel 80386";;
+          # Glibc 2.41 seems to use "Intel i386"
+          i386) ARCH_CHECK="Intel 80386|Intel i386";;
           ppc64el) ARCH_CHECK="64-bit PowerPC";;
           s390x) ARCH_CHECK="IBM S/390";;
           *) ARCH_CHECK="x86-64";;
         esac
         echo "Checking for built matching architecture: $ARCH_CHECK"
-        file src/neard | grep "$ARCH_CHECK"
+        file src/neard | grep -E "$ARCH_CHECK"
         if [ "$VARIANT" = "sanitizers" ]; then
           echo "Checking for linking against sanitizer libraries"
           ldd src/neard | grep libasan.so
