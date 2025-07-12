@@ -5,6 +5,7 @@
 # Copyright (c) 2021 Canonical Ltd.
 # Author: Krzysztof Kozlowski <krzysztof.kozlowski@canonical.com>
 #                             <krzk@kernel.org>
+# Copyright (c) 2025 Krzysztof Kozlowski <krzk@kernel.org>
 #
 
 set -ex
@@ -16,6 +17,9 @@ fi
 
 dpkg --add-architecture $ARCH
 apt update
+
+apt install -y --no-install-recommends \
+	libc6-dev-${ARCH}-cross
 
 apt install -y --no-install-recommends \
 	autoconf:${ARCH} \
