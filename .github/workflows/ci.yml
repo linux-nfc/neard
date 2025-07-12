@@ -48,7 +48,6 @@ jobs:
           - fedora:34
           - ubuntu:latest
           - ubuntu:noble
-          - ubuntu:mantic
           - ubuntu:jammy
           - ubuntu:focal
         cross_compile: [""]
