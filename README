@@ -41,7 +41,7 @@ disabled with the following configuration options:
 
 	--disable-nfctype4
 
-		Disable support for type 1 NFC tags.
+		Disable support for type 4 NFC tags.
 
 	--disable-nfctype5
 
