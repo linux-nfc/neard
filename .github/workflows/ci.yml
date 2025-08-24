@@ -36,7 +36,6 @@ jobs:
           - debian:stable
           - debian:bookworm
           - debian:bullseye
-          - debian:buster
           # Fails on configure on GCC and clang (process restrictions?)
           # - fedora:rawhide
           - fedora:latest
@@ -101,20 +100,6 @@ jobs:
             variant: i386
 
           - container: "debian:bullseye"
-            arch: i386
-            compiler: gcc -m32
-            cross_compile: i686-linux-gnu
-            mode: no-maintainer
-            variant: i386
-
-          - container: "debian:buster"
-            arch: i386
-            compiler: gcc -m32
-            cross_compile: i686-linux-gnu
-            mode: maintainer
-            variant: i386
-
-          - container: "debian:buster"
             arch: i386
             compiler: gcc -m32
             cross_compile: i686-linux-gnu
@@ -209,14 +194,6 @@ jobs:
           #  mode: maintainer
           #  variant: cross-compile
 
-          # Only arm64 builds on Buster (missing dependencies?)
-          - container: "debian:buster"
-            arch: arm64
-            compiler: aarch64-linux-gnu-gcc
-            cross_compile: aarch64-linux-gnu
-            mode: maintainer
-            variant: cross-compile
-
           # Debian GCC sanitizer builds
           - container: "debian:testing"
             arch: x86-64
@@ -237,12 +214,6 @@ jobs:
             variant: sanitizers
 
           - container: "debian:bullseye"
-            arch: x86-64
-            compiler: gcc
-            mode: maintainer
-            variant: sanitizers
-
-          - container: "debian:buster"
             arch: x86-64
             compiler: gcc
             mode: maintainer
