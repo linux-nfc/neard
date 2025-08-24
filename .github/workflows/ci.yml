@@ -34,6 +34,7 @@ jobs:
           - archlinux:latest
           - debian:testing
           - debian:stable
+          - debian:trixie
           - debian:bookworm
           - debian:bullseye
           # Fails on configure on GCC and clang (process restrictions?)
@@ -72,6 +73,20 @@ jobs:
             variant: i386
 
           - container: "debian:stable"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "debian:trixie"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:trixie"
             arch: i386
             compiler: gcc -m32
             cross_compile: i686-linux-gnu
@@ -185,6 +200,12 @@ jobs:
             variant: sanitizers
 
           - container: "debian:stable"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "debian:trixie"
             arch: x86-64
             compiler: gcc
             mode: maintainer
