@@ -550,8 +550,8 @@ int llcp_print_pdu(guint8 *data, guint32 data_len, struct timeval *timestamp)
 			prefix = '+';
 		}
 
-		sprintf(time_str,  "%c%ld.%06lds", prefix, msg_timestamp.tv_sec,
-							msg_timestamp.tv_usec);
+		sprintf(time_str,  "%c%lld.%06llds", prefix, (long long int)msg_timestamp.tv_sec,
+			(long long int)msg_timestamp.tv_usec);
 	}
 
 	llcp_printf_header(direction_str, direction_color,
