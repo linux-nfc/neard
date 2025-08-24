@@ -177,23 +177,6 @@ jobs:
             mode: maintainer
             variant: cross-compile
 
-          # Bullseye cannot install dependencies for ppc64el and s390x without
-          # pulling libc6-dev from that arch, which conflicts with base/host
-          # libc6, thus just disable them for now:
-          #- container: "debian:bullseye"
-          #  arch: ppc64el
-          #  compiler: powerpc64le-linux-gnu-gcc
-          #  cross_compile: powerpc64le-linux-gnu
-          #  mode: maintainer
-          #  variant: cross-compile
-
-          #- container: "debian:bullseye"
-          #  arch: s390x
-          #  compiler: s390x-linux-gnu-gcc
-          #  cross_compile: s390x-linux-gnu
-          #  mode: maintainer
-          #  variant: cross-compile
-
           # Debian GCC sanitizer builds
           - container: "debian:testing"
             arch: x86-64
