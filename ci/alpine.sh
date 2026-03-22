@@ -5,6 +5,7 @@
 # Copyright (c) 2021 Canonical Ltd.
 # Author: Krzysztof Kozlowski <krzysztof.kozlowski@canonical.com>
 #                             <krzk@kernel.org>
+# Copyright (c) 2026 Krzysztof Kozlowski <krzk@kernel.org>
 #
 
 set -ex
@@ -23,13 +24,14 @@ esac
 # Packages needed by CI
 PKGS_MORE="file"
 
-# gzip: for distcheck
+# gzip and tar: for distcheck
 apk add \
 	autoconf \
 	autoconf-archive \
 	automake \
 	binutils \
 	gzip \
+	tar \
 	dbus-dev \
 	glib-dev \
 	libnl3-dev \
