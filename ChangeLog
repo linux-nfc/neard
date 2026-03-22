@@ -1,3 +1,11 @@
+ver 0.20
+	Fixed possible parallel build failures.
+	Ported all tests to Python3. This might unblock packaging for Debian.
+	Fixed unexpected truncation while parsing text payloads.
+	Cleaned up unused systemduserunitdir Makefile.
+	Document working mailing list oe-linux-nfc@lists.linux.dev.
+	Fixed builds on 32-bit ARM with __USE_TIME64_REDIRECTS.
+
 ver 0.19
 	Fixed missing DBus org.neard.se.conf.
 	Sync Linux kernel UAPI nfc.h header with newer kernel.

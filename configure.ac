@@ -1,5 +1,5 @@
 AC_PREREQ([2.60])
-AC_INIT([neard],[0.19],[oe-linux-nfc@lists.linux.dev])
+AC_INIT([neard],[0.20],[oe-linux-nfc@lists.linux.dev])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects color-tests])
