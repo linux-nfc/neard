@@ -745,7 +745,7 @@ static struct seel_ace_rule *find_generic_rule_for_hash(struct seel_ace *ace,
 	DBG("");
 
 	if (!hash)
-		return false;
+		return NULL;
 
 	for (list = ace->rules; list; list = list->next) {
 		struct seel_ace_rule *rule = list->data;
