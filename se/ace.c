@@ -716,7 +716,7 @@ static struct seel_ace_rule *find_generic_rule_for_aid(struct seel_ace *ace,
 	DBG("%zu", aid_len);
 
 	if (!aid)
-		return false;
+		return NULL;
 
 	for (list = ace->rules; list; list = list->next) {
 		struct seel_ace_rule *rule = list->data;
