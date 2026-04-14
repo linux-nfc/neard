@@ -658,7 +658,7 @@ static struct seel_ace_rule *find_specific_rule(struct seel_ace *ace,
 	DBG("%zu", aid_len);
 
 	if (!hash || !aid)
-		return false;
+		return NULL;
 
 	for (list = ace->rules; list; list = list->next) {
 		struct seel_ace_rule *rule = list->data;
