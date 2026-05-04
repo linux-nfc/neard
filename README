@@ -11,49 +11,49 @@ In order to compile neard you need following software packages:
 	- GCC compiler
 	- D-Bus library
 	- GLib library
-	- Netlink (libnl) library, version 1 or 2.
+	- Netlink (libnl) library, version 3, 2, or 1.
+
+neard uses the Meson build system and requires at least version 1.1.
 
 To configure run:
-	./configure --prefix=/usr
+	meson setup builddir --prefix=/usr
 
-Configure automatically searches for all required components and packages.
+Meson automatically searches for all required components and packages.
 
 To compile and install run:
-	make && make install
+	meson compile -C builddir
+	meson install -C builddir
 
 Configuration and options
 =========================
 
 By default all neard plugins and features are built in. They can be
-disabled with the following configuration options:
+adjusted with the following configuration options, passed as
+-Doption=value to meson setup (or changed later with meson configure):
 
-	--disable-nfctype1
+	-Dnfctypes=nfctype1,nfctype2,nfctype3,nfctype4,nfctype5
 
-		Disable support for type 1 NFC tags.
+		Select which NFC Forum tag types (1 to 5) to support.
 
-	--disable-nfctype2
+	-Dp2p=true|false
 
-		Disable support for type 2 NFC tags.
+		Enable or disable support for peer to peer mode.
 
-	--disable-nfctype3
+	-Dese=true|false
 
-		Disable support for type 3 NFC tags.
+		Enable or disable embedded Secure Element support.
 
-	--disable-nfctype4
+	-Dsystemd=auto|enabled|disabled
 
-		Disable support for type 4 NFC tags.
+		Install the systemd service file.
 
-	--disable-nfctype5
+	-Dtools=true|false
 
-		Disable support for type 5 ISO 15693 tags.
+		Build testing tools (nfctool, nciattach).
 
-	--disable-p2p
+	-Dtest=true|false
 
-		Disable support for peer to peer mode.
-
-Running ./bootstrap-configure will build the configure script and then
-run it, with maintainer mode enabled. bootstrap-configure will configure
-neard with all features enabled.
+		Install test/example scripts.
 
 Bugs and contributing
 =====================
