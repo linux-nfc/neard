@@ -60,6 +60,8 @@ Bugs and contributing
 
 Please send bug reports to mailing list:
 	oe-linux-nfc@lists.linux.dev
+or via issues on GitHub:
+	https://github.com/linux-nfc/neard/issues
 
 The project development happens on GitHub:
 	https://github.com/linux-nfc/neard
