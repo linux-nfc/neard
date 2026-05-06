@@ -1,0 +1,426 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Copyright (c) 2021 Canonical Ltd.
+# Copyright (c) 2023-2024 Linaro Ltd.
+# Author: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+#                             <krzk@kernel.org>
+# Copyright (c) 2025 Krzysztof Kozlowski <krzk@kernel.org>
+# Loosely based on https://github.com/linux-test-project/ltp
+#
+name: "Builds (meson)"
+on:
+  pull_request:
+  push:
+  schedule:
+    # Run at 1:01 AM, every Tuesday
+    - cron: '1 1 * * 2'
+  workflow_dispatch:
+
+jobs:
+  job:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86-64]
+        compiler: [gcc, clang]
+        container:
+          - alpine:latest
+          - archlinux:latest
+          - debian:testing
+          - debian:stable
+          - debian:forky
+          - debian:trixie
+          - debian:bookworm
+          # Fails on configure on GCC and clang (process restrictions?)
+          # - fedora:rawhide
+          - fedora:latest
+          - fedora:44
+          - fedora:43
+          - ubuntu:latest
+          - ubuntu:resolute
+          - ubuntu:noble
+          - ubuntu:jammy
+        cross_compile: [""]
+        mode: [maintainer, no-maintainer]
+        variant: [""]
+        include:
+          # Debian 32-bit builds
+          - container: "debian:testing"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:testing"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "debian:stable"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:stable"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "debian:trixie"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:trixie"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "debian:forky"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:forky"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "debian:bookworm"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "debian:bookworm"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          # Debian cross compilation builds
+          - container: "debian:stable"
+            arch: armhf
+            compiler: arm-linux-gnueabihf-gcc
+            cross_compile: arm-linux-gnueabihf
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:stable"
+            arch: arm64
+            compiler: aarch64-linux-gnu-gcc
+            cross_compile: aarch64-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:stable"
+            arch: ppc64el
+            compiler: powerpc64le-linux-gnu-gcc
+            cross_compile: powerpc64le-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:stable"
+            arch: s390x
+            compiler: s390x-linux-gnu-gcc
+            cross_compile: s390x-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:bookworm"
+            arch: armhf
+            compiler: arm-linux-gnueabihf-gcc
+            cross_compile: arm-linux-gnueabihf
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:bookworm"
+            arch: arm64
+            compiler: aarch64-linux-gnu-gcc
+            cross_compile: aarch64-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:bookworm"
+            arch: ppc64el
+            compiler: powerpc64le-linux-gnu-gcc
+            cross_compile: powerpc64le-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:bookworm"
+            arch: s390x
+            compiler: s390x-linux-gnu-gcc
+            cross_compile: s390x-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          # Debian GCC sanitizer builds
+          - container: "debian:testing"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "debian:stable"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "debian:trixie"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "debian:forky"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          # Ubuntu 32-bit builds
+          - container: "ubuntu:latest"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "ubuntu:latest"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "ubuntu:resolute"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "ubuntu:resolute"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "ubuntu:noble"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "ubuntu:noble"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          - container: "ubuntu:jammy"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: maintainer
+            variant: i386
+
+          - container: "ubuntu:jammy"
+            arch: i386
+            compiler: gcc -m32
+            cross_compile: i686-linux-gnu
+            mode: no-maintainer
+            variant: i386
+
+          # Ubuntu GCC sanitizer builds
+          - container: "ubuntu:latest"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "ubuntu:resolute"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "ubuntu:noble"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+          - container: "ubuntu:jammy"
+            arch: x86-64
+            compiler: gcc
+            mode: maintainer
+            variant: sanitizers
+
+    container:
+      image: ${{ matrix.container }}
+      env:
+        ARCH: ${{ matrix.arch }}
+        CC: ${{ matrix.compiler }}
+        CROSS_COMPILE: ${{ matrix.cross_compile }}
+        MODE: ${{ matrix.mode }}
+        VARIANT: ${{ matrix.variant }}
+
+    steps:
+    - name: Show OS
+      run: cat /etc/os-release
+
+    - name: Show env (matrix settings)
+      run: |
+        echo "ARCH: $ARCH"
+        echo "CC: $CC"
+        echo "CROSS_COMPILE: $CROSS_COMPILE"
+        echo "MODE: $MODE"
+        echo "VARIANT: $VARIANT"
+
+    - name: Git checkout
+      uses: actions/checkout@v6
+
+    - name: Install additional packages
+      run: |
+        INSTALL=${{ matrix.container }}
+        INSTALL="${INSTALL%%:*}"
+        INSTALL="${INSTALL%%/*}"
+        echo "Running ./ci/$INSTALL.meson.sh"
+        ./ci/$INSTALL.meson.sh
+        if [ "$VARIANT" ]; then
+          echo "Running ./ci/$INSTALL.meson.$VARIANT.sh"
+          ./ci/$INSTALL.meson.$VARIANT.sh;
+        fi
+
+    - name: Compiler version
+      run: $CC --version
+
+    - name: Display environment and Linux version
+      run: |
+        test -f /etc/issue && cat /etc/issue
+        echo "############################################"
+        lsb_release -a || true
+        echo "############################################"
+        cat /usr/include/linux/version.h
+        echo "############################################"
+        uname -a
+        echo "############################################"
+        cat /proc/cmdline
+        echo "############################################"
+        printenv
+
+    - name: Display nfc.h differences between local and Linux kernel headers
+      run: diff -uBb /usr/include/linux/nfc.h include/nfc_copy.h || true
+
+    - name: Configure
+      id: configure
+      run: |
+        SETUP_ARGS=""
+        if [ "$VARIANT" = "sanitizers" ]; then
+          SETUP_ARGS="-Db_sanitize=address,undefined -Db_pie=true"
+        fi
+        if [ "$MODE" = "maintainer" ]; then
+          SETUP_ARGS="$SETUP_ARGS --werror"
+        fi
+        CROSS_FILE_ARGS=""
+        if [ "$CROSS_COMPILE" ]; then
+          case "$ARCH" in
+            i386)    CPU_FAMILY=x86;     CPU=i686;        ENDIAN=little; MULTIARCH=i386-linux-gnu ;;
+            armhf)   CPU_FAMILY=arm;     CPU=armv7;       ENDIAN=little; MULTIARCH=arm-linux-gnueabihf ;;
+            arm64)   CPU_FAMILY=aarch64; CPU=aarch64;     ENDIAN=little; MULTIARCH=aarch64-linux-gnu ;;
+            ppc64el) CPU_FAMILY=ppc64;   CPU=powerpc64le; ENDIAN=little; MULTIARCH=powerpc64le-linux-gnu ;;
+            s390x)   CPU_FAMILY=s390x;   CPU=s390x;       ENDIAN=big;    MULTIARCH=s390x-linux-gnu ;;
+          esac
+          CC=$CC \
+          PKG_CONFIG=pkg-config \
+          PKG_CONFIG_LIBDIR="/usr/lib/${MULTIARCH}/pkgconfig:/usr/share/pkgconfig" \
+            meson env2mfile --cross \
+              --system linux \
+              --subsystem linux \
+              --kernel linux \
+              --cpu-family $CPU_FAMILY \
+              --cpu $CPU \
+              --endian $ENDIAN \
+              -o /tmp/cross.ini
+          CROSS_FILE_ARGS="--cross-file /tmp/cross.ini"
+        fi
+        CC=$CC meson setup build \
+          --prefix=/usr \
+          --sysconfdir=/etc \
+          -Dese=true \
+          -Dtools=true \
+          -Dsystemd=disabled \
+          $SETUP_ARGS \
+          $CROSS_FILE_ARGS
+
+    - name: Get configure logs
+      run: cat build/meson-logs/meson-log.txt
+      if: ${{ always() && ((steps.configure.outcome == 'failure') ||
+                           (steps.configure.outcome == 'success')) }}
+
+    - name: Compile
+      run: ninja -C build -j$(nproc)
+
+    - name: Run unit tests
+      id: unit_tests
+      run: meson test -C build
+      if: ${{ (matrix.arch == 'x86-64') || (matrix.arch == 'i386') }}
+
+    - name: Get unit tests logs
+      run: cat build/meson-logs/testlog.txt
+      if: ${{ always() && ((steps.unit_tests.outcome == 'failure') ||
+                           (steps.unit_tests.outcome == 'success')) }}
+
+    - name: Check final binary
+      run: |
+        file build/neard
+        ARCH_CHECK="$ARCH"
+        case "$ARCH" in
+          armhf) ARCH_CHECK="ARM, EABI";;
+          arm64) ARCH_CHECK="aarch64";;
+          # Glibc 2.41 seems to use "Intel i386"
+          i386) ARCH_CHECK="Intel 80386|Intel i386";;
+          ppc64el) ARCH_CHECK="64-bit PowerPC";;
+          s390x) ARCH_CHECK="IBM S/390";;
+          *) ARCH_CHECK="x86-64";;
+        esac
+        echo "Checking for built matching architecture: $ARCH_CHECK"
+        file build/neard | grep -E "$ARCH_CHECK"
+        if [ "$VARIANT" = "sanitizers" ]; then
+          echo "Checking for linking against sanitizer libraries"
+          ldd build/neard | grep libasan.so
+          # liblsan won't appear if asan is used
+          ldd build/neard | grep libubsan.so
+        fi
+
+    - name: Install
+      run: meson install -C build
