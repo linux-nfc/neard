@@ -7,7 +7,7 @@
 # Copyright (c) 2025 Krzysztof Kozlowski <krzk@kernel.org>
 # Loosely based on https://github.com/linux-test-project/ltp
 #
-name: "Builds"
+name: "Builds (meson)"
 on:
   pull_request:
   push:
@@ -203,12 +203,6 @@ jobs:
             mode: maintainer
             variant: sanitizers
 
-          - container: "debian:bookworm"
-            arch: x86-64
-            compiler: gcc
-            mode: maintainer
-            variant: sanitizers
-
           # Ubuntu 32-bit builds
           - container: "ubuntu:latest"
             arch: i386
@@ -320,11 +314,11 @@ jobs:
         INSTALL=${{ matrix.container }}
         INSTALL="${INSTALL%%:*}"
         INSTALL="${INSTALL%%/*}"
-        echo "Running ./ci/$INSTALL.sh"
-        ./ci/$INSTALL.sh
+        echo "Running ./ci/$INSTALL.meson.sh"
+        ./ci/$INSTALL.meson.sh
         if [ "$VARIANT" ]; then
-          echo "Running ./ci/$INSTALL.$VARIANT.sh"
-          ./ci/$INSTALL.$VARIANT.sh;
+          echo "Running ./ci/$INSTALL.meson.$VARIANT.sh"
+          ./ci/$INSTALL.meson.$VARIANT.sh;
         fi
 
     - name: Compiler version
@@ -350,54 +344,65 @@ jobs:
     - name: Configure
       id: configure
       run: |
-        echo "Bootstraping in mode: $MODE"
-        CONFIGURE_ARGS=""
+        SETUP_ARGS=""
         if [ "$VARIANT" = "sanitizers" ]; then
-          CONFIGURE_ARGS="--enable-asan --enable-lsan --enable-ubsan --enable-pie"
-        fi
-        CONFIGURE_CROSS=""
-        if [ "$CROSS_COMPILE" ]; then
-          CONFIGURE_CROSS="--host=${CROSS_COMPILE}"
+          SETUP_ARGS="-Db_sanitize=address,undefined -Db_pie=true"
         fi
         if [ "$MODE" = "maintainer" ]; then
-          ./bootstrap-configure \
-            --disable-silent-rules \
-            $CONFIGURE_ARGS
-        else
-          CONFIGURE_ARGS="$CONFIGURE_ARGS $CONFIGURE_CROSS"
-          ./bootstrap && \
-            ./configure \
-            --disable-systemd \
-            --disable-silent-rules \
-            --prefix=/usr \
-            --enable-ese \
-            --sysconfdir=/etc \
-            --enable-tools \
-            $CONFIGURE_ARGS
+          SETUP_ARGS="$SETUP_ARGS --werror"
         fi
+        CROSS_FILE_ARGS=""
+        if [ "$CROSS_COMPILE" ]; then
+          case "$ARCH" in
+            i386)    CPU_FAMILY=x86;     CPU=i686;        ENDIAN=little; MULTIARCH=i386-linux-gnu ;;
+            armhf)   CPU_FAMILY=arm;     CPU=armv7;       ENDIAN=little; MULTIARCH=arm-linux-gnueabihf ;;
+            arm64)   CPU_FAMILY=aarch64; CPU=aarch64;     ENDIAN=little; MULTIARCH=aarch64-linux-gnu ;;
+            ppc64el) CPU_FAMILY=ppc64;   CPU=powerpc64le; ENDIAN=little; MULTIARCH=powerpc64le-linux-gnu ;;
+            s390x)   CPU_FAMILY=s390x;   CPU=s390x;       ENDIAN=big;    MULTIARCH=s390x-linux-gnu ;;
+          esac
+          CC=$CC \
+          PKG_CONFIG=pkg-config \
+          PKG_CONFIG_LIBDIR="/usr/lib/${MULTIARCH}/pkgconfig:/usr/share/pkgconfig" \
+            meson env2mfile --cross \
+              --system linux \
+              --subsystem linux \
+              --kernel linux \
+              --cpu-family $CPU_FAMILY \
+              --cpu $CPU \
+              --endian $ENDIAN \
+              -o /tmp/cross.ini
+          CROSS_FILE_ARGS="--cross-file /tmp/cross.ini"
+        fi
+        CC=$CC meson setup build \
+          --prefix=/usr \
+          --sysconfdir=/etc \
+          -Dese=true \
+          -Dtools=true \
+          -Dsystemd=disabled \
+          $SETUP_ARGS \
+          $CROSS_FILE_ARGS
 
     - name: Get configure logs
-      run: cat config.log
+      run: cat build/meson-logs/meson-log.txt
       if: ${{ always() && ((steps.configure.outcome == 'failure') ||
                            (steps.configure.outcome == 'success')) }}
 
     - name: Compile
-      run: make -j$(nproc)
+      run: ninja -C build -j$(nproc)
 
     - name: Run unit tests
       id: unit_tests
-      run: |
-        make check
+      run: meson test -C build
       if: ${{ (matrix.arch == 'x86-64') || (matrix.arch == 'i386') }}
 
     - name: Get unit tests logs
-      run: cat test-suite.log
+      run: cat build/meson-logs/testlog.txt
       if: ${{ always() && ((steps.unit_tests.outcome == 'failure') ||
                            (steps.unit_tests.outcome == 'success')) }}
 
     - name: Check final binary
       run: |
-        file src/neard
+        file build/neard
         ARCH_CHECK="$ARCH"
         case "$ARCH" in
           armhf) ARCH_CHECK="ARM, EABI";;
@@ -409,19 +414,13 @@ jobs:
           *) ARCH_CHECK="x86-64";;
         esac
         echo "Checking for built matching architecture: $ARCH_CHECK"
-        file src/neard | grep -E "$ARCH_CHECK"
+        file build/neard | grep -E "$ARCH_CHECK"
         if [ "$VARIANT" = "sanitizers" ]; then
           echo "Checking for linking against sanitizer libraries"
-          ldd src/neard | grep libasan.so
+          ldd build/neard | grep libasan.so
           # liblsan won't appear if asan is used
-          ldd src/neard | grep libubsan.so
+          ldd build/neard | grep libubsan.so
         fi
 
     - name: Install
-      run: make install
-
-    - name: Distribution check
-      run: make distcheck
-      # distcheck runs unit tests so no point for cross compile
-      # TODO: figure out how to re-configure during distcheck with --host for i386 (DISTCHECK_CONFIGURE_FLAGS)
-      if: ${{ (matrix.arch == 'x86-64')}}
+      run: meson install -C build

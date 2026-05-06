@@ -1,0 +1,19 @@
+option('nfctypes', type : 'array',
+  choices : ['nfctype1', 'nfctype2', 'nfctype3', 'nfctype4', 'nfctype5'],
+  value : ['nfctype1', 'nfctype2', 'nfctype3', 'nfctype4', 'nfctype5'],
+  description: 'Enable NFC Forum Type 1, 2, 3, 4 or 5 tag support')
+
+option('p2p', type: 'boolean', value: true,
+  description: 'Enable NFC peer-to-peer support')
+
+option('ese', type: 'boolean', value: false,
+  description: 'Enable embedded Secure Element support')
+
+option('systemd', type: 'feature', value: 'auto',
+  description: 'Install systemd service file')
+
+option('tools', type: 'boolean', value: false,
+  description: 'Build testing tools (nfctool, nciattach)')
+
+option('test', type: 'boolean', value: false,
+  description: 'Install test/example scripts')
