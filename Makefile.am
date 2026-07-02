@@ -263,6 +263,7 @@ $(se_seeld_OBJECTS) \
 $(unit_test_ndef_parse_OBJECTS) \
 $(unit_test_ndef_build_OBJECTS) \
 $(unit_test_snep-read_OBJECTS) \
+$(tools_nciattach_OBJECTS) \
 $(tools_snep_send_OBJECTS): $(local_headers)
 
 include/near/version.h: include/version.h
