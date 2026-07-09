@@ -243,6 +243,17 @@ static gboolean property_get_type(const GDBusPropertyTable *property,
 	return TRUE;
 }
 
+static gboolean property_uid_exists(const GDBusPropertyTable *property, void *user_data)
+{
+	struct near_tag *tag = user_data;
+
+	uint8_t *uid;
+	uint8_t len;
+	len = uid_array(tag, &uid);
+
+	return uid && len;
+}
+
 static gboolean property_get_uid(const GDBusPropertyTable *property,
 					DBusMessageIter *iter, void *user_data)
 {
@@ -572,7 +583,7 @@ static const GDBusPropertyTable tag_properties[] = {
 	{ "Protocol", "s", property_get_protocol },
 	{ "ReadOnly", "b", property_get_readonly },
 	{ "Adapter", "o", property_get_adapter },
-	{ "Uid", "ay", property_get_uid },
+	{ "Uid", "ay", property_get_uid, NULL, property_uid_exists },
 
 	{ }
 };
