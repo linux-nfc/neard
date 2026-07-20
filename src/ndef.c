@@ -317,6 +317,12 @@ static gboolean property_get_text(const GDBusPropertyTable *property,
 
 			dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING,
 									&text);
+			/*
+			 * stop after the first record as we otherwise emit multiple
+			 * property values for multi-language tags, which gets us
+			 * disconnected from D-Bus for having produced an invalid message.
+			 */
+			break;
 		}
 
 		return TRUE;
