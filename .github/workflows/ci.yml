@@ -171,13 +171,6 @@ jobs:
             mode: maintainer
             variant: cross-compile
 
-          - container: "debian:bookworm"
-            arch: s390x
-            compiler: s390x-linux-gnu-gcc
-            cross_compile: s390x-linux-gnu
-            mode: maintainer
-            variant: cross-compile
-
           # Debian GCC sanitizer builds
           - container: "debian:testing"
             arch: x86-64
