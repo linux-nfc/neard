@@ -150,6 +150,34 @@ jobs:
             mode: maintainer
             variant: cross-compile
 
+          - container: "debian:trixie"
+            arch: armhf
+            compiler: arm-linux-gnueabihf-gcc
+            cross_compile: arm-linux-gnueabihf
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:trixie"
+            arch: arm64
+            compiler: aarch64-linux-gnu-gcc
+            cross_compile: aarch64-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:trixie"
+            arch: ppc64el
+            compiler: powerpc64le-linux-gnu-gcc
+            cross_compile: powerpc64le-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
+          - container: "debian:trixie"
+            arch: s390x
+            compiler: s390x-linux-gnu-gcc
+            cross_compile: s390x-linux-gnu
+            mode: maintainer
+            variant: cross-compile
+
           - container: "debian:bookworm"
             arch: armhf
             compiler: arm-linux-gnueabihf-gcc
