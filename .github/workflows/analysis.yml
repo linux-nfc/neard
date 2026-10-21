@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Copyright (c) 2021 Canonical Ltd.
+# Copyright (c) 2023 Linaro Ltd.
+# Author: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+#                             <krzk@kernel.org>
+# Copyright (c) 2026 Krzysztof Kozlowski <krzk@kernel.org>
+#
+name: "Analysis"
+on:
+  pull_request:
+  push:
+  schedule:
+    # Run at 1:01 AM, every Tuesday
+    - cron: '1 1 * * 2'
+  workflow_dispatch:
+
+jobs:
+  codeql:
+    uses: linux-nfc/neard-workflow/.github/workflows/codeql-analysis.yml@main
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
