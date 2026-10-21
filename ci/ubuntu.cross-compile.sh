@@ -1,1 +1,0 @@
-debian.cross-compile.sh

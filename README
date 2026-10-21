@@ -75,3 +75,6 @@ oe-linux-nfc@lists.linux.dev or GitHub pull requests on mentioned GitHub
 repository.
 
 See also HACKING and doc/coding-style.txt files.
+
+GitHub Actions (Continuous Integration) is managed in dedicated repository:
+	https://github.com/linux-nfc/neard-workflow
