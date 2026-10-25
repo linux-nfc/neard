@@ -78,7 +78,6 @@ struct test_snep_context {
 };
 
 /* variables used in dummy_req_{get|put} */
-static struct test_snep_context *gcontext;
 static struct near_ndef_record *stored_recd;
 static GSList *test_fragments;
 
@@ -216,8 +215,6 @@ static void test_snep_init(gpointer context, gconstpointer data)
 	ctx->req_info_len = ctx->test_recd_msg->length;
 	ctx->payload_len = ctx->test_recd_msg->length;
 	ctx->acc_len = 64;
-
-	gcontext = ctx;
 }
 
 static void test_snep_cleanup(gpointer context, gconstpointer data)
@@ -236,8 +233,6 @@ static void test_snep_cleanup(gpointer context, gconstpointer data)
 
 	close(sockfd[client]);
 	close(sockfd[server]);
-
-	gcontext = NULL;
 }
 
 /*
