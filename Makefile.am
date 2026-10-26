@@ -3,19 +3,15 @@ ACLOCAL_AMFLAGS = -I m4
 
 AM_MAKEFLAGS = --no-print-directory
 
-pkgincludedir = ${includedir}/near
-
-pkginclude_HEADERS = include/types.h include/log.h include/plugin.h \
+noinst_HEADERS = include/types.h include/log.h include/plugin.h \
 			include/tag.h include/adapter.h include/ndef.h \
 			include/tlv.h include/setting.h include/device.h \
-			include/nfc_copy.h include/snep.h
+			include/nfc_copy.h include/snep.h include/dbus.h
 
-nodist_pkginclude_HEADERS = include/version.h
+nodist_noinst_HEADERS = include/version.h
 
-noinst_HEADERS = include/dbus.h
-
-local_headers = $(foreach file,$(pkginclude_HEADERS) $(nodist_pkginclude_HEADERS) \
-			$(noinst_HEADERS), include/near/$(notdir $(file)))
+local_headers = $(foreach file,$(noinst_HEADERS) \
+			$(nodist_noinst_HEADERS), include/near/$(notdir $(file)))
 
 gdbus_sources = gdbus/gdbus.h gdbus/mainloop.c gdbus/watch.c \
 				gdbus/object.c gdbus/client.c gdbus/polkit.c
@@ -226,13 +222,7 @@ include Makefile.plugins
 
 EXTRA_DIST += $(test_scripts)
 
-pkgconfigdir = $(libdir)/pkgconfig
-
-pkgconfig_DATA = neard.pc
-
 DISTCHECK_CONFIGURE_FLAGS = --enable-tools --enable-ese --disable-systemd
-
-DISTCLEANFILES = $(pkgconfig_DATA)
 
 MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \

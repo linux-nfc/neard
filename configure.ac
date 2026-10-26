@@ -15,8 +15,8 @@ if (test "${libdir}" = '${exec_prefix}/lib'); then
 	libdir='${prefix}/lib'
 fi
 
-# pkglibdir is defined by automake but autoconf parses the neard.pc.in
-# which uses pkglibdir, therefore define it manually in autoconf.
+# pkglibdir is defined by automake but autoconf needs it to expand plugindir,
+# therefore define it manually in autoconf.
 AC_SUBST([pkglibdir], ["\${libdir}/${PACKAGE_NAME}"])
 
 plugindir='${pkglibdir}/plugins'
@@ -220,5 +220,5 @@ AM_CONDITIONAL(ESE, test "${enable_ese}" = "yes")
 
 AM_CONDITIONAL(SE, test "${enable_ese}" = "yes")
 
-AC_CONFIG_FILES([Makefile include/version.h neard.pc])
+AC_CONFIG_FILES([Makefile include/version.h])
 AC_OUTPUT

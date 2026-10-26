@@ -41,14 +41,3 @@ install_data(
   'org.neard.se.conf',
   install_dir : get_option('sysconfdir') / 'dbus-1' / 'system.d',
 )
-
-pkgconfig.generate(
-  name         : 'seeld',
-  description  : 'Secure Element daemon',
-  version      : meson.project_version(),
-  requires     : [glib_dep, dbus_dep],
-  libraries    : ['-module', '-avoid-version', '-export-symbols-regex', 'seeld_plugin_desc'],
-  variables    : {
-    'plugindir' : '${libdir}/seeld/plugins',
-  },
-)

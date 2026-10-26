@@ -14,18 +14,3 @@ include_files = files(
 )
 
 version_h_in = files('version.h.in')
-
-install_headers(
-  'adapter.h',
-  'device.h',
-  'log.h',
-  'ndef.h',
-  'nfc_copy.h',
-  'plugin.h',
-  'setting.h',
-  'snep.h',
-  'tag.h',
-  'tlv.h',
-  'types.h',
-  subdir : 'near',
-)
