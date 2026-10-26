@@ -6,7 +6,6 @@ project('neard', 'c',
 )
 
 cc = meson.get_compiler('c')
-pkgconfig = import('pkgconfig')
 
 prefix       = get_option('prefix')
 libexecdir   = prefix / get_option('libexecdir')

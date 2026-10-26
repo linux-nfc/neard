@@ -20,6 +20,4 @@ version_h = configure_file(
   input         : version_h_in,
   output        : '@BASENAME@',
   configuration : version_conf,
-  install       : true,
-  install_dir   : get_option('includedir') / 'near',
 )

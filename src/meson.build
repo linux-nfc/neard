@@ -50,18 +50,6 @@ neard = executable('neard',
   install_dir         : pkglibexecdir,
 )
 
-pkgconfig.generate(
-  name         : 'neard',
-  description  : 'NFC daemon',
-  version      : meson.project_version(),
-  requires     : [glib_dep, dbus_dep, netlink_dep],
-  libraries    : ['-module', '-avoid-version', '-export-symbols-regex', 'neard_plugin_desc'],
-  variables    : {
-    'pkglibdir' : '${libdir}/' + meson.project_name(),
-    'plugindir' : '${libdir}/' + meson.project_name() + '/plugins',
-  },
-)
-
 if systemd_dep.found()
   systemd_unitdir = systemd_dep.get_variable('systemdsystemunitdir')
   service_conf = configuration_data()

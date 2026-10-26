@@ -31,7 +31,6 @@ test-driver
 autom4te.cache
 TAGS
 
-neard.pc
 include/near
 include/version.h
 src/builtin.h
